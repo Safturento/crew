@@ -1,0 +1,16 @@
+name = "recipes-app"
+repo_path = "/home/x/Repos/Recipes-App"
+default_branch = "main"
+
+[jira]
+project_key = "KAN"
+site = "https://safturento.atlassian.net"
+
+[github]
+repo = "Safturento/Recipes"
+
+[docker]
+canonical_worktree = "Recipes-App"
+http_port_base = 8000
+https_port_base = 8400
+postgres_port_base = 15400

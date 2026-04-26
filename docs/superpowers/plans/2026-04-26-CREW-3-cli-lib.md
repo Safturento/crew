@@ -69,6 +69,7 @@ packages/cli/test/fixtures/
 Sets up the directory layout and a top-level barrel file that the rest of Phase 1 will import from. Each module's actual code lands in subsequent tasks.
 
 **Files:**
+
 - Create: `packages/cli/src/lib/index.ts`
 
 - [ ] **Step 1: Create the barrel file**
@@ -99,6 +100,7 @@ cd packages/cli && git add src/lib/index.ts && git commit -m "feat(CREW-3): add 
 Starts the TDD pattern that the rest of the plan repeats. Pure function, no IO, deterministic — perfect first module.
 
 **Files:**
+
 - Create: `packages/cli/src/lib/docker/port-hash.ts`
 - Create: `packages/cli/src/lib/docker/port-hash.test.ts`
 - Create: `packages/cli/src/lib/docker/index.ts` (partial; compose.ts ships in Task 3)
@@ -228,6 +230,7 @@ git commit -m "feat(CREW-3): docker/portHash — deterministic per-worktree port
 Compose project introspection — used by `crew list` (CREW-8) and `crew docker-env` (CREW-7).
 
 **Files:**
+
 - Create: `packages/cli/src/lib/docker/compose.ts`
 - Create: `packages/cli/src/lib/docker/compose.test.ts`
 - Modify: `packages/cli/src/lib/docker/index.ts`
@@ -405,9 +408,10 @@ git commit -m "feat(CREW-3): docker/compose — listRunningProjects + getStackUr
 
 ## Task 4: prompts/ — typed prompt builders
 
-Replaces the bash `__KEY__` sed-substitution with proper string interpolation.  No IO, no fixtures — fully unit-testable.
+Replaces the bash `__KEY__` sed-substitution with proper string interpolation. No IO, no fixtures — fully unit-testable.
 
 **Files:**
+
 - Create: `packages/cli/src/lib/prompts/ticket.ts`
 - Create: `packages/cli/src/lib/prompts/fix-pr.ts`
 - Create: `packages/cli/src/lib/prompts/builders.test.ts`
@@ -676,6 +680,7 @@ git commit -m "feat(CREW-3): prompts/ — typed buildTicketPrompt + buildFixPrPr
 Replaces the bash watch-ticket.sh's jq filter with typed equivalents.
 
 **Files:**
+
 - Create: `packages/cli/src/lib/transcripts/types.ts`
 - Create: `packages/cli/src/lib/transcripts/parser.ts`
 - Create: `packages/cli/src/lib/transcripts/parser.test.ts`
@@ -725,7 +730,9 @@ describe('parseTranscript', () => {
   });
 
   it('skips lines that fail to parse as JSON', () => {
-    const events = parseTranscript('{"type":"assistant","timestamp":"x","message":{"id":"a","model":"m","role":"assistant","content":[],"usage":{"input_tokens":0,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"output_tokens":0}}}\n{not json}\n');
+    const events = parseTranscript(
+      '{"type":"assistant","timestamp":"x","message":{"id":"a","model":"m","role":"assistant","content":[],"usage":{"input_tokens":0,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"output_tokens":0}}}\n{not json}\n',
+    );
     expect(events).toHaveLength(1);
   });
 });
@@ -803,7 +810,11 @@ export interface ThinkingContent {
   signature: string;
 }
 
-export type MessageContent = ToolUseContent | ToolResultContent | ThinkingContent | { type: string };
+export type MessageContent =
+  | ToolUseContent
+  | ToolResultContent
+  | ThinkingContent
+  | { type: string };
 
 export interface UsageBlock {
   input_tokens: number;
@@ -885,9 +896,7 @@ export function parseTranscript(raw: string): TranscriptEvent[] {
 
 export function parseToolCall(event: TranscriptEvent): ToolCall | null {
   if (event.type !== 'assistant') return null;
-  const toolUse = event.message.content.find(
-    (c): c is ToolUseContent => c.type === 'tool_use',
-  );
+  const toolUse = event.message.content.find((c): c is ToolUseContent => c.type === 'tool_use');
   if (!toolUse) return null;
   return {
     name: toolUse.name,
@@ -940,7 +949,9 @@ function summarizeInput(toolName: string, input: Record<string, unknown>): strin
     case 'Write':
       return String(input.file_path ?? '?');
     case 'Bash':
-      return String(input.command ?? '').replace(/\n/g, ' ⏎ ').slice(0, 140);
+      return String(input.command ?? '')
+        .replace(/\n/g, ' ⏎ ')
+        .slice(0, 140);
     case 'Glob':
       return `${String(input.pattern ?? '?')}  in  ${String(input.path ?? '.')}`;
     case 'Grep':
@@ -978,6 +989,7 @@ git commit -m "feat(CREW-3): transcripts/ — typed JSONL parser + tool-call hel
 ## Task 6: config/ — TOML loader + zod schema + auto-discovery
 
 **Files:**
+
 - Create: `packages/cli/src/lib/config/schema.ts`
 - Create: `packages/cli/src/lib/config/loader.ts`
 - Create: `packages/cli/src/lib/config/loader.test.ts`
@@ -1215,6 +1227,7 @@ git commit -m "feat(CREW-3): config/ — TOML loader + zod schema + project auto
 Three functions. Uses Node's built-in `fetch`. Auth via Basic from `JIRA_EMAIL` + `JIRA_TOKEN` env vars (or pass-through to a future per-user secrets file).
 
 **Files:**
+
 - Create: `packages/cli/src/lib/jira/client.ts`
 - Create: `packages/cli/src/lib/jira/client.test.ts`
 - Create: `packages/cli/src/lib/jira/index.ts`
@@ -1278,7 +1291,12 @@ describe('JiraClient.getTransitions', () => {
 
 describe('JiraClient.transition', () => {
   it('POSTs the transition body', async () => {
-    fetchMock.mockResolvedValueOnce({ ok: true, status: 204, json: async () => ({}), text: async () => '' });
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      status: 204,
+      json: async () => ({}),
+      text: async () => '',
+    });
 
     await client.transition('KAN-1', '11');
 
@@ -1395,9 +1413,10 @@ git commit -m "feat(CREW-3): jira/ — minimal REST client (getIssue, getTransit
 
 ## Task 8: github/ — gh CLI wrapper
 
-Three functions wrapping `gh` via execa.  No direct REST — relies on the user's `gh auth` for token handling.
+Three functions wrapping `gh` via execa. No direct REST — relies on the user's `gh auth` for token handling.
 
 **Files:**
+
 - Create: `packages/cli/src/lib/github/client.ts`
 - Create: `packages/cli/src/lib/github/client.test.ts`
 - Create: `packages/cli/src/lib/github/index.ts`
@@ -1469,7 +1488,9 @@ describe('getReviewComments', () => {
                   },
                   {
                     isResolved: true,
-                    comments: { nodes: [{ author: { login: 'x' }, path: 'y', line: 1, body: 'old' }] },
+                    comments: {
+                      nodes: [{ author: { login: 'x' }, path: 'y', line: 1, body: 'old' }],
+                    },
                   },
                 ],
               },
@@ -1639,7 +1660,7 @@ git commit -m "feat(CREW-3): github/ — gh CLI wrapper (getPrForBranch, mergeSt
 
 ## Task 9: Verification gate
 
-Final acceptance check.  Invoke `superpowers:verification-before-completion` here.
+Final acceptance check. Invoke `superpowers:verification-before-completion` here.
 
 - [ ] **Step 1: typecheck**
 
@@ -1663,7 +1684,7 @@ Expected: zero warnings.
 npm run format:check
 ```
 
-Expected: clean.  If diffs, run `npm run format` once and re-check.
+Expected: clean. If diffs, run `npm run format` once and re-check.
 
 - [ ] **Step 4: full test run**
 
@@ -1671,7 +1692,7 @@ Expected: clean.  If diffs, run `npm run format` once and re-check.
 npm run test:run
 ```
 
-Expected: all tests pass.  Roughly: docker (~7), prompts (~6), transcripts (~7), config (~4), jira (~4), github (~4) = ~32 tests total.
+Expected: all tests pass. Roughly: docker (~7), prompts (~6), transcripts (~7), config (~4), jira (~4), github (~4) = ~32 tests total.
 
 - [ ] **Step 5: confirm clean working tree**
 
@@ -1686,6 +1707,7 @@ Expected: nothing to commit.
 ## Self-review
 
 **Spec coverage:**
+
 - ✅ config/ (TOML + zod + auto-discover) — Task 6
 - ✅ docker/ (port-hash + compose helpers) — Tasks 2, 3
 - ✅ transcripts/ (parser + helpers) — Task 5
@@ -1697,12 +1719,14 @@ Expected: nothing to commit.
 **Placeholder scan:** No "TBD" / "implement later". Every test has full code; every implementation has full code; every command has expected output.
 
 **Type consistency:**
+
 - `ProjectConfig` from `config/schema.ts` is the source of truth — used by every consumer.
 - `TranscriptEvent` discriminated union from `transcripts/types.ts` is consistent across `parseTranscript`, `parseToolCall`, `aggregateUsage`.
 - `JiraClient` constructor options match the schema fields (`email`, `token`, `site`).
 - `getReviewComments` GraphQL query shape matches the test fixture and the bash equivalent in fix-pr.sh.
 
 **Skills hooks:**
+
 - `superpowers:test-driven-development` — fires on every module task (Tasks 2-8). The plan's TDD pattern (write failing test → run → implement → verify) is explicit per task.
 - `superpowers:verification-before-completion` — fires at Task 9 explicitly.
 - `superpowers:systematic-debugging` — fires if any task's expected output deviates. Don't guess.

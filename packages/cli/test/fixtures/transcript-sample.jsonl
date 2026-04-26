@@ -1,0 +1,3 @@
+{"type":"assistant","timestamp":"2026-04-26T17:47:39.520Z","message":{"id":"msg_001","model":"claude-opus-4-7","role":"assistant","content":[{"type":"tool_use","id":"tool_001","name":"Read","input":{"file_path":"/home/x/repo/foo.ts"}}],"usage":{"input_tokens":10,"cache_creation_input_tokens":0,"cache_read_input_tokens":1000,"output_tokens":42}}}
+{"type":"user","timestamp":"2026-04-26T17:47:39.700Z","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"tool_001","content":"file contents..."}]}}
+{"type":"last-prompt","lastPrompt":"...","sessionId":"abc123"}
