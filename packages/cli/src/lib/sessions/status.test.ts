@@ -84,9 +84,7 @@ describe('findLatestSessionForBranch', () => {
     mkdirSync(main);
     writeFileSync(join(main, 'm.jsonl'), assistantToolUseLine({ gitBranch: 'main' }) + '\n');
 
-    expect(
-      findLatestSessionForBranch({ repoPath, branch: 'KAN-23', projectsRoot }),
-    ).toBeNull();
+    expect(findLatestSessionForBranch({ repoPath, branch: 'KAN-23', projectsRoot })).toBeNull();
   });
 });
 
@@ -174,10 +172,9 @@ describe('summarizeSessionStatus', () => {
     const file = join(tmp, 'sess.jsonl');
     writeFileSync(
       file,
-      [
-        assistantToolUseLine({ toolName: 'Read' }),
-        assistantToolUseLine({ toolName: 'Edit' }),
-      ].join('\n') + '\n',
+      [assistantToolUseLine({ toolName: 'Read' }), assistantToolUseLine({ toolName: 'Edit' })].join(
+        '\n',
+      ) + '\n',
     );
 
     const status = summarizeSessionStatus(file);

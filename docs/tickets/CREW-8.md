@@ -40,12 +40,13 @@ swap to a daemon API; the surface stays the same.
   with `-home-u-Repo`. Treating that as a prefix catches the main repo and all
   per-ticket worktrees in one pass without the loader having to enumerate
   `git worktree list`.
-- **"Running" heuristic = recent mtime + no `last-prompt` sentinel.** Phase 1
-  has no daemon to ask. `pgrep -f <sessionId>` doesn't reliably hit the
-  `claude` process (sessionId isn't in argv). mtime within the last 60s plus
-  the absence of a `last-prompt` event is a robust local check — false
-  positives only happen for sessions that happen to be edited concurrently,
-  which is fine for a read-only listing.
+- **"Running" heuristic = recent mtime.** Phase 1 has no daemon to ask.
+  `pgrep -f <sessionId>` doesn't reliably hit the `claude` process (sessionId
+  isn't in argv). The `last-prompt` event we initially considered turns out
+  to be written on every turn (it's a resume marker), not at session end —
+  so it can't gate "is this still running?". mtime within the last 60s is the
+  pragmatic choice: false positives only happen for sessions edited
+  concurrently for some other reason, which is fine for a read-only listing.
 - **`--all` window: last 24h.** Matches the ticket spec ("from the past day").
   The default view is "running + last 5 finished by mtime".
 - **`KEY` derivation = the `gitBranch` field.** Don't try to parse the worktree

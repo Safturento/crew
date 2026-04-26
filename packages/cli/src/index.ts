@@ -2,6 +2,8 @@ import { Command } from 'commander';
 import { runCommand } from './commands/run.js';
 import { finishCommand } from './commands/finish.js';
 import { fixPrCommand } from './commands/fix-pr.js';
+import { listCommand } from './commands/list.js';
+import { statusCommand } from './commands/status.js';
 import { dockerEnvCommand } from './commands/docker-env.js';
 import { dbCloneCommand } from './commands/db-clone.js';
 
@@ -15,6 +17,8 @@ program
 program.addCommand(runCommand);
 program.addCommand(fixPrCommand);
 program.addCommand(finishCommand);
+program.addCommand(listCommand);
+program.addCommand(statusCommand);
 program.addCommand(dockerEnvCommand);
 program.addCommand(dbCloneCommand);
 

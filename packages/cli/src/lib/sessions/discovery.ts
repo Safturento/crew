@@ -27,7 +27,6 @@ export interface SessionSummary {
   outputTokens: number;
   lastModified: Date;
   lastToolName: string | null;
-  lastToolTimestamp: string | null;
   running: boolean;
 }
 
@@ -55,7 +54,8 @@ export function listSessionsForRepo(opts: ListSessionsForRepoOptions): SessionSu
     // Decode by slicing off the matched repo-encoded prefix and reattaching
     // the remainder. We can't naively swap every `-` back to `/` because
     // worktree basenames legitimately contain `-` (e.g. `Repo-KAN-23`).
-    const worktreePath = entry === repoEncoded ? opts.repoPath : opts.repoPath + entry.slice(repoEncoded.length);
+    const worktreePath =
+      entry === repoEncoded ? opts.repoPath : opts.repoPath + entry.slice(repoEncoded.length);
     for (const file of readdirSync(projectDir)) {
       if (!file.endsWith('.jsonl')) continue;
       const fullPath = join(projectDir, file);
@@ -95,30 +95,23 @@ function summarize(args: SummarizeArgs): SessionSummary {
   let outputTokens = 0;
   let branch: string | null = null;
   let lastToolName: string | null = null;
-  let lastToolTimestamp: string | null = null;
-  let hasLastPrompt = false;
 
   for (const event of args.events) {
-    if (event.type === 'last-prompt') {
-      hasLastPrompt = true;
-      continue;
-    }
     if (event.type === 'assistant' || event.type === 'user') {
       if (!branch && event.gitBranch) branch = event.gitBranch;
     }
     if (event.type !== 'assistant') continue;
     outputTokens += event.message.usage.output_tokens;
-    const toolUse = event.message.content.find(
-      (c): c is ToolUseContent => c.type === 'tool_use',
-    );
+    const toolUse = event.message.content.find((c): c is ToolUseContent => c.type === 'tool_use');
     if (!toolUse) continue;
     toolCalls += 1;
     lastToolName = toolUse.name;
-    lastToolTimestamp = event.timestamp;
   }
 
-  const running =
-    !hasLastPrompt && args.now - args.lastModified.getTime() <= args.runningWindow;
+  // mtime-based: a transcript appended to within `runningWindowMs` is
+  // assumed live. The `last-prompt` sentinel is not usable here — Claude
+  // writes one per turn (for resume support), not at session end.
+  const running = args.now - args.lastModified.getTime() <= args.runningWindow;
 
   return {
     sessionId: args.sessionId,
@@ -129,7 +122,6 @@ function summarize(args: SummarizeArgs): SessionSummary {
     outputTokens,
     lastModified: args.lastModified,
     lastToolName,
-    lastToolTimestamp,
     running,
   };
 }

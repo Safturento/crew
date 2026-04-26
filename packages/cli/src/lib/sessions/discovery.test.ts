@@ -135,7 +135,7 @@ describe('listSessionsForRepo', () => {
     expect(ids).toEqual(['newer', 'older']);
   });
 
-  it('marks a session running when mtime is recent and no last-prompt event has been written', () => {
+  it('marks a session running when mtime is within the running window', () => {
     const repoPath = '/home/u/Repo';
     const dir = join(projectsRoot, encodeWorktreeProjectPath(repoPath));
     mkdirSync(dir);
@@ -147,15 +147,15 @@ describe('listSessionsForRepo', () => {
     expect(sess?.running).toBe(true);
   });
 
-  it('marks a session finished when last-prompt event is present (regardless of mtime)', () => {
+  it('still marks a session running when last-prompt events are present (they are per-turn resume markers, not end-of-session)', () => {
     const repoPath = '/home/u/Repo';
     const dir = join(projectsRoot, encodeWorktreeProjectPath(repoPath));
     mkdirSync(dir);
-    const file = join(dir, 'done.jsonl');
+    const file = join(dir, 'still-running.jsonl');
     writeFileSync(file, [assistantToolUseLine(), lastPromptLine()].join('\n') + '\n');
 
     const [sess] = listSessionsForRepo({ repoPath, projectsRoot });
-    expect(sess?.running).toBe(false);
+    expect(sess?.running).toBe(true);
   });
 
   it('marks a session finished when mtime is older than the running window', () => {
