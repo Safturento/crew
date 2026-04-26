@@ -232,7 +232,7 @@ function readJiraSecrets(env: NodeJS.ProcessEnv): { email: string; token: string
 
 export const finishCommand = new Command('finish')
   .description('post-merge cleanup: docker, worktree, branches, jira, /tmp logs')
-  .argument('<key>', 'ticket key, e.g. KAN-23')
+  .argument('<key>', 'ticket key, e.g. KAN-23', (v) => v.toUpperCase())
   .action(async (key: string) => {
     const cwd = process.cwd();
     const config = await discoverProjectConfig(cwd);

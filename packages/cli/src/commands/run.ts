@@ -36,7 +36,7 @@ export const runCommand = new Command('run')
   .description(
     'create a worktree for <key>, generate the docker .env, and launch a sandboxed claude agent on the ticket — equivalent of run-ticket.sh',
   )
-  .argument('<key>', 'Jira ticket key (e.g. KAN-23)')
+  .argument('<key>', 'Jira ticket key (e.g. KAN-23)', (v) => v.toUpperCase())
   .option('--skip-docker', 'skip the per-worktree docker bringup')
   .action(async (key: string, options: RunOptions) => {
     await runTicket(key, options);

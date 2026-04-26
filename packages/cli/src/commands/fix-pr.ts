@@ -115,7 +115,7 @@ function selectMode(flags: FixPrFlags): FeedbackMode {
 
 export const fixPrCommand = new Command('fix-pr')
   .description("Resume the worktree's Claude Code session with review feedback")
-  .argument('<key>', 'Jira ticket key (e.g. KAN-23)')
+  .argument('<key>', 'Jira ticket key (e.g. KAN-23)', (v) => v.toUpperCase())
   .option('--from-pr', 'Auto-pull feedback from the open PR for the branch (default)')
   .option('--from-file <path>', 'Read feedback from a file at <path>')
   .option('--from-stdin', 'Read feedback piped on stdin')
