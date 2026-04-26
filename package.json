@@ -12,8 +12,10 @@
     "test": "npm run test --workspaces --if-present",
     "test:run": "npm run test:run --workspaces --if-present",
     "typecheck": "npm run typecheck --workspaces --if-present",
-    "lint": "eslint packages --fix",
-    "format": "prettier --write packages docs"
+    "lint": "eslint packages",
+    "lint:fix": "eslint packages --fix",
+    "format": "prettier --write packages docs",
+    "format:check": "prettier --check packages docs"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
