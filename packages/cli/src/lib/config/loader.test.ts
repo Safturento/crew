@@ -54,4 +54,55 @@ repo = "u/r"
 `;
     expect(() => parseProjectConfig(raw)).toThrow();
   });
+
+  it('parses an optional [db_clone] section with all fields', () => {
+    const raw = `
+name = "x"
+repo_path = "/x"
+
+[jira]
+project_key = "X"
+site = "https://x.atlassian.net"
+
+[github]
+repo = "u/r"
+
+[db_clone]
+postgres_service = "db"
+postgres_user = "app"
+postgres_database = "app"
+required_tables = ["user", "user_macro_goal"]
+exclude_tables = ["kysely_migration*", "audit_log"]
+`;
+    const config = parseProjectConfig(raw);
+    expect(config.db_clone).toEqual({
+      postgres_service: 'db',
+      postgres_user: 'app',
+      postgres_database: 'app',
+      required_tables: ['user', 'user_macro_goal'],
+      exclude_tables: ['kysely_migration*', 'audit_log'],
+    });
+  });
+
+  it('fills in db_clone defaults when section is omitted', () => {
+    const raw = `
+name = "x"
+repo_path = "/x"
+
+[jira]
+project_key = "X"
+site = "https://x.atlassian.net"
+
+[github]
+repo = "u/r"
+`;
+    const config = parseProjectConfig(raw);
+    expect(config.db_clone).toEqual({
+      postgres_service: 'postgres',
+      postgres_user: 'postgres',
+      postgres_database: 'postgres',
+      required_tables: [],
+      exclude_tables: ['kysely_migration*'],
+    });
+  });
 });
