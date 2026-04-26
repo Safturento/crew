@@ -6,4 +6,5 @@ export * from './github/index.js';
 export * from './jira/index.js';
 export * from './prompts/index.js';
 export * from './sessions/index.js';
+export * from './run/index.js';
 export * from './transcripts/index.js';
