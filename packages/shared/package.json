@@ -1,0 +1,7 @@
+{
+  "name": "crew-shared",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Placeholder. Phase 1 lives in cli/src/lib/; this package gets populated in Phase 1.5 when the daemon needs the same modules."
+}

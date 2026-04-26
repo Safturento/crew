@@ -1,0 +1,7 @@
+{
+  "name": "crew-dashboard",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Placeholder for crew's web dashboard. Populated in Phase 3."
+}

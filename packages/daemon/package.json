@@ -1,0 +1,7 @@
+{
+  "name": "crew-daemon",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Placeholder for crew's state-tracking daemon. Populated in Phase 2."
+}
