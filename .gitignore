@@ -49,3 +49,6 @@ desktop.ini
 
 # Crew's own runtime data dir (config + state)
 .crew/
+
+# Per-repo agent sandbox config + secrets (gh-token, etc.)
+.claude/
