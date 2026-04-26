@@ -71,3 +71,7 @@ every assistant/user/system event (verified against
 Existing fixture `packages/cli/test/fixtures/transcript-sample.jsonl` lacks
 these, so the discovery module's tests build their own fixtures with
 `gitBranch` populated.
+
+**Workflow note:** the CREW Jira board only has To Do / In Progress / Done
+transitions — there is no "In Review" status to flip to after the PR is
+opened. The branch is left In Progress; PR is the source of truth.
