@@ -22,25 +22,53 @@ A solo developer (or small team) who:
 - **A multi-tenant product.** Designed for personal use. No auth, no billing, no SaaS layer.
 - **Project-specific automation.** crew should not have logic that only makes sense for one repo. Repo-specific stuff lives in per-project config files.
 
+## Tech stack
+
+Locked through the brainstorming session in `docs/plans/...` (this file). The choices are intentionally conservative — boring, mature, well-documented libraries — because crew is a tool we want to live with for years, not a place to chase ergonomics fashion.
+
+| Concern | Pick | Notes |
+|---|---|---|
+| Language | TypeScript | |
+| Runtime | Node 22+ | Native TS via `--experimental-strip-types` exists but skipped for now (experimental, awkward shebangs). Revisit when stable |
+| Dev loop | **tsx** | No build step in Phase 1. `bin/crew` is a node shebang that imports `src/cli/index.ts` via tsx. Faster iteration; ~100ms tsx startup is invisible for a manually-invoked CLI |
+| Build (when needed) | **esbuild** | Phase 4+, only if/when we ship as a single binary. Not used in Phase 1 |
+| Arg parsing | **commander** | Mature, ubiquitous, no surprises. Picked over citty (younger) and yargs (heavier than we need) |
+| Subprocess | **execa** | Better defaults than `node:child_process`. We shell out heavily to git, docker, gh, claude |
+| Colors | **picocolors** | Lighter and faster than chalk; same API |
+| Spinners | **ora** | The standard; tty detection out of the box |
+| Multi-step progress | **listr2** | Composes ora-style spinners into a tree. Perfect for the run-ticket sequence (worktree → env → docker bringup → migrations → clone → claude launch) |
+| Tables | **cli-table3** | For `crew list` / `crew status` |
+| Interactive prompts | **@inquirer/prompts** | Modular successor to old monolithic inquirer. Cherry-pick what we need (input, select, confirm) |
+| Schema validation | **zod** | Project config TOML, prompt args |
+| TOML parsing | **smol-toml** | Modern, fast, small. `@iarna/toml` is older and heavier |
+| Testing | **vitest** | Same as Recipes-App; familiar |
+| Logging | none initially | `console.log` + picocolors is fine for Phase 1. Revisit (probably **pino**) when the daemon needs structured logs |
+
+**Phase 2/3 add:** chokidar (fs watching), better-sqlite3 (state), hono (daemon HTTP), vite + react (dashboard).
+
+**Live tool-call stream rendering:** plain stdout + picocolors + ANSI cursor codes. Ink (React for CLIs) is intentionally not used — the one-line-per-tool-call shape doesn't need React to render. Re-evaluate in Phase 3 if a multi-pane TUI for "all running agents" is wanted; that's the kind of view Ink earns its keep on.
+
+**Cross-platform target:** Linux/WSL2 is the primary target (where the tool runs today). Code in `shared/` should use `path.join` and avoid Linux-only APIs where it costs nothing, so macOS support is a free bonus when someone wants it. Windows-native is out of scope — bwrap (the sandbox runtime) is Linux-only anyway.
+
 ## Architecture overview
 
-Four packages in an npm workspace:
+Four packages in an npm workspace.  Phase 1 lives entirely in `cli/`; the others are placeholders that fill in during their respective phases.  Workspaces are declared upfront (option C from the brainstorm) so we don't have to migrate imports later.
 
 ```
 crew/
 ├── packages/
-│   ├── cli/         # `crew` command — what the user types
-│   ├── daemon/      # long-running watcher + REST/SSE API
-│   ├── dashboard/   # web UI consuming the daemon's API
-│   └── shared/      # types, transcript parsing, project config, jira/github clients
+│   ├── cli/         # `crew` command — Phase 1 lives entirely here
+│   ├── daemon/      # placeholder — long-running watcher + REST/SSE API (Phase 2)
+│   ├── dashboard/   # placeholder — web UI consuming the daemon's API (Phase 3)
+│   └── shared/      # placeholder — extracted from cli/ when daemon needs the same code (Phase 2)
 └── docs/
 ```
 
+`shared/` doesn't exist as a populated package during Phase 1 — anything Phase 1 needs lives in `cli/src/lib/` and gets extracted when Phase 2 starts.  This avoids premature abstraction.
+
 ### CLI
 
-`crew <subcommand>` invocations. Each subcommand is a thin wrapper that loads project config (TOML), validates inputs, and either runs synchronously (e.g. `crew docker-env`) or shells out to the daemon (e.g. `crew run` registers the run with the daemon and tails its events).
-
-Stack: Node 22+, Commander.js for arg parsing, Hono's RPC client for talking to the daemon, execa for shelling out to git/docker/gh/claude.
+`crew <subcommand>` invocations. Each subcommand is a thin wrapper that loads project config (TOML), validates inputs, and either runs synchronously (e.g. `crew docker-env`) or shells out to the daemon (e.g. `crew run` registers the run with the daemon and tails its events — Phase 2 behaviour; Phase 1 reads transcripts directly).
 
 Subcommands (Phase 1):
 
@@ -52,7 +80,7 @@ Subcommands (Phase 1):
 - `crew docker-env [path]` — generate per-worktree docker `.env`
 - `crew db-clone <KEY>` — clone main's postgres data into a worktree's stack
 - `crew normalize-line-endings` — the legacy CRLF fixer (kept for hosts with autocrlf)
-- `crew daemon start|stop|status` — daemon lifecycle
+- `crew daemon start|stop|status` — daemon lifecycle (no-op stubs in Phase 1)
 
 ### Daemon
 
@@ -81,14 +109,14 @@ Routes:
 
 Live updates come from the daemon's SSE stream. No polling.
 
-### Shared package
+### Shared modules (Phase 1: `cli/src/lib/`; Phase 1.5: extracted to `shared/`)
 
-Pure TypeScript modules used by all three packages:
+Pure TypeScript modules used by `cli/` initially and (once Phase 2 starts) by `daemon/` too. Living in `cli/src/lib/` during Phase 1 keeps the workspace ceremony low; gets extracted into `shared/` the moment another package needs them.
 
 - `transcripts/` — parse Claude Code's JSONL format (the same logic the bash watch-ticket.sh has, but typed)
-- `config/` — per-project TOML config schema + loader
+- `config/` — per-project TOML config schema (zod) + loader (smol-toml)
 - `jira/` — REST client for status transitions, issue fetch (works alongside the agent's MCP usage; the daemon needs a separate token for batch operations)
-- `github/` — gh CLI wrapper for PR state
+- `github/` — `gh` CLI wrapper (via execa) for PR state
 - `docker/` — compose project introspection, port hash for `.env` generation
 - `agents/` — the prompt templates as typed string builders
 
@@ -144,12 +172,16 @@ Auto-discovered when `crew` is run from inside a registered repo's tree.
 
 Everything the bash scripts do, but typed. No daemon yet, no dashboard. Each subcommand runs synchronously, prints structured output, exits.
 
-- Workspace setup, base tooling (eslint, prettier, vitest, typescript)
-- `shared/` package with transcript types, config loader, prompt templates
-- `cli/` package with all the subcommands listed above
-- A migration shim in Recipes-App that installs the CLI globally and points the existing `scripts/` at it (or removes them entirely)
+- Workspace setup, base tooling (eslint, prettier, vitest, typescript) — workspaces declared upfront with empty placeholders for `daemon`, `dashboard`, `shared`
+- `cli/` package with all the subcommands listed above; cross-cutting helpers (config loader, transcript parser, prompt builders, jira/github clients, port hash) live in `cli/src/lib/` for now
+- Distribution via `npm link` from the local crew checkout — no npm publish in Phase 1.  The Recipes-App bash shims become `exec crew "$@"` and pick up the linked binary from `PATH`
+- A migration shim in Recipes-App that points the existing `scripts/` at the linked CLI
 
 **Done when:** every existing bash script has a `crew` equivalent that produces the same outcome with cleaner errors and structured output.
+
+### Phase 1.5 — `shared/` extraction (transition into Phase 2)
+
+When Phase 2 starts, the daemon will need to import the same transcript parser and config loader that Phase 1 lives with in `cli/src/lib/`. At that moment — not before — extract those modules into the `shared/` workspace package and update `cli` to import from `shared/` instead of `./lib/`. This is a single-PR refactor, not a separate phase per se, but worth calling out so it doesn't get done prematurely.
 
 ### Phase 2 — Daemon + state store
 
@@ -195,7 +227,7 @@ The web UI. Phase 2's REST + SSE endpoints provide everything it needs.
 
 ## Open questions
 
-- **Distribution.** npm package or curl-installable binary? Bun's build into a single binary is appealing for a CLI but adds a tooling layer. Start with npm-link-then-publish.
+- **Distribution past Phase 1.** Phase 1 ships via `npm link` from the local checkout. Past that: `npm publish` is the easy default; Node SEA single-binary is fancier but ergonomic for shipping to multiple machines without a Node install. Defer the call until we actually want to install crew somewhere we don't already have it set up.
 - **Auth secrets.** Where do gh-token, jira-token, anthropic-api-key live? Currently per-repo `.claude/secrets/`. For crew that's project-config relative, but that re-introduces per-project secret duplication. Probably: per-user `~/.config/crew/secrets.toml` with project-scoped fallbacks.
 - **Sandbox config drift.** crew can write `.claude/settings.json` for a worktree, but if the user customises it, crew shouldn't clobber. Use the same "tag the file with a `# generated by crew` header and refuse to overwrite without it" pattern from `docker-env.sh`.
 - **Whether Phase 2 + Phase 3 deserve to be separate phases.** They could ship together. Decide based on Phase 1's actual size.
