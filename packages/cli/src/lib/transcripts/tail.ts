@@ -1,4 +1,4 @@
-import { existsSync } from 'node:fs';
+import { existsSync, statSync } from 'node:fs';
 import { open } from 'node:fs/promises';
 import { setTimeout as delay } from 'node:timers/promises';
 import type { TranscriptEvent } from './types.js';
@@ -6,6 +6,12 @@ import type { TranscriptEvent } from './types.js';
 export interface TailOptions {
   signal?: AbortSignal;
   pollMs?: number;
+  /**
+   * When true, skip any content already in the file at the moment tailing
+   * starts and only yield events appended afterwards. Use this for resumed
+   * Claude sessions where the prior history shouldn't be replayed.
+   */
+  startAtEnd?: boolean;
 }
 
 /**
@@ -19,7 +25,7 @@ export async function* tailTranscript(
   opts: TailOptions = {},
 ): AsyncGenerator<TranscriptEvent> {
   const pollMs = opts.pollMs ?? 200;
-  let position = 0;
+  let position = opts.startAtEnd && existsSync(path) ? statSync(path).size : 0;
   let buffer = '';
 
   // Read-first-then-check-abort: guarantees one final drain pass after the
