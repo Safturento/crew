@@ -1,0 +1,4 @@
+# Prompt templates are byte-precise — Prettier's markdown printer would reformat
+# bullets, code fences, and trailing whitespace, breaking buildTicketPrompt /
+# buildFixPrPrompt's identical-output guarantee.
+packages/cli/src/lib/prompts/templates/
