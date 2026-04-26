@@ -80,11 +80,7 @@ describe('tailTranscript', () => {
     writeFileSync(path, '');
 
     const abort = new AbortController();
-    const collector = collect(
-      tailTranscript(path, { signal: abort.signal, pollMs: 20 }),
-      2,
-      abort,
-    );
+    const collector = collect(tailTranscript(path, { signal: abort.signal, pollMs: 20 }), 2, abort);
 
     await delay(50);
     appendFileSync(path, assistantEvent(1) + '\n');
@@ -99,11 +95,7 @@ describe('tailTranscript', () => {
     const path = join(dir, 'late.jsonl');
 
     const abort = new AbortController();
-    const collector = collect(
-      tailTranscript(path, { signal: abort.signal, pollMs: 20 }),
-      1,
-      abort,
-    );
+    const collector = collect(tailTranscript(path, { signal: abort.signal, pollMs: 20 }), 1, abort);
 
     await delay(60);
     writeFileSync(path, assistantEvent(1) + '\n');
