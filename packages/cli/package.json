@@ -1,0 +1,16 @@
+{
+  "name": "crew-cli",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "The crew CLI.",
+  "bin": {
+    "crew": "./bin/crew.js"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest",
+    "test:run": "vitest run"
+  },
+  "dependencies": {}
+}
