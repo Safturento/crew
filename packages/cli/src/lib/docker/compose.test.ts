@@ -21,10 +21,7 @@ describe('listRunningProjects', () => {
     const projects = await listRunningProjects();
 
     expect(projects).toEqual(['recipes-app', 'recipes-app-kan-23', 'recipes-app-kan-25']);
-    expect(mockedExeca).toHaveBeenCalledWith(
-      'docker',
-      expect.arrayContaining(['ps', '--format']),
-    );
+    expect(mockedExeca).toHaveBeenCalledWith('docker', expect.arrayContaining(['ps', '--format']));
   });
 
   it('deduplicates and skips empty lines', async () => {

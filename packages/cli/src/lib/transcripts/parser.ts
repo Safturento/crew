@@ -1,9 +1,4 @@
-import type {
-  TranscriptEvent,
-  ToolCall,
-  AggregateUsage,
-  ToolUseContent,
-} from './types.js';
+import type { TranscriptEvent, ToolCall, AggregateUsage, ToolUseContent } from './types.js';
 
 export function parseTranscript(raw: string): TranscriptEvent[] {
   const events: TranscriptEvent[] = [];
@@ -21,9 +16,7 @@ export function parseTranscript(raw: string): TranscriptEvent[] {
 
 export function parseToolCall(event: TranscriptEvent): ToolCall | null {
   if (event.type !== 'assistant') return null;
-  const toolUse = event.message.content.find(
-    (c): c is ToolUseContent => c.type === 'tool_use',
-  );
+  const toolUse = event.message.content.find((c): c is ToolUseContent => c.type === 'tool_use');
   if (!toolUse) return null;
   return {
     name: toolUse.name,
