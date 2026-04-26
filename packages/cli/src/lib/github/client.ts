@@ -13,14 +13,31 @@ export interface ReviewComment {
   body: string;
 }
 
-export async function getPrForBranch(branch: string): Promise<PrSummary | null> {
+export interface IssueComment {
+  author: string;
+  createdAt: string;
+  body: string;
+}
+
+export interface Review {
+  author: string;
+  state: string;
+  body: string;
+}
+
+export type PrState = 'open' | 'closed' | 'merged' | 'all';
+
+export async function getPrForBranch(
+  branch: string,
+  state: PrState = 'all',
+): Promise<PrSummary | null> {
   const { stdout } = await execa('gh', [
     'pr',
     'list',
     '--head',
     branch,
     '--state',
-    'all',
+    state,
     '--json',
     'number,state,url',
   ]);
@@ -37,6 +54,37 @@ export async function mergeStatus(prNumber: number): Promise<{ state: string }> 
     'state,mergedAt',
   ]);
   return JSON.parse(stdout) as { state: string };
+}
+
+export async function getIssueComments(
+  owner: string,
+  repo: string,
+  prNumber: number,
+): Promise<IssueComment[]> {
+  const { stdout } = await execa('gh', [
+    'api',
+    `repos/${owner}/${repo}/issues/${prNumber}/comments`,
+  ]);
+  type Raw = { user: { login: string }; created_at: string; body: string };
+  const list = JSON.parse(stdout) as Raw[];
+  return list.map((c) => ({
+    author: c.user.login,
+    createdAt: c.created_at,
+    body: c.body,
+  }));
+}
+
+export async function getReviews(owner: string, repo: string, prNumber: number): Promise<Review[]> {
+  const { stdout } = await execa('gh', ['api', `repos/${owner}/${repo}/pulls/${prNumber}/reviews`]);
+  type Raw = { user: { login: string }; state: string; body: string | null };
+  const list = JSON.parse(stdout) as Raw[];
+  return list
+    .filter((r): r is Raw & { body: string } => typeof r.body === 'string' && r.body.length > 0)
+    .map((r) => ({
+      author: r.user.login,
+      state: r.state,
+      body: r.body,
+    }));
 }
 
 export async function getReviewComments(

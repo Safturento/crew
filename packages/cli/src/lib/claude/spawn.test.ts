@@ -1,0 +1,93 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { execa } from 'execa';
+import { spawnClaudeResume } from './spawn.js';
+
+vi.mock('execa', () => ({ execa: vi.fn() }));
+
+const mockedExeca = vi.mocked(execa);
+
+beforeEach(() => mockedExeca.mockReset());
+
+describe('spawnClaudeResume', () => {
+  it('spawns claude with the resume + headless flags and the prompt', () => {
+    const fakeSubprocess = {
+      stdout: { pipe: vi.fn() },
+      stderr: { pipe: vi.fn() },
+    };
+    mockedExeca.mockReturnValueOnce(fakeSubprocess as never);
+
+    const result = spawnClaudeResume({
+      sessionId: 'abc-123',
+      prompt: 'do the thing',
+      logFile: '/tmp/x.log',
+    });
+
+    expect(mockedExeca).toHaveBeenCalledWith(
+      'claude',
+      ['--dangerously-skip-permissions', '--resume', 'abc-123', '-p', 'do the thing'],
+      expect.objectContaining({ env: expect.any(Object) }),
+    );
+    expect(result).toBe(fakeSubprocess);
+  });
+
+  it('pipes both stdout and stderr to the log file', () => {
+    const stdoutPipe = vi.fn();
+    const stderrPipe = vi.fn();
+    const fakeSubprocess = {
+      stdout: { pipe: stdoutPipe },
+      stderr: { pipe: stderrPipe },
+    };
+    mockedExeca.mockReturnValueOnce(fakeSubprocess as never);
+
+    spawnClaudeResume({ sessionId: 's', prompt: 'p', logFile: '/tmp/x.log' });
+
+    expect(stdoutPipe).toHaveBeenCalledTimes(1);
+    expect(stderrPipe).toHaveBeenCalledTimes(1);
+  });
+
+  it('prepends ~/.local/bin to PATH if missing', () => {
+    const original = process.env.PATH;
+    process.env.PATH = '/usr/bin:/bin';
+    try {
+      mockedExeca.mockReturnValueOnce({
+        stdout: { pipe: vi.fn() },
+        stderr: { pipe: vi.fn() },
+      } as never);
+      spawnClaudeResume({ sessionId: 's', prompt: 'p', logFile: '/tmp/x.log' });
+      expect(mockedExeca).toHaveBeenCalledWith(
+        'claude',
+        expect.any(Array),
+        expect.objectContaining({
+          env: expect.objectContaining({
+            PATH: expect.stringMatching(/^\/[^:]+\/\.local\/bin:\/usr\/bin:\/bin$/),
+          }),
+        }),
+      );
+    } finally {
+      process.env.PATH = original;
+    }
+  });
+
+  it('leaves PATH alone if ~/.local/bin is already present', () => {
+    const original = process.env.PATH;
+    const home = process.env.HOME ?? '/home/x';
+    const localBin = `${home}/.local/bin`;
+    process.env.PATH = `${localBin}:/usr/bin:/bin`;
+    try {
+      mockedExeca.mockReturnValueOnce({
+        stdout: { pipe: vi.fn() },
+        stderr: { pipe: vi.fn() },
+      } as never);
+      spawnClaudeResume({ sessionId: 's', prompt: 'p', logFile: '/tmp/x.log' });
+      expect(mockedExeca).toHaveBeenCalledWith(
+        'claude',
+        expect.any(Array),
+        expect.objectContaining({
+          env: expect.objectContaining({ PATH: `${localBin}:/usr/bin:/bin` }),
+        }),
+      );
+    } finally {
+      process.env.PATH = original;
+    }
+  });
+});
