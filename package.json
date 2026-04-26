@@ -2,6 +2,7 @@
   "name": "crew",
   "private": true,
   "version": "0.0.0",
+  "type": "module",
   "description": "CLI + dashboard for orchestrating Claude Code agents on tickets.",
   "workspaces": [
     "packages/*"
@@ -11,7 +12,18 @@
     "test": "npm run test --workspaces --if-present",
     "test:run": "npm run test:run --workspaces --if-present",
     "typecheck": "npm run typecheck --workspaces --if-present",
-    "lint": "eslint packages --fix",
-    "format": "prettier --write packages docs"
+    "lint": "eslint packages",
+    "lint:fix": "eslint packages --fix",
+    "format": "prettier --write packages docs",
+    "format:check": "prettier --check packages docs"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.2.1",
+    "eslint-config-prettier": "^10.1.8",
+    "prettier": "^3.8.3",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.59.0",
+    "vitest": "^4.1.5"
   }
 }

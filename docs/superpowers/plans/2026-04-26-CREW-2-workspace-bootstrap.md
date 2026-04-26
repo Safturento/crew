@@ -41,6 +41,7 @@
 ## Task 1: Add base TypeScript config
 
 **Files:**
+
 - Create: `tsconfig.base.json`
 - Create: `packages/cli/tsconfig.json`
 
@@ -90,6 +91,7 @@ git commit -m "feat(CREW-2): add base TypeScript config + cli tsconfig"
 ## Task 2: Add ESLint flat config
 
 **Files:**
+
 - Create: `eslint.config.js`
 
 - [ ] **Step 1: Create `eslint.config.js` at repo root**
@@ -134,6 +136,7 @@ git commit -m "feat(CREW-2): add eslint flat config"
 ## Task 3: Add Prettier config
 
 **Files:**
+
 - Create: `.prettierrc`
 
 - [ ] **Step 1: Create `.prettierrc`**
@@ -160,6 +163,7 @@ git commit -m "feat(CREW-2): add prettier config"
 ## Task 4: Add Vitest config
 
 **Files:**
+
 - Create: `vitest.config.ts`
 
 - [ ] **Step 1: Create `vitest.config.ts` at repo root**
@@ -188,6 +192,7 @@ git commit -m "feat(CREW-2): add vitest config"
 These workspaces stay unpopulated through Phase 1. They need a `package.json` for the workspace declaration to resolve.
 
 **Files:**
+
 - Create: `packages/daemon/package.json`
 - Create: `packages/dashboard/package.json`
 - Create: `packages/shared/package.json`
@@ -240,6 +245,7 @@ git commit -m "feat(CREW-2): add placeholder package.jsons for unused workspaces
 ## Task 6: Create cli/package.json
 
 **Files:**
+
 - Create: `packages/cli/package.json`
 
 - [ ] **Step 1: Create `packages/cli/package.json`**
@@ -277,6 +283,7 @@ git commit -m "feat(CREW-2): add cli package.json with bin entry"
 ## Task 7: Create cli bin script + src entry + placeholder test
 
 **Files:**
+
 - Create: `packages/cli/bin/crew.js`
 - Create: `packages/cli/src/index.ts`
 - Create: `packages/cli/src/index.test.ts`
@@ -342,6 +349,7 @@ git commit -m "feat(CREW-2): add cli bin launcher + commander entry + placeholde
 ## Task 8: Install dependencies
 
 **Files:**
+
 - Modify: `package.json` (devDependencies)
 - Modify: `packages/cli/package.json` (dependencies)
 - Create: `package-lock.json`
@@ -485,6 +493,7 @@ Expected: nothing to commit. (If `package-lock.json` got further updates, those 
 ## Self-review
 
 **Spec coverage:**
+
 - ✅ Workspaces declared with placeholders for daemon/dashboard/shared (Tasks 5)
 - ✅ cli populated with bin + src + test (Tasks 6, 7)
 - ✅ Root tsconfig + per-package tsconfig (Task 1)
@@ -502,6 +511,7 @@ Expected: nothing to commit. (If `package-lock.json` got further updates, those 
 **Scope:** Single workspace bootstrap for one package (`cli`) plus tooling. Right-sized for one ticket.
 
 **Skills hooks:**
+
 - `superpowers:verification-before-completion` invoked at Task 9 explicitly.
 - `superpowers:test-driven-development` doesn't really fire here (this is config + placeholder code, no real logic to TDD); the placeholder test is just to prove the test runner works.
 - `superpowers:systematic-debugging` would fire if any step's expected output differs — unlikely on greenfield setup, but the agent should invoke it rather than guess if something breaks.

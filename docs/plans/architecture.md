@@ -26,23 +26,23 @@ A solo developer (or small team) who:
 
 Locked through the brainstorming session in `docs/plans/...` (this file). The choices are intentionally conservative — boring, mature, well-documented libraries — because crew is a tool we want to live with for years, not a place to chase ergonomics fashion.
 
-| Concern | Pick | Notes |
-|---|---|---|
-| Language | TypeScript | |
-| Runtime | Node 22+ | Native TS via `--experimental-strip-types` exists but skipped for now (experimental, awkward shebangs). Revisit when stable |
-| Dev loop | **tsx** | No build step in Phase 1. `bin/crew` is a node shebang that imports `src/cli/index.ts` via tsx. Faster iteration; ~100ms tsx startup is invisible for a manually-invoked CLI |
-| Build (when needed) | **esbuild** | Phase 4+, only if/when we ship as a single binary. Not used in Phase 1 |
-| Arg parsing | **commander** | Mature, ubiquitous, no surprises. Picked over citty (younger) and yargs (heavier than we need) |
-| Subprocess | **execa** | Better defaults than `node:child_process`. We shell out heavily to git, docker, gh, claude |
-| Colors | **picocolors** | Lighter and faster than chalk; same API |
-| Spinners | **ora** | The standard; tty detection out of the box |
-| Multi-step progress | **listr2** | Composes ora-style spinners into a tree. Perfect for the run-ticket sequence (worktree → env → docker bringup → migrations → clone → claude launch) |
-| Tables | **cli-table3** | For `crew list` / `crew status` |
-| Interactive prompts | **@inquirer/prompts** | Modular successor to old monolithic inquirer. Cherry-pick what we need (input, select, confirm) |
-| Schema validation | **zod** | Project config TOML, prompt args |
-| TOML parsing | **smol-toml** | Modern, fast, small. `@iarna/toml` is older and heavier |
-| Testing | **vitest** | Same as Recipes-App; familiar |
-| Logging | none initially | `console.log` + picocolors is fine for Phase 1. Revisit (probably **pino**) when the daemon needs structured logs |
+| Concern             | Pick                  | Notes                                                                                                                                                                        |
+| ------------------- | --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Language            | TypeScript            |                                                                                                                                                                              |
+| Runtime             | Node 22+              | Native TS via `--experimental-strip-types` exists but skipped for now (experimental, awkward shebangs). Revisit when stable                                                  |
+| Dev loop            | **tsx**               | No build step in Phase 1. `bin/crew` is a node shebang that imports `src/cli/index.ts` via tsx. Faster iteration; ~100ms tsx startup is invisible for a manually-invoked CLI |
+| Build (when needed) | **esbuild**           | Phase 4+, only if/when we ship as a single binary. Not used in Phase 1                                                                                                       |
+| Arg parsing         | **commander**         | Mature, ubiquitous, no surprises. Picked over citty (younger) and yargs (heavier than we need)                                                                               |
+| Subprocess          | **execa**             | Better defaults than `node:child_process`. We shell out heavily to git, docker, gh, claude                                                                                   |
+| Colors              | **picocolors**        | Lighter and faster than chalk; same API                                                                                                                                      |
+| Spinners            | **ora**               | The standard; tty detection out of the box                                                                                                                                   |
+| Multi-step progress | **listr2**            | Composes ora-style spinners into a tree. Perfect for the run-ticket sequence (worktree → env → docker bringup → migrations → clone → claude launch)                          |
+| Tables              | **cli-table3**        | For `crew list` / `crew status`                                                                                                                                              |
+| Interactive prompts | **@inquirer/prompts** | Modular successor to old monolithic inquirer. Cherry-pick what we need (input, select, confirm)                                                                              |
+| Schema validation   | **zod**               | Project config TOML, prompt args                                                                                                                                             |
+| TOML parsing        | **smol-toml**         | Modern, fast, small. `@iarna/toml` is older and heavier                                                                                                                      |
+| Testing             | **vitest**            | Same as Recipes-App; familiar                                                                                                                                                |
+| Logging             | none initially        | `console.log` + picocolors is fine for Phase 1. Revisit (probably **pino**) when the daemon needs structured logs                                                            |
 
 **Phase 2/3 add:** chokidar (fs watching), better-sqlite3 (state), hono (daemon HTTP), vite + react (dashboard).
 
@@ -52,7 +52,7 @@ Locked through the brainstorming session in `docs/plans/...` (this file). The ch
 
 ## Architecture overview
 
-Four packages in an npm workspace.  Phase 1 lives entirely in `cli/`; the others are placeholders that fill in during their respective phases.  Workspaces are declared upfront (option C from the brainstorm) so we don't have to migrate imports later.
+Four packages in an npm workspace. Phase 1 lives entirely in `cli/`; the others are placeholders that fill in during their respective phases. Workspaces are declared upfront (option C from the brainstorm) so we don't have to migrate imports later.
 
 ```
 crew/
@@ -64,7 +64,7 @@ crew/
 └── docs/
 ```
 
-`shared/` doesn't exist as a populated package during Phase 1 — anything Phase 1 needs lives in `cli/src/lib/` and gets extracted when Phase 2 starts.  This avoids premature abstraction.
+`shared/` doesn't exist as a populated package during Phase 1 — anything Phase 1 needs lives in `cli/src/lib/` and gets extracted when Phase 2 starts. This avoids premature abstraction.
 
 ### CLI
 
@@ -174,7 +174,7 @@ Everything the bash scripts do, but typed. No daemon yet, no dashboard. Each sub
 
 - Workspace setup, base tooling (eslint, prettier, vitest, typescript) — workspaces declared upfront with empty placeholders for `daemon`, `dashboard`, `shared`
 - `cli/` package with all the subcommands listed above; cross-cutting helpers (config loader, transcript parser, prompt builders, jira/github clients, port hash) live in `cli/src/lib/` for now
-- Distribution via `npm link` from the local crew checkout — no npm publish in Phase 1.  The Recipes-App bash shims become `exec crew "$@"` and pick up the linked binary from `PATH`
+- Distribution via `npm link` from the local crew checkout — no npm publish in Phase 1. The Recipes-App bash shims become `exec crew "$@"` and pick up the linked binary from `PATH`
 - A migration shim in Recipes-App that points the existing `scripts/` at the linked CLI
 
 **Done when:** every existing bash script has a `crew` equivalent that produces the same outcome with cleaner errors and structured output.
