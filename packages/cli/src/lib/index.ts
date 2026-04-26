@@ -1,5 +1,6 @@
 export * from './claude/index.js';
 export * from './config/index.js';
+export * from './db-clone/index.js';
 export * from './docker/index.js';
 export * from './git/index.js';
 export * from './github/index.js';
