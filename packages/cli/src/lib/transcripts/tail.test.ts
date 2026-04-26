@@ -119,6 +119,28 @@ describe('tailTranscript', () => {
     expect(events[0]?.type).toBe('assistant');
   });
 
+  it('skips pre-existing content when startAtEnd is true', async () => {
+    const path = join(dir, 't.jsonl');
+    writeFileSync(path, assistantEvent(1) + '\n' + assistantEvent(2) + '\n');
+
+    const abort = new AbortController();
+    const collector = collect(
+      tailTranscript(path, { signal: abort.signal, pollMs: 20, startAtEnd: true }),
+      1,
+      abort,
+    );
+
+    await delay(50);
+    appendFileSync(path, assistantEvent(3) + '\n');
+
+    const events = await collector;
+    expect(events).toHaveLength(1);
+    expect(events[0]?.type).toBe('assistant');
+    if (events[0]?.type === 'assistant') {
+      expect(events[0].message.id).toBe('msg-3');
+    }
+  });
+
   it('stops promptly when the AbortSignal fires', async () => {
     const path = join(dir, 't.jsonl');
     writeFileSync(path, '');

@@ -13,7 +13,6 @@ import {
   hasUncommittedChanges,
   NO_FEEDBACK_MARKER,
   parseToolCall,
-  parseTranscript,
   rebaseOnto,
   resolveWorktreePath,
   spawnClaudeResume,
@@ -209,18 +208,23 @@ async function runFixPr(key: string, flags: FixPrFlags): Promise<void> {
   process.on('SIGINT', onSignal);
   process.on('SIGTERM', onSignal);
 
+  // Bridge the subprocess lifecycle to an AbortSignal so the tail loop exits
+  // cleanly after claude terminates (or crashes). Drain-then-check-abort in
+  // the generator guarantees a final flush of trailing events.
+  const abort = new AbortController();
+  void Promise.resolve(sub)
+    .catch(() => {})
+    .finally(() => abort.abort());
+
   let claudeExitCode = 0;
   try {
-    await tailTranscript({
-      transcriptPath: session.transcriptPath,
-      until: sub,
-      onLine: (line) => {
-        for (const event of parseTranscript(line)) {
-          const call = parseToolCall(event);
-          if (call) process.stdout.write(`${formatToolCall(call)}\n`);
-        }
-      },
-    });
+    for await (const event of tailTranscript(session.transcriptPath, {
+      signal: abort.signal,
+      startAtEnd: true,
+    })) {
+      const call = parseToolCall(event);
+      if (call) process.stdout.write(`${formatToolCall(call)}\n`);
+    }
     try {
       await sub;
     } catch (err) {
