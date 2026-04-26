@@ -2,6 +2,8 @@ import { existsSync, readdirSync, statSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { basename, join } from 'node:path';
 
+export * from './discovery.js';
+
 const DEFAULT_PROJECTS_ROOT = join(homedir(), '.claude', 'projects');
 
 /**
