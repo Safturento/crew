@@ -3,6 +3,7 @@ import { homedir } from 'node:os';
 import { basename, join } from 'node:path';
 
 export * from './discovery.js';
+export * from './status.js';
 
 const DEFAULT_PROJECTS_ROOT = join(homedir(), '.claude', 'projects');
 
