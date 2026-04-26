@@ -88,6 +88,37 @@ describe('tailTranscript', () => {
     expect(lines).toEqual(['flushed']);
   });
 
+  it('terminates when until rejects (does not strand the loop)', async () => {
+    const file = join(tmp, 't.jsonl');
+    writeFileSync(file, 'pending\n');
+
+    const lines: string[] = [];
+    let rejectDone: (err: Error) => void = () => {};
+    const failed = new Promise<void>((_, reject) => {
+      rejectDone = reject;
+    });
+    failed.catch(() => {});
+
+    const tailPromise = tailTranscript({
+      transcriptPath: file,
+      until: failed,
+      onLine: (l) => lines.push(l),
+      pollMs: 25,
+    });
+
+    await new Promise((r) => setTimeout(r, 30));
+    appendFileSync(file, 'flushed\n');
+    rejectDone(new Error('subprocess crashed'));
+
+    // Should resolve promptly even though `until` rejected.
+    await Promise.race([
+      tailPromise,
+      new Promise((_, rej) => setTimeout(() => rej(new Error('tail did not terminate')), 1000)),
+    ]);
+
+    expect(lines).toEqual(['flushed']);
+  });
+
   it('survives the file not existing at start (waits for it to appear)', async () => {
     const file = join(tmp, 'late.jsonl');
 

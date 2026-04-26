@@ -28,6 +28,34 @@ describe('getPrForBranch', () => {
     mockedExeca.mockResolvedValueOnce({ stdout: '[]' } as never);
     expect(await getPrForBranch('KAN-1')).toBeNull();
   });
+
+  it('passes the requested state filter to gh (default all, override open)', async () => {
+    mockedExeca.mockResolvedValueOnce({ stdout: '[]' } as never);
+    await getPrForBranch('KAN-1');
+    expect(mockedExeca).toHaveBeenCalledWith('gh', [
+      'pr',
+      'list',
+      '--head',
+      'KAN-1',
+      '--state',
+      'all',
+      '--json',
+      'number,state,url',
+    ]);
+
+    mockedExeca.mockResolvedValueOnce({ stdout: '[]' } as never);
+    await getPrForBranch('KAN-1', 'open');
+    expect(mockedExeca).toHaveBeenLastCalledWith('gh', [
+      'pr',
+      'list',
+      '--head',
+      'KAN-1',
+      '--state',
+      'open',
+      '--json',
+      'number,state,url',
+    ]);
+  });
 });
 
 describe('mergeStatus', () => {

@@ -1,5 +1,6 @@
 import { execa } from 'execa';
-import { basename, dirname, join } from 'node:path';
+import { existsSync, statSync } from 'node:fs';
+import { basename, dirname, isAbsolute, join } from 'node:path';
 
 /**
  * Returns true if the worktree has any uncommitted changes (working tree
@@ -50,13 +51,9 @@ export async function rebaseOnto(cwd: string, ref: string): Promise<RebaseResult
 async function isMidRebase(cwd: string): Promise<boolean> {
   for (const variant of ['rebase-merge', 'rebase-apply']) {
     const { stdout: relPath } = await execa('git', ['rev-parse', '--git-path', variant], { cwd });
-    const fullPath = relPath.trim();
-    try {
-      await execa('test', ['-d', fullPath], { cwd });
-      return true;
-    } catch {
-      // not a directory; try next variant
-    }
+    const trimmed = relPath.trim();
+    const fullPath = isAbsolute(trimmed) ? trimmed : join(cwd, trimmed);
+    if (existsSync(fullPath) && statSync(fullPath).isDirectory()) return true;
   }
   return false;
 }

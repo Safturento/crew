@@ -67,10 +67,10 @@ export async function loadFeedback(
   }
 
   const branch = opts.branch ?? opts.key;
-  const pr = await getPrForBranch(branch);
+  const pr = await getPrForBranch(branch, 'open');
   if (!pr) {
     throw new Error(
-      `no PR found on branch ${branch}. Open one first or use --from-file / --from-stdin.`,
+      `no open PR found on branch ${branch}. Open one first or use --from-file / --from-stdin.`,
     );
   }
   const slug = parseGithubPrUrl(pr.url);
@@ -203,10 +203,13 @@ async function runFixPr(key: string, flags: FixPrFlags): Promise<void> {
   const onSignal = (): void => {
     process.stderr.write('\n→ Aborting…\n');
     sub.kill('SIGTERM');
+    // Mirror the bash trap: exit immediately with the conventional 130 for SIGINT.
+    process.exit(130);
   };
   process.on('SIGINT', onSignal);
   process.on('SIGTERM', onSignal);
 
+  let claudeExitCode = 0;
   try {
     await tailTranscript({
       transcriptPath: session.transcriptPath,
@@ -218,37 +221,60 @@ async function runFixPr(key: string, flags: FixPrFlags): Promise<void> {
         }
       },
     });
-    await sub;
+    try {
+      await sub;
+    } catch (err) {
+      claudeExitCode = (err as { exitCode?: number }).exitCode ?? 1;
+    }
   } finally {
     process.off('SIGINT', onSignal);
     process.off('SIGTERM', onSignal);
   }
 
-  const log = existsSync(logFile) ? readFileSync(logFile, 'utf8') : '';
+  printFooter({
+    key,
+    worktree,
+    logFile,
+    conflicts,
+    claudeExitCode,
+  });
+  process.exitCode = claudeExitCode;
+}
+
+interface PrintFooterOptions {
+  key: string;
+  worktree: string;
+  logFile: string;
+  conflicts: string[] | undefined;
+  claudeExitCode: number;
+}
+
+function printFooter(opts: PrintFooterOptions): void {
+  const log = existsSync(opts.logFile) ? readFileSync(opts.logFile, 'utf8') : '';
   process.stdout.write(
     `\n─────────────────────────────────────────────────────────────\n` +
-      `→ Run finished. Final claude output:\n` +
-      `  (full log: ${logFile})\n` +
+      `→ Run finished (rc=${opts.claudeExitCode}). Final claude output:\n` +
+      `  (full log: ${opts.logFile})\n` +
       `─────────────────────────────────────────────────────────────\n\n` +
       log +
       '\n',
   );
 
-  if (conflicts && conflicts.length > 0) {
+  if (opts.conflicts && opts.conflicts.length > 0 && opts.claudeExitCode === 0) {
     process.stdout.write(
       `\n─────────────────────────────────────────────────────────────\n` +
         `⚠  Conflicts were resolved during this run — nothing has been pushed.\n` +
         `   Inspect the resolution before shipping:\n` +
-        `     cd ${worktree}\n` +
-        `     git log --oneline origin/${key}..HEAD     # commits to review\n` +
-        `     git diff origin/${key}..HEAD              # full diff of pending push\n` +
+        `     cd ${opts.worktree}\n` +
+        `     git log --oneline origin/${opts.key}..HEAD     # commits to review\n` +
+        `     git diff origin/${opts.key}..HEAD              # full diff of pending push\n` +
         `   When you're satisfied:\n` +
-        `     git push --force-with-lease origin ${key}\n` +
+        `     git push --force-with-lease origin ${opts.key}\n` +
         `─────────────────────────────────────────────────────────────\n`,
     );
-  } else {
+  } else if (opts.claudeExitCode === 0) {
     process.stdout.write(
-      `\n→ Push when ready:\n` + `     git push --force-with-lease origin ${key}\n`,
+      `\n→ Push when ready:\n` + `     git push --force-with-lease origin ${opts.key}\n`,
     );
   }
 }

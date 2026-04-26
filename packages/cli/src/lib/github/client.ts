@@ -25,14 +25,19 @@ export interface Review {
   body: string;
 }
 
-export async function getPrForBranch(branch: string): Promise<PrSummary | null> {
+export type PrState = 'open' | 'closed' | 'merged' | 'all';
+
+export async function getPrForBranch(
+  branch: string,
+  state: PrState = 'all',
+): Promise<PrSummary | null> {
   const { stdout } = await execa('gh', [
     'pr',
     'list',
     '--head',
     branch,
     '--state',
-    'all',
+    state,
     '--json',
     'number,state,url',
   ]);

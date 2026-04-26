@@ -22,15 +22,11 @@ describe('spawnClaudeResume', () => {
       logFile: '/tmp/x.log',
     });
 
-    const [bin, args] = mockedExeca.mock.calls[0]!;
-    expect(bin).toBe('claude');
-    expect(args).toEqual([
-      '--dangerously-skip-permissions',
-      '--resume',
-      'abc-123',
-      '-p',
-      'do the thing',
-    ]);
+    expect(mockedExeca).toHaveBeenCalledWith(
+      'claude',
+      ['--dangerously-skip-permissions', '--resume', 'abc-123', '-p', 'do the thing'],
+      expect.objectContaining({ env: expect.any(Object) }),
+    );
     expect(result).toBe(fakeSubprocess);
   });
 
@@ -47,5 +43,51 @@ describe('spawnClaudeResume', () => {
 
     expect(stdoutPipe).toHaveBeenCalledTimes(1);
     expect(stderrPipe).toHaveBeenCalledTimes(1);
+  });
+
+  it('prepends ~/.local/bin to PATH if missing', () => {
+    const original = process.env.PATH;
+    process.env.PATH = '/usr/bin:/bin';
+    try {
+      mockedExeca.mockReturnValueOnce({
+        stdout: { pipe: vi.fn() },
+        stderr: { pipe: vi.fn() },
+      } as never);
+      spawnClaudeResume({ sessionId: 's', prompt: 'p', logFile: '/tmp/x.log' });
+      expect(mockedExeca).toHaveBeenCalledWith(
+        'claude',
+        expect.any(Array),
+        expect.objectContaining({
+          env: expect.objectContaining({
+            PATH: expect.stringMatching(/^\/[^:]+\/\.local\/bin:\/usr\/bin:\/bin$/),
+          }),
+        }),
+      );
+    } finally {
+      process.env.PATH = original;
+    }
+  });
+
+  it('leaves PATH alone if ~/.local/bin is already present', () => {
+    const original = process.env.PATH;
+    const home = process.env.HOME ?? '/home/x';
+    const localBin = `${home}/.local/bin`;
+    process.env.PATH = `${localBin}:/usr/bin:/bin`;
+    try {
+      mockedExeca.mockReturnValueOnce({
+        stdout: { pipe: vi.fn() },
+        stderr: { pipe: vi.fn() },
+      } as never);
+      spawnClaudeResume({ sessionId: 's', prompt: 'p', logFile: '/tmp/x.log' });
+      expect(mockedExeca).toHaveBeenCalledWith(
+        'claude',
+        expect.any(Array),
+        expect.objectContaining({
+          env: expect.objectContaining({ PATH: `${localBin}:/usr/bin:/bin` }),
+        }),
+      );
+    } finally {
+      process.env.PATH = original;
+    }
   });
 });

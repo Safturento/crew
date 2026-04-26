@@ -1,4 +1,7 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { mkdtempSync, rmSync, mkdirSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { execa } from 'execa';
 import { hasUncommittedChanges, fetchOrigin, rebaseOnto, resolveWorktreePath } from './index.js';
 
@@ -47,18 +50,28 @@ describe('fetchOrigin', () => {
 });
 
 describe('rebaseOnto', () => {
+  let tmp: string;
+
+  beforeEach(() => {
+    tmp = mkdtempSync(join(tmpdir(), 'crew-rebase-'));
+  });
+
+  afterEach(() => {
+    rmSync(tmp, { recursive: true, force: true });
+  });
+
   it('returns ok=true on a clean rebase', async () => {
     ok();
-    expect(await rebaseOnto('/wt', 'origin/main')).toEqual({ ok: true });
+    expect(await rebaseOnto(tmp, 'origin/main')).toEqual({ ok: true });
   });
 
   it('returns conflict files when the rebase reports a merge state', async () => {
+    mkdirSync(join(tmp, '.git', 'rebase-merge'), { recursive: true });
     fail('CONFLICT');
     ok('.git/rebase-merge\n');
-    ok(); // test -d succeeds
     ok('src/foo.ts\nsrc/bar.ts\n');
 
-    expect(await rebaseOnto('/wt', 'origin/main')).toEqual({
+    expect(await rebaseOnto(tmp, 'origin/main')).toEqual({
       ok: false,
       conflicts: ['src/foo.ts', 'src/bar.ts'],
     });
@@ -67,11 +80,9 @@ describe('rebaseOnto', () => {
   it('throws when the rebase fails for a non-conflict reason', async () => {
     fail('weird');
     ok('.git/rebase-merge\n');
-    fail('no such file');
     ok('.git/rebase-apply\n');
-    fail('no such file');
 
-    await expect(rebaseOnto('/wt', 'origin/main')).rejects.toThrow();
+    await expect(rebaseOnto(tmp, 'origin/main')).rejects.toThrow();
   });
 });
 

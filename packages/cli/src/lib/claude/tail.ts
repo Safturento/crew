@@ -1,4 +1,4 @@
-import { existsSync, statSync, openSync, readSync, closeSync } from 'node:fs';
+import { statSync, openSync, readSync, closeSync } from 'node:fs';
 
 export interface TailOptions {
   transcriptPath: string;
@@ -17,12 +17,16 @@ export interface TailOptions {
  */
 export async function tailTranscript(opts: TailOptions): Promise<void> {
   const pollMs = opts.pollMs ?? 250;
-  let pos = existsSync(opts.transcriptPath) ? statSync(opts.transcriptPath).size : 0;
+  let pos = currentSize(opts.transcriptPath);
   let leftover = '';
   let done = false;
-  void opts.until.then(() => {
-    done = true;
-  });
+  // Set done on either resolve OR reject so a crashing subprocess (or any
+  // rejected `until`) doesn't strand the polling loop.
+  void Promise.resolve(opts.until)
+    .catch(() => {})
+    .finally(() => {
+      done = true;
+    });
 
   const drain = (): void => {
     const next = readNewBytes(opts.transcriptPath, pos);
@@ -48,8 +52,7 @@ export async function tailTranscript(opts: TailOptions): Promise<void> {
 }
 
 function readNewBytes(path: string, from: number): Buffer | null {
-  if (!existsSync(path)) return null;
-  const size = statSync(path).size;
+  const size = currentSize(path);
   if (size <= from) return null;
   const length = size - from;
   const fd = openSync(path, 'r');
@@ -59,6 +62,14 @@ function readNewBytes(path: string, from: number): Buffer | null {
     return buf;
   } finally {
     closeSync(fd);
+  }
+}
+
+function currentSize(path: string): number {
+  try {
+    return statSync(path).size;
+  } catch {
+    return 0;
   }
 }
 

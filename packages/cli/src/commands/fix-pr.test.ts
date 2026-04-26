@@ -16,6 +16,17 @@ describe('parseGithubPrUrl', () => {
   it('returns null on non-github urls', () => {
     expect(parseGithubPrUrl('https://example.com/x/y/pull/1')).toBeNull();
   });
+
+  it('returns null on ssh-style urls', () => {
+    expect(parseGithubPrUrl('git@github.com:Safturento/crew.git')).toBeNull();
+  });
+
+  it('keeps the literal repo segment, including any trailing .git', () => {
+    expect(parseGithubPrUrl('https://github.com/Safturento/crew.git/pull/1')).toEqual({
+      owner: 'Safturento',
+      repo: 'crew.git',
+    });
+  });
 });
 
 describe('loadFeedback (file mode)', () => {
