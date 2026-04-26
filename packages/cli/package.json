@@ -12,5 +12,15 @@
     "test": "vitest",
     "test:run": "vitest run"
   },
-  "dependencies": {}
+  "dependencies": {
+    "@inquirer/prompts": "^8.4.2",
+    "cli-table3": "^0.6.5",
+    "commander": "^14.0.3",
+    "execa": "^9.6.1",
+    "listr2": "^10.2.1",
+    "ora": "^9.4.0",
+    "picocolors": "^1.1.1",
+    "smol-toml": "^1.6.1",
+    "zod": "^4.3.6"
+  }
 }
