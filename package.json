@@ -1,0 +1,17 @@
+{
+  "name": "crew",
+  "private": true,
+  "version": "0.0.0",
+  "description": "CLI + dashboard for orchestrating Claude Code agents on tickets.",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "test:run": "npm run test:run --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "lint": "eslint packages --fix",
+    "format": "prettier --write packages docs"
+  }
+}

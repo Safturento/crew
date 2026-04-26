@@ -1,0 +1,32 @@
+# Force LF line endings on every text file in the working tree.  Same
+# rationale as the recipes-app project: Git for Windows tends to set
+# core.autocrlf=true globally, which produces noisy "LF will be replaced
+# by CRLF" warnings and breaks shell-script shebangs when files get
+# rewritten with CRLF endings.
+
+* text=auto eol=lf
+
+*.sh        text eol=lf
+*.md        text eol=lf
+*.ts        text eol=lf
+*.tsx       text eol=lf
+*.js        text eol=lf
+*.jsx       text eol=lf
+*.json      text eol=lf
+*.yml       text eol=lf
+*.yaml      text eol=lf
+*.css       text eol=lf
+*.html      text eol=lf
+*.toml      text eol=lf
+
+*.png       binary
+*.jpg       binary
+*.jpeg      binary
+*.gif       binary
+*.webp      binary
+*.ico       binary
+*.pdf       binary
+*.woff      binary
+*.woff2     binary
+*.ttf       binary
+*.otf       binary

@@ -1,0 +1,49 @@
+# Dependencies
+node_modules
+
+# Build output
+dist
+build
+
+# TypeScript incremental build cache
+*.tsbuildinfo
+
+# Vite
+.vite
+vite.config.*.timestamp-*
+
+# Tests
+coverage
+.nyc_output
+
+# Local env / overrides / secrets
+*.local
+.env
+.env.*
+
+# Logs
+*.log
+logs
+
+# Caches
+.cache
+.eslintcache
+.prettiercache
+
+# OS metadata
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editor / temp
+*.swp
+*.swo
+*~
+
+# Local SQLite state for the daemon (per-machine, never useful in git)
+*.sqlite
+*.sqlite-journal
+*.sqlite-wal
+
+# Crew's own runtime data dir (config + state)
+.crew/
