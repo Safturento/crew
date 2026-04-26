@@ -147,14 +147,20 @@ async function runTicket(key: string, opts: RunOptions): Promise<never> {
   console.log();
 
   const logStream = createWriteStream(logPath, { flags: 'w' });
+  // Pipe stdout/stderr through after spawn rather than passing logStream as
+  // stdio directly: execa v9 rejects WriteStream objects whose fd hasn't
+  // been assigned yet (createWriteStream returns synchronously but opens
+  // the file on the next tick), causing an immediate ERR_INVALID_ARG_VALUE.
   const claudeProcess = execa('claude', ['--dangerously-skip-permissions', '-p', prompt], {
     cwd: worktree,
     stdin: 'ignore',
-    stdout: logStream,
-    stderr: logStream,
+    stdout: 'pipe',
+    stderr: 'pipe',
     env: { ...childEnv, GH_TOKEN: ghToken },
     reject: false,
   });
+  claudeProcess.stdout?.pipe(logStream);
+  claudeProcess.stderr?.pipe(logStream);
 
   // When claude exits, give the tail one more poll cycle to drain any
   // trailing events, then abort.
@@ -182,9 +188,13 @@ async function runTicket(key: string, opts: RunOptions): Promise<never> {
   if (!transcriptPath) {
     logStream.end();
     const result = await claudeProcess;
-    console.error(
-      pc.red(`claude exited (rc=${result.exitCode ?? '?'}) before producing a transcript.`),
-    );
+    if (result.failed && result.shortMessage) {
+      console.error(pc.red(`claude failed to spawn: ${result.shortMessage.split('\n')[0]}`));
+    } else {
+      console.error(
+        pc.red(`claude exited (rc=${result.exitCode ?? '?'}) before producing a transcript.`),
+      );
+    }
     if (existsSync(logPath)) console.error(readFileSync(logPath, 'utf8'));
     process.exit(resolveExitCode(result, signaled));
   }
@@ -262,15 +272,19 @@ function startDockerBringup(
   const dockerLogPath = dockerLogPathFor(key);
   const dockerStream = createWriteStream(dockerLogPath, { flags: 'w' });
   const script = buildDockerBringupScript(config.repo_path);
+  // See note above the claudeProcess spawn: execa v9 rejects WriteStream
+  // objects whose fd is still null. Pipe after spawn instead.
   const proc = execa('bash', ['-c', script], {
     cwd: worktree,
     stdin: 'ignore',
-    stdout: dockerStream,
-    stderr: dockerStream,
+    stdout: 'pipe',
+    stderr: 'pipe',
     detached: true,
     reject: false,
     env,
   });
+  proc.stdout?.pipe(dockerStream);
+  proc.stderr?.pipe(dockerStream);
   proc.unref();
   proc.finally(() => dockerStream.end()).catch(() => {});
 
