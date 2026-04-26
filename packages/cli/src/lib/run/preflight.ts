@@ -1,21 +1,32 @@
-import { execa } from 'execa';
+import { accessSync, constants } from 'node:fs';
+import { join } from 'node:path';
 
 /**
- * Whether the given binary resolves on $PATH (via `which`).
+ * Whether `name` exists as an executable file in one of the `:`-separated
+ * directories of `path` (defaults to $PATH). Avoids spawning `which` so the
+ * check is portable to minimal containers and Alpine/musl images that don't
+ * ship one by default.
  */
-export async function hasBinary(name: string): Promise<boolean> {
-  try {
-    await execa('which', [name]);
-    return true;
-  } catch {
-    return false;
+export function hasBinary(name: string, path: string = process.env.PATH ?? ''): boolean {
+  for (const dir of path.split(':')) {
+    if (!dir) continue;
+    try {
+      accessSync(join(dir, name), constants.X_OK);
+      return true;
+    } catch {
+      // not in this dir; try next
+    }
   }
+  return false;
 }
 
 /**
- * Return the subset of `tools` that are not on $PATH, preserving input order.
+ * Return the subset of `tools` that are not on $PATH (or `path`), preserving
+ * input order.
  */
-export async function preflightTools(tools: readonly string[]): Promise<string[]> {
-  const checks = await Promise.all(tools.map((tool) => hasBinary(tool)));
-  return tools.filter((_, i) => !checks[i]);
+export function preflightTools(
+  tools: readonly string[],
+  path: string = process.env.PATH ?? '',
+): string[] {
+  return tools.filter((tool) => !hasBinary(tool, path));
 }

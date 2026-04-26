@@ -1,54 +1,76 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { execa } from 'execa';
-import { preflightTools, hasBinary } from './preflight.js';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { chmodSync, mkdirSync, mkdtempSync, rmSync, writeFileSync, symlinkSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { hasBinary, preflightTools } from './preflight.js';
 
-vi.mock('execa', () => ({ execa: vi.fn() }));
-
-const mockedExeca = vi.mocked(execa);
+let dir: string;
 
 beforeEach(() => {
-  mockedExeca.mockReset();
+  dir = mkdtempSync(join(tmpdir(), 'crew-preflight-'));
 });
 
-describe('hasBinary', () => {
-  it('returns true when `which` resolves successfully', async () => {
-    mockedExeca.mockResolvedValueOnce({ stdout: '/usr/bin/claude' } as never);
+afterEach(() => {
+  rmSync(dir, { recursive: true, force: true });
+});
 
-    expect(await hasBinary('claude')).toBe(true);
-    expect(mockedExeca).toHaveBeenCalledWith('which', ['claude']);
+function makeExecutable(parent: string, name: string): void {
+  mkdirSync(parent, { recursive: true });
+  const path = join(parent, name);
+  writeFileSync(path, '#!/usr/bin/env bash\n');
+  chmodSync(path, 0o755);
+}
+
+describe('hasBinary', () => {
+  it('returns true when an executable file with the name lives in one of the PATH entries', () => {
+    makeExecutable(join(dir, 'a'), 'claude');
+    const path = `${join(dir, 'b')}:${join(dir, 'a')}`;
+
+    expect(hasBinary('claude', path)).toBe(true);
   });
 
-  it('returns false when `which` rejects', async () => {
-    mockedExeca.mockRejectedValueOnce(new Error('not found'));
+  it('returns false when the binary is missing in every PATH entry', () => {
+    expect(hasBinary('nope', `${dir}:${join(dir, 'sub')}`)).toBe(false);
+  });
 
-    expect(await hasBinary('nope')).toBe(false);
+  it('skips empty path segments without throwing', () => {
+    expect(hasBinary('nope', '::')).toBe(false);
+  });
+
+  it('treats files without the executable bit as missing', () => {
+    const parent = join(dir, 'a');
+    mkdirSync(parent, { recursive: true });
+    writeFileSync(join(parent, 'gh'), '');
+
+    expect(hasBinary('gh', parent)).toBe(false);
+  });
+
+  it('follows symlinks to a real executable', () => {
+    const parent = join(dir, 'a');
+    makeExecutable(parent, 'claude-real');
+    const linkParent = join(dir, 'b');
+    mkdirSync(linkParent, { recursive: true });
+    symlinkSync(join(parent, 'claude-real'), join(linkParent, 'claude'));
+
+    expect(hasBinary('claude', linkParent)).toBe(true);
   });
 });
 
 describe('preflightTools', () => {
-  it('returns an empty list when every binary is on PATH', async () => {
-    mockedExeca.mockResolvedValue({ stdout: '/usr/bin/x' } as never);
+  it('returns an empty list when every tool is on PATH', () => {
+    const parent = join(dir, 'bin');
+    makeExecutable(parent, 'claude');
+    makeExecutable(parent, 'gh');
+    makeExecutable(parent, 'jq');
 
-    expect(await preflightTools(['claude', 'gh', 'jq'])).toEqual([]);
-    expect(mockedExeca).toHaveBeenCalledTimes(3);
+    expect(preflightTools(['claude', 'gh', 'jq'], parent)).toEqual([]);
   });
 
-  it('returns the names of binaries `which` could not resolve', async () => {
-    mockedExeca
-      .mockResolvedValueOnce({ stdout: '/usr/bin/claude' } as never)
-      .mockRejectedValueOnce(new Error('not found'))
-      .mockResolvedValueOnce({ stdout: '/usr/bin/jq' } as never)
-      .mockRejectedValueOnce(new Error('not found'));
+  it('returns the names of binaries that are missing, preserving input order', () => {
+    const parent = join(dir, 'bin');
+    makeExecutable(parent, 'claude');
+    makeExecutable(parent, 'jq');
 
-    expect(await preflightTools(['claude', 'gh', 'jq', 'bwrap'])).toEqual(['gh', 'bwrap']);
-  });
-
-  it('preserves the input order in the missing list', async () => {
-    mockedExeca
-      .mockRejectedValueOnce(new Error('not found'))
-      .mockRejectedValueOnce(new Error('not found'))
-      .mockResolvedValueOnce({ stdout: '/usr/bin/x' } as never);
-
-    expect(await preflightTools(['a', 'b', 'c'])).toEqual(['a', 'b']);
+    expect(preflightTools(['claude', 'gh', 'jq', 'bwrap'], parent)).toEqual(['gh', 'bwrap']);
   });
 });

@@ -5,7 +5,6 @@ import {
   existsSync,
   mkdirSync,
   readFileSync,
-  statSync,
 } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
@@ -22,6 +21,8 @@ import {
   findNewestTranscript,
   hasBinary,
   preflightTools,
+  requireGhToken,
+  requireWorktreeAvailable,
   runLogPathFor,
   worktreePathFor,
 } from '../lib/run/index.js';
@@ -49,40 +50,47 @@ async function runTicket(key: string, opts: RunOptions): Promise<never> {
     );
   }
 
-  // Ensure ~/.local/bin is on $PATH so child processes can find tools that
-  // shells normally augment (e.g. user-installed gh). Mirrors run-ticket.sh.
+  // Build the augmented PATH once and pass it explicitly to every subprocess
+  // rather than mutating process.env. ~/.local/bin is prepended so user-
+  // installed binaries (e.g. gh) are reachable even if the shell that invoked
+  // crew didn't already include it. Mirrors run-ticket.sh.
   const localBin = join(homedir(), '.local', 'bin');
-  const path = process.env.PATH ?? '';
-  if (!path.split(':').includes(localBin)) {
-    process.env.PATH = `${localBin}:${path}`;
-  }
+  const childPath = ((): string => {
+    const existing = process.env.PATH ?? '';
+    const segments = existing.split(':');
+    if (segments.includes(localBin)) return existing;
+    return `${localBin}:${existing}`;
+  })();
 
-  const skipDocker = opts.skipDocker || !(await hasBinary('docker'));
+  const skipDocker = opts.skipDocker || !hasBinary('docker', childPath);
 
   const required = ['claude', 'gh', 'jq', 'bwrap'];
-  const missing = await preflightTools(required);
+  const missing = preflightTools(required, childPath);
   if (missing.length > 0) {
     fail(`missing required tool(s) on PATH: ${missing.join(', ')}`);
   }
 
   const ghTokenSource = join(config.repo_path, '.claude', 'secrets', 'gh-token');
-  if (!existsSync(ghTokenSource) || statSync(ghTokenSource).size === 0) {
-    fail(
-      `gh-token file missing or empty: ${ghTokenSource}\n       create it with: echo 'github_pat_…' > ${ghTokenSource} && chmod 600 ${ghTokenSource}`,
-    );
+  try {
+    requireGhToken(ghTokenSource);
+  } catch (err) {
+    fail(err instanceof Error ? err.message : String(err));
   }
 
   const worktree = worktreePathFor(config.repo_path, key);
-  if (existsSync(worktree)) {
-    fail(
-      `worktree already exists at ${worktree}\n       remove it first: git worktree remove '${worktree}'`,
-    );
+  try {
+    requireWorktreeAvailable(worktree);
+  } catch (err) {
+    fail(err instanceof Error ? err.message : String(err));
   }
+
+  const childEnv = { ...process.env, PATH: childPath };
 
   console.log(pc.dim(`→ fetching origin/${config.default_branch}…`));
   await execa('git', ['-C', config.repo_path, 'fetch', 'origin', config.default_branch], {
     stdout: 'inherit',
     stderr: 'inherit',
+    env: childEnv,
   });
 
   console.log(
@@ -102,7 +110,7 @@ async function runTicket(key: string, opts: RunOptions): Promise<never> {
       worktree,
       `origin/${config.default_branch}`,
     ],
-    { stdout: 'inherit', stderr: 'inherit' },
+    { stdout: 'inherit', stderr: 'inherit', env: childEnv },
   );
 
   const secretsDir = join(worktree, '.claude', 'secrets');
@@ -121,7 +129,7 @@ async function runTicket(key: string, opts: RunOptions): Promise<never> {
     console.log(pc.dim(`    url:     ${env.appUrl}`));
   }
 
-  const dockerProcess = startDockerBringup(config, worktree, key, skipDocker);
+  const dockerProcess = startDockerBringup(config, worktree, key, skipDocker, childEnv);
 
   const ghToken = readFileSync(ghTokenDest, 'utf8').trim();
   const prompt = buildTicketPrompt({
@@ -144,7 +152,7 @@ async function runTicket(key: string, opts: RunOptions): Promise<never> {
     stdin: 'ignore',
     stdout: logStream,
     stderr: logStream,
-    env: { ...process.env, GH_TOKEN: ghToken },
+    env: { ...childEnv, GH_TOKEN: ghToken },
     reject: false,
   });
 
@@ -158,7 +166,9 @@ async function runTicket(key: string, opts: RunOptions): Promise<never> {
     })
     .catch(() => {});
 
+  let signaled = false;
   const sigintHandler = (): void => {
+    signaled = true;
     console.error(pc.yellow('\n→ aborting…'));
     claudeProcess.kill('SIGTERM');
   };
@@ -176,7 +186,7 @@ async function runTicket(key: string, opts: RunOptions): Promise<never> {
       pc.red(`claude exited (rc=${result.exitCode ?? '?'}) before producing a transcript.`),
     );
     if (existsSync(logPath)) console.error(readFileSync(logPath, 'utf8'));
-    process.exit(typeof result.exitCode === 'number' ? result.exitCode : 1);
+    process.exit(resolveExitCode(result, signaled));
   }
 
   console.log(pc.dim(`→ watching ${transcriptPath}`));
@@ -221,7 +231,20 @@ async function runTicket(key: string, opts: RunOptions): Promise<never> {
 
   if (existsSync(logPath)) console.log(readFileSync(logPath, 'utf8'));
 
-  process.exit(typeof result.exitCode === 'number' ? result.exitCode : 1);
+  process.exit(resolveExitCode(result, signaled));
+}
+
+export interface ExecResult {
+  exitCode?: number;
+  signal?: string;
+}
+
+export function resolveExitCode(result: ExecResult, signaled: boolean): number {
+  // bash convention: a process killed by SIGINT/SIGTERM exits 130/143. We
+  // collapse both into 130 so callers see "user canceled" uniformly,
+  // matching run-ticket.sh's `exit 130` after a Ctrl+C trap.
+  if (signaled || result.signal === 'SIGINT' || result.signal === 'SIGTERM') return 130;
+  return typeof result.exitCode === 'number' ? result.exitCode : 1;
 }
 
 function startDockerBringup(
@@ -229,6 +252,7 @@ function startDockerBringup(
   worktree: string,
   key: string,
   skip: boolean,
+  env: NodeJS.ProcessEnv,
 ): ResultPromise | null {
   if (skip || !config.docker) {
     console.log(pc.dim('→ docker bringup skipped'));
@@ -245,7 +269,7 @@ function startDockerBringup(
     stderr: dockerStream,
     detached: true,
     reject: false,
-    env: process.env,
+    env,
   });
   proc.unref();
   proc.finally(() => dockerStream.end()).catch(() => {});
