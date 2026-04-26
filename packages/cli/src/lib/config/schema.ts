@@ -24,6 +24,15 @@ export const projectConfigSchema = z.object({
       allowed_domains: z.array(z.string()),
     })
     .optional(),
+  db_clone: z
+    .object({
+      postgres_service: z.string().default('postgres'),
+      postgres_user: z.string().default('postgres'),
+      postgres_database: z.string().default('postgres'),
+      required_tables: z.array(z.string()).default([]),
+      exclude_tables: z.array(z.string()).default(['kysely_migration*']),
+    })
+    .prefault({}),
 });
 
 export type ProjectConfig = z.infer<typeof projectConfigSchema>;

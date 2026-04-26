@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { listRunningProjects, getStackUrl } from './compose.js';
+import { listRunningProjects, getStackUrl, findComposeContainer } from './compose.js';
 import { execa } from 'execa';
 
 vi.mock('execa', () => ({
@@ -66,5 +66,39 @@ describe('getStackUrl', () => {
       .mockResolvedValueOnce({ stdout: '0.0.0.0:443\n' } as never);
 
     expect(await getStackUrl('recipes-app')).toBe('https://localhost');
+  });
+});
+
+describe('findComposeContainer', () => {
+  beforeEach(() => {
+    mockedExeca.mockReset();
+  });
+
+  it('returns the container id when a matching service is running', async () => {
+    mockedExeca.mockResolvedValueOnce({ stdout: 'abc123\n' } as never);
+    expect(await findComposeContainer('recipes-app', 'postgres')).toBe('abc123');
+    expect(mockedExeca).toHaveBeenCalledWith('docker', [
+      'ps',
+      '-q',
+      '--filter',
+      'label=com.docker.compose.project=recipes-app',
+      '--filter',
+      'label=com.docker.compose.service=postgres',
+    ]);
+  });
+
+  it('returns the first id when multiple replicas are running', async () => {
+    mockedExeca.mockResolvedValueOnce({ stdout: 'aaa\nbbb\n' } as never);
+    expect(await findComposeContainer('recipes-app', 'postgres')).toBe('aaa');
+  });
+
+  it('returns null when no container matches', async () => {
+    mockedExeca.mockResolvedValueOnce({ stdout: '' } as never);
+    expect(await findComposeContainer('recipes-app', 'postgres')).toBeNull();
+  });
+
+  it('returns null when docker errors', async () => {
+    mockedExeca.mockRejectedValueOnce(new Error('boom'));
+    expect(await findComposeContainer('recipes-app', 'postgres')).toBeNull();
   });
 });
