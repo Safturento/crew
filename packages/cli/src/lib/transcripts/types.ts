@@ -30,7 +30,18 @@ export interface UsageBlock {
   output_tokens: number;
 }
 
-export interface AssistantEvent {
+/**
+ * Fields Claude Code stamps onto every transcript event for the session it
+ * was emitted from. They're optional in the type because the older fixtures
+ * (and `last-prompt` sentinels) don't carry them.
+ */
+export interface SessionContext {
+  sessionId?: string;
+  cwd?: string;
+  gitBranch?: string;
+}
+
+export interface AssistantEvent extends SessionContext {
   type: 'assistant';
   timestamp: string;
   message: {
@@ -42,7 +53,7 @@ export interface AssistantEvent {
   };
 }
 
-export interface UserEvent {
+export interface UserEvent extends SessionContext {
   type: 'user';
   timestamp: string;
   message: {
