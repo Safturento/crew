@@ -22,6 +22,13 @@ const sampleConfig: ProjectConfig = {
     site: 'https://safturento.atlassian.net',
   },
   github: { repo: 'Safturento/Recipes' },
+  db_clone: {
+    postgres_service: 'postgres',
+    postgres_user: 'postgres',
+    postgres_database: 'postgres',
+    required_tables: [],
+    exclude_tables: ['kysely_migration*'],
+  },
 };
 
 function makeDeps(overrides: Partial<FinishDeps> = {}): FinishDeps & {

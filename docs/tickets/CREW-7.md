@@ -39,8 +39,8 @@ can be retired:
   `getStackUrl` in `compose.ts`. Avoids `docker compose -p <name>` which
   needs a `compose.yml` in cwd or a `--file` flag.
 - **pg_dump → psql piped via execa stdio.** Spawn pg_dump with `stdout:
-  'pipe'` and pipe its stdout into a psql process spawned with `stdin:
-  pgDump.stdout`. Keeps the data streaming through Node without buffering.
+'pipe'` and pipe its stdout into a psql process spawned with `stdin:
+pgDump.stdout`. Keeps the data streaming through Node without buffering.
 - **Migration wait polls psql every 1s up to 60s.** Tests inject a
   `pollIntervalMs` and `timeoutMs` so they don't sleep for real.
 - **Truncate excludes `kysely_migration*` by default.** Same patterns

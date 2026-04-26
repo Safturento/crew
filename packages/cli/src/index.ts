@@ -2,6 +2,8 @@ import { Command } from 'commander';
 import { runCommand } from './commands/run.js';
 import { finishCommand } from './commands/finish.js';
 import { fixPrCommand } from './commands/fix-pr.js';
+import { dockerEnvCommand } from './commands/docker-env.js';
+import { dbCloneCommand } from './commands/db-clone.js';
 
 const program = new Command();
 
@@ -13,5 +15,7 @@ program
 program.addCommand(runCommand);
 program.addCommand(fixPrCommand);
 program.addCommand(finishCommand);
+program.addCommand(dockerEnvCommand);
+program.addCommand(dbCloneCommand);
 
 program.parse(process.argv);
