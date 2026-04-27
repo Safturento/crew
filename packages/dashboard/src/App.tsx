@@ -1,16 +1,16 @@
 const STATES = [
-  { name: 'initializing', color: 'var(--color-state-blue)' },
-  { name: 'running', color: 'var(--color-state-neutral)' },
-  { name: 'idle', color: 'var(--color-state-gray)' },
-  { name: 'waiting', color: 'var(--color-state-yellow)' },
-  { name: 'pr_open', color: 'var(--color-state-purple)' },
-  { name: 'error', color: 'var(--color-state-red)' },
-  { name: 'finished', color: 'var(--color-state-green)' },
+  { name: 'initializing', color: 'var(--color-state-initializing)' },
+  { name: 'running', color: 'var(--color-state-running)' },
+  { name: 'idle', color: 'var(--color-state-idle)' },
+  { name: 'waiting', color: 'var(--color-state-waiting)' },
+  { name: 'pr_open', color: 'var(--color-state-pr-open)' },
+  { name: 'error', color: 'var(--color-state-error)' },
+  { name: 'finished', color: 'var(--color-state-finished)' },
 ] as const;
 
 export function App() {
   return (
-    <div className="min-h-screen bg-page p-6">
+    <div className="min-h-screen bg-canvas p-6">
       <div className="mx-auto max-w-3xl rounded-lg border border-border bg-bg p-8 shadow-2xl">
         <header className="flex items-baseline gap-2">
           <h1 className="text-xl font-semibold tracking-tight">crew</h1>
