@@ -8,7 +8,7 @@
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-BIN_SOURCE="$REPO_ROOT/packages/cli/bin/crew.js"
+BIN_SOURCE="$REPO_ROOT/packages/cli/bin/crew"
 BIN_TARGET="$HOME/.local/bin/crew"
 
 if [[ ! -f "$BIN_SOURCE" ]]; then
