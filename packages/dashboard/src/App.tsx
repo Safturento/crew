@@ -1,42 +1,78 @@
-const STATES = [
-  { name: 'initializing', color: 'var(--color-state-initializing)' },
-  { name: 'running', color: 'var(--color-state-running)' },
-  { name: 'idle', color: 'var(--color-state-idle)' },
-  { name: 'waiting', color: 'var(--color-state-waiting)' },
-  { name: 'pr_open', color: 'var(--color-state-pr-open)' },
-  { name: 'error', color: 'var(--color-state-error)' },
-  { name: 'finished', color: 'var(--color-state-finished)' },
-] as const;
+import { useEffect, useMemo, useState } from 'react';
 
-export function App() {
+import { useAttention } from './attention/useAttention.js';
+import { useFaviconBadge } from './attention/useFaviconBadge.js';
+import { AgentDetailPlaceholder } from './components/AgentDetailPlaceholder.js';
+import { AgentsList } from './components/AgentsList.js';
+import { TopNav } from './components/TopNav.js';
+import { ViewportFrame } from './components/ViewportFrame.js';
+import type { DaemonClient } from './data/DaemonClient.js';
+import { MockDaemonClient } from './data/MockDaemonClient.js';
+import type { Agent, Project } from './data/types.js';
+import { navigate, useHashRoute } from './routing/useHashRoute.js';
+
+const defaultClient: DaemonClient = new MockDaemonClient();
+
+export function App({ client = defaultClient }: { client?: DaemonClient } = {}) {
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [agents, setAgents] = useState<Agent[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    void Promise.all([client.listProjects(), client.listAgents()]).then(([p, a]) => {
+      if (cancelled) return;
+      setProjects(p);
+      setAgents(a);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [client]);
+
+  const route = useHashRoute();
+  const attention = useAttention(agents);
+  useFaviconBadge(attention.count);
+
+  const body = useMemo(() => {
+    switch (route.kind) {
+      case 'agent-detail':
+        return <AgentDetailPlaceholder agentKey={route.key} />;
+      case 'projects':
+        return <ProjectsPlaceholder />;
+      case 'agents-list':
+      default:
+        return (
+          <AgentsList
+            projects={projects}
+            agents={agents}
+            onSelectAgent={(key) => navigate(`/agents/${key}`)}
+          />
+        );
+    }
+  }, [route, projects, agents]);
+
   return (
-    <div className="min-h-screen bg-canvas p-6">
-      <div className="mx-auto max-w-3xl rounded-lg border border-border bg-bg p-8 shadow-2xl">
-        <header className="flex items-baseline gap-2">
-          <h1 className="text-xl font-semibold tracking-tight">crew</h1>
-          <span className="mono text-text-3 text-xs">dashboard bootstrap</span>
-        </header>
+    <ViewportFrame>
+      <TopNav
+        route={route}
+        attentionCount={attention.count}
+        onClearAttention={attention.clear}
+        onNewRun={() => {
+          /* New Run modal lands in a future plan */
+        }}
+      />
+      <div className="flex-1 overflow-y-auto">{body}</div>
+    </ViewportFrame>
+  );
+}
 
-        <p className="text-text-2 mt-3 text-sm">
-          Foundation only — Vite + React + Tailwind v4 + Vitest. The seven state-palette tokens
-          render below.
-        </p>
-
-        <ul className="mt-6 grid grid-cols-1 gap-2 sm:grid-cols-2">
-          {STATES.map((state) => (
-            <li
-              key={state.name}
-              className="border-border bg-surface flex items-center gap-3 rounded-md border p-3"
-            >
-              <span
-                aria-hidden="true"
-                className="inline-block h-2.5 w-2.5 rounded-full"
-                style={{ background: state.color }}
-              />
-              <span className="mono text-text text-sm">{state.name}</span>
-            </li>
-          ))}
-        </ul>
+function ProjectsPlaceholder() {
+  return (
+    <div className="mx-auto w-full max-w-[1240px] p-6">
+      <div className="rounded-[14px] border border-white/10 bg-surface px-6 py-8">
+        <p className="font-mono text-xs text-text-3">PROJECTS</p>
+        <p className="mt-1 text-2xl font-semibold tracking-tight text-text">Projects</p>
+        <p className="mt-3 text-sm text-text-2">The projects route ships in a follow-up plan.</p>
       </div>
     </div>
   );
