@@ -75,3 +75,22 @@ body {
     'calt' on,
     'liga' on;
 }
+
+@source inline(
+  "bg-state-initializing bg-state-running bg-state-idle bg-state-waiting bg-state-pr-open bg-state-error bg-state-finished"
+);
+@source inline(
+  "bg-state-initializing/10 bg-state-running/10 bg-state-idle/10 bg-state-waiting/10 bg-state-pr-open/10 bg-state-error/10 bg-state-finished/10"
+);
+@source inline(
+  "text-state-initializing text-state-running text-state-idle text-state-waiting text-state-pr-open text-state-error text-state-finished"
+);
+@source inline(
+  "border-state-initializing border-state-running border-state-idle border-state-waiting border-state-pr-open border-state-error border-state-finished"
+);
+@source inline(
+  "border-state-initializing/30 border-state-running/30 border-state-idle/30 border-state-waiting/30 border-state-pr-open/30 border-state-error/30 border-state-finished/30"
+);
+@source inline(
+  "border-state-initializing/40 border-state-running/40 border-state-idle/40 border-state-waiting/40 border-state-pr-open/40 border-state-error/40 border-state-finished/40"
+);
