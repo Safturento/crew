@@ -16,6 +16,16 @@ You hand `crew` a Jira ticket key. It:
 
 The agent runs unattended. You watch the dashboard, review the PR, leave comments, run `crew fix-pr` to apply feedback, merge, run `crew finish` to clean up.
 
+## Install
+
+```sh
+git clone git@github.com:Safturento/crew.git
+cd crew
+./scripts/install.sh
+```
+
+Symlinks `~/.local/bin/crew` to the repo's `packages/cli/bin/crew.js`. Re-run the script after a fresh clone or if `node_modules` is wiped.
+
 ## Status
 
 Pre-MVP. See [`docs/plans/architecture.md`](./docs/plans/architecture.md) for the design and phased rollout.
