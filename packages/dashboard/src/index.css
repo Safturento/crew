@@ -1,0 +1,77 @@
+@import 'tailwindcss';
+
+@theme {
+  --color-page: #05060a;
+  --color-bg: #13141a;
+  --color-surface: #1a1c24;
+  --color-surface-2: #21232d;
+  --color-surface-3: #292c38;
+
+  --color-text: #e7e8ec;
+  --color-text-2: #b8bbc4;
+  --color-text-3: #7e8290;
+  --color-dim: #6b6f7c;
+
+  --color-border: rgba(255, 255, 255, 0.07);
+  --color-border-strong: rgba(255, 255, 255, 0.12);
+
+  --color-state-blue: oklch(0.7 0.16 250);
+  --color-state-neutral: oklch(0.78 0.005 260);
+  --color-state-gray: oklch(0.65 0.01 260);
+  --color-state-yellow: oklch(0.82 0.16 90);
+  --color-state-purple: oklch(0.72 0.16 295);
+  --color-state-red: oklch(0.7 0.16 25);
+  --color-state-green: oklch(0.72 0.096 150);
+
+  --font-sans: 'Hanken Grotesk', ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-mono: 'Fira Code', ui-monospace, monospace;
+
+  --radius-sm: 6px;
+  --radius: 10px;
+  --radius-lg: 14px;
+
+  --animate-att-pulse: att-pulse 1.8s ease-in-out infinite;
+  --animate-pulse-dot: pulse-dot 1.6s ease-in-out infinite;
+}
+
+@keyframes att-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
+}
+
+@keyframes pulse-dot {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.3;
+  }
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  background: var(--color-page);
+  color: var(--color-text);
+  color-scheme: dark;
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.mono {
+  font-family: var(--font-mono);
+  font-feature-settings:
+    'calt' on,
+    'liga' on;
+}
