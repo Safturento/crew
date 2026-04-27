@@ -27,6 +27,7 @@ export function AgentRow({ agent, onSelect }: AgentRowProps) {
       data-attention={attentionAttr}
       onClick={() => onSelect(agent.key)}
       onKeyDown={(e) => {
+        if (e.target !== e.currentTarget) return;
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault();
           onSelect(agent.key);

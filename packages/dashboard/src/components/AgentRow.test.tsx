@@ -67,6 +67,16 @@ describe('AgentRow', () => {
     expect(onSelect).not.toHaveBeenCalled();
   });
 
+  it('does not fire onSelect when Enter is pressed on the quick action', async () => {
+    const user = userEvent.setup();
+    const onSelect = vi.fn();
+    render(<AgentRow agent={baseAgent} onSelect={onSelect} />);
+    const action = screen.getByRole('button', { name: 'Answer' });
+    action.focus();
+    await user.keyboard('{Enter}');
+    expect(onSelect).not.toHaveBeenCalled();
+  });
+
   it('marks the row with attention data attribute for tinting', () => {
     render(<AgentRow agent={baseAgent} onSelect={() => {}} />);
     expect(screen.getByRole('button', { name: /KAN-31/ })).toHaveAttribute(
