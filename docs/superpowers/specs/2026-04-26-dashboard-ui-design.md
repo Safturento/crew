@@ -23,12 +23,12 @@
 
 **Navigation pattern: list-first with side-drawer drill-down.**
 
-| Route | Surface | Notes |
-|---|---|---|
-| `/` | **Agents (home)** — the canvas | Always visible; agents grouped by project, drawer opens over it |
-| `/agent/:key` | **Agent detail (drawer)** | Slides in from right over the list (desktop) or as full-screen sheet (mobile) |
-| `/agent/:key/full` | **Agent detail (full page)** | Same content, dedicated page — opened via "↗ Open as page" button on the drawer |
-| `/projects` | **Projects** | Full page (not a drawer); list + register/edit/remove |
+| Route              | Surface                        | Notes                                                                           |
+| ------------------ | ------------------------------ | ------------------------------------------------------------------------------- |
+| `/`                | **Agents (home)** — the canvas | Always visible; agents grouped by project, drawer opens over it                 |
+| `/agent/:key`      | **Agent detail (drawer)**      | Slides in from right over the list (desktop) or as full-screen sheet (mobile)   |
+| `/agent/:key/full` | **Agent detail (full page)**   | Same content, dedicated page — opened via "↗ Open as page" button on the drawer |
+| `/projects`        | **Projects**                   | Full page (not a drawer); list + register/edit/remove                           |
 
 **Top nav** (lean):
 
@@ -37,7 +37,7 @@
 
 **Routing rules:**
 
-- The drawer always renders *over* the agent list. Browser back closes the drawer (returns to `/`).
+- The drawer always renders _over_ the agent list. Browser back closes the drawer (returns to `/`).
 - A direct deep link to `/agent/:key` mounts the agents list behind the drawer so back/close behavior is consistent regardless of entry point.
 - The full-page variant (`/agent/:key/full`) is a standalone route — browser back behaves normally (returns to whichever route was previously in history).
 
@@ -45,15 +45,15 @@
 
 An agent has **one current state at any time**, with a stored history of transitions. The transcript timeline (§5) is segmented and grouped by these state-runs.
 
-| State | Color | Attention? | Typical primary action |
-|---|---|---|---|
-| **Initializing** | Blue | No | (none — wait) |
-| **Running** | Neutral (foreground text) | No | (none — wait) |
-| **Idle / Paused** | Gray | No | Resume / Finish |
-| **Waiting on me** | Yellow | **Yes** (sticky badge) | Provide input / review |
-| **PR open** | Purple | **Yes** (sticky badge) | View PR / merge |
-| **Error** | Red | **Yes** (sticky badge) | Inspect logs |
-| **Finished** | Muted gray-green | No | (terminal) |
+| State             | Color                     | Attention?             | Typical primary action |
+| ----------------- | ------------------------- | ---------------------- | ---------------------- |
+| **Initializing**  | Blue                      | No                     | (none — wait)          |
+| **Running**       | Neutral (foreground text) | No                     | (none — wait)          |
+| **Idle / Paused** | Gray                      | No                     | Resume / Finish        |
+| **Waiting on me** | Yellow                    | **Yes** (sticky badge) | Provide input / review |
+| **PR open**       | Purple                    | **Yes** (sticky badge) | View PR / merge        |
+| **Error**         | Red                       | **Yes** (sticky badge) | Inspect logs           |
+| **Finished**      | Muted gray-green          | No                     | (terminal)             |
 
 **Attention rules:**
 
@@ -70,13 +70,13 @@ An agent has **one current state at any time**, with a stored history of transit
 
 **Within each section,** rows for each agent. Columns:
 
-| Column | Treatment |
-|---|---|
-| State badge | Colored, leftmost — fastest scan target |
-| Ticket key | Monospace (FiraCode), e.g. `KAN-23` |
-| Ticket title | Truncated with ellipsis as width shrinks |
-| Runtime | Elapsed wall-time, live-updating for active agents |
-| Token total | Single number with `k`/`M` suffix, monospace |
+| Column       | Treatment                                                       |
+| ------------ | --------------------------------------------------------------- |
+| State badge  | Colored, leftmost — fastest scan target                         |
+| Ticket key   | Monospace (FiraCode), e.g. `KAN-23`                             |
+| Ticket title | Truncated with ellipsis as width shrinks                        |
+| Runtime      | Elapsed wall-time, live-updating for active agents              |
+| Token total  | Single number with `k`/`M` suffix, monospace                    |
 | Quick action | State-driven button (see below); blank for Initializing/Running |
 
 **Quick action mapping (per state):**
@@ -145,7 +145,7 @@ Triggered by the global **`+ New Run`** button in the top nav. Opens a modal/pop
 
 **Step 1 — Pick project.** A list (filterable when many) of registered projects.
 
-**Step 2 — Pick ticket.** A searchable list of *open Jira tickets* for that project. Daemon fetches and caches from Jira; no free-text fallback (picker only).
+**Step 2 — Pick ticket.** A searchable list of _open Jira tickets_ for that project. Daemon fetches and caches from Jira; no free-text fallback (picker only).
 
 **Step 3 — Confirm.** Daemon spawns `crew run KAN-23`. Modal closes. New agent appears in the list immediately in `Initializing` state.
 
@@ -176,15 +176,15 @@ Full-page list of registered projects (read from `~/.config/crew/projects/*.toml
 
 **Color palette.** Neutral dark base + the state palette as the primary chromatic system: blue (init), neutral (running), gray (idle), yellow (waiting), purple (PR), red (error), muted green (finished). **The state palette is the palette** — no extra brand accent color.
 
-**Density.** Information-dense but breathable. Closer to Linear than Datadog. Small typography is fine; whitespace separates *sections*, not rows.
+**Density.** Information-dense but breathable. Closer to Linear than Datadog. Small typography is fine; whitespace separates _sections_, not rows.
 
 ## 9. Responsive behavior
 
-| Breakpoint | Layout |
-|---|---|
-| ≥ 1280px (wide desktop) | Drawer ~640px wide; agent list visible alongside |
-| 768px–1279px (vertical monitor / narrow desktop) | Drawer takes ~75% width but never below ~520px; list still visible |
-| < 768px (mobile) | Drawer becomes full-screen sheet; list rows collapse to two-line cards; top nav simplifies (icon-only or hamburger) |
+| Breakpoint                                       | Layout                                                                                                              |
+| ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------- |
+| ≥ 1280px (wide desktop)                          | Drawer ~640px wide; agent list visible alongside                                                                    |
+| 768px–1279px (vertical monitor / narrow desktop) | Drawer takes ~75% width but never below ~520px; list still visible                                                  |
+| < 768px (mobile)                                 | Drawer becomes full-screen sheet; list rows collapse to two-line cards; top nav simplifies (icon-only or hamburger) |
 
 **No horizontal scroll at any width.** Mobile and vertical-monitor layouts are first-class targets, not after-thoughts.
 
