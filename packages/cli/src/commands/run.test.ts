@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { resolveExitCode, runCommand } from './run.js';
+import { buildDockerBringupScript, resolveExitCode, runCommand } from './run.js';
 
 describe('runCommand', () => {
   it('is named "run"', () => {
@@ -42,5 +42,19 @@ describe('resolveExitCode', () => {
 
   it('falls back to 1 when neither exit code nor signal is known', () => {
     expect(resolveExitCode({}, false)).toBe(1);
+  });
+});
+
+describe('buildDockerBringupScript', () => {
+  it('includes `docker compose stop` when stopAfterBringup is true', () => {
+    const script = buildDockerBringupScript('/repo', { stopAfterBringup: true });
+    expect(script).toContain('docker compose stop');
+    expect(script).toContain('warm-but-stopped');
+  });
+
+  it('omits `docker compose stop` when stopAfterBringup is false', () => {
+    const script = buildDockerBringupScript('/repo', { stopAfterBringup: false });
+    expect(script).not.toContain('docker compose stop');
+    expect(script).toContain('leaving stack running');
   });
 });

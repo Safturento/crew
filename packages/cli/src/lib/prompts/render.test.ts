@@ -7,6 +7,7 @@ describe('render', () => {
       key: 'ZZZ-9',
       githubRepo: 'owner/repo',
       jiraSite: 'https://example.atlassian.net',
+      visualTestingBlock: '',
     });
 
     expect(out).toContain('ZZZ-9');
@@ -19,6 +20,7 @@ describe('render', () => {
       key: 'ZZZ-9',
       githubRepo: 'owner/repo',
       jiraSite: 'https://example.atlassian.net',
+      visualTestingBlock: '',
     });
 
     // The ticket template references {{key}} many times; ensure no `{{key}}`
@@ -30,9 +32,9 @@ describe('render', () => {
     expect(() =>
       render('ticket', {
         key: 'ZZZ-9',
-        // intentionally omitting githubRepo and jiraSite
+        // intentionally omitting githubRepo, jiraSite, visualTestingBlock
       }),
-    ).toThrow(/githubRepo|jiraSite/);
+    ).toThrow(/githubRepo|jiraSite|visualTestingBlock/);
   });
 
   it('throws when the template name does not exist', () => {

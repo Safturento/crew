@@ -56,6 +56,27 @@ claude mcp add atlassian --scope user \
 
 Verify with `claude mcp list` — `atlassian` should report `✓ Connected`.
 
+### Visual testing (per project, optional)
+
+Crew can give the dispatched agent a Playwright-driven browser pointed at the project's running app, so it can smoke-verify UI changes (and optionally author committed Playwright tests). Off by default. Opt in by adding a `[visual_testing]` section to the project's TOML at `~/.config/crew/projects/<name>.toml`:
+
+```toml
+[visual_testing]
+enabled = true
+app_url = "https://localhost:{httpsPort}"   # placeholders {httpPort}, {httpsPort}, {postgresPort} are substituted from the docker .env when [docker] is present
+start_command = "npm run dev"               # required when [docker] is not configured
+```
+
+When enabled, `crew run`:
+
+- Generates `<worktree>/.mcp.json` declaring the [`@playwright/mcp`](https://github.com/microsoft/playwright-mcp) server (`--headless`). The agent auto-discovers it.
+- Adds `.mcp.json` to `<worktree>/.git/info/exclude` so it's never committed.
+- Leaves the docker stack **running** (today's default is to stop it after bringup) so the agent has a live URL to test against. You can hit the same URL from your own browser during the run.
+
+When disabled (no `[visual_testing]` section), behaviour is unchanged.
+
+**Headed sessions for ad-hoc browsing.** The generated `.mcp.json` always uses `--headless`. If you want a headed browser when *you* invoke MCP browser tools interactively in a worktree, register a user-scope server (`claude mcp add -s user playwright -- npx -y @playwright/mcp@latest`) — your user-scope settings will take precedence in your interactive session, but the dispatched agent still uses the worktree-scoped headless config.
+
 ### GitHub token (once per project)
 
 `crew run` injects a GitHub token into the agent so it can push branches and open PRs. Each registered project needs one at `<repo>/.claude/secrets/gh-token`:

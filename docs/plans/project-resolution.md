@@ -4,7 +4,7 @@
 
 ## Context
 
-A CLI that operates against multiple registered projects has to answer one question on every invocation: *which project is this command for?* Two common signals:
+A CLI that operates against multiple registered projects has to answer one question on every invocation: _which project is this command for?_ Two common signals:
 
 1. **The current working directory** — if cwd lives inside a registered project's tree, that's the project.
 2. **An identifier the user passes** — typically a ticket key (`ABC-123`), where the prefix maps to a project's tracker key.
@@ -13,7 +13,7 @@ Tools that rely solely on (1) force the user to `cd` before every command, which
 
 Once a tool grows a dashboard or any non-CLI entry point, project resolution can no longer be cwd-implicit. Either the cwd path becomes one signal among several, or it gets replaced entirely by an explicit project identifier on every command. Picking the right blend early avoids re-plumbing every subcommand later.
 
-> **Project-specific:** crew today auto-discovers the project by walking up from cwd to find a registered `repo_path` (see `docs/plans/architecture.md` line 167), and *errors out* when the cwd-detected project doesn't match the ticket's tracker key. The triggering incident: running `crew run <KAN-ticket>` from inside the `crew` repo failed with a wrong-project error instead of just resolving `KAN-` to the recipes-app project. The Phase 3 dashboard will trigger the same operations (`run`, `fix-pr`, `finish`, `status`) from a process that has no meaningful cwd. Between the friction today and the dashboard's needs tomorrow, the CLI should support project-by-ticket *now* so the dashboard inherits a working code path instead of a parallel one.
+> **Project-specific:** crew today auto-discovers the project by walking up from cwd to find a registered `repo_path` (see `docs/plans/architecture.md` line 167), and _errors out_ when the cwd-detected project doesn't match the ticket's tracker key. The triggering incident: running `crew run <KAN-ticket>` from inside the `crew` repo failed with a wrong-project error instead of just resolving `KAN-` to the recipes-app project. The Phase 3 dashboard will trigger the same operations (`run`, `fix-pr`, `finish`, `status`) from a process that has no meaningful cwd. Between the friction today and the dashboard's needs tomorrow, the CLI should support project-by-ticket _now_ so the dashboard inherits a working code path instead of a parallel one.
 
 ## Options considered
 

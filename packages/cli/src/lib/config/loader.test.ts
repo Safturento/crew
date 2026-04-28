@@ -106,3 +106,94 @@ repo = "u/r"
     });
   });
 });
+
+describe('parseProjectConfig — visual_testing', () => {
+  const baseToml = `
+name = "minimal"
+repo_path = "/x"
+
+[jira]
+project_key = "MIN"
+site = "https://x.atlassian.net"
+
+[github]
+repo = "owner/repo"
+`;
+
+  it('parses with no [visual_testing] section (backwards compatible)', () => {
+    const config = parseProjectConfig(baseToml);
+    expect(config.visual_testing).toBeUndefined();
+  });
+
+  it('parses [visual_testing] with start_command (no docker)', () => {
+    const raw = `${baseToml}
+[visual_testing]
+enabled = true
+app_url = "http://localhost:5173"
+start_command = "npm run dev"
+`;
+    const config = parseProjectConfig(raw);
+    expect(config.visual_testing?.enabled).toBe(true);
+    expect(config.visual_testing?.app_url).toBe('http://localhost:5173');
+    expect(config.visual_testing?.start_command).toBe('npm run dev');
+  });
+
+  it('parses [visual_testing] with port placeholder + [docker]', () => {
+    const raw = `${baseToml}
+[docker]
+canonical_worktree = "main"
+
+[visual_testing]
+enabled = true
+app_url = "https://localhost:{httpsPort}"
+`;
+    const config = parseProjectConfig(raw);
+    expect(config.visual_testing?.app_url).toBe('https://localhost:{httpsPort}');
+  });
+
+  it('rejects [visual_testing] without app_url', () => {
+    const raw = `${baseToml}
+[visual_testing]
+enabled = true
+`;
+    expect(() => parseProjectConfig(raw)).toThrow();
+  });
+
+  it('rejects [visual_testing] when neither start_command nor [docker] present', () => {
+    const raw = `${baseToml}
+[visual_testing]
+enabled = true
+app_url = "http://localhost:5173"
+`;
+    expect(() => parseProjectConfig(raw)).toThrow(/start_command/);
+  });
+
+  it('rejects {httpsPort} placeholder when no [docker] section', () => {
+    const raw = `${baseToml}
+[visual_testing]
+enabled = true
+app_url = "https://localhost:{httpsPort}"
+start_command = "npm run dev"
+`;
+    expect(() => parseProjectConfig(raw)).toThrow(/docker/);
+  });
+
+  it('parses [visual_testing.authored] sub-table when complete', () => {
+    const raw = `${baseToml}
+[visual_testing]
+enabled = true
+app_url = "http://localhost:5173"
+start_command = "npm run dev"
+
+[visual_testing.authored]
+tests_dir = "tests/e2e"
+test_command = "npm run test:e2e"
+`;
+    const config = parseProjectConfig(raw);
+    expect(config.visual_testing?.authored?.tests_dir).toBe('tests/e2e');
+    expect(config.visual_testing?.authored?.test_command).toBe('npm run test:e2e');
+  });
+
+  // Note: the [visual_testing.authored] partial-rejection case is tested in
+  // CREW-γ (Task 13) when the authored sub-table is added to the schema.
+});
