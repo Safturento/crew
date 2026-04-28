@@ -2,3 +2,8 @@
 # bullets, code fences, and trailing whitespace, breaking buildTicketPrompt /
 # buildFixPrPrompt's identical-output guarantee.
 packages/cli/src/lib/prompts/templates/
+
+# Design hand-off is vendor/reference content — README documents tokens and
+# component anatomy, source/ is reference-only JSX. Reformatting bloats diffs
+# and conflicts with future hand-off updates.
+docs/designs/

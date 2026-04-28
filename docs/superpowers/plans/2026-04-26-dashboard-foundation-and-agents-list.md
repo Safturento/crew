@@ -31,32 +31,32 @@ The hand-off uses raw hex/OKLCH values. This plan substitutes the closest stock 
 
 **Surface tokens** (named so semantic intent survives any palette shift):
 
-| Token | Tailwind reference | Rendered value | Use |
-|---|---|---|---|
-| `--color-canvas` | `--color-slate-900` | `#0f172a` | App page background (the area outside the viewport frame) |
-| `--color-surface` | `--color-slate-800` | `#1e293b` | Viewport frame, rows, cards |
-| `--color-surface-2` | `--color-slate-700` | `#334155` | Row hover, sticky headers |
+| Token               | Tailwind reference  | Rendered value | Use                                                       |
+| ------------------- | ------------------- | -------------- | --------------------------------------------------------- |
+| `--color-canvas`    | `--color-slate-900` | `#0f172a`      | App page background (the area outside the viewport frame) |
+| `--color-surface`   | `--color-slate-800` | `#1e293b`      | Viewport frame, rows, cards                               |
+| `--color-surface-2` | `--color-slate-700` | `#334155`      | Row hover, sticky headers                                 |
 
 **Text tokens:**
 
-| Token | Tailwind reference | Use |
-|---|---|---|
-| `--color-text` | `--color-slate-100` | Default body |
-| `--color-text-2` | `--color-slate-400` | Secondary (ticket key, runtime) |
-| `--color-text-3` | `--color-slate-500` | Tertiary (section labels, dim mono) |
-| `--color-dim` | `--color-slate-600` | Lowest contrast (placeholder, divider labels) |
+| Token            | Tailwind reference  | Use                                           |
+| ---------------- | ------------------- | --------------------------------------------- |
+| `--color-text`   | `--color-slate-100` | Default body                                  |
+| `--color-text-2` | `--color-slate-400` | Secondary (ticket key, runtime)               |
+| `--color-text-3` | `--color-slate-500` | Tertiary (section labels, dim mono)           |
+| `--color-dim`    | `--color-slate-600` | Lowest contrast (placeholder, divider labels) |
 
 **State palette** (Tailwind names; saturation tuned to -400 weight for default visibility):
 
-| State | Token | Tailwind | Attention? |
-|---|---|---|---|
-| `initializing` | `--color-state-initializing` | `--color-sky-400` | no |
-| `running` | `--color-state-running` | `--color-slate-200` | no |
-| `idle` | `--color-state-idle` | `--color-slate-500` | no |
-| `waiting` | `--color-state-waiting` | `--color-amber-400` | yes |
-| `pr_open` | `--color-state-pr-open` | `--color-violet-400` | yes |
-| `error` | `--color-state-error` | `--color-rose-400` | yes |
-| `finished` | `--color-state-finished` | `--color-emerald-400` | no |
+| State          | Token                        | Tailwind              | Attention? |
+| -------------- | ---------------------------- | --------------------- | ---------- |
+| `initializing` | `--color-state-initializing` | `--color-sky-400`     | no         |
+| `running`      | `--color-state-running`      | `--color-slate-200`   | no         |
+| `idle`         | `--color-state-idle`         | `--color-slate-500`   | no         |
+| `waiting`      | `--color-state-waiting`      | `--color-amber-400`   | yes        |
+| `pr_open`      | `--color-state-pr-open`      | `--color-violet-400`  | yes        |
+| `error`        | `--color-state-error`        | `--color-rose-400`    | yes        |
+| `finished`     | `--color-state-finished`     | `--color-emerald-400` | no         |
 
 **Borders:** use Tailwind's stock `white/10` and `white/20` directly via utility classes, no semantic token needed.
 
@@ -1090,7 +1090,11 @@ export function StateBadge({ state, intensity = 'mid', size = 'md' }: StateBadge
       data-state={state}
       className={classes}
     >
-      {ACTIVE_STATES.has(state) ? <PulseDot colorVar={meta.colorVar} /> : <Dot colorVar={meta.colorVar} />}
+      {ACTIVE_STATES.has(state) ? (
+        <PulseDot colorVar={meta.colorVar} />
+      ) : (
+        <Dot colorVar={meta.colorVar} />
+      )}
       {meta.label}
     </span>
   );
@@ -1617,13 +1621,8 @@ describe('AgentsList', () => {
   });
 
   it('omits projects with no agents', () => {
-    const projectsWithExtra: Project[] = [
-      ...projects,
-      { name: 'crew', repoPath: '~/code/crew' },
-    ];
-    render(
-      <AgentsList projects={projectsWithExtra} agents={agents} onSelectAgent={() => {}} />,
-    );
+    const projectsWithExtra: Project[] = [...projects, { name: 'crew', repoPath: '~/code/crew' }];
+    render(<AgentsList projects={projectsWithExtra} agents={agents} onSelectAgent={() => {}} />);
     expect(screen.queryByText('crew')).not.toBeInTheDocument();
   });
 });
@@ -1818,7 +1817,13 @@ export function BrandMark({ className = 'h-[22px] w-[22px]' }: { className?: str
     >
       <rect x="1.5" y="1.5" width="21" height="21" rx="6" fill="currentColor" opacity="0.15" />
       <rect x="1.5" y="1.5" width="21" height="21" rx="6" stroke="currentColor" strokeWidth="1.5" />
-      <path d="M7 12 L11 16 L17 8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      <path
+        d="M7 12 L11 16 L17 8"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
     </svg>
   );
 }
@@ -1857,10 +1862,7 @@ describe('TopNav', () => {
         onNewRun={() => {}}
       />,
     );
-    expect(screen.getByRole('link', { name: 'Agents' })).toHaveAttribute(
-      'aria-current',
-      'page',
-    );
+    expect(screen.getByRole('link', { name: 'Agents' })).toHaveAttribute('aria-current', 'page');
     expect(screen.getByRole('link', { name: 'Projects' })).not.toHaveAttribute('aria-current');
   });
 
@@ -1873,10 +1875,7 @@ describe('TopNav', () => {
         onNewRun={() => {}}
       />,
     );
-    expect(screen.getByRole('link', { name: 'Projects' })).toHaveAttribute(
-      'aria-current',
-      'page',
-    );
+    expect(screen.getByRole('link', { name: 'Projects' })).toHaveAttribute('aria-current', 'page');
   });
 
   it('disables the Clear attention button when count is 0', () => {
@@ -2378,7 +2377,9 @@ describe('App', () => {
     await waitFor(() => screen.getByText('KAN-31'));
     await user.click(screen.getByRole('button', { name: /KAN-31/ }));
     expect(window.location.hash).toBe('#/agents/KAN-31');
-    expect(await screen.findByText(/agent detail drawer ships in a follow-up plan/i)).toBeInTheDocument();
+    expect(
+      await screen.findByText(/agent detail drawer ships in a follow-up plan/i),
+    ).toBeInTheDocument();
   });
 });
 ```
@@ -2467,13 +2468,13 @@ If nothing changed, skip this step.
 
 When the plan is complete, the following should all be true:
 
-| Check | Command |
-|---|---|
-| Lint clean | `npm run lint` |
-| Format clean | `npm run format:check` |
-| Types clean | `npm run typecheck` |
-| All tests pass | `npm run test:run` |
-| Build succeeds | `npm run build` |
+| Check                           | Command                                                                     |
+| ------------------------------- | --------------------------------------------------------------------------- |
+| Lint clean                      | `npm run lint`                                                              |
+| Format clean                    | `npm run format:check`                                                      |
+| Types clean                     | `npm run typecheck`                                                         |
+| All tests pass                  | `npm run test:run`                                                          |
+| Build succeeds                  | `npm run build`                                                             |
 | Dev server serves the dashboard | `npm run dev --workspace=crew-dashboard` then visit `http://localhost:5173` |
 
 Visual acceptance:
