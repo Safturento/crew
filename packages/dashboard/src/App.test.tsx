@@ -1,10 +1,11 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it } from 'vitest';
 
 import { App } from './App.js';
 import { MockDaemonClient } from './data/MockDaemonClient.js';
 import type { Agent, Project } from './data/types.js';
+import { renderWithProviders } from './test/renderWithProviders.js';
 
 const projects: Project[] = [{ name: 'kanban-api', repoPath: '~/code/kanban-api' }];
 
@@ -21,7 +22,7 @@ const agents: Agent[] = [
 
 function renderApp() {
   const client = new MockDaemonClient({ projects, agents });
-  return render(<App client={client} />);
+  return renderWithProviders(<App client={client} />);
 }
 
 beforeEach(() => {

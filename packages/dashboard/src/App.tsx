@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
 
 import { useAttention } from './attention/useAttention.js';
 import { useFaviconBadge } from './attention/useFaviconBadge.js';
@@ -8,26 +9,22 @@ import { TopNav } from './components/TopNav.js';
 import { ViewportFrame } from './components/ViewportFrame.js';
 import type { DaemonClient } from './data/DaemonClient.js';
 import { MockDaemonClient } from './data/MockDaemonClient.js';
-import type { Agent, Project } from './data/types.js';
 import { navigate, useHashRoute } from './routing/useHashRoute.js';
 
 const defaultClient: DaemonClient = new MockDaemonClient();
 
 export function App({ client = defaultClient }: { client?: DaemonClient } = {}) {
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [agents, setAgents] = useState<Agent[]>([]);
+  const projectsQuery = useQuery({
+    queryKey: ['projects'],
+    queryFn: () => client.listProjects(),
+  });
+  const agentsQuery = useQuery({
+    queryKey: ['agents'],
+    queryFn: () => client.listAgents(),
+  });
 
-  useEffect(() => {
-    let cancelled = false;
-    void Promise.all([client.listProjects(), client.listAgents()]).then(([p, a]) => {
-      if (cancelled) return;
-      setProjects(p);
-      setAgents(a);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [client]);
+  const projects = projectsQuery.data ?? [];
+  const agents = agentsQuery.data ?? [];
 
   const route = useHashRoute();
   const attention = useAttention(agents);
