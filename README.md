@@ -28,7 +28,7 @@ Symlinks `~/.local/bin/crew` to the repo's `packages/cli/bin/crew`, runs `npm in
 
 ## Setup
 
-Two one-time setup items before `crew run` can do anything useful.
+A few one-time setup items before `crew` can do everything it's meant to.
 
 ### Atlassian MCP (once per machine)
 
@@ -76,6 +76,22 @@ When enabled, `crew run`:
 When disabled (no `[visual_testing]` section), behaviour is unchanged.
 
 **Headed sessions for ad-hoc browsing.** The generated `.mcp.json` always uses `--headless`. If you want a headed browser when *you* invoke MCP browser tools interactively in a worktree, register a user-scope server (`claude mcp add -s user playwright -- npx -y @playwright/mcp@latest`) — your user-scope settings will take precedence in your interactive session, but the dispatched agent still uses the worktree-scoped headless config.
+
+### Jira API credentials (once per machine)
+`crew finish` transitions the ticket to Done after the PR merges. It reads `CREW_JIRA_EMAIL` and `CREW_JIRA_API_TOKEN` directly from `process.env` — there's no `.env` loading, so dropping them in a repo `.env` won't work. If they aren't set, the transition step is skipped with a warning. Keep them outside any repo. A common pattern is `~/.secrets`, sourced from your shell rc:                        
+
+```sh
+# ~/.secrets                        
+export CREW_JIRA_EMAIL="you@example.com"
+export CREW_JIRA_API_TOKEN="..."
+```
+
+```sh                
+chmod 600 ~/.secrets
+echo '[ -f ~/.secrets ] && source ~/.secrets' >> ~/.bashrc
+```
+
+Open a new shell (or `source ~/.bashrc`) and verify with `echo $CREW_JIRA_EMAIL`. The token is the same Atlassian API token the MCP server uses, so you can reuse it.
 
 ### GitHub token (once per project)
 
