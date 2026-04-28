@@ -37,6 +37,30 @@ describe('buildTicketPrompt', () => {
 
     expect(prompt).toMatch(/issue_type\.name == "Epic"/);
   });
+
+  it('matches the baseline snapshot when visualTesting is omitted', () => {
+    const prompt = buildTicketPrompt({
+      key: 'KAN-23',
+      githubRepo: 'Safturento/Recipes',
+      jiraSite: 'https://safturento.atlassian.net',
+    });
+    expect(prompt).toMatchSnapshot();
+  });
+
+  it('renders identically when visualTesting is undefined as when omitted', () => {
+    const a = buildTicketPrompt({
+      key: 'KAN-23',
+      githubRepo: 'Safturento/Recipes',
+      jiraSite: 'https://safturento.atlassian.net',
+    });
+    const b = buildTicketPrompt({
+      key: 'KAN-23',
+      githubRepo: 'Safturento/Recipes',
+      jiraSite: 'https://safturento.atlassian.net',
+      visualTesting: undefined,
+    });
+    expect(a).toBe(b);
+  });
 });
 
 describe('buildFixPrPrompt', () => {

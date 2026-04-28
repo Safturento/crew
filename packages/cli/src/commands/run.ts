@@ -15,6 +15,7 @@ import pc from 'picocolors';
 import { discoverProjectConfig, type ProjectConfig } from '../lib/config/index.js';
 import { writeDockerEnv } from '../lib/docker/index.js';
 import { buildTicketPrompt } from '../lib/prompts/index.js';
+import { resolveAppUrl, writeMcpFile } from '../lib/visual-testing/index.js';
 import {
   claudeProjectDirFor,
   dockerLogPathFor,
@@ -119,14 +120,31 @@ async function runTicket(key: string, opts: RunOptions): Promise<never> {
   copyFileSync(ghTokenSource, ghTokenDest);
   chmodSync(ghTokenDest, 0o600);
 
+  let dockerPorts: { httpPort: number; httpsPort: number; postgresPort: number } | undefined;
   if (config.docker) {
     const env = writeDockerEnv(worktree, { canonicalWorktree: config.docker.canonical_worktree });
+    dockerPorts = {
+      httpPort: env.caddyHttpPort,
+      httpsPort: env.caddyHttpsPort,
+      postgresPort: env.postgresPort,
+    };
     console.log(pc.dim(`→ wrote ${env.envPath}`));
     console.log(pc.dim(`    project: ${env.composeProjectName}`));
     console.log(pc.dim(`    http:    ${env.caddyHttpPort}`));
     console.log(pc.dim(`    https:   ${env.caddyHttpsPort}`));
     console.log(pc.dim(`    pg:      ${env.postgresPort}`));
     console.log(pc.dim(`    url:     ${env.appUrl}`));
+  }
+
+  let resolvedAppUrl: string | undefined;
+  if (config.visual_testing?.enabled) {
+    const resolved = resolveAppUrl(config.visual_testing.app_url, dockerPorts);
+    resolvedAppUrl = resolved.raw;
+    const writeResult = writeMcpFile(worktree, { appUrl: resolved.raw });
+    console.log(pc.dim(`→ wrote ${join(worktree, '.mcp.json')} (CREW_APP_URL=${resolved.raw})`));
+    if (writeResult.existed) {
+      console.warn(pc.yellow('  ! .mcp.json already existed in worktree — overwritten'));
+    }
   }
 
   const dockerProcess = startDockerBringup(config, worktree, key, skipDocker, childEnv);
@@ -136,6 +154,19 @@ async function runTicket(key: string, opts: RunOptions): Promise<never> {
     key,
     githubRepo: config.github.repo,
     jiraSite: config.jira.site,
+    visualTesting:
+      config.visual_testing?.enabled && resolvedAppUrl
+        ? {
+            appUrl: resolvedAppUrl,
+            startCommand: config.visual_testing.start_command,
+            authored: config.visual_testing.authored
+              ? {
+                  testsDir: config.visual_testing.authored.tests_dir,
+                  testCommand: config.visual_testing.authored.test_command,
+                }
+              : undefined,
+          }
+        : undefined,
   });
 
   const logPath = runLogPathFor(key);
