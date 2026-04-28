@@ -271,7 +271,8 @@ function startDockerBringup(
 
   const dockerLogPath = dockerLogPathFor(key);
   const dockerStream = createWriteStream(dockerLogPath, { flags: 'w' });
-  const script = buildDockerBringupScript(config.repo_path);
+  const stopAfterBringup = !config.visual_testing?.enabled;
+  const script = buildDockerBringupScript(config.repo_path, { stopAfterBringup });
   // See note above the claudeProcess spawn: execa v9 rejects WriteStream
   // objects whose fd is still null. Pipe after spawn instead.
   const proc = execa('bash', ['-c', script], {
@@ -292,11 +293,25 @@ function startDockerBringup(
   return proc;
 }
 
-function buildDockerBringupScript(repoPath: string): string {
+export interface BringupScriptOptions {
+  stopAfterBringup: boolean;
+}
+
+export function buildDockerBringupScript(
+  repoPath: string,
+  opts: BringupScriptOptions,
+): string {
   // Bring the worktree's compose stack up, optionally clone data from the
-  // canonical worktree's stack, then stop the containers (warm but idle so
-  // they don't burn RAM). Mirrors the Recipes-App run-ticket.sh behavior.
+  // canonical worktree's stack. When stopAfterBringup is true (default for
+  // ticket runs without visual_testing), stop the containers afterward so
+  // they're warm but idle. When false (visual_testing enabled), leave the
+  // stack running so the agent can hit the live URL via Playwright MCP.
   const dbCloneScript = join(repoPath, 'scripts', 'db-clone-from-main.sh');
+  const stopBlock = opts.stopAfterBringup
+    ? `  echo "[$(date +%T)] docker compose stop (leaving stack warm-but-stopped)"
+  docker compose stop 2>&1
+  echo "[$(date +%T)] ✓ stack stopped"`
+    : `  echo "[$(date +%T)] ✓ leaving stack running for visual testing"`;
   return `set -u
 echo "[$(date +%T)] docker compose up --build --detach"
 if docker compose up --build --detach 2>&1; then
@@ -309,9 +324,7 @@ if docker compose up --build --detach 2>&1; then
       echo "[$(date +%T)] ! data clone skipped (main's stack isn't running)"
     fi
   fi
-  echo "[$(date +%T)] docker compose stop (leaving stack warm-but-stopped)"
-  docker compose stop 2>&1
-  echo "[$(date +%T)] ✓ stack stopped"
+${stopBlock}
 else
   echo "[$(date +%T)] ! docker stack failed to come up"
 fi
