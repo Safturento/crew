@@ -51,11 +51,10 @@ export const projectConfigSchema = z
     visual_testing: visualTestingSchema.optional(),
   })
   .superRefine((cfg, ctx) => {
-    if (!cfg.visual_testing) return;
+    const vt = cfg.visual_testing;
+    if (!vt) return;
 
-    const usesPortPlaceholder = PORT_PLACEHOLDERS.some((p) =>
-      cfg.visual_testing!.app_url.includes(p),
-    );
+    const usesPortPlaceholder = PORT_PLACEHOLDERS.some((p) => vt.app_url.includes(p));
     if (usesPortPlaceholder && !cfg.docker) {
       ctx.addIssue({
         code: 'custom',
@@ -64,7 +63,7 @@ export const projectConfigSchema = z
       });
     }
 
-    if (!cfg.visual_testing.start_command && !cfg.docker) {
+    if (!vt.start_command && !cfg.docker) {
       ctx.addIssue({
         code: 'custom',
         path: ['visual_testing', 'start_command'],

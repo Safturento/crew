@@ -8,10 +8,7 @@ export interface WriteMcpFileResult {
 
 const EXCLUDE_LINE = '.mcp.json';
 
-export function writeMcpFile(
-  worktreePath: string,
-  opts: { appUrl: string },
-): WriteMcpFileResult {
+export function writeMcpFile(worktreePath: string, opts: { appUrl: string }): WriteMcpFileResult {
   const mcpPath = join(worktreePath, '.mcp.json');
   const existed = existsSync(mcpPath);
 

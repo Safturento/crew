@@ -328,10 +328,7 @@ export interface BringupScriptOptions {
   stopAfterBringup: boolean;
 }
 
-export function buildDockerBringupScript(
-  repoPath: string,
-  opts: BringupScriptOptions,
-): string {
+export function buildDockerBringupScript(repoPath: string, opts: BringupScriptOptions): string {
   // Bring the worktree's compose stack up, optionally clone data from the
   // canonical worktree's stack. When stopAfterBringup is true (default for
   // ticket runs without visual_testing), stop the containers afterward so

@@ -25,8 +25,10 @@ export function buildTicketPrompt(opts: BuildTicketPromptOptions): string {
   });
 }
 
-function buildVisualTestingBlock(_vt: VisualTestingPromptOptions | undefined): string {
-  // CREW-20 (β) fills the smoke fragment; CREW-21 (γ) extends with the authored
-  // fragment. For CREW-19 (α), the placeholder always renders empty.
+// CREW-20 (β) will populate the smoke fragment from `vt`; CREW-21 (γ) will
+// extend it with the authored fragment. For CREW-19 (α), the placeholder
+// always renders empty regardless of input.
+function buildVisualTestingBlock(vt: VisualTestingPromptOptions | undefined): string {
+  if (vt === undefined) return '';
   return '';
 }

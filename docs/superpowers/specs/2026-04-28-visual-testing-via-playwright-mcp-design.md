@@ -9,6 +9,7 @@
 When `crew run <KEY>` dispatches an agent on a UI ticket, the agent should be able to drive a real browser against the running app — taking screenshots, exercising the golden path, and (where appropriate) authoring committed Playwright tests — without bespoke per-project setup outside what crew's per-project TOML already covers.
 
 **In scope:**
+
 - A `[visual_testing]` opt-in section in the per-project TOML config.
 - A per-worktree generated `.mcp.json` that wires in `@playwright/mcp` only when the project opts in.
 - Lifecycle changes so that docker-backed apps stay running for the agent (today they're stopped after bringup).
@@ -16,6 +17,7 @@ When `crew run <KEY>` dispatches an agent on a UI ticket, the agent should be ab
 - README documentation for users opting a project in.
 
 **Out of scope (explicit non-goals):**
+
 - Crew installing `@playwright/test` or `playwright.config.ts` into target repos. Repos own their test-runner setup; crew validates the contract and fails fast when missing.
 - User-scope MCP server registration. Crew controls visibility per-worktree; ad-hoc interactive use is the user's choice.
 - A unified app-lifecycle abstraction. Crew already orchestrates docker; we extend the docker path and let the agent run a `start_command` for non-docker projects.
@@ -25,13 +27,13 @@ When `crew run <KEY>` dispatches an agent on a UI ticket, the agent should be ab
 
 ## 2. Decisions reached during brainstorming
 
-| # | Question | Decision |
-|---|---|---|
-| 1 | Which projects get visual testing? | Per-project opt-in via TOML `[visual_testing]` section. |
-| 2 | Smoke verification or authored tests? | Both, as separate tickets in one epic. |
-| 3 | Who runs the app? | Hybrid: docker stack stays running when present; agent runs `start_command` otherwise. |
-| 4 | Who installs `@playwright/test` in target repos? | Target repos own setup; crew declares the contract and fails fast on missing prereqs. |
-| 5 | MCP install scope? | Per-worktree generated `.mcp.json`; agents on backend tickets see no Playwright tools at all. |
+| #   | Question                                         | Decision                                                                                      |
+| --- | ------------------------------------------------ | --------------------------------------------------------------------------------------------- |
+| 1   | Which projects get visual testing?               | Per-project opt-in via TOML `[visual_testing]` section.                                       |
+| 2   | Smoke verification or authored tests?            | Both, as separate tickets in one epic.                                                        |
+| 3   | Who runs the app?                                | Hybrid: docker stack stays running when present; agent runs `start_command` otherwise.        |
+| 4   | Who installs `@playwright/test` in target repos? | Target repos own setup; crew declares the contract and fails fast on missing prereqs.         |
+| 5   | MCP install scope?                               | Per-worktree generated `.mcp.json`; agents on backend tickets see no Playwright tools at all. |
 
 ## 3. Architecture
 
@@ -112,7 +114,7 @@ test_command = "npm run test:e2e"
 **Validation rules** (Zod refines):
 
 - `[visual_testing]` is optional at the top level. When present, both `enabled = true` and `app_url` are required.
-- `start_command` is required *unless* the project also has `[docker]` configured (cross-validation).
+- `start_command` is required _unless_ the project also has `[docker]` configured (cross-validation).
 - `app_url` placeholders that reference docker-derived ports (`{httpPort}`, `{httpsPort}`, `{postgresPort}`) require the `[docker]` block to be present.
 - `[visual_testing.authored]` is optional; when present, both `tests_dir` and `test_command` are required.
 
@@ -155,7 +157,7 @@ export interface ResolvedAppUrl {
 
 export function resolveAppUrl(
   template: string,
-  ports?: { httpPort: number; httpsPort: number; postgresPort: number }
+  ports?: { httpPort: number; httpsPort: number; postgresPort: number },
 ): ResolvedAppUrl;
 
 export function buildMcpConfig(opts: { appUrl: string }): McpConfig;
@@ -168,10 +170,7 @@ CLI does the file writing and the `info/exclude` append; shared owns the resolut
 The current `startDockerBringup()` ends with `docker compose stop`. With VT enabled the stack must stay running for the agent.
 
 ```ts
-function buildDockerBringupScript(
-  repoPath: string,
-  opts: { stopAfterBringup: boolean }
-): string {
+function buildDockerBringupScript(repoPath: string, opts: { stopAfterBringup: boolean }): string {
   // ... up + db-clone unchanged
   if (opts.stopAfterBringup) {
     // existing `docker compose stop` behavior
@@ -183,13 +182,14 @@ function buildDockerBringupScript(
 
 Caller passes `stopAfterBringup = !visualTestingEnabled`. No teardown logic — `crew finish` already cleans up the worktree, and the user's existing `docker:down` workflow handles container cleanup if desired.
 
-**Non-docker projects:** crew does *not* run `start_command` itself. The prompt instructs the agent to run it before testing. Crew's responsibilities stay narrow; the agent already manages other long-running processes during its run.
+**Non-docker projects:** crew does _not_ run `start_command` itself. The prompt instructs the agent to run it before testing. Crew's responsibilities stay narrow; the agent already manages other long-running processes during its run.
 
 ## 7. Prompt template additions
 
 The current renderer (`packages/cli/src/lib/prompts/render.ts`) is plain `{{var}}` substitution. We keep it that way and use small fragment files with composition done in the builder:
 
 > **Project-specific:**
+>
 > ```
 > packages/cli/src/lib/prompts/templates/
 > ├── ticket.md                     (existing base; +1 line: {{visualTestingBlock}})
@@ -221,11 +221,12 @@ end-to-end in a browser before claiming "Verify" complete.
 3. Inspect the screenshot. If the change is invisible or broken, return to
    step 7 (Execute) — it isn't done yet.
 
-If your change is *clearly* backend-only (no observable user effect), say
+If your change is _clearly_ backend-only (no observable user effect), say
 so explicitly in the PR description and skip this step.
 ```
 
 `{startCommandHint}` resolves to one of:
+
 - (docker case) `"The docker stack is already running — verify with curl ${appUrl} or just navigate."`
 - (non-docker case) `"Run \`${startCommand}\` in the worktree. Wait for the dev server to be reachable, then proceed."`
 
@@ -251,19 +252,23 @@ do **not** silently skip — that's a project setup gap, not your fault.
 ## 8. Failure modes & error handling
 
 **At config load** (CREW-α):
+
 - Schema-validation failures fail fast with the path to the bad config and the offending field.
 - Cross-validation failures (e.g. `start_command` missing without `[docker]`, `{httpsPort}` referenced without `[docker]`) carry an explicit message naming the conflict.
 
 **At worktree setup** (CREW-α):
+
 - Pre-existing `<worktree>/.mcp.json` → overwrite with a yellow warning. (Fresh worktrees from `origin/main` shouldn't have one.)
 - Failed `info/exclude` write → fail hard. Fundamental git op.
 - Malformed substituted URL → not validated. Agent will see the bad URL and the connection error.
 
 **At docker bringup** (CREW-α):
+
 - Bringup failure → already logged today. Agent still launches and discovers the problem on first navigation.
 - App never becomes reachable → agent's problem to detect via Playwright, not crew's. No pre-flight HTTP probe.
 
 **At agent runtime** (CREW-β/γ via prompt fragments):
+
 - First-run Playwright browser download → 30–60s on first MCP call. Tolerable; no pre-warm.
 - Playwright MCP not on PATH → tool-call error from Claude Code's MCP layer. Surfaced in PR description per the prompt's instructions.
 - App unreachable when navigating → Playwright's error is descriptive; agent decides whether to (re)run `start_command`.
@@ -272,6 +277,7 @@ do **not** silently skip — that's a project setup gap, not your fault.
 ## 9. Testing strategy
 
 **CREW-α (foundation):**
+
 - Schema cases in the existing `loader.test.ts`: VT absent, VT enabled minimal, missing `app_url`, `start_command` required-without-docker, `{httpsPort}` without `[docker]`, partial `[visual_testing.authored]`.
 - New `mcp-config.test.ts` in `shared/`: `resolveAppUrl` substitution paths, `buildMcpConfig` snapshot.
 - New `mcp/write.test.ts` in `cli/`: file write + `info/exclude` idempotent append + overwrite-warning.
@@ -280,19 +286,23 @@ do **not** silently skip — that's a project setup gap, not your fault.
 - `runTicket` integration: extend the existing mocked-execa test to assert `.mcp.json` write happens iff VT is enabled.
 
 **CREW-β (smoke prompt):**
+
 - Three `buildTicketPrompt` snapshots: VT-off (matches α baseline), VT-on with docker (docker hint), VT-on without docker (`start_command` hint).
 - Direct unit test for the `startCommandHint` resolver.
 
 **CREW-γ (authored-test prompt):**
+
 - Snapshot with `[visual_testing.authored]` populated; smoke + authored both appear in order.
 - Schema cases for `[visual_testing.authored]`.
 
 **Cross-cutting:**
+
 - No live Playwright in crew's CI. The `.mcp.json` content is the contract; what Claude does with it is not crew's test surface.
 - No live target-repo tests in crew's CI. Tmpdirs and mocked execa only.
 - One manual smoke per ticket as part of acceptance criteria: α → eyeball generated `.mcp.json`; β → watch a real agent run call `mcp__playwright__navigate` on a UI ticket; γ → watch a real agent author a `.spec.ts`.
 
 **Runtime (non-test) behavior** that is verified live, not in CI:
+
 - Docker container stays running through the agent's lifetime.
 - Agent reads the prompt URL, calls Playwright tools, drives a real browser against the deployed container, takes real screenshots.
 - User can simultaneously hit the same URL in their own browser.
@@ -311,13 +321,13 @@ A new "Visual testing (per project)" subsection under "Setup" in the crew README
 
 **Epic: Visual testing via Playwright MCP** — covers the three crew implementation tickets. Target-repo prerequisite tickets are linked but live outside this epic since they're consumable independently and don't require crew changes to ship.
 
-| Ticket | Title | Blocks/blocked-by |
-|---|---|---|
-| **CREW-α** | TOML schema + per-worktree `.mcp.json` generator + lifecycle (don't stop docker when VT enabled) | Blocks β, γ |
-| **CREW-β** | Smoke-verification prompt fragment + builder branch | Blocked by α; parallel with γ |
-| **CREW-γ** | Authored-test prompt fragment + schema extension | Blocked by α; parallel with β |
-| **(Recipes repo)** | Install `@playwright/test`, `playwright.config.ts`, `tests/e2e/`, `npm run test:e2e` | Independent of crew epic; required before γ produces value in Recipes |
-| **(crew dashboard)** | Same as above but for `packages/dashboard/` | Independent of crew epic; required before γ produces value for crew's own dashboard |
+| Ticket               | Title                                                                                            | Blocks/blocked-by                                                                   |
+| -------------------- | ------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------- |
+| **CREW-α**           | TOML schema + per-worktree `.mcp.json` generator + lifecycle (don't stop docker when VT enabled) | Blocks β, γ                                                                         |
+| **CREW-β**           | Smoke-verification prompt fragment + builder branch                                              | Blocked by α; parallel with γ                                                       |
+| **CREW-γ**           | Authored-test prompt fragment + schema extension                                                 | Blocked by α; parallel with β                                                       |
+| **(Recipes repo)**   | Install `@playwright/test`, `playwright.config.ts`, `tests/e2e/`, `npm run test:e2e`             | Independent of crew epic; required before γ produces value in Recipes               |
+| **(crew dashboard)** | Same as above but for `packages/dashboard/`                                                      | Independent of crew epic; required before γ produces value for crew's own dashboard |
 
 **Parallelism plan** (to be confirmed in the next phase before any implementation begins):
 

@@ -12,13 +12,13 @@
 
 **Ticket carve-up** (one Epic + 3 child tickets in CREW + 2 independent prereq tickets in target repos):
 
-| Ticket | Tasks | Blocks |
-|---|---|---|
-| **CREW-α** (foundation) | Tasks 1-8 | Blocks β, γ |
-| **CREW-β** (smoke prompt) | Tasks 9-12 | After α; parallel with γ |
-| **CREW-γ** (authored prompt + schema extension) | Tasks 13-16 | After α; parallel with β |
-| (Recipes repo, KAN-prereq) | Install `@playwright/test`, `playwright.config.ts`, `tests/e2e/`, `npm run test:e2e` | Independent; required before γ produces value in Recipes |
-| (crew dashboard, CREW-prereq) | Same for `packages/dashboard/` | Independent; required before γ produces value for crew's own dashboard |
+| Ticket                                          | Tasks                                                                                | Blocks                                                                 |
+| ----------------------------------------------- | ------------------------------------------------------------------------------------ | ---------------------------------------------------------------------- |
+| **CREW-α** (foundation)                         | Tasks 1-8                                                                            | Blocks β, γ                                                            |
+| **CREW-β** (smoke prompt)                       | Tasks 9-12                                                                           | After α; parallel with γ                                               |
+| **CREW-γ** (authored prompt + schema extension) | Tasks 13-16                                                                          | After α; parallel with β                                               |
+| (Recipes repo, KAN-prereq)                      | Install `@playwright/test`, `playwright.config.ts`, `tests/e2e/`, `npm run test:e2e` | Independent; required before γ produces value in Recipes               |
+| (crew dashboard, CREW-prereq)                   | Same for `packages/dashboard/`                                                       | Independent; required before γ produces value for crew's own dashboard |
 
 **Implementation note — module location:** The spec referenced `packages/shared/` for the URL substitution + MCP config builder. In practice, `crew-shared` is currently an unbootstrapped placeholder (only README + package.json), and the existing pattern keeps cross-cutting helpers in `packages/cli/src/lib/<topic>/` (see `cli/src/lib/docker/` for the precedent). This plan keeps visual-testing logic in `packages/cli/src/lib/visual-testing/` for now. When `crew-shared` gets bootstrapped (Phase 1.5 in the architecture doc), this module relocates with no API changes.
 
@@ -29,6 +29,7 @@
 ### Task 1: TOML schema additions
 
 **Files:**
+
 - Modify: `packages/cli/src/lib/config/schema.ts`
 - Test: `packages/cli/src/lib/config/loader.test.ts`
 
@@ -235,6 +236,7 @@ git commit -m "feat(CREW-α): TOML schema for [visual_testing] opt-in section"
 ### Task 2: URL substitution helper
 
 **Files:**
+
 - Create: `packages/cli/src/lib/visual-testing/index.ts`
 - Create: `packages/cli/src/lib/visual-testing/resolve-app-url.ts`
 - Create: `packages/cli/src/lib/visual-testing/resolve-app-url.test.ts`
@@ -361,6 +363,7 @@ git commit -m "feat(CREW-α): resolveAppUrl — port placeholder substitution"
 ### Task 3: MCP config builder
 
 **Files:**
+
 - Create: `packages/cli/src/lib/visual-testing/build-mcp-config.ts`
 - Create: `packages/cli/src/lib/visual-testing/build-mcp-config.test.ts`
 - Modify: `packages/cli/src/lib/visual-testing/index.ts`
@@ -451,6 +454,7 @@ git commit -m "feat(CREW-α): buildMcpConfig — Playwright MCP config builder"
 ### Task 4: `.mcp.json` writer + `info/exclude` append
 
 **Files:**
+
 - Create: `packages/cli/src/lib/visual-testing/write-mcp-file.ts`
 - Create: `packages/cli/src/lib/visual-testing/write-mcp-file.test.ts`
 - Modify: `packages/cli/src/lib/visual-testing/index.ts`
@@ -535,10 +539,7 @@ export interface WriteMcpFileResult {
 
 const EXCLUDE_LINE = '.mcp.json';
 
-export function writeMcpFile(
-  worktreePath: string,
-  opts: { appUrl: string },
-): WriteMcpFileResult {
+export function writeMcpFile(worktreePath: string, opts: { appUrl: string }): WriteMcpFileResult {
   const mcpPath = join(worktreePath, '.mcp.json');
   const existed = existsSync(mcpPath);
 
@@ -584,6 +585,7 @@ git commit -m "feat(CREW-α): writeMcpFile — generate .mcp.json + info/exclude
 ### Task 5: Docker bringup `stopAfterBringup` flag
 
 **Files:**
+
 - Modify: `packages/cli/src/commands/run.ts:295-319` (export `buildDockerBringupScript` + add option param)
 - Modify: `packages/cli/src/commands/run.test.ts` (add new describe block)
 
@@ -623,10 +625,7 @@ export interface BringupScriptOptions {
   stopAfterBringup: boolean;
 }
 
-export function buildDockerBringupScript(
-  repoPath: string,
-  opts: BringupScriptOptions,
-): string {
+export function buildDockerBringupScript(repoPath: string, opts: BringupScriptOptions): string {
   const dbCloneScript = join(repoPath, 'scripts', 'db-clone-from-main.sh');
   const stopBlock = opts.stopAfterBringup
     ? `  echo "[$(date +%T)] docker compose stop (leaving stack warm-but-stopped)"
@@ -683,6 +682,7 @@ git commit -m "feat(CREW-α): docker bringup leaves stack running when visual te
 ### Task 6: `runTicket` integration — write `.mcp.json` and resolve URL once
 
 **Files:**
+
 - Modify: `packages/cli/src/commands/run.ts` (within `runTicket()`, after the docker `.env` write, before agent spawn)
 
 This task has no new unit-test surface beyond what Task 4 covers — the writes are thin calls into already-tested modules. Integration is verified manually (acceptance criterion in the ticket).
@@ -768,6 +768,7 @@ git commit -m "feat(CREW-α): write per-worktree .mcp.json when visual testing i
 ### Task 7: Base prompt template plumbing
 
 **Files:**
+
 - Modify: `packages/cli/src/lib/prompts/templates/ticket.md` (insert one placeholder)
 - Modify: `packages/cli/src/lib/prompts/ticket.ts` (extend `BuildTicketPromptOptions` with optional `visualTesting`)
 - Modify: `packages/cli/src/lib/prompts/builders.test.ts` (add baseline snapshot test)
@@ -817,7 +818,7 @@ Modify `packages/cli/src/lib/prompts/templates/ticket.md`. Replace the section h
 9. **Self-review.** Invoke `superpowers:requesting-code-review`.
 ```
 
-Insert immediately *before* it (between step 8 "Verify" and step 9 "Self-review"):
+Insert immediately _before_ it (between step 8 "Verify" and step 9 "Self-review"):
 
 Wait — actually, per the spec, the visual-testing block goes **just before "Verify"**, not before Self-review. Re-read: "slotted in just before the existing 'Verify' step." Verify is currently step 8.
 
@@ -827,7 +828,7 @@ Find the line:
 8. **Verify.** Invoke `superpowers:verification-before-completion`. Run lint / format / typecheck / test:run.
 ```
 
-Insert immediately *before* it:
+Insert immediately _before_ it:
 
 ```markdown
 {{visualTestingBlock}}
@@ -932,11 +933,12 @@ git commit -m "feat(CREW-α): plumb visualTesting opt through buildTicketPrompt 
 ### Task 8: README — visual-testing setup foundational subsection
 
 **Files:**
+
 - Modify: `README.md` (add a new subsection under `## Setup`)
 
 - [ ] **Step 1: Add the subsection**
 
-In `README.md`, find the line `### GitHub token (once per project)` and insert *before* it (so visual-testing comes between Atlassian MCP and the gh-token section):
+In `README.md`, find the line `### GitHub token (once per project)` and insert _before_ it (so visual-testing comes between Atlassian MCP and the gh-token section):
 
 ````markdown
 ### Visual testing (per project, optional)
@@ -958,8 +960,7 @@ When enabled, `crew run`:
 
 When disabled (no `[visual_testing]` section), behaviour is unchanged.
 
-**Headed sessions for ad-hoc browsing.** The generated `.mcp.json` always uses `--headless`. If you want a headed browser when *you* invoke MCP browser tools interactively in a worktree, register a user-scope server (`claude mcp add -s user playwright -- npx -y @playwright/mcp@latest`) — your user-scope settings will take precedence in your interactive session, but the dispatched agent still uses the worktree-scoped headless config.
-
+**Headed sessions for ad-hoc browsing.** The generated `.mcp.json` always uses `--headless`. If you want a headed browser when _you_ invoke MCP browser tools interactively in a worktree, register a user-scope server (`claude mcp add -s user playwright -- npx -y @playwright/mcp@latest`) — your user-scope settings will take precedence in your interactive session, but the dispatched agent still uses the worktree-scoped headless config.
 ````
 
 - [ ] **Step 2: Verify the formatting**
@@ -983,6 +984,7 @@ git commit -m "docs(CREW-α): README — visual-testing per-project setup"
 ### Task 9: `startCommandHint` helper
 
 **Files:**
+
 - Create: `packages/cli/src/lib/visual-testing/start-command-hint.ts`
 - Create: `packages/cli/src/lib/visual-testing/start-command-hint.test.ts`
 - Modify: `packages/cli/src/lib/visual-testing/index.ts`
@@ -1060,6 +1062,7 @@ git commit -m "feat(CREW-β): startCommandHint — docker vs vite phrasing helpe
 ### Task 10: Smoke fragment template + builder branch
 
 **Files:**
+
 - Create: `packages/cli/src/lib/prompts/templates/ticket-visual-smoke.md`
 - Modify: `packages/cli/src/lib/prompts/ticket.ts` (replace the empty `buildVisualTestingBlock` placeholder)
 - Modify: `packages/cli/src/lib/prompts/builders.test.ts`
@@ -1127,7 +1130,7 @@ This project's UI runs at **{{appUrl}}**. If your changes touch the frontend (an
 2. Use the `mcp__playwright__*` tools to navigate to {{appUrl}} and exercise the golden path you changed. Take a screenshot at the relevant state.
 3. Inspect the screenshot. If the change is invisible or broken, return to step 7 (Execute) — it isn't done yet.
 
-If your change is *clearly* backend-only (no observable user effect), say so explicitly in the PR description and skip this step.
+If your change is _clearly_ backend-only (no observable user effect), say so explicitly in the PR description and skip this step.
 ```
 
 - [ ] **Step 4: Update `buildVisualTestingBlock` to render the smoke fragment**
@@ -1197,6 +1200,7 @@ Expected: VT-off output is identical to today's prompt. VT-smoke output has the 
 ### Task 12: README — smoke section addition
 
 **Files:**
+
 - Modify: `README.md`
 
 - [ ] **Step 1: Append to the visual-testing subsection**
@@ -1205,7 +1209,6 @@ Find the closing of the "Visual testing (per project, optional)" subsection (the
 
 ```markdown
 **At agent runtime.** The dispatched agent's prompt instructs it (when `[visual_testing]` is enabled) to navigate to `app_url` after implementing UI-related changes, take a screenshot, and verify the change visually before claiming "Verify" complete. Backend-only changes skip the smoke step with an explicit note in the PR description.
-
 ```
 
 - [ ] **Step 2: Format check**
@@ -1229,6 +1232,7 @@ git commit -m "docs(CREW-β): README — smoke verification at agent runtime"
 The full `[visual_testing.authored]` shape is already in the schema from Task 1 — Task 13 adds the rejection cases for **partial** sub-tables that Task 1 deferred.
 
 **Files:**
+
 - Modify: `packages/cli/src/lib/config/loader.test.ts`
 - Modify: `packages/cli/src/lib/config/schema.ts` (only if Task 1's schema accepted partials)
 
@@ -1319,6 +1323,7 @@ git commit -m "test(CREW-γ): assert schema rejects partial [visual_testing.auth
 ### Task 14: Authored fragment template + builder branch
 
 **Files:**
+
 - Create: `packages/cli/src/lib/prompts/templates/ticket-visual-authored.md`
 - Modify: `packages/cli/src/lib/prompts/ticket.ts` (extend `buildVisualTestingBlock`)
 - Modify: `packages/cli/src/lib/prompts/builders.test.ts`
@@ -1375,7 +1380,6 @@ Expected: FAIL — `authored` rendering doesn't exist.
 Create `packages/cli/src/lib/prompts/templates/ticket-visual-authored.md`:
 
 ```markdown
-
 ## Authored Playwright test
 
 If the change has regression value (a user-facing flow that broke before or could break again), add a Playwright test:
@@ -1458,6 +1462,7 @@ Expected: smoke section followed immediately by authored section, both fitting b
 ### Task 16: README — authored section addition
 
 **Files:**
+
 - Modify: `README.md`
 
 - [ ] **Step 1: Append to the visual-testing subsection**
@@ -1474,7 +1479,6 @@ test_command = "npm run test:e2e"
 ```
 
 Crew does **not** install `@playwright/test` for you — the target repo must have it set up (config + script + folder) before the agent can run authored tests. When the prerequisite is missing, the agent surfaces it in the PR description rather than silently skipping. This matches the convention of keeping target-repo dependencies as a target-repo concern.
-
 ````
 
 - [ ] **Step 2: Format check**
@@ -1493,7 +1497,7 @@ git commit -m "docs(CREW-γ): README — authored Playwright test opt-in"
 
 ## After all tasks land
 
-The Epic is complete when CREW-α/β/γ are all merged to `main`. The two target-repo prerequisite tickets (Recipes + crew dashboard `@playwright/test` setup) are independent and may merge before, during, or after the crew epic — they only gate γ's *value* per repo, not γ's merge.
+The Epic is complete when CREW-α/β/γ are all merged to `main`. The two target-repo prerequisite tickets (Recipes + crew dashboard `@playwright/test` setup) are independent and may merge before, during, or after the crew epic — they only gate γ's _value_ per repo, not γ's merge.
 
 **Manual end-to-end verification** (not enforced by CI, but the acceptance gate per ticket):
 
