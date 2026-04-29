@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import type { MouseEvent } from 'react';
+import { cva } from 'class-variance-authority';
 
 import type { Agent, AgentState } from '../data/types.js';
-import { STATE_META } from '../data/state-meta.js';
+import { STATE_CLASSES, STATE_META } from '../data/state-meta.js';
 import { StateBadge } from './StateBadge.js';
 import { formatDuration } from '../format/duration.js';
 import { formatTokens } from '../format/tokens.js';
@@ -14,9 +15,40 @@ interface AgentRowProps {
 
 const ACTIVE_STATES = new Set<AgentState>(['running', 'initializing']);
 
+const quickActionButton = cva('rounded-md border px-3 py-1.5 text-xs font-medium', {
+  variants: {
+    variant: {
+      primary: 'border-white/10 bg-state-waiting text-slate-950 hover:opacity-90',
+      secondary: 'border-white/10 text-text hover:bg-surface-2',
+    },
+  },
+  defaultVariants: { variant: 'secondary' },
+});
+
+type QuickActionDescriptor =
+  | { kind: 'button'; label: string; variant: 'primary' | 'secondary' }
+  | { kind: 'link'; label: string; variant: 'primary' | 'secondary'; href: string }
+  | null;
+
+function describeQuickAction(agent: Agent): QuickActionDescriptor {
+  switch (agent.state) {
+    case 'waiting':
+      return { kind: 'button', label: 'Answer', variant: 'primary' };
+    case 'pr_open':
+      return { kind: 'link', label: 'View PR ↗', variant: 'secondary', href: agent.prUrl ?? '#' };
+    case 'error':
+      return { kind: 'button', label: 'Retry', variant: 'secondary' };
+    case 'finished':
+      return { kind: 'button', label: 'Archive', variant: 'secondary' };
+    default:
+      return null;
+  }
+}
+
 export function AgentRow({ agent, onSelect }: AgentRowProps) {
   const runtime = useLiveRuntime(agent.startedAt, ACTIVE_STATES.has(agent.state));
   const meta = STATE_META[agent.state];
+  const stateClasses = STATE_CLASSES[agent.state];
   const attentionAttr = meta.attention ? agent.state : undefined;
 
   return (
@@ -36,13 +68,13 @@ export function AgentRow({ agent, onSelect }: AgentRowProps) {
       className={[
         'group relative grid cursor-pointer items-center gap-4 rounded-[10px] border bg-surface px-4 py-3 transition-colors hover:bg-surface-2',
         'grid-cols-[100px_90px_1fr_90px_70px_auto]',
-        meta.attention ? `border-${meta.colorVar}/30 bg-${meta.colorVar}/10` : 'border-white/10',
+        meta.attention ? `${stateClasses.border30} ${stateClasses.bg10}` : 'border-white/10',
       ].join(' ')}
     >
       {meta.attention && (
         <span
           aria-hidden
-          className={`absolute inset-y-1.5 left-0 w-[3px] rounded-full bg-${meta.colorVar} animate-att-pulse`}
+          className={`absolute inset-y-1.5 left-0 w-[3px] rounded-full ${stateClasses.bg} animate-att-pulse`}
         />
       )}
       <StateBadge state={agent.state} />
@@ -58,54 +90,31 @@ export function AgentRow({ agent, onSelect }: AgentRowProps) {
 }
 
 function QuickAction({ agent }: { agent: Agent }) {
+  const action = describeQuickAction(agent);
+  if (action === null) return <span aria-hidden />;
   const stop = (e: MouseEvent) => e.stopPropagation();
-
-  switch (agent.state) {
-    case 'waiting':
-      return (
-        <button
-          type="button"
-          onClick={stop}
-          className="rounded-md border border-white/10 bg-state-waiting px-3 py-1.5 text-xs font-medium text-slate-950 hover:opacity-90"
-        >
-          Answer
-        </button>
-      );
-    case 'pr_open':
-      return (
-        <a
-          href={agent.prUrl ?? '#'}
-          target="_blank"
-          rel="noreferrer"
-          onClick={stop}
-          className="rounded-md border border-white/10 px-3 py-1.5 text-xs font-medium text-text hover:bg-surface-2"
-        >
-          View PR ↗
-        </a>
-      );
-    case 'error':
-      return (
-        <button
-          type="button"
-          onClick={stop}
-          className="rounded-md border border-white/10 px-3 py-1.5 text-xs font-medium text-text hover:bg-surface-2"
-        >
-          Retry
-        </button>
-      );
-    case 'finished':
-      return (
-        <button
-          type="button"
-          onClick={stop}
-          className="rounded-md border border-white/10 px-3 py-1.5 text-xs font-medium text-text hover:bg-surface-2"
-        >
-          Archive
-        </button>
-      );
-    default:
-      return <span aria-hidden />;
+  if (action.kind === 'link') {
+    return (
+      <a
+        href={action.href}
+        target="_blank"
+        rel="noreferrer"
+        onClick={stop}
+        className={quickActionButton({ variant: action.variant })}
+      >
+        {action.label}
+      </a>
+    );
   }
+  return (
+    <button
+      type="button"
+      onClick={stop}
+      className={quickActionButton({ variant: action.variant })}
+    >
+      {action.label}
+    </button>
+  );
 }
 
 function useLiveRuntime(startedAt: string, live: boolean): string {

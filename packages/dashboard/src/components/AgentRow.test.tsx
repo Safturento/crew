@@ -84,4 +84,14 @@ describe('AgentRow', () => {
       'waiting',
     );
   });
+
+  it('renders a "Retry" quick action for error state', () => {
+    render(<AgentRow agent={{ ...baseAgent, state: 'error' }} onSelect={() => {}} />);
+    expect(screen.getByRole('button', { name: 'Retry' })).toBeInTheDocument();
+  });
+
+  it('renders an "Archive" quick action for finished state', () => {
+    render(<AgentRow agent={{ ...baseAgent, state: 'finished' }} onSelect={() => {}} />);
+    expect(screen.getByRole('button', { name: 'Archive' })).toBeInTheDocument();
+  });
 });
