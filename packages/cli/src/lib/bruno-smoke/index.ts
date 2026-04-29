@@ -4,3 +4,8 @@ export {
   type BrunoSmokeUser,
   type BuildEnvFileOptions,
 } from './build-env-file.js';
+export {
+  writeEnvFile,
+  type WriteEnvFileOptions,
+  type WriteEnvFileResult,
+} from './write-env-file.js';
