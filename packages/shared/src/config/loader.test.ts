@@ -222,6 +222,134 @@ test_command = "npm run test:e2e"
   });
 });
 
+describe('parseProjectConfig — bruno_smoke', () => {
+  const baseToml = `
+name = "minimal"
+repo_path = "/x"
+
+[jira]
+project_key = "MIN"
+site = "https://x.atlassian.net"
+
+[github]
+repo = "owner/repo"
+`;
+
+  it('parses with no [bruno_smoke] section (backwards compatible)', () => {
+    const config = parseProjectConfig(baseToml);
+    expect(config.bruno_smoke).toBeUndefined();
+  });
+
+  it('parses [bruno_smoke] minimal (no docker, no smoke_user)', () => {
+    const raw = `${baseToml}
+[bruno_smoke]
+enabled = true
+base_url = "http://localhost:3000"
+`;
+    const config = parseProjectConfig(raw);
+    expect(config.bruno_smoke?.enabled).toBe(true);
+    expect(config.bruno_smoke?.base_url).toBe('http://localhost:3000');
+    expect(config.bruno_smoke?.collection_dir).toBe('bruno');
+    expect(config.bruno_smoke?.smoke_user).toBeUndefined();
+  });
+
+  it('parses [bruno_smoke] with port placeholder + [docker]', () => {
+    const raw = `${baseToml}
+[docker]
+canonical_worktree = "main"
+
+[bruno_smoke]
+enabled = true
+base_url = "https://localhost:{httpsPort}"
+`;
+    const config = parseProjectConfig(raw);
+    expect(config.bruno_smoke?.base_url).toBe('https://localhost:{httpsPort}');
+  });
+
+  it('parses custom collection_dir', () => {
+    const raw = `${baseToml}
+[bruno_smoke]
+enabled = true
+base_url = "http://localhost:3000"
+collection_dir = "api-tests"
+`;
+    const config = parseProjectConfig(raw);
+    expect(config.bruno_smoke?.collection_dir).toBe('api-tests');
+  });
+
+  it('parses full [bruno_smoke.smoke_user] sub-table', () => {
+    const raw = `${baseToml}
+[bruno_smoke]
+enabled = true
+base_url = "http://localhost:3000"
+
+[bruno_smoke.smoke_user]
+email = "smoke@example.com"
+username = "smoke"
+password = "hunter2"
+`;
+    const config = parseProjectConfig(raw);
+    expect(config.bruno_smoke?.smoke_user).toEqual({
+      email: 'smoke@example.com',
+      username: 'smoke',
+      password: 'hunter2',
+    });
+  });
+
+  it('rejects [bruno_smoke] without base_url', () => {
+    const raw = `${baseToml}
+[bruno_smoke]
+enabled = true
+`;
+    expect(() => parseProjectConfig(raw)).toThrow();
+  });
+
+  it('rejects {httpsPort} placeholder when no [docker] section', () => {
+    const raw = `${baseToml}
+[bruno_smoke]
+enabled = true
+base_url = "https://localhost:{httpsPort}"
+`;
+    expect(() => parseProjectConfig(raw)).toThrow(/docker/);
+  });
+
+  it('rejects [bruno_smoke.smoke_user] missing password', () => {
+    const raw = `${baseToml}
+[bruno_smoke]
+enabled = true
+base_url = "http://localhost:3000"
+
+[bruno_smoke.smoke_user]
+email = "smoke@example.com"
+username = "smoke"
+`;
+    expect(() => parseProjectConfig(raw)).toThrow(/password/);
+  });
+
+  it('rejects [bruno_smoke.smoke_user] missing email', () => {
+    const raw = `${baseToml}
+[bruno_smoke]
+enabled = true
+base_url = "http://localhost:3000"
+
+[bruno_smoke.smoke_user]
+username = "smoke"
+password = "hunter2"
+`;
+    expect(() => parseProjectConfig(raw)).toThrow(/email/);
+  });
+
+  it('rejects empty collection_dir', () => {
+    const raw = `${baseToml}
+[bruno_smoke]
+enabled = true
+base_url = "http://localhost:3000"
+collection_dir = ""
+`;
+    expect(() => parseProjectConfig(raw)).toThrow();
+  });
+});
+
 describe('loadProjectConfigByName', () => {
   it('loads a config from a custom configDir when provided', () => {
     const dir = mkdtempSync(join(tmpdir(), 'crew-shared-config-'));

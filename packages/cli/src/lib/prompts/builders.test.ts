@@ -171,6 +171,21 @@ describe('buildTicketPrompt', () => {
     });
     expect(prompt).not.toContain('Authored Playwright test');
   });
+
+  it('renders identically when brunoSmoke is undefined as when omitted', () => {
+    const a = buildTicketPrompt({
+      key: 'KAN-23',
+      githubRepo: 'Safturento/Recipes',
+      jiraSite: 'https://safturento.atlassian.net',
+    });
+    const b = buildTicketPrompt({
+      key: 'KAN-23',
+      githubRepo: 'Safturento/Recipes',
+      jiraSite: 'https://safturento.atlassian.net',
+      brunoSmoke: undefined,
+    });
+    expect(a).toBe(b);
+  });
 });
 
 describe('buildFixPrPrompt', () => {
@@ -225,5 +240,20 @@ describe('buildFixPrPrompt', () => {
     const curatedIdx = prompt.indexOf('superpowers:requesting-code-review');
     const discoveredIdx = prompt.indexOf('reaching-for-frontend-libraries');
     expect(discoveredIdx).toBeGreaterThan(curatedIdx);
+  });
+
+  it('renders identically when brunoSmoke is undefined as when omitted', () => {
+    const a = buildFixPrPrompt({
+      key: 'KAN-23',
+      feedback: 'fix the typo',
+      feedbackSource: 'stdin',
+    });
+    const b = buildFixPrPrompt({
+      key: 'KAN-23',
+      feedback: 'fix the typo',
+      feedbackSource: 'stdin',
+      brunoSmoke: undefined,
+    });
+    expect(a).toBe(b);
   });
 });

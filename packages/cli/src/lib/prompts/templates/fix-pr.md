@@ -14,6 +14,8 @@ Source: {{feedbackSource}}.
 - **`superpowers:systematic-debugging`** — when something fails unexpectedly.
 - **`superpowers:requesting-code-review`** — before pushing.{{discoveredSkillsBlock}}
 
+{{brunoSmokeBlock}}
+
 ## Apply the fixes
 
 - Update implementation and tests to address each point.

@@ -26,6 +26,7 @@ You are required to use these Superpowers skills as appropriate. Invoke each via
 
 7. **Execute, committing per step.** Use `superpowers:test-driven-development`. Frequent small commits referencing `{{key}}`.
 {{visualTestingBlock}}
+{{brunoSmokeBlock}}
 8. **Verify.** Invoke `superpowers:verification-before-completion`. Run lint / format / typecheck / test:run.
 
 9. **Self-review.** Invoke `superpowers:requesting-code-review`.

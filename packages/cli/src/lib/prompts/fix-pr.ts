@@ -1,10 +1,12 @@
 import { render } from './render.js';
+import type { BrunoSmokePromptOptions } from './ticket.js';
 
 export interface BuildFixPrPromptOptions {
   key: string;
   feedback: string;
   feedbackSource: string;
   conflictFiles?: string[];
+  brunoSmoke?: BrunoSmokePromptOptions;
   discoveredSkillsBlock?: string;
 }
 
@@ -26,6 +28,13 @@ export function buildFixPrPrompt(opts: BuildFixPrPromptOptions): string {
     feedbackSource: opts.feedbackSource,
     conflictPreamble,
     pushDirective,
+    brunoSmokeBlock: buildBrunoSmokeBlock(opts.brunoSmoke),
     discoveredSkillsBlock: opts.discoveredSkillsBlock ?? '',
   });
+}
+
+function buildBrunoSmokeBlock(bs: BrunoSmokePromptOptions | undefined): string {
+  if (!bs) return '';
+  // γ fills the fix-pr-bruno-smoke fragment body. For α the placeholder is wired but empty.
+  return '';
 }

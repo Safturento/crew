@@ -8,6 +8,7 @@ describe('render', () => {
       githubRepo: 'owner/repo',
       jiraSite: 'https://example.atlassian.net',
       visualTestingBlock: '',
+      brunoSmokeBlock: '',
       discoveredSkillsBlock: '',
     });
 
@@ -22,6 +23,7 @@ describe('render', () => {
       githubRepo: 'owner/repo',
       jiraSite: 'https://example.atlassian.net',
       visualTestingBlock: '',
+      brunoSmokeBlock: '',
       discoveredSkillsBlock: '',
     });
 
@@ -35,9 +37,9 @@ describe('render', () => {
       render('ticket', {
         key: 'ZZZ-9',
         // intentionally omitting githubRepo, jiraSite, visualTestingBlock,
-        // discoveredSkillsBlock
+        // brunoSmokeBlock, discoveredSkillsBlock
       }),
-    ).toThrow(/githubRepo|jiraSite|visualTestingBlock|discoveredSkillsBlock/);
+    ).toThrow(/githubRepo|jiraSite|visualTestingBlock|brunoSmokeBlock|discoveredSkillsBlock/);
   });
 
   it('throws when the template name does not exist', () => {

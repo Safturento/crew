@@ -14,6 +14,19 @@ const visualTestingSchema = z.object({
     .optional(),
 });
 
+const brunoSmokeSchema = z.object({
+  enabled: z.literal(true),
+  base_url: z.string().min(1),
+  collection_dir: z.string().min(1).default('bruno'),
+  smoke_user: z
+    .object({
+      email: z.string().min(1),
+      username: z.string().min(1),
+      password: z.string().min(1),
+    })
+    .optional(),
+});
+
 export const projectConfigSchema = z
   .object({
     name: z.string(),
@@ -49,27 +62,40 @@ export const projectConfigSchema = z
       })
       .prefault({}),
     visual_testing: visualTestingSchema.optional(),
+    bruno_smoke: brunoSmokeSchema.optional(),
   })
   .superRefine((cfg, ctx) => {
     const vt = cfg.visual_testing;
-    if (!vt) return;
+    if (vt) {
+      const usesPortPlaceholder = PORT_PLACEHOLDERS.some((p) => vt.app_url.includes(p));
+      if (usesPortPlaceholder && !cfg.docker) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['visual_testing', 'app_url'],
+          message: `app_url uses a port placeholder (${PORT_PLACEHOLDERS.join(', ')}) but no [docker] section is configured`,
+        });
+      }
 
-    const usesPortPlaceholder = PORT_PLACEHOLDERS.some((p) => vt.app_url.includes(p));
-    if (usesPortPlaceholder && !cfg.docker) {
-      ctx.addIssue({
-        code: 'custom',
-        path: ['visual_testing', 'app_url'],
-        message: `app_url uses a port placeholder (${PORT_PLACEHOLDERS.join(', ')}) but no [docker] section is configured`,
-      });
+      if (!vt.start_command && !cfg.docker) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['visual_testing', 'start_command'],
+          message:
+            'start_command is required when [docker] is not configured (the agent needs a command to bring the app up)',
+        });
+      }
     }
 
-    if (!vt.start_command && !cfg.docker) {
-      ctx.addIssue({
-        code: 'custom',
-        path: ['visual_testing', 'start_command'],
-        message:
-          'start_command is required when [docker] is not configured (the agent needs a command to bring the app up)',
-      });
+    const bs = cfg.bruno_smoke;
+    if (bs) {
+      const usesPortPlaceholder = PORT_PLACEHOLDERS.some((p) => bs.base_url.includes(p));
+      if (usesPortPlaceholder && !cfg.docker) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['bruno_smoke', 'base_url'],
+          message: `base_url uses a port placeholder (${PORT_PLACEHOLDERS.join(', ')}) but no [docker] section is configured`,
+        });
+      }
     }
   });
 

@@ -1,0 +1,11 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`buildEnvFileContent > matches the snapshot for the full shape 1`] = `
+"vars {
+  baseUrl: https://localhost:18443
+  testUser.email: a@b.c
+  testUser.username: a
+  testUser.password: p
+}
+"
+`;
