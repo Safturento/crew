@@ -223,9 +223,9 @@ export async function runFinish(key: string, deps: FinishDeps): Promise<FinishRe
   return { ok: true };
 }
 
-function readJiraSecrets(env: NodeJS.ProcessEnv): { email: string; token: string } | null {
-  const email = env.CREW_JIRA_EMAIL;
-  const token = env.CREW_JIRA_API_TOKEN;
+export function readJiraSecrets(env: NodeJS.ProcessEnv): { email: string; token: string } | null {
+  const email = env.CREW_JIRA_EMAIL?.trim();
+  const token = env.CREW_JIRA_API_TOKEN?.trim();
   if (email && token) return { email, token };
   return null;
 }
