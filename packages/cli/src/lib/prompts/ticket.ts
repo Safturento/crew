@@ -56,6 +56,10 @@ function buildVisualTestingBlock(vt: VisualTestingPromptOptions | undefined): st
 
 function buildBrunoSmokeBlock(bs: BrunoSmokePromptOptions | undefined): string {
   if (!bs) return '';
-  // β fills the bruno-smoke fragment body. For α the placeholder is wired but empty.
-  return '';
+  return render('ticket-bruno-smoke', {
+    baseUrl: bs.baseUrl,
+    envName: bs.envName,
+    collectionDir: bs.collectionDir,
+    testUserClause: bs.hasSmokeUser ? ' and a test user' : '',
+  });
 }
