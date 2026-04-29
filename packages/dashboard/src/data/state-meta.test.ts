@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import { STATE_META, sortAgentsByPriority } from './state-meta.js';
-import type { Agent } from './types.js';
+import { STATE_CLASSES, STATE_META, sortAgentsByPriority } from './state-meta.js';
+import type { Agent, AgentState } from './types.js';
 
 const agent = (key: string, state: Agent['state'], startedAt: string): Agent => ({
   key,
@@ -51,4 +51,35 @@ describe('sortAgentsByPriority', () => {
     const sorted = sortAgentsByPriority(agents);
     expect(sorted.map((a) => a.key)).toEqual(['newer', 'middle', 'older']);
   });
+});
+
+const ALL_STATES: AgentState[] = [
+  'initializing',
+  'running',
+  'idle',
+  'waiting',
+  'pr_open',
+  'error',
+  'finished',
+];
+
+const TOKEN_KEYS = ['text', 'borderSolid', 'border30', 'border40', 'bg', 'bg10'] as const;
+
+describe('STATE_CLASSES', () => {
+  it.each(ALL_STATES)('has non-empty class tokens for %s', (state) => {
+    const tokens = STATE_CLASSES[state];
+    for (const key of TOKEN_KEYS) {
+      expect(tokens[key], `${state}.${key}`).toMatch(/^\S+$/);
+    }
+  });
+
+  it.each(ALL_STATES)(
+    'uses literal class names (no template-string interpolation) for %s',
+    (state) => {
+      const tokens = STATE_CLASSES[state];
+      for (const key of TOKEN_KEYS) {
+        expect(tokens[key], `${state}.${key}`).not.toMatch(/[$\\{}]/);
+      }
+    },
+  );
 });

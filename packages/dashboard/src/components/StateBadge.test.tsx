@@ -2,6 +2,7 @@ import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 
 import { StateBadge } from './StateBadge.js';
+import type { AgentState } from '../data/types.js';
 
 describe('StateBadge', () => {
   it('renders the human label for each state', () => {
@@ -33,5 +34,21 @@ describe('StateBadge', () => {
     render(<StateBadge state="finished" />);
     expect(screen.queryByTestId('state-badge-pulse')).not.toBeInTheDocument();
     expect(screen.getByTestId('state-badge-dot')).toBeInTheDocument();
+  });
+
+  const STATES_AND_TOKENS: Array<[AgentState, string]> = [
+    ['waiting', 'state-waiting'],
+    ['running', 'state-running'],
+    ['error', 'state-error'],
+    ['pr_open', 'state-pr-open'],
+    ['finished', 'state-finished'],
+    ['initializing', 'state-initializing'],
+    ['idle', 'state-idle'],
+  ];
+
+  it.each(STATES_AND_TOKENS)('emits literal Tailwind tokens for %s', (state, token) => {
+    render(<StateBadge state={state} />);
+    const badge = screen.getByRole('status');
+    expect(badge.className).toContain(token);
   });
 });
