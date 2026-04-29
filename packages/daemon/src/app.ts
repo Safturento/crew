@@ -1,5 +1,16 @@
-import Fastify, { type FastifyError } from 'fastify';
+import Fastify, {
+  type FastifyError,
+  type FastifyInstance,
+  type RawReplyDefaultExpression,
+  type RawRequestDefaultExpression,
+  type RawServerDefault,
+} from 'fastify';
 import { fastifyAwilixPlugin } from '@fastify/awilix';
+import {
+  serializerCompiler,
+  validatorCompiler,
+  type ZodTypeProvider,
+} from 'fastify-type-provider-zod';
 import { ZodError } from 'zod';
 import type { Kysely } from 'kysely';
 import type { Logger } from 'pino';
@@ -7,6 +18,20 @@ import type { DaemonConfig } from './config.js';
 import type { DaemonDatabase } from './db.js';
 import { ConfigDirNotFoundError, NotFoundError } from './errors.js';
 import { buildContainer } from './container.js';
+import { registerProjectsRoutes } from './routes/projects.js';
+
+/**
+ * The Fastify instance shape returned by `buildApp` — a pino logger plus
+ * the Zod type provider so route files declaring Zod schemas in their
+ * `schema` blocks compile against this exact instance type.
+ */
+export type DaemonApp = FastifyInstance<
+  RawServerDefault,
+  RawRequestDefaultExpression<RawServerDefault>,
+  RawReplyDefaultExpression<RawServerDefault>,
+  Logger,
+  ZodTypeProvider
+>;
 
 function getValidation(err: Error): FastifyError['validation'] | undefined {
   const candidate = (err as { validation?: unknown }).validation;
@@ -25,8 +50,10 @@ export interface BuildAppOptions {
  * server (or calls `app.inject` in tests) and is responsible for
  * `app.close()` on shutdown.
  */
-export async function buildApp({ config, logger, db }: BuildAppOptions) {
-  const app = Fastify({ loggerInstance: logger });
+export async function buildApp({ config, logger, db }: BuildAppOptions): Promise<DaemonApp> {
+  const app: DaemonApp = Fastify({ loggerInstance: logger }).withTypeProvider<ZodTypeProvider>();
+  app.setValidatorCompiler(validatorCompiler);
+  app.setSerializerCompiler(serializerCompiler);
 
   await app.register(fastifyAwilixPlugin, {
     container: buildContainer({ config, logger, db }),
@@ -60,6 +87,8 @@ export async function buildApp({ config, logger, db }: BuildAppOptions) {
   });
 
   app.get('/health', async () => ({ ok: true }));
+
+  await registerProjectsRoutes(app);
 
   return app;
 }
