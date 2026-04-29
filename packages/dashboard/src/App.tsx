@@ -1,33 +1,43 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo } from 'react';
+import { useQuery, useQueryErrorResetBoundary } from '@tanstack/react-query';
+import { ErrorBoundary } from 'react-error-boundary';
 
 import { useAttention } from './attention/useAttention.js';
 import { useFaviconBadge } from './attention/useFaviconBadge.js';
 import { AgentDetailPlaceholder } from './components/AgentDetailPlaceholder.js';
 import { AgentsList } from './components/AgentsList.js';
+import { ErrorFallback } from './components/ErrorFallback.js';
 import { TopNav } from './components/TopNav.js';
 import { ViewportFrame } from './components/ViewportFrame.js';
 import type { DaemonClient } from './data/DaemonClient.js';
 import { MockDaemonClient } from './data/MockDaemonClient.js';
-import type { Agent, Project } from './data/types.js';
 import { navigate, useHashRoute } from './routing/useHashRoute.js';
 
 const defaultClient: DaemonClient = new MockDaemonClient();
 
 export function App({ client = defaultClient }: { client?: DaemonClient } = {}) {
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [agents, setAgents] = useState<Agent[]>([]);
+  const { reset } = useQueryErrorResetBoundary();
+  return (
+    <ViewportFrame>
+      <ErrorBoundary FallbackComponent={ErrorFallback} onReset={reset}>
+        <AppContent client={client} />
+      </ErrorBoundary>
+    </ViewportFrame>
+  );
+}
 
-  useEffect(() => {
-    let cancelled = false;
-    void Promise.all([client.listProjects(), client.listAgents()]).then(([p, a]) => {
-      if (cancelled) return;
-      setProjects(p);
-      setAgents(a);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [client]);
+function AppContent({ client }: { client: DaemonClient }) {
+  const projectsQuery = useQuery({
+    queryKey: ['projects'],
+    queryFn: () => client.listProjects(),
+  });
+  const agentsQuery = useQuery({
+    queryKey: ['agents'],
+    queryFn: () => client.listAgents(),
+  });
+
+  const projects = projectsQuery.data ?? [];
+  const agents = agentsQuery.data ?? [];
 
   const route = useHashRoute();
   const attention = useAttention(agents);
@@ -52,7 +62,7 @@ export function App({ client = defaultClient }: { client?: DaemonClient } = {}) 
   }, [route, projects, agents]);
 
   return (
-    <ViewportFrame>
+    <>
       <TopNav
         route={route}
         attentionCount={attention.count}
@@ -62,7 +72,7 @@ export function App({ client = defaultClient }: { client?: DaemonClient } = {}) 
         }}
       />
       <div className="flex-1 overflow-y-auto">{body}</div>
-    </ViewportFrame>
+    </>
   );
 }
 
