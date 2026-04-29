@@ -1,7 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { execa } from 'execa';
 import { unlink } from 'node:fs/promises';
-import { computeWorktreePath, isInsideWorktree, runFinish, type FinishDeps } from './finish.js';
+import {
+  computeWorktreePath,
+  isInsideWorktree,
+  readJiraSecrets,
+  runFinish,
+  type FinishDeps,
+} from './finish.js';
 import type { ProjectConfig } from '../lib/index.js';
 
 vi.mock('execa', () => ({ execa: vi.fn() }));
@@ -66,6 +72,22 @@ describe('computeWorktreePath', () => {
     expect(computeWorktreePath('/home/u/Repos/Recipes-App/', 'KAN-23')).toBe(
       '/home/u/Repos/Recipes-App-KAN-23',
     );
+  });
+});
+
+describe('readJiraSecrets', () => {
+  it('returns null when either var is unset', () => {
+    expect(readJiraSecrets({})).toBeNull();
+    expect(readJiraSecrets({ CREW_JIRA_EMAIL: 'me@x.com' })).toBeNull();
+    expect(readJiraSecrets({ CREW_JIRA_API_TOKEN: 'tok' })).toBeNull();
+  });
+
+  it('trims surrounding whitespace so CRLF-loaded env files do not break Basic auth', () => {
+    const secrets = readJiraSecrets({
+      CREW_JIRA_EMAIL: 'me@x.com\r',
+      CREW_JIRA_API_TOKEN: '  tok\n',
+    });
+    expect(secrets).toEqual({ email: 'me@x.com', token: 'tok' });
   });
 });
 

@@ -59,7 +59,9 @@ export class JiraClient {
       },
     });
     if (!res.ok) {
-      throw new Error(`Jira ${init?.method ?? 'GET'} ${path} failed: ${res.status}`);
+      const body = (await res.text()).trim();
+      const detail = body ? ` — ${body}` : '';
+      throw new Error(`Jira ${init?.method ?? 'GET'} ${path} failed: ${res.status}${detail}`);
     }
     if (res.status === 204) return undefined as T;
     return (await res.json()) as T;

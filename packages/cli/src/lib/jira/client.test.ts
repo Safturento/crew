@@ -21,12 +21,12 @@ function ok(body: unknown) {
   };
 }
 
-function status(code: number) {
+function status(code: number, body = '') {
   return {
     ok: false,
     status: code,
     json: async () => ({}),
-    text: async () => '',
+    text: async () => body,
   };
 }
 
@@ -47,6 +47,16 @@ describe('JiraClient.getIssue', () => {
   it('throws a useful error on non-2xx', async () => {
     fetchMock.mockResolvedValueOnce(status(404));
     await expect(client.getIssue('NOPE-1')).rejects.toThrow(/404/);
+  });
+
+  it('includes the response body in the error so auth-as-404 is diagnosable', async () => {
+    fetchMock.mockResolvedValueOnce(
+      status(
+        404,
+        '{"errorMessages":["Issue does not exist or you do not have permission to see it."],"errors":{}}',
+      ),
+    );
+    await expect(client.getIssue('CREW-28')).rejects.toThrow(/do not have permission/);
   });
 });
 
