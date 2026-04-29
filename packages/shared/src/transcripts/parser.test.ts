@@ -5,7 +5,7 @@ import { join, dirname } from 'node:path';
 import { parseTranscript, parseToolCall, aggregateUsage, formatToolCall } from './index.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const FIXTURE = join(__dirname, '../../../test/fixtures/transcript-sample.jsonl');
+const FIXTURE = join(__dirname, '../../test/fixtures/transcript-sample.jsonl');
 
 describe('parseTranscript', () => {
   it('parses a JSONL transcript into typed events', () => {

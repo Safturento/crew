@@ -12,7 +12,14 @@ import { setTimeout as delay } from 'node:timers/promises';
 import { Command } from 'commander';
 import { execa, type ResultPromise } from 'execa';
 import pc from 'picocolors';
-import { discoverProjectConfig, type ProjectConfig } from '../lib/index.js';
+import {
+  claudeProjectDirFor,
+  discoverProjectConfig,
+  formatToolCall,
+  parseToolCall,
+  tailTranscript,
+  type ProjectConfig,
+} from '../lib/index.js';
 import { writeDockerEnv } from '../lib/docker/index.js';
 import { buildTicketPrompt } from '../lib/prompts/index.js';
 import { discoverSkills, renderDiscoveredSkillsBlock } from '../lib/prompts/skills.js';
@@ -23,7 +30,6 @@ import {
 } from '../lib/bruno-smoke/index.js';
 import {
   agentNeedsAppRunning,
-  claudeProjectDirFor,
   dockerLogPathFor,
   findNewestTranscript,
   hasBinary,
@@ -33,7 +39,6 @@ import {
   runLogPathFor,
   worktreePathFor,
 } from '../lib/run/index.js';
-import { formatToolCall, parseToolCall, tailTranscript } from '../lib/transcripts/index.js';
 
 interface RunOptions {
   skipDocker?: boolean;

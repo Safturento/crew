@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { listSessionsForRepo, type SessionSummary } from './discovery.js';
-import { parseTranscript, parseToolCall, type ToolCall } from '../transcripts/index.js';
+import { parseTranscript, parseToolCall, type ToolCall } from 'crew-shared';
 
 export interface FindLatestSessionForBranchOptions {
   repoPath: string;

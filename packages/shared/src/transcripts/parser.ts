@@ -62,7 +62,7 @@ function formatTokens(n: number): string {
   return `${n} tok`;
 }
 
-function summarizeInput(toolName: string, input: Record<string, unknown>): string {
+export function summarizeInput(toolName: string, input: Record<string, unknown>): string {
   switch (toolName) {
     case 'Read':
     case 'Edit':
