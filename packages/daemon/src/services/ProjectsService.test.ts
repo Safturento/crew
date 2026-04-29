@@ -43,11 +43,14 @@ describe('ProjectsService.list', () => {
     const dir = projectsDir();
     writeFileSync(join(dir, 'good.toml'), validToml('good', '/tmp/good'));
     writeFileSync(join(dir, 'broken.toml'), 'this = is not [valid toml');
-    const warn = vi.fn();
-    const loggerWithWarn = { ...silentLogger, warn } as unknown as Logger;
-    const svc = new ProjectsService({ projectsDir: dir, logger: loggerWithWarn });
-    expect(svc.list()).toEqual([{ name: 'good', repoPath: '/tmp/good' }]);
-    expect(warn).toHaveBeenCalledOnce();
+    const warnSpy = vi.spyOn(silentLogger, 'warn');
+    try {
+      const svc = new ProjectsService({ projectsDir: dir, logger: silentLogger });
+      expect(svc.list()).toEqual([{ name: 'good', repoPath: '/tmp/good' }]);
+      expect(warnSpy).toHaveBeenCalledOnce();
+    } finally {
+      warnSpy.mockRestore();
+    }
   });
 
   it('returns an empty array when the projects dir does not exist', () => {

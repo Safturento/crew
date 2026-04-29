@@ -47,6 +47,10 @@ export function buildContainer(deps: BuildContainerDeps): AwilixContainer<Daemon
     config: asValue(deps.config),
     logger: asValue(deps.logger),
     db: asValue(deps.db),
+    // `config.configDir` IS the projects directory today (per CREW-35's
+    // env schema). The service param is named `projectsDir` to describe
+    // what it actually scans; if `DaemonConfig` later splits the two,
+    // change this argument, not the service's parameter name.
     projectsService: asFunction(
       ({ config, logger }: DaemonCradle) =>
         new ProjectsService({ projectsDir: config.configDir, logger }),
