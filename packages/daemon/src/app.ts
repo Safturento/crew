@@ -1,3 +1,5 @@
+import { existsSync } from 'node:fs';
+import { join } from 'node:path';
 import Fastify, {
   type FastifyError,
   type FastifyInstance,
@@ -5,6 +7,7 @@ import Fastify, {
   type RawRequestDefaultExpression,
   type RawServerDefault,
 } from 'fastify';
+import fastifyStatic from '@fastify/static';
 import { fastifyAwilixPlugin } from '@fastify/awilix';
 import {
   serializerCompiler,
@@ -19,6 +22,16 @@ import type { DaemonDatabase } from './db.js';
 import { ConfigDirNotFoundError, NotFoundError } from './errors.js';
 import { buildContainer } from './container.js';
 import { registerProjectsRoutes } from './routes/projects.js';
+
+const PLACEHOLDER_HTML = `<!DOCTYPE html>
+<html>
+  <head><title>crew daemon</title></head>
+  <body style="font-family: system-ui; padding: 2rem;">
+    <h1>crew daemon</h1>
+    <p>dashboard not built — run <code>npm run build --workspace=crew-dashboard</code></p>
+  </body>
+</html>
+`;
 
 /**
  * The Fastify instance shape returned by `buildApp` — a pino logger plus
@@ -42,6 +55,15 @@ export interface BuildAppOptions {
   config: DaemonConfig;
   logger: Logger;
   db: Kysely<DaemonDatabase>;
+  /**
+   * Absolute path to the dashboard's built dist directory. When present
+   * AND it contains `index.html`, the daemon serves static assets at `/`
+   * with an SPA fallback to `index.html` for unknown non-`/api` routes.
+   * When absent or unbuilt, `/` serves a placeholder pointing the user
+   * at the dashboard build command. `/api/*` always returns JSON 404 on
+   * unknown routes regardless of the dist state.
+   */
+  dashboardDistDir?: string;
 }
 
 /**
@@ -50,7 +72,12 @@ export interface BuildAppOptions {
  * server (or calls `app.inject` in tests) and is responsible for
  * `app.close()` on shutdown.
  */
-export async function buildApp({ config, logger, db }: BuildAppOptions): Promise<DaemonApp> {
+export async function buildApp({
+  config,
+  logger,
+  db,
+  dashboardDistDir,
+}: BuildAppOptions): Promise<DaemonApp> {
   const app: DaemonApp = Fastify({ loggerInstance: logger }).withTypeProvider<ZodTypeProvider>();
   app.setValidatorCompiler(validatorCompiler);
   app.setSerializerCompiler(serializerCompiler);
@@ -89,6 +116,23 @@ export async function buildApp({ config, logger, db }: BuildAppOptions): Promise
   app.get('/health', async () => ({ ok: true }));
 
   await registerProjectsRoutes(app);
+
+  if (dashboardDistDir && existsSync(join(dashboardDistDir, 'index.html'))) {
+    await app.register(fastifyStatic, { root: dashboardDistDir, prefix: '/' });
+    app.setNotFoundHandler((req, reply) => {
+      if (req.url.startsWith('/api/')) {
+        return reply.code(404).send({ error: 'not_found' });
+      }
+      return reply.sendFile('index.html');
+    });
+  } else {
+    app.setNotFoundHandler((req, reply) => {
+      if (req.url.startsWith('/api/')) {
+        return reply.code(404).send({ error: 'not_found' });
+      }
+      return reply.code(200).type('text/html').send(PLACEHOLDER_HTML);
+    });
+  }
 
   return app;
 }
