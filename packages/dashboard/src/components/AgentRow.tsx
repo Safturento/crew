@@ -107,11 +107,7 @@ function QuickAction({ agent }: { agent: Agent }) {
     );
   }
   return (
-    <button
-      type="button"
-      onClick={stop}
-      className={quickActionButton({ variant: action.variant })}
-    >
+    <button type="button" onClick={stop} className={quickActionButton({ variant: action.variant })}>
       {action.label}
     </button>
   );
