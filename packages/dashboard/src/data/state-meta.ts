@@ -22,6 +22,74 @@ export const STATE_META: Record<AgentState, StateMetaEntry> = {
   finished: { label: 'Finished', colorVar: 'state-finished', attention: false, sortRank: 6 },
 };
 
+export interface StateClassTokens {
+  text: string;
+  borderSolid: string;
+  border30: string;
+  border40: string;
+  bg: string;
+  bg10: string;
+}
+
+export const STATE_CLASSES: Record<AgentState, StateClassTokens> = {
+  initializing: {
+    text: 'text-state-initializing',
+    borderSolid: 'border-state-initializing',
+    border30: 'border-state-initializing/30',
+    border40: 'border-state-initializing/40',
+    bg: 'bg-state-initializing',
+    bg10: 'bg-state-initializing/10',
+  },
+  running: {
+    text: 'text-state-running',
+    borderSolid: 'border-state-running',
+    border30: 'border-state-running/30',
+    border40: 'border-state-running/40',
+    bg: 'bg-state-running',
+    bg10: 'bg-state-running/10',
+  },
+  idle: {
+    text: 'text-state-idle',
+    borderSolid: 'border-state-idle',
+    border30: 'border-state-idle/30',
+    border40: 'border-state-idle/40',
+    bg: 'bg-state-idle',
+    bg10: 'bg-state-idle/10',
+  },
+  waiting: {
+    text: 'text-state-waiting',
+    borderSolid: 'border-state-waiting',
+    border30: 'border-state-waiting/30',
+    border40: 'border-state-waiting/40',
+    bg: 'bg-state-waiting',
+    bg10: 'bg-state-waiting/10',
+  },
+  pr_open: {
+    text: 'text-state-pr-open',
+    borderSolid: 'border-state-pr-open',
+    border30: 'border-state-pr-open/30',
+    border40: 'border-state-pr-open/40',
+    bg: 'bg-state-pr-open',
+    bg10: 'bg-state-pr-open/10',
+  },
+  error: {
+    text: 'text-state-error',
+    borderSolid: 'border-state-error',
+    border30: 'border-state-error/30',
+    border40: 'border-state-error/40',
+    bg: 'bg-state-error',
+    bg10: 'bg-state-error/10',
+  },
+  finished: {
+    text: 'text-state-finished',
+    borderSolid: 'border-state-finished',
+    border30: 'border-state-finished/30',
+    border40: 'border-state-finished/40',
+    bg: 'bg-state-finished',
+    bg10: 'bg-state-finished/10',
+  },
+};
+
 export function sortAgentsByPriority(agents: Agent[]): Agent[] {
   return [...agents].sort((a, b) => {
     const rankDiff = STATE_META[a.state].sortRank - STATE_META[b.state].sortRank;
