@@ -171,6 +171,21 @@ describe('buildTicketPrompt', () => {
     });
     expect(prompt).not.toContain('Authored Playwright test');
   });
+
+  it('renders identically when brunoSmoke is undefined as when omitted', () => {
+    const a = buildTicketPrompt({
+      key: 'KAN-23',
+      githubRepo: 'Safturento/Recipes',
+      jiraSite: 'https://safturento.atlassian.net',
+    });
+    const b = buildTicketPrompt({
+      key: 'KAN-23',
+      githubRepo: 'Safturento/Recipes',
+      jiraSite: 'https://safturento.atlassian.net',
+      brunoSmoke: undefined,
+    });
+    expect(a).toBe(b);
+  });
 });
 
 describe('buildFixPrPrompt', () => {

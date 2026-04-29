@@ -197,6 +197,15 @@ async function runTicket(key: string, opts: RunOptions): Promise<never> {
               : undefined,
           }
         : undefined,
+    brunoSmoke:
+      config.bruno_smoke?.enabled && brunoEnvName && resolvedBrunoBaseUrl
+        ? {
+            baseUrl: resolvedBrunoBaseUrl,
+            envName: brunoEnvName,
+            collectionDir: config.bruno_smoke.collection_dir,
+            hasSmokeUser: Boolean(config.bruno_smoke.smoke_user),
+          }
+        : undefined,
     discoveredSkillsBlock,
   });
 

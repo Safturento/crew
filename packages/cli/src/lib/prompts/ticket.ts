@@ -10,11 +10,19 @@ export interface VisualTestingPromptOptions {
   };
 }
 
+export interface BrunoSmokePromptOptions {
+  baseUrl: string;
+  envName: string;
+  collectionDir: string;
+  hasSmokeUser: boolean;
+}
+
 export interface BuildTicketPromptOptions {
   key: string;
   githubRepo: string;
   jiraSite: string;
   visualTesting?: VisualTestingPromptOptions;
+  brunoSmoke?: BrunoSmokePromptOptions;
   discoveredSkillsBlock?: string;
 }
 
@@ -24,6 +32,7 @@ export function buildTicketPrompt(opts: BuildTicketPromptOptions): string {
     githubRepo: opts.githubRepo,
     jiraSite: opts.jiraSite,
     visualTestingBlock: buildVisualTestingBlock(opts.visualTesting),
+    brunoSmokeBlock: buildBrunoSmokeBlock(opts.brunoSmoke),
     discoveredSkillsBlock: opts.discoveredSkillsBlock ?? '',
   });
 }
@@ -43,4 +52,9 @@ function buildVisualTestingBlock(vt: VisualTestingPromptOptions | undefined): st
     testCommand: vt.authored.testCommand,
   });
   return smoke + authored;
+}
+
+function buildBrunoSmokeBlock(_bs: BrunoSmokePromptOptions | undefined): string {
+  // β fills the bruno-smoke fragment. For α, the placeholder always renders empty.
+  return '';
 }

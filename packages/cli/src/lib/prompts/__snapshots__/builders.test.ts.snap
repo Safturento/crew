@@ -29,6 +29,7 @@ You are required to use these Superpowers skills as appropriate. Invoke each via
 
 7. **Execute, committing per step.** Use \`superpowers:test-driven-development\`. Frequent small commits referencing \`KAN-23\`.
 
+
 8. **Verify.** Invoke \`superpowers:verification-before-completion\`. Run lint / format / typecheck / test:run.
 
 9. **Self-review.** Invoke \`superpowers:requesting-code-review\`.
@@ -89,6 +90,7 @@ The following user-level skills are equally required when their description matc
 
 7. **Execute, committing per step.** Use \`superpowers:test-driven-development\`. Frequent small commits referencing \`KAN-23\`.
 
+
 8. **Verify.** Invoke \`superpowers:verification-before-completion\`. Run lint / format / typecheck / test:run.
 
 9. **Self-review.** Invoke \`superpowers:requesting-code-review\`.
@@ -144,6 +146,7 @@ You are required to use these Superpowers skills as appropriate. Invoke each via
 6. **Plan inline (or follow an existing plan).** If a plan doc exists, invoke \`superpowers:executing-plans\` and let the plan drive. Otherwise decompose into commit-shaped steps via \`TaskCreate\`.
 
 7. **Execute, committing per step.** Use \`superpowers:test-driven-development\`. Frequent small commits referencing \`KAN-23\`.
+
 
 8. **Verify.** Invoke \`superpowers:verification-before-completion\`. Run lint / format / typecheck / test:run.
 
@@ -222,6 +225,7 @@ If the change has regression value (a user-facing flow that broke before or coul
 
 If \`tests/e2e/\` doesn't exist or \`npm run test:e2e\` fails because the runner isn't installed, surface the problem in the PR description and do **not** silently skip — that's a project setup gap, not your fault.
 
+
 8. **Verify.** Invoke \`superpowers:verification-before-completion\`. Run lint / format / typecheck / test:run.
 
 9. **Self-review.** Invoke \`superpowers:requesting-code-review\`.
@@ -288,6 +292,7 @@ This project's UI runs at **https://localhost:18443**. If your changes touch the
 
 If your change is _clearly_ backend-only (no observable user effect), say so explicitly in the PR description and skip this step.
 
+
 8. **Verify.** Invoke \`superpowers:verification-before-completion\`. Run lint / format / typecheck / test:run.
 
 9. **Self-review.** Invoke \`superpowers:requesting-code-review\`.
@@ -353,6 +358,7 @@ This project's UI runs at **http://localhost:5173**. If your changes touch the f
 3. Inspect the screenshot. If the change is invisible or broken, return to step 7 (Execute) — it isn't done yet.
 
 If your change is _clearly_ backend-only (no observable user effect), say so explicitly in the PR description and skip this step.
+
 
 8. **Verify.** Invoke \`superpowers:verification-before-completion\`. Run lint / format / typecheck / test:run.
 
