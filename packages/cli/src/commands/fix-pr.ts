@@ -135,6 +135,8 @@ function repoPathFromWorktree(worktree: string, key: string): string {
   return worktree.endsWith(suffix) ? worktree.slice(0, -suffix.length) : worktree;
 }
 
+const PORT_PLACEHOLDER_RE = /\{[a-zA-Z]+Port\}/;
+
 export function brunoSmokeOptionsFor(
   config: ProjectConfig,
   worktree: string,
@@ -143,8 +145,10 @@ export function brunoSmokeOptionsFor(
   if (!bs?.enabled) return undefined;
 
   // fix-pr does not run writeDockerEnv; the .env on disk is authoritative.
-  // Read it from the worktree's existing .env file rather than recomputing.
-  const dockerPorts = config.docker ? readDockerPortsFromEnvFile(worktree) : undefined;
+  // Only touch disk when base_url actually has a placeholder to substitute.
+  const dockerPorts = PORT_PLACEHOLDER_RE.test(bs.base_url)
+    ? readDockerPortsFromEnvFile(worktree)
+    : undefined;
 
   const baseUrl = resolveAppUrl(bs.base_url, dockerPorts).raw;
   return {

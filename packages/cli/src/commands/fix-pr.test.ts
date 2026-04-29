@@ -139,4 +139,27 @@ describe('brunoSmokeOptionsFor', () => {
     const opts = brunoSmokeOptionsFor(cfg, '/wt/main');
     expect(opts?.hasSmokeUser).toBe(true);
   });
+
+  it('does not read .env when base_url has no port placeholder, even with [docker] set', () => {
+    const cfg = baseConfig();
+    cfg.docker = {
+      canonical_worktree: 'main',
+      http_port_base: 8000,
+      https_port_base: 8400,
+      postgres_port_base: 15400,
+    };
+    cfg.bruno_smoke = {
+      enabled: true,
+      base_url: 'http://localhost:3000',
+      collection_dir: 'bruno',
+    };
+    // /wt/missing has no .env file. If the helper reads disk, this throws.
+    const opts = brunoSmokeOptionsFor(cfg, '/wt/missing');
+    expect(opts).toEqual({
+      baseUrl: 'http://localhost:3000',
+      envName: 'missing',
+      collectionDir: 'bruno',
+      hasSmokeUser: false,
+    });
+  });
 });
