@@ -1,8 +1,8 @@
 import { existsSync, readdirSync, statSync, readFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { basename, join } from 'node:path';
-import { parseTranscript } from '../transcripts/index.js';
-import type { TranscriptEvent, ToolUseContent } from '../transcripts/index.js';
+import { parseTranscript } from 'crew-shared';
+import type { TranscriptEvent, ToolUseContent } from 'crew-shared';
 
 const DEFAULT_PROJECTS_ROOT = join(homedir(), '.claude', 'projects');
 const DEFAULT_RUNNING_WINDOW_MS = 60_000;

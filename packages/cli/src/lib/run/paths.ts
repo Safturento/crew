@@ -1,4 +1,3 @@
-import { homedir } from 'node:os';
 import { basename, dirname, join } from 'node:path';
 
 /**
@@ -9,17 +8,6 @@ import { basename, dirname, join } from 'node:path';
 export function worktreePathFor(repoPath: string, key: string): string {
   const trimmed = repoPath.replace(/\/+$/, '');
   return join(dirname(trimmed), `${basename(trimmed)}-${key}`);
-}
-
-/**
- * Path to the Claude Code project directory that holds JSONL transcripts
- * for runs invoked from `worktreePath`. Claude encodes the cwd by replacing
- * each `/` in the absolute path with `-` (so a leading slash becomes a
- * leading dash).
- */
-export function claudeProjectDirFor(worktreePath: string, home: string = homedir()): string {
-  const encoded = worktreePath.replace(/\//g, '-');
-  return join(home, '.claude', 'projects', encoded);
 }
 
 export function runLogPathFor(key: string): string {
