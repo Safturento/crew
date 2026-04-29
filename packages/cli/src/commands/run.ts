@@ -12,7 +12,7 @@ import { setTimeout as delay } from 'node:timers/promises';
 import { Command } from 'commander';
 import { execa, type ResultPromise } from 'execa';
 import pc from 'picocolors';
-import { discoverProjectConfig, type ProjectConfig } from '../lib/config/index.js';
+import { discoverProjectConfig, type ProjectConfig } from '../lib/index.js';
 import { writeDockerEnv } from '../lib/docker/index.js';
 import { buildTicketPrompt } from '../lib/prompts/index.js';
 import { discoverSkills, renderDiscoveredSkillsBlock } from '../lib/prompts/skills.js';
