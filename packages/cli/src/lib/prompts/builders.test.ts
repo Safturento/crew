@@ -126,6 +126,51 @@ describe('buildTicketPrompt', () => {
     });
     expect(prompt).toMatchSnapshot();
   });
+
+  it('renders the authored test section after the smoke section when authored is provided', () => {
+    const prompt = buildTicketPrompt({
+      key: 'KAN-23',
+      githubRepo: 'Safturento/Recipes',
+      jiraSite: 'https://safturento.atlassian.net',
+      visualTesting: {
+        appUrl: 'https://localhost:18443',
+        authored: {
+          testsDir: 'tests/e2e',
+          testCommand: 'npm run test:e2e',
+        },
+      },
+    });
+    expect(prompt).toContain('Visual smoke verification');
+    expect(prompt).toContain('Authored Playwright test');
+    expect(prompt).toContain('tests/e2e');
+    expect(prompt).toContain('npm run test:e2e');
+
+    const smokeIdx = prompt.indexOf('Visual smoke verification');
+    const authoredIdx = prompt.indexOf('Authored Playwright test');
+    expect(authoredIdx).toBeGreaterThan(smokeIdx);
+
+    expect(prompt).toMatchSnapshot();
+  });
+
+  it('omits the authored section when visualTesting is set without authored', () => {
+    const prompt = buildTicketPrompt({
+      key: 'KAN-23',
+      githubRepo: 'Safturento/Recipes',
+      jiraSite: 'https://safturento.atlassian.net',
+      visualTesting: { appUrl: 'https://localhost:18443' },
+    });
+    expect(prompt).toContain('Visual smoke verification');
+    expect(prompt).not.toContain('Authored Playwright test');
+  });
+
+  it('omits the authored section when visualTesting is undefined', () => {
+    const prompt = buildTicketPrompt({
+      key: 'KAN-23',
+      githubRepo: 'Safturento/Recipes',
+      jiraSite: 'https://safturento.atlassian.net',
+    });
+    expect(prompt).not.toContain('Authored Playwright test');
+  });
 });
 
 describe('buildFixPrPrompt', () => {

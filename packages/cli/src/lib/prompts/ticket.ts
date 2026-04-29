@@ -37,6 +37,10 @@ function buildVisualTestingBlock(vt: VisualTestingPromptOptions | undefined): st
       startCommand: vt.startCommand,
     }),
   });
-  // CREW-21 (γ) will append the authored fragment here when vt.authored is set.
-  return smoke;
+  if (!vt.authored) return smoke;
+  const authored = render('ticket-visual-authored', {
+    testsDir: vt.authored.testsDir,
+    testCommand: vt.authored.testCommand,
+  });
+  return smoke + authored;
 }
