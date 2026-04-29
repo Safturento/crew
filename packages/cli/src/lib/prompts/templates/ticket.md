@@ -8,7 +8,7 @@ You are required to use these Superpowers skills as appropriate. Invoke each via
 - **`superpowers:test-driven-development`** — fires for every feature or bug fix you implement. Write the failing test first, watch it fail, then implement.
 - **`superpowers:verification-before-completion`** — fires before claiming work is done, committing, or opening a PR. Required to run the verification commands and confirm output, not assume.
 - **`superpowers:systematic-debugging`** — fires whenever you hit an unexpected failure (test red that you didn't write, type error you don't understand, runtime error). Don't guess at fixes; diagnose root causes.
-- **`superpowers:requesting-code-review`** — fires as part of the Self-review step before pushing.
+- **`superpowers:requesting-code-review`** — fires as part of the Self-review step before pushing.{{discoveredSkillsBlock}}
 
 ## Workflow
 

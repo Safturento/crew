@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { buildTicketPrompt, buildFixPrPrompt } from './index.js';
+import { renderDiscoveredSkillsBlock } from './skills.js';
 
 describe('buildTicketPrompt', () => {
   it('substitutes the ticket key throughout', () => {
@@ -60,6 +61,31 @@ describe('buildTicketPrompt', () => {
       visualTesting: undefined,
     });
     expect(a).toBe(b);
+  });
+
+  it('appends the discoveredSkillsBlock after the curated bullets when populated', () => {
+    const discoveredSkillsBlock = renderDiscoveredSkillsBlock([
+      {
+        name: 'reaching-for-backend-patterns',
+        description: 'Use when implementing Node backend code that handles HTTP requests.',
+        source: 'user',
+      },
+    ]);
+    const prompt = buildTicketPrompt({
+      key: 'KAN-23',
+      githubRepo: 'Safturento/Recipes',
+      jiraSite: 'https://safturento.atlassian.net',
+      discoveredSkillsBlock,
+    });
+
+    const curatedBulletIdx = prompt.indexOf('`superpowers:requesting-code-review`');
+    const userParaIdx = prompt.indexOf('user-level skills');
+    expect(curatedBulletIdx).toBeGreaterThan(-1);
+    expect(userParaIdx).toBeGreaterThan(curatedBulletIdx);
+    expect(prompt).toContain(
+      '- **`reaching-for-backend-patterns`** — Use when implementing Node backend code that handles HTTP requests.',
+    );
+    expect(prompt).toMatchSnapshot();
   });
 });
 
