@@ -2,7 +2,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
-import { discoverSkills } from './skills.js';
+import { discoverSkills, renderDiscoveredSkillsBlock } from './skills.js';
 
 let homeFixture: string;
 let repoFixture: string;
@@ -118,5 +118,64 @@ describe('discoverSkills', () => {
     const result = discoverSkills({ home: homeFixture, repoPath: emptyFixture });
     expect(result.find((s) => s.name === 'malformed')).toBeUndefined();
     expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('malformed'));
+  });
+});
+
+describe('renderDiscoveredSkillsBlock', () => {
+  it('returns empty string for empty input', () => {
+    expect(renderDiscoveredSkillsBlock([])).toBe('');
+  });
+
+  it('renders only the user paragraph when only user skills are present', () => {
+    const result = renderDiscoveredSkillsBlock([
+      { name: 'alpha', description: 'Use when alpha.', source: 'user' },
+      { name: 'beta', description: 'Use when beta.', source: 'user' },
+    ]);
+
+    expect(result).toContain('user-level skills');
+    expect(result).not.toContain('project-level skills');
+    expect(result).toContain('- **`alpha`** — Use when alpha.');
+    expect(result).toContain('- **`beta`** — Use when beta.');
+  });
+
+  it('renders only the project paragraph when only project skills are present', () => {
+    const result = renderDiscoveredSkillsBlock([
+      { name: 'gamma', description: 'Use when gamma.', source: 'project' },
+    ]);
+
+    expect(result).not.toContain('user-level skills');
+    expect(result).toContain('project-level skills');
+    expect(result).toContain('- **`gamma`** — Use when gamma.');
+  });
+
+  it('renders both paragraphs in user-then-project order', () => {
+    const result = renderDiscoveredSkillsBlock([
+      { name: 'alpha', description: 'Use when alpha.', source: 'user' },
+      { name: 'gamma', description: 'Use when gamma.', source: 'project' },
+    ]);
+
+    const userIdx = result.indexOf('user-level skills');
+    const projectIdx = result.indexOf('project-level skills');
+    expect(userIdx).toBeGreaterThan(-1);
+    expect(projectIdx).toBeGreaterThan(userIdx);
+  });
+
+  it('alphabetizes bullets within each source', () => {
+    const result = renderDiscoveredSkillsBlock([
+      { name: 'beta', description: 'Use when beta.', source: 'user' },
+      { name: 'alpha', description: 'Use when alpha.', source: 'user' },
+      { name: 'delta', description: 'Use when delta.', source: 'project' },
+      { name: 'charlie', description: 'Use when charlie.', source: 'project' },
+    ]);
+
+    expect(result.indexOf('alpha')).toBeLessThan(result.indexOf('beta'));
+    expect(result.indexOf('charlie')).toBeLessThan(result.indexOf('delta'));
+  });
+
+  it('starts with a blank-line separator so it concatenates cleanly under the curated block', () => {
+    const result = renderDiscoveredSkillsBlock([
+      { name: 'alpha', description: 'Use when alpha.', source: 'user' },
+    ]);
+    expect(result.startsWith('\n')).toBe(true);
   });
 });

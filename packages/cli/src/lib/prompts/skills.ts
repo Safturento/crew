@@ -63,3 +63,27 @@ function readSkillsFromRoot(root: string, source: 'user' | 'project'): Discovere
 function sortByName(skills: DiscoveredSkill[]): DiscoveredSkill[] {
   return [...skills].sort((a, b) => a.name.localeCompare(b.name));
 }
+
+export function renderDiscoveredSkillsBlock(skills: DiscoveredSkill[]): string {
+  if (skills.length === 0) return '';
+
+  const userSkills = sortByName(skills.filter((s) => s.source === 'user'));
+  const projectSkills = sortByName(skills.filter((s) => s.source === 'project'));
+
+  const paragraphs: string[] = [];
+  if (userSkills.length > 0) {
+    paragraphs.push(renderParagraph('user-level', userSkills));
+  }
+  if (projectSkills.length > 0) {
+    paragraphs.push(renderParagraph('project-level', projectSkills));
+  }
+
+  if (paragraphs.length === 0) return '';
+  return `\n\n${paragraphs.join('\n\n')}`;
+}
+
+function renderParagraph(label: 'user-level' | 'project-level', skills: DiscoveredSkill[]): string {
+  const lead = `The following ${label} skills are equally required when their description matches what you're about to do — invoke them via the \`Skill\` tool the same way:`;
+  const bullets = skills.map((s) => `- **\`${s.name}\`** — ${s.description}`).join('\n');
+  return `${lead}\n\n${bullets}`;
+}
