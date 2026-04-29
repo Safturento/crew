@@ -186,6 +186,80 @@ describe('buildTicketPrompt', () => {
     });
     expect(a).toBe(b);
   });
+
+  it('renders the bruno-smoke section when brunoSmoke is provided (no smoke_user)', () => {
+    const prompt = buildTicketPrompt({
+      key: 'KAN-23',
+      githubRepo: 'Safturento/Recipes',
+      jiraSite: 'https://safturento.atlassian.net',
+      brunoSmoke: {
+        baseUrl: 'https://localhost:18443',
+        envName: 'recipes-kan-23',
+        collectionDir: 'bruno',
+        hasSmokeUser: false,
+      },
+    });
+    expect(prompt).toContain('API smoke verification (Bruno)');
+    expect(prompt).toContain('https://localhost:18443');
+    expect(prompt).toContain('CREW_BRUNO_ENV=recipes-kan-23');
+    expect(prompt).toContain('npm run bruno:smoke');
+    expect(prompt).toContain('bruno/');
+    expect(prompt).not.toContain('and a test user');
+    expect(prompt).toMatchSnapshot();
+  });
+
+  it('renders the testUser clause when hasSmokeUser is true', () => {
+    const prompt = buildTicketPrompt({
+      key: 'KAN-23',
+      githubRepo: 'Safturento/Recipes',
+      jiraSite: 'https://safturento.atlassian.net',
+      brunoSmoke: {
+        baseUrl: 'https://localhost:18443',
+        envName: 'recipes-kan-23',
+        collectionDir: 'bruno',
+        hasSmokeUser: true,
+      },
+    });
+    expect(prompt).toContain('and a test user');
+    expect(prompt).toMatchSnapshot();
+  });
+
+  it('renders both visual-testing and bruno-smoke when both are provided', () => {
+    const prompt = buildTicketPrompt({
+      key: 'KAN-23',
+      githubRepo: 'Safturento/Recipes',
+      jiraSite: 'https://safturento.atlassian.net',
+      visualTesting: { appUrl: 'https://localhost:18443' },
+      brunoSmoke: {
+        baseUrl: 'https://localhost:18443',
+        envName: 'recipes-kan-23',
+        collectionDir: 'bruno',
+        hasSmokeUser: true,
+      },
+    });
+    expect(prompt).toContain('Visual smoke verification');
+    expect(prompt).toContain('API smoke verification (Bruno)');
+    const visualIdx = prompt.indexOf('Visual smoke verification');
+    const brunoIdx = prompt.indexOf('API smoke verification (Bruno)');
+    expect(brunoIdx).toBeGreaterThan(visualIdx);
+    expect(prompt).toMatchSnapshot();
+  });
+
+  it('honours a custom collection_dir in the rendered fragment', () => {
+    const prompt = buildTicketPrompt({
+      key: 'KAN-23',
+      githubRepo: 'Safturento/Recipes',
+      jiraSite: 'https://safturento.atlassian.net',
+      brunoSmoke: {
+        baseUrl: 'http://localhost:3000',
+        envName: 'recipes',
+        collectionDir: 'api-tests',
+        hasSmokeUser: false,
+      },
+    });
+    expect(prompt).toContain('api-tests/');
+    expect(prompt).not.toContain('`bruno/`');
+  });
 });
 
 describe('buildFixPrPrompt', () => {
