@@ -1,11 +1,14 @@
 import { Command } from 'commander';
 import { execa } from 'execa';
 import { existsSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { stdin as processStdin } from 'node:process';
 import type { Readable } from 'node:stream';
+import type { ProjectConfig } from 'crew-shared';
 import {
   assemblePrFeedback,
   buildFixPrPrompt,
+  discoverProjectConfig,
   fetchOrigin,
   findLatestSession,
   formatToolCall,
@@ -18,7 +21,10 @@ import {
   spawnClaudeResume,
   tailTranscript,
 } from '../lib/index.js';
+import { resolveBrunoEnvName } from '../lib/bruno-smoke/index.js';
+import type { BrunoSmokePromptOptions } from '../lib/prompts/index.js';
 import { discoverSkills, renderDiscoveredSkillsBlock } from '../lib/prompts/skills.js';
+import { resolveAppUrl } from '../lib/visual-testing/index.js';
 
 export type FeedbackMode = { kind: 'pr' } | { kind: 'file'; path: string } | { kind: 'stdin' };
 
@@ -129,6 +135,55 @@ function repoPathFromWorktree(worktree: string, key: string): string {
   return worktree.endsWith(suffix) ? worktree.slice(0, -suffix.length) : worktree;
 }
 
+const PORT_PLACEHOLDER_RE = /\{[a-zA-Z]+Port\}/;
+
+export function brunoSmokeOptionsFor(
+  config: ProjectConfig,
+  worktree: string,
+): BrunoSmokePromptOptions | undefined {
+  const bs = config.bruno_smoke;
+  if (!bs?.enabled) return undefined;
+
+  // fix-pr does not run writeDockerEnv; the .env on disk is authoritative.
+  // Only touch disk when base_url actually has a placeholder to substitute.
+  const dockerPorts = PORT_PLACEHOLDER_RE.test(bs.base_url)
+    ? readDockerPortsFromEnvFile(worktree)
+    : undefined;
+
+  const baseUrl = resolveAppUrl(bs.base_url, dockerPorts).raw;
+  return {
+    baseUrl,
+    envName: resolveBrunoEnvName(worktree),
+    collectionDir: bs.collection_dir,
+    hasSmokeUser: Boolean(bs.smoke_user),
+  };
+}
+
+function readDockerPortsFromEnvFile(worktree: string): {
+  httpPort: number;
+  httpsPort: number;
+  postgresPort: number;
+} {
+  const envPath = join(worktree, '.env');
+  if (!existsSync(envPath)) {
+    throw new Error(
+      `fix-pr cannot resolve Bruno base_url placeholders: ${envPath} not found. ` +
+        `Run 'crew run <KEY>' first or remove port placeholders from base_url.`,
+    );
+  }
+  const raw = readFileSync(envPath, 'utf8');
+  const get = (key: string): number => {
+    const match = raw.match(new RegExp(`^${key}=(\\d+)$`, 'm'));
+    if (!match) throw new Error(`fix-pr: ${key} not found in ${envPath}`);
+    return Number(match[1]);
+  };
+  return {
+    httpPort: get('CADDY_HTTP_PORT'),
+    httpsPort: get('CADDY_HTTPS_PORT'),
+    postgresPort: get('POSTGRES_PORT'),
+  };
+}
+
 async function runFixPr(key: string, flags: FixPrFlags): Promise<void> {
   const mode = selectMode(flags);
 
@@ -182,14 +237,17 @@ async function runFixPr(key: string, flags: FixPrFlags): Promise<void> {
     );
   }
 
+  const repoPath = repoPathFromWorktree(worktree, key);
+  const projectConfig = await discoverProjectConfig(repoPath);
+  const brunoSmoke = projectConfig ? brunoSmokeOptionsFor(projectConfig, worktree) : undefined;
+
   const prompt = buildFixPrPrompt({
     key,
     feedback,
     feedbackSource: source,
     conflictFiles: conflicts,
-    discoveredSkillsBlock: renderDiscoveredSkillsBlock(
-      discoverSkills({ repoPath: repoPathFromWorktree(worktree, key) }),
-    ),
+    brunoSmoke,
+    discoveredSkillsBlock: renderDiscoveredSkillsBlock(discoverSkills({ repoPath })),
   });
 
   const logFile = `/tmp/crew-fix-pr-${key}.log`;

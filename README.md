@@ -148,6 +148,8 @@ Once these are in place, `crew run` against a backend ticket will do the rest.
 
 **At agent runtime.** When `[bruno_smoke]` is enabled, the dispatched agent's prompt requires `npm run bruno:smoke` as part of the Verify step. A non-zero exit blocks "Verify" the same way a failing unit test does. The agent is also instructed to update the matching `<collection_dir>/endpoints/<route-group>/<verb>-<name>.bru` (and `<collection_dir>/flows/<flow>.bru` where relevant) in the same PR whenever it adds or modifies an HTTP route — keeping smoke coverage from drifting silently.
 
+**During `crew fix-pr`.** The same rules apply: the agent must run `npm run bruno:smoke` before pushing, and must update `.bru` files in the same set of fix-up commits if the fix touches an HTTP endpoint. `crew fix-pr` does not bring docker up itself — if smoke fails with a connection error, the worktree's stack isn't running.
+
 **The `bruno-collection-maintenance` skill.** The agent automatically picks up the user-scope `bruno-collection-maintenance` skill at `~/.claude/skills/bruno-collection-maintenance/`. The skill teaches the file-naming conventions, the `vars:post-response` chaining pattern, and the "update `.bru` when touching endpoints" rule.
 
 ### GitHub token (once per project)
