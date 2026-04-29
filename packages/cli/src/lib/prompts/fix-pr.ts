@@ -33,7 +33,8 @@ export function buildFixPrPrompt(opts: BuildFixPrPromptOptions): string {
   });
 }
 
-function buildBrunoSmokeBlock(_bs: BrunoSmokePromptOptions | undefined): string {
-  // γ fills the fix-pr-bruno-smoke fragment. For α, always empty.
+function buildBrunoSmokeBlock(bs: BrunoSmokePromptOptions | undefined): string {
+  if (!bs) return '';
+  // γ fills the fix-pr-bruno-smoke fragment body. For α the placeholder is wired but empty.
   return '';
 }

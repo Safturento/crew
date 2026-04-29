@@ -54,7 +54,8 @@ function buildVisualTestingBlock(vt: VisualTestingPromptOptions | undefined): st
   return smoke + authored;
 }
 
-function buildBrunoSmokeBlock(_bs: BrunoSmokePromptOptions | undefined): string {
-  // β fills the bruno-smoke fragment. For α, the placeholder always renders empty.
+function buildBrunoSmokeBlock(bs: BrunoSmokePromptOptions | undefined): string {
+  if (!bs) return '';
+  // β fills the bruno-smoke fragment body. For α the placeholder is wired but empty.
   return '';
 }
