@@ -241,4 +241,19 @@ describe('buildFixPrPrompt', () => {
     const discoveredIdx = prompt.indexOf('reaching-for-frontend-libraries');
     expect(discoveredIdx).toBeGreaterThan(curatedIdx);
   });
+
+  it('renders identically when brunoSmoke is undefined as when omitted', () => {
+    const a = buildFixPrPrompt({
+      key: 'KAN-23',
+      feedback: 'fix the typo',
+      feedbackSource: 'stdin',
+    });
+    const b = buildFixPrPrompt({
+      key: 'KAN-23',
+      feedback: 'fix the typo',
+      feedbackSource: 'stdin',
+      brunoSmoke: undefined,
+    });
+    expect(a).toBe(b);
+  });
 });
