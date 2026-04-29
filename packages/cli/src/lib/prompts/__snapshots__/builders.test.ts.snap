@@ -172,6 +172,83 @@ You are required to use these Superpowers skills as appropriate. Invoke each via
 "
 `;
 
+exports[`buildTicketPrompt > renders the authored test section after the smoke section when authored is provided 1`] = `
+"You are running unattended on a fresh git worktree to implement Jira ticket KAN-23 end-to-end. The repo's \`CLAUDE.md\` is your authoritative project guide; read it before doing anything else.
+
+## Skills
+
+You are required to use these Superpowers skills as appropriate. Invoke each via the \`Skill\` tool when its trigger condition fires:
+
+- **\`superpowers:executing-plans\`** — fires when a plan document exists at \`docs/plans/KAN-23-*.md\`, \`docs/superpowers/plans/KAN-23-*.md\`, or similar. If a plan exists, skip the inline-planning step and follow the plan task-by-task with the skill's checkpoint discipline.
+- **\`superpowers:test-driven-development\`** — fires for every feature or bug fix you implement. Write the failing test first, watch it fail, then implement.
+- **\`superpowers:verification-before-completion\`** — fires before claiming work is done, committing, or opening a PR. Required to run the verification commands and confirm output, not assume.
+- **\`superpowers:systematic-debugging\`** — fires whenever you hit an unexpected failure (test red that you didn't write, type error you don't understand, runtime error). Don't guess at fixes; diagnose root causes.
+- **\`superpowers:requesting-code-review\`** — fires as part of the Self-review step before pushing.
+
+## Workflow
+
+1. **Pull the ticket.** Use \`mcp__atlassian__jira_get_issue\` with key \`KAN-23\`. Note the \`issue_type.name\` and the current \`status.name\`.
+
+2. **Epic guard.** If \`issue_type.name == "Epic"\`, do not implement. Find children via \`mcp__atlassian__jira_search\` with JQL \`parent = KAN-23\` (or \`"Epic Link" = KAN-23\` for older layouts), write a breakdown to \`docs/tickets/KAN-23.md\`, commit, and exit. Do not push.
+
+3. **Move KAN-23 to "In Progress".** Use \`mcp__atlassian__jira_get_transitions\` and \`mcp__atlassian__jira_transition_issue\`. Bump the parent Epic from "To Do" to "In Progress" if applicable.
+
+4. **Read context.** Skim \`CLAUDE.md\`, \`docs/plans/\`, and any related ticket files.
+
+5. **Write the ticket file** at \`docs/tickets/KAN-23.md\` from \`docs/tickets/_template.md\` if one is needed for this ticket.
+
+6. **Plan inline (or follow an existing plan).** If a plan doc exists, invoke \`superpowers:executing-plans\` and let the plan drive. Otherwise decompose into commit-shaped steps via \`TaskCreate\`.
+
+7. **Execute, committing per step.** Use \`superpowers:test-driven-development\`. Frequent small commits referencing \`KAN-23\`.
+
+## Visual smoke verification
+
+This project's UI runs at **https://localhost:18443**. If your changes touch the frontend (any file under a frontend/dashboard package, anything that renders to a DOM, or a backend change a user can observe), you must verify the change end-to-end in a browser before claiming "Verify" complete.
+
+1. Make sure the app is running. The docker stack is already running — verify with \`curl https://localhost:18443\` or just navigate.
+2. Use the \`mcp__playwright__*\` tools to navigate to https://localhost:18443 and exercise the golden path you changed. Take a screenshot at the relevant state.
+3. Inspect the screenshot. If the change is invisible or broken, return to step 7 (Execute) — it isn't done yet.
+
+If your change is _clearly_ backend-only (no observable user effect), say so explicitly in the PR description and skip this step.
+
+## Authored Playwright test
+
+If the change has regression value (a user-facing flow that broke before or could break again), add a Playwright test:
+
+- Tests live in **tests/e2e/**. Mirror existing files there for style.
+- Run them with \`npm run test:e2e\`. If you authored a test, this command must exit 0 before "Verify".
+- One test per behaviour, not per assertion. Names describe user intent.
+- Don't add a test just because you can. Skip when the change is cosmetic, throwaway, or fully covered by existing unit tests.
+
+If \`tests/e2e/\` doesn't exist or \`npm run test:e2e\` fails because the runner isn't installed, surface the problem in the PR description and do **not** silently skip — that's a project setup gap, not your fault.
+
+8. **Verify.** Invoke \`superpowers:verification-before-completion\`. Run lint / format / typecheck / test:run.
+
+9. **Self-review.** Invoke \`superpowers:requesting-code-review\`.
+
+10. **Push and PR.**
+
+    \`\`\`
+    git push -u origin KAN-23
+    gh pr create --base main --head KAN-23 --title "<title>" --body "<Summary + Test Plan>"
+    \`\`\`
+
+11. **Move KAN-23 to "In Review".**
+
+## Repo context
+
+- GitHub: Safturento/Recipes
+- Jira: https://safturento.atlassian.net
+- Default branch: main
+
+## Constraints
+
+- Do not push to \`main\` or any branch other than \`KAN-23\`.
+- No \`--no-verify\`, no plain \`--force\`. \`--force-with-lease\` allowed on \`KAN-23\` for rebases only.
+- Do not write to \`.git\`, \`.claude\`, \`.husky\`, \`.vscode\`, \`.idea\`.
+"
+`;
+
 exports[`buildTicketPrompt > renders the smoke verification section when visualTesting is provided (docker case) 1`] = `
 "You are running unattended on a fresh git worktree to implement Jira ticket KAN-23 end-to-end. The repo's \`CLAUDE.md\` is your authoritative project guide; read it before doing anything else.
 
