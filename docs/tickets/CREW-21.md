@@ -32,13 +32,13 @@ tasks 13–16.
 
 ## Decisions
 
-- **CREW-20 (β/smoke fragment) is not yet merged.** γ ships standalone:
-  `buildVisualTestingBlock` returns the authored fragment alone when
-  `vt.authored` is set, otherwise returns empty. When β merges, it can
-  prepend the smoke fragment so both fragments concatenate as the plan
-  envisioned. γ's tests assert only on authored content; the
-  smoke-comes-first ordering assertion in plan task 14 is deferred to the β
-  merge integration.
+- **Composition with CREW-20 (β/smoke fragment).** β merged after this
+  branch was first opened. Post-rebase, `buildVisualTestingBlock` emits
+  smoke + authored when both are configured, smoke alone when only
+  `visual_testing` is set, and empty when `visual_testing` is unset. The
+  ordering assertion (`indexOf('Visual smoke') < indexOf('Authored
+  Playwright')`) — deferred at first PR open — is now in place per plan
+  task 14 step 1.
 - **Schema is already strict.** Both `tests_dir` and `test_command` are
   declared `z.string().min(1)` (no `.optional()`), so Zod rejects partials
   by default. Task 13 only adds tests, no schema change.
@@ -47,7 +47,6 @@ tasks 13–16.
 
 - `@playwright/test` install in target repos (Recipes, crew dashboard) —
   separate prerequisite tickets per the plan.
-- Smoke-fragment integration ordering — handled when CREW-20 merges.
 
 ## Notes
 
