@@ -6,15 +6,47 @@ import {
   SqliteDialect,
   Migrator,
   FileMigrationProvider,
+  type Generated,
   type MigrationResultSet,
 } from 'kysely';
 
-/**
- * The daemon's SQLite schema cradle. Empty for slice 1a — tables land in
- * slice 1b. Each new table adds an entry whose type matches the migration
- * that creates it.
- */
-export type DaemonDatabase = Record<string, never>;
+export interface AgentsTable {
+  key: string;
+  project_name: string;
+  ticket_title: string | null;
+  worktree_path: string;
+  branch: string | null;
+  pr_url: string | null;
+  created_at: string;
+}
+
+export interface RunsTable {
+  id: Generated<number>;
+  agent_key: string;
+  command: 'run' | 'fix-pr' | 'finish';
+  session_id: string;
+  started_at: string;
+  completed_at: string | null;
+  exit_code: number | null;
+}
+
+export interface ToolCallsTable {
+  id: Generated<number>;
+  run_id: number;
+  tool_name: string;
+  input_summary: string | null;
+  output_tokens: number;
+  input_tokens: number;
+  cache_read_tokens: number;
+  cache_creation_tokens: number;
+  occurred_at: string;
+}
+
+export interface DaemonDatabase {
+  agents: AgentsTable;
+  runs: RunsTable;
+  tool_calls: ToolCallsTable;
+}
 
 /**
  * Open a Kysely-backed SQLite database. Pass `:memory:` for tests.
@@ -29,6 +61,15 @@ export function createDb(dbFile: string): Kysely<DaemonDatabase> {
   });
 }
 
+// Vitest co-locates `.test.ts` next to the migration it covers; tsx runs the
+// daemon straight off the same `src/migrations/` folder. Kysely's stock
+// FileMigrationProvider tries to dynamic-import every file in the folder, so
+// stripping test files here protects both the in-process test and the prod
+// boot path from loading them as migrations.
+function isMigrationFile(name: string): boolean {
+  return /\.(?:m?js|m?ts)$/.test(name) && !/\.(?:d|test)\.(?:m?ts|m?js)$/.test(name);
+}
+
 /**
  * Run any pending migrations from `migrationsPath` to the latest version.
  * Returns the list of applied migration results (empty when the folder
@@ -41,7 +82,12 @@ export async function runMigrations(
   const migrator = new Migrator({
     db,
     provider: new FileMigrationProvider({
-      fs,
+      fs: {
+        readdir: async (folder) => {
+          const entries = await fs.readdir(folder);
+          return entries.filter(isMigrationFile);
+        },
+      },
       path,
       migrationFolder: migrationsPath,
     }),
