@@ -10,10 +10,15 @@ import { ErrorFallback } from './components/ErrorFallback.js';
 import { TopNav } from './components/TopNav.js';
 import { ViewportFrame } from './components/ViewportFrame.js';
 import type { DaemonClient } from './data/DaemonClient.js';
+import { HttpProjectsClient } from './data/HttpProjectsClient.js';
+import { HybridDaemonClient } from './data/HybridDaemonClient.js';
 import { MockDaemonClient } from './data/MockDaemonClient.js';
 import { navigate, useHashRoute } from './routing/useHashRoute.js';
 
-const defaultClient: DaemonClient = new MockDaemonClient();
+const defaultClient: DaemonClient = new HybridDaemonClient(
+  new HttpProjectsClient(),
+  new MockDaemonClient(),
+);
 
 export function App({ client = defaultClient }: { client?: DaemonClient } = {}) {
   const { reset } = useQueryErrorResetBoundary();
