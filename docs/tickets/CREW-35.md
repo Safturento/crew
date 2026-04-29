@@ -61,6 +61,11 @@ path)` (Kysely's `Migrator` + `FileMigrationProvider`).
   for `/api/projects` will add `projectsService` (and
   `projectConfigDir` derived from `config.configDir`) when that
   ticket lands.
+- **Per-app Awilix container, not the shared `diContainer` singleton.**
+  `buildContainer()` returns a fresh container per `buildApp` call so
+  multiple apps in the same process (the test suite, future
+  hot-reload scenarios) don't silently overwrite each other's
+  registrations.
 - **`CREW_PORT` non-numeric throws.** `z.coerce.number().int().positive()`
   on the schema means `CREW_PORT=notaport` blows up at boot rather
   than silently falling through to the default.

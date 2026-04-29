@@ -1,12 +1,12 @@
 import Fastify, { type FastifyError } from 'fastify';
-import { fastifyAwilixPlugin, diContainer } from '@fastify/awilix';
+import { fastifyAwilixPlugin } from '@fastify/awilix';
 import { ZodError } from 'zod';
 import type { Kysely } from 'kysely';
 import type { Logger } from 'pino';
 import type { DaemonConfig } from './config.js';
 import type { DaemonDatabase } from './db.js';
 import { ConfigDirNotFoundError, NotFoundError } from './errors.js';
-import { registerServices } from './container.js';
+import { buildContainer } from './container.js';
 
 function getValidation(err: Error): FastifyError['validation'] | undefined {
   const candidate = (err as { validation?: unknown }).validation;
@@ -29,14 +29,13 @@ export async function buildApp({ config, logger, db }: BuildAppOptions) {
   const app = Fastify({ loggerInstance: logger });
 
   await app.register(fastifyAwilixPlugin, {
+    container: buildContainer({ config, logger, db }),
     disposeOnClose: true,
     disposeOnResponse: false,
     asyncInit: false,
     asyncDispose: false,
     strictBooleanEnforced: true,
   });
-
-  registerServices(diContainer, { config, logger, db });
 
   app.setErrorHandler((err: unknown, req, reply) => {
     if (err instanceof NotFoundError) {
