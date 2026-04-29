@@ -1,3 +1,4 @@
+import { startCommandHint } from '../visual-testing/index.js';
 import { render } from './render.js';
 
 export interface VisualTestingPromptOptions {
@@ -27,10 +28,15 @@ export function buildTicketPrompt(opts: BuildTicketPromptOptions): string {
   });
 }
 
-// CREW-20 (β) will populate the smoke fragment from `vt`; CREW-21 (γ) will
-// extend it with the authored fragment. For CREW-19 (α), the placeholder
-// always renders empty regardless of input.
 function buildVisualTestingBlock(vt: VisualTestingPromptOptions | undefined): string {
-  if (vt === undefined) return '';
-  return '';
+  if (!vt) return '';
+  const smoke = render('ticket-visual-smoke', {
+    appUrl: vt.appUrl,
+    startCommandHint: startCommandHint({
+      appUrl: vt.appUrl,
+      startCommand: vt.startCommand,
+    }),
+  });
+  // CREW-21 (γ) will append the authored fragment here when vt.authored is set.
+  return smoke;
 }
