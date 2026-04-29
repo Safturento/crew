@@ -197,6 +197,7 @@ async function runFixPr(key: string, flags: FixPrFlags): Promise<void> {
     sessionId: session.sessionId,
     prompt,
     logFile,
+    cwd: worktree,
   });
 
   const onSignal = (): void => {

@@ -7,6 +7,13 @@ export interface SpawnClaudeResumeOptions {
   sessionId: string;
   prompt: string;
   logFile: string;
+  /**
+   * Working directory the spawned `claude` runs in. Required because claude
+   * derives its project directory (and thus where to look up `--resume`
+   * sessions) from cwd — letting it inherit the parent shell's cwd causes
+   * "No conversation found" when fix-pr is invoked from outside the worktree.
+   */
+  cwd: string;
 }
 
 /**
@@ -22,7 +29,10 @@ export function spawnClaudeResume(opts: SpawnClaudeResumeOptions): ResultPromise
   const sub = execa(
     'claude',
     ['--dangerously-skip-permissions', '--resume', opts.sessionId, '-p', opts.prompt],
-    { env: { ...process.env, PATH: ensureLocalBinOnPath(process.env.PATH) } },
+    {
+      cwd: opts.cwd,
+      env: { ...process.env, PATH: ensureLocalBinOnPath(process.env.PATH) },
+    },
   );
   const log = createWriteStream(opts.logFile);
   sub.stdout?.pipe(log);
