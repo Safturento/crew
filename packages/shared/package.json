@@ -3,5 +3,23 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "description": "Placeholder. Phase 1 lives in cli/src/lib/; this package gets populated in Phase 1.5 when the daemon needs the same modules."
+  "description": "Shared types, schemas, and loaders consumed by crew's CLI, daemon, and dashboard.",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest",
+    "test:run": "vitest run"
+  },
+  "dependencies": {
+    "smol-toml": "^1.6.1",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@types/node": "^25.6.0"
+  }
 }

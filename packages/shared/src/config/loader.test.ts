@@ -1,11 +1,12 @@
 import { describe, it, expect } from 'vitest';
-import { readFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, writeFileSync, rmSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { join, dirname } from 'node:path';
-import { parseProjectConfig } from './index.js';
+import { tmpdir } from 'node:os';
+import { loadProjectConfigByName, parseProjectConfig } from './index.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const FIXTURE = join(__dirname, '../../../test/fixtures/project-config-sample.toml');
+const FIXTURE = join(__dirname, '../../test/fixtures/project-config-sample.toml');
 
 describe('parseProjectConfig', () => {
   it('parses a valid TOML config', () => {
@@ -218,5 +219,41 @@ start_command = "npm run dev"
 test_command = "npm run test:e2e"
 `;
     expect(() => parseProjectConfig(raw)).toThrow(/tests_dir/);
+  });
+});
+
+describe('loadProjectConfigByName', () => {
+  it('loads a config from a custom configDir when provided', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'crew-shared-config-'));
+    try {
+      writeFileSync(
+        join(dir, 'recipes-app.toml'),
+        `name = "recipes-app"
+repo_path = "/x"
+
+[jira]
+project_key = "KAN"
+site = "https://safturento.atlassian.net"
+
+[github]
+repo = "Safturento/Recipes"
+`,
+        'utf8',
+      );
+      const config = loadProjectConfigByName('recipes-app', dir);
+      expect(config.name).toBe('recipes-app');
+      expect(config.jira.project_key).toBe('KAN');
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('throws a useful error referencing the custom configDir when missing', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'crew-shared-config-'));
+    try {
+      expect(() => loadProjectConfigByName('does-not-exist', dir)).toThrow(/does-not-exist/);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 });
