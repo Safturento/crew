@@ -22,6 +22,7 @@
   },
   "dependencies": {
     "@fastify/awilix": "^8.2.0",
+    "@fastify/static": "^9.1.3",
     "awilix": "^13.0.3",
     "better-sqlite3": "^12.9.0",
     "crew-shared": "*",

@@ -1,10 +1,15 @@
 import { describe, it, expect } from 'vitest';
+import { mkdirSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { buildApp } from './app.js';
 import { createDb } from './db.js';
 import { createLogger } from './logger.js';
 import { ConfigDirNotFoundError, NotFoundError } from './errors.js';
+import { useTmpDir } from './test/tmpdir.js';
 
-async function buildTestApp() {
+const tmp = useTmpDir();
+
+async function buildTestApp(opts: { dashboardDistDir?: string } = {}) {
   return buildApp({
     config: {
       port: 0,
@@ -15,6 +20,7 @@ async function buildTestApp() {
     },
     logger: createLogger(),
     db: createDb(':memory:'),
+    dashboardDistDir: opts.dashboardDistDir,
   });
 }
 
@@ -65,6 +71,75 @@ describe('buildApp', () => {
       expect(res.json()).toMatchObject({
         error: expect.stringContaining('/tmp/missing-config-dir'),
       });
+    } finally {
+      await app.close();
+    }
+  });
+});
+
+describe('static dashboard serving', () => {
+  function makeDist(html = '<!DOCTYPE html><html><body>hi</body></html>'): string {
+    const distDir = join(tmp(), 'dist');
+    mkdirSync(distDir, { recursive: true });
+    writeFileSync(join(distDir, 'index.html'), html);
+    return distDir;
+  }
+
+  it('serves index.html at / when dist directory exists', async () => {
+    const distDir = makeDist();
+    const app = await buildTestApp({ dashboardDistDir: distDir });
+    try {
+      const res = await app.inject({ method: 'GET', url: '/' });
+      expect(res.statusCode).toBe(200);
+      expect(res.body).toContain('<body>hi</body>');
+    } finally {
+      await app.close();
+    }
+  });
+
+  it('falls back to index.html for SPA routes', async () => {
+    const distDir = makeDist('<!DOCTYPE html><html><body>spa</body></html>');
+    const app = await buildTestApp({ dashboardDistDir: distDir });
+    try {
+      const res = await app.inject({ method: 'GET', url: '/agents/KAN-31' });
+      expect(res.statusCode).toBe(200);
+      expect(res.body).toContain('<body>spa</body>');
+    } finally {
+      await app.close();
+    }
+  });
+
+  it('serves a placeholder when dashboardDistDir is missing', async () => {
+    const app = await buildTestApp({ dashboardDistDir: '/nonexistent/path' });
+    try {
+      const res = await app.inject({ method: 'GET', url: '/' });
+      expect(res.statusCode).toBe(200);
+      expect(res.headers['content-type']).toMatch(/text\/html/);
+      expect(res.body).toContain('dashboard not built');
+    } finally {
+      await app.close();
+    }
+  });
+
+  it('does not intercept /api routes with the SPA fallback', async () => {
+    const distDir = makeDist('<!DOCTYPE html><html><body>shell</body></html>');
+    const app = await buildTestApp({ dashboardDistDir: distDir });
+    try {
+      const res = await app.inject({ method: 'GET', url: '/api/projects' });
+      expect(res.statusCode).toBe(200);
+      expect(res.json()).toEqual({ projects: [] });
+    } finally {
+      await app.close();
+    }
+  });
+
+  it('returns JSON 404 for unknown /api routes even with dist present', async () => {
+    const distDir = makeDist();
+    const app = await buildTestApp({ dashboardDistDir: distDir });
+    try {
+      const res = await app.inject({ method: 'GET', url: '/api/does-not-exist' });
+      expect(res.statusCode).toBe(404);
+      expect(res.json()).toEqual({ error: 'not_found' });
     } finally {
       await app.close();
     }
