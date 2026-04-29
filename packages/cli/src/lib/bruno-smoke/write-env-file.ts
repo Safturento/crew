@@ -14,10 +14,7 @@ export interface WriteEnvFileResult {
   existed: boolean;
 }
 
-export function writeEnvFile(
-  worktreePath: string,
-  opts: WriteEnvFileOptions,
-): WriteEnvFileResult {
+export function writeEnvFile(worktreePath: string, opts: WriteEnvFileOptions): WriteEnvFileResult {
   const collectionRoot = join(worktreePath, opts.collectionDir);
   if (!existsSync(collectionRoot) || !statSync(collectionRoot).isDirectory()) {
     throw new Error(
