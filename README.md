@@ -75,6 +75,8 @@ When enabled, `crew run`:
 
 When disabled (no `[visual_testing]` section), behaviour is unchanged.
 
+**At agent runtime.** The dispatched agent's prompt instructs it (when `[visual_testing]` is enabled) to navigate to `app_url` after implementing UI-related changes, take a screenshot, and verify the change visually before claiming "Verify" complete. Backend-only changes skip the smoke step with an explicit note in the PR description.
+
 **Headed sessions for ad-hoc browsing.** The generated `.mcp.json` always uses `--headless`. If you want a headed browser when *you* invoke MCP browser tools interactively in a worktree, register a user-scope server (`claude mcp add -s user playwright -- npx -y @playwright/mcp@latest`) — your user-scope settings will take precedence in your interactive session, but the dispatched agent still uses the worktree-scoped headless config.
 
 ### Jira API credentials (once per machine)

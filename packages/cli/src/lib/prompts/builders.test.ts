@@ -87,6 +87,45 @@ describe('buildTicketPrompt', () => {
     );
     expect(prompt).toMatchSnapshot();
   });
+
+  it('renders the smoke verification section when visualTesting is provided (docker case)', () => {
+    const prompt = buildTicketPrompt({
+      key: 'KAN-23',
+      githubRepo: 'Safturento/Recipes',
+      jiraSite: 'https://safturento.atlassian.net',
+      visualTesting: { appUrl: 'https://localhost:18443' },
+    });
+    expect(prompt).toContain('Visual smoke verification');
+    expect(prompt).toContain('https://localhost:18443');
+    expect(prompt).toContain('docker stack is already running');
+    expect(prompt).toContain('mcp__playwright__');
+    expect(prompt).toMatchSnapshot();
+  });
+
+  it('renders the smoke verification section with start_command hint (non-docker case)', () => {
+    const prompt = buildTicketPrompt({
+      key: 'CREW-99',
+      githubRepo: 'Safturento/crew',
+      jiraSite: 'https://safturento.atlassian.net',
+      visualTesting: {
+        appUrl: 'http://localhost:5173',
+        startCommand: 'npm run dev --workspace=crew-dashboard',
+      },
+    });
+    expect(prompt).toContain('http://localhost:5173');
+    expect(prompt).toContain('npm run dev --workspace=crew-dashboard');
+    expect(prompt).toContain('Wait for the dev server to be reachable');
+    expect(prompt).toMatchSnapshot();
+  });
+
+  it('VT-off snapshot still matches the CREW-19 baseline (no regression from CREW-20)', () => {
+    const prompt = buildTicketPrompt({
+      key: 'KAN-23',
+      githubRepo: 'Safturento/Recipes',
+      jiraSite: 'https://safturento.atlassian.net',
+    });
+    expect(prompt).toMatchSnapshot();
+  });
 });
 
 describe('buildFixPrPrompt', () => {
