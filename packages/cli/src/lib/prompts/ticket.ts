@@ -14,6 +14,7 @@ export interface BuildTicketPromptOptions {
   githubRepo: string;
   jiraSite: string;
   visualTesting?: VisualTestingPromptOptions;
+  discoveredSkillsBlock?: string;
 }
 
 export function buildTicketPrompt(opts: BuildTicketPromptOptions): string {
@@ -22,6 +23,7 @@ export function buildTicketPrompt(opts: BuildTicketPromptOptions): string {
     githubRepo: opts.githubRepo,
     jiraSite: opts.jiraSite,
     visualTestingBlock: buildVisualTestingBlock(opts.visualTesting),
+    discoveredSkillsBlock: opts.discoveredSkillsBlock ?? '',
   });
 }
 

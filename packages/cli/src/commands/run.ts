@@ -15,6 +15,7 @@ import pc from 'picocolors';
 import { discoverProjectConfig, type ProjectConfig } from '../lib/config/index.js';
 import { writeDockerEnv } from '../lib/docker/index.js';
 import { buildTicketPrompt } from '../lib/prompts/index.js';
+import { discoverSkills, renderDiscoveredSkillsBlock } from '../lib/prompts/skills.js';
 import { resolveAppUrl, writeMcpFile } from '../lib/visual-testing/index.js';
 import {
   claudeProjectDirFor,
@@ -150,6 +151,9 @@ async function runTicket(key: string, opts: RunOptions): Promise<never> {
   const dockerProcess = startDockerBringup(config, worktree, key, skipDocker, childEnv);
 
   const ghToken = readFileSync(ghTokenDest, 'utf8').trim();
+  const discoveredSkillsBlock = renderDiscoveredSkillsBlock(
+    discoverSkills({ repoPath: config.repo_path }),
+  );
   const prompt = buildTicketPrompt({
     key,
     githubRepo: config.github.repo,
@@ -167,6 +171,7 @@ async function runTicket(key: string, opts: RunOptions): Promise<never> {
               : undefined,
           }
         : undefined,
+    discoveredSkillsBlock,
   });
 
   const logPath = runLogPathFor(key);
