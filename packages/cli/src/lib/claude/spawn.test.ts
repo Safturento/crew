@@ -20,6 +20,7 @@ describe('spawnClaudeResume', () => {
       sessionId: 'abc-123',
       prompt: 'do the thing',
       logFile: '/tmp/x.log',
+      cwd: '/tmp/worktree',
     });
 
     expect(mockedExeca).toHaveBeenCalledWith(
@@ -28,6 +29,26 @@ describe('spawnClaudeResume', () => {
       expect.objectContaining({ env: expect.any(Object) }),
     );
     expect(result).toBe(fakeSubprocess);
+  });
+
+  it('passes cwd to execa so the resumed claude resolves the worktree project', () => {
+    mockedExeca.mockReturnValueOnce({
+      stdout: { pipe: vi.fn() },
+      stderr: { pipe: vi.fn() },
+    } as never);
+
+    spawnClaudeResume({
+      sessionId: 's',
+      prompt: 'p',
+      logFile: '/tmp/x.log',
+      cwd: '/home/me/Repos/Recipes-KAN-13',
+    });
+
+    expect(mockedExeca).toHaveBeenCalledWith(
+      'claude',
+      expect.any(Array),
+      expect.objectContaining({ cwd: '/home/me/Repos/Recipes-KAN-13' }),
+    );
   });
 
   it('pipes both stdout and stderr to the log file', () => {
@@ -39,7 +60,7 @@ describe('spawnClaudeResume', () => {
     };
     mockedExeca.mockReturnValueOnce(fakeSubprocess as never);
 
-    spawnClaudeResume({ sessionId: 's', prompt: 'p', logFile: '/tmp/x.log' });
+    spawnClaudeResume({ sessionId: 's', prompt: 'p', logFile: '/tmp/x.log', cwd: '/tmp/wt' });
 
     expect(stdoutPipe).toHaveBeenCalledTimes(1);
     expect(stderrPipe).toHaveBeenCalledTimes(1);
@@ -53,7 +74,7 @@ describe('spawnClaudeResume', () => {
         stdout: { pipe: vi.fn() },
         stderr: { pipe: vi.fn() },
       } as never);
-      spawnClaudeResume({ sessionId: 's', prompt: 'p', logFile: '/tmp/x.log' });
+      spawnClaudeResume({ sessionId: 's', prompt: 'p', logFile: '/tmp/x.log', cwd: '/tmp/wt' });
       expect(mockedExeca).toHaveBeenCalledWith(
         'claude',
         expect.any(Array),
@@ -78,7 +99,7 @@ describe('spawnClaudeResume', () => {
         stdout: { pipe: vi.fn() },
         stderr: { pipe: vi.fn() },
       } as never);
-      spawnClaudeResume({ sessionId: 's', prompt: 'p', logFile: '/tmp/x.log' });
+      spawnClaudeResume({ sessionId: 's', prompt: 'p', logFile: '/tmp/x.log', cwd: '/tmp/wt' });
       expect(mockedExeca).toHaveBeenCalledWith(
         'claude',
         expect.any(Array),
