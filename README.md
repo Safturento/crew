@@ -77,6 +77,16 @@ When disabled (no `[visual_testing]` section), behaviour is unchanged.
 
 **At agent runtime.** The dispatched agent's prompt instructs it (when `[visual_testing]` is enabled) to navigate to `app_url` after implementing UI-related changes, take a screenshot, and verify the change visually before claiming "Verify" complete. Backend-only changes skip the smoke step with an explicit note in the PR description.
 
+**Authoring committed Playwright tests.** Add a `[visual_testing.authored]` sub-table to opt the project into authored-test workflow:
+
+```toml
+[visual_testing.authored]
+tests_dir    = "tests/e2e"
+test_command = "npm run test:e2e"
+```
+
+Crew does **not** install `@playwright/test` for you — the target repo must have it set up (config + script + folder) before the agent can run authored tests. When the prerequisite is missing, the agent surfaces it in the PR description rather than silently skipping. This matches the convention of keeping target-repo dependencies as a target-repo concern.
+
 **Headed sessions for ad-hoc browsing.** The generated `.mcp.json` always uses `--headless`. If you want a headed browser when *you* invoke MCP browser tools interactively in a worktree, register a user-scope server (`claude mcp add -s user playwright -- npx -y @playwright/mcp@latest`) — your user-scope settings will take precedence in your interactive session, but the dispatched agent still uses the worktree-scoped headless config.
 
 ### Jira API credentials (once per machine)
