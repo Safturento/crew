@@ -15,6 +15,23 @@ interface AgentRowProps {
 
 const ACTIVE_STATES = new Set<AgentState>(['running', 'initializing']);
 
+const agentRow = cva(
+  'group relative grid cursor-pointer items-center gap-4 rounded-[10px] border bg-surface px-4 py-3 transition-colors hover:bg-surface-2 grid-cols-[100px_90px_1fr_90px_70px_auto]',
+  {
+    variants: {
+      state: {
+        initializing: 'border-white/10',
+        running: 'border-white/10',
+        idle: 'border-white/10',
+        finished: 'border-white/10',
+        waiting: `${STATE_CLASSES.waiting.border30} ${STATE_CLASSES.waiting.bg10}`,
+        pr_open: `${STATE_CLASSES.pr_open.border30} ${STATE_CLASSES.pr_open.bg10}`,
+        error: `${STATE_CLASSES.error.border30} ${STATE_CLASSES.error.bg10}`,
+      },
+    },
+  },
+);
+
 const quickActionButton = cva('rounded-md border px-3 py-1.5 text-xs font-medium', {
   variants: {
     variant: {
@@ -65,11 +82,7 @@ export function AgentRow({ agent, onSelect }: AgentRowProps) {
           onSelect(agent.key);
         }
       }}
-      className={[
-        'group relative grid cursor-pointer items-center gap-4 rounded-[10px] border bg-surface px-4 py-3 transition-colors hover:bg-surface-2',
-        'grid-cols-[100px_90px_1fr_90px_70px_auto]',
-        meta.attention ? `${stateClasses.border30} ${stateClasses.bg10}` : 'border-white/10',
-      ].join(' ')}
+      className={agentRow({ state: agent.state })}
     >
       {meta.attention && (
         <span

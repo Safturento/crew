@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
 import { AgentRow } from './AgentRow.js';
-import type { Agent } from '../data/types.js';
+import type { Agent, AgentState } from '../data/types.js';
 
 const baseAgent: Agent = {
   key: 'KAN-31',
@@ -94,4 +94,31 @@ describe('AgentRow', () => {
     render(<AgentRow agent={{ ...baseAgent, state: 'finished' }} onSelect={() => {}} />);
     expect(screen.getByRole('button', { name: 'Archive' })).toBeInTheDocument();
   });
+
+  const ATTENTION_TOKENS: Array<[AgentState, string, string]> = [
+    ['waiting', 'border-state-waiting/30', 'bg-state-waiting/10'],
+    ['error', 'border-state-error/30', 'bg-state-error/10'],
+    ['pr_open', 'border-state-pr-open/30', 'bg-state-pr-open/10'],
+  ];
+
+  it.each(ATTENTION_TOKENS)(
+    'tints the row with literal STATE_CLASSES tokens for %s',
+    (state, borderToken, bgToken) => {
+      render(<AgentRow agent={{ ...baseAgent, state }} onSelect={() => {}} />);
+      const row = screen.getByRole('button', { name: /KAN-31/ });
+      expect(row.className).toContain(borderToken);
+      expect(row.className).toContain(bgToken);
+    },
+  );
+
+  const NON_ATTENTION_STATES: AgentState[] = ['initializing', 'running', 'idle', 'finished'];
+
+  it.each(NON_ATTENTION_STATES)(
+    'uses neutral border for non-attention state %s',
+    (state) => {
+      render(<AgentRow agent={{ ...baseAgent, state }} onSelect={() => {}} />);
+      const row = screen.getByRole('button', { name: /KAN-31/ });
+      expect(row.className).toContain('border-white/10');
+    },
+  );
 });
