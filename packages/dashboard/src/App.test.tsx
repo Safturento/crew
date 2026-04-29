@@ -1,10 +1,11 @@
 import { QueryClient } from '@tanstack/react-query';
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { App } from './App.js';
 import type { DaemonClient } from './data/DaemonClient.js';
+import { FIXTURE_PROJECTS } from './data/fixtures.js';
 import { MockDaemonClient } from './data/MockDaemonClient.js';
 import type { Agent, Project } from './data/types.js';
 import { renderWithProviders } from './test/renderWithProviders.js';
@@ -32,6 +33,19 @@ beforeEach(() => {
 });
 
 describe('App', () => {
+  beforeEach(() => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify({ projects: FIXTURE_PROJECTS }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      }),
+    );
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it('renders the agents list with mock data', async () => {
     renderApp();
     await waitFor(() => expect(screen.getByText('kanban-api')).toBeInTheDocument());
