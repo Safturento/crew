@@ -5,6 +5,7 @@ export interface BuildFixPrPromptOptions {
   feedback: string;
   feedbackSource: string;
   conflictFiles?: string[];
+  discoveredSkillsBlock?: string;
 }
 
 export function buildFixPrPrompt(opts: BuildFixPrPromptOptions): string {
@@ -25,5 +26,6 @@ export function buildFixPrPrompt(opts: BuildFixPrPromptOptions): string {
     feedbackSource: opts.feedbackSource,
     conflictPreamble,
     pushDirective,
+    discoveredSkillsBlock: opts.discoveredSkillsBlock ?? '',
   });
 }

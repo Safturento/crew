@@ -210,4 +210,20 @@ describe('buildFixPrPrompt', () => {
     expect(prompt).toContain('src/bar.ts');
     expect(prompt).toContain('DO NOT PUSH this run');
   });
+
+  it('renders the discovered skills block under the curated Skills list', () => {
+    const prompt = buildFixPrPrompt({
+      key: 'KAN-23',
+      feedback: 'Some feedback',
+      feedbackSource: 'manual test',
+      discoveredSkillsBlock:
+        "\n\nThe following user-level skills are equally required when their description matches what you're about to do — invoke them via the `Skill` tool the same way:\n\n- **`reaching-for-frontend-libraries`** — Use when implementing frontend features.",
+    });
+
+    expect(prompt).toContain('superpowers:requesting-code-review');
+    expect(prompt).toContain('reaching-for-frontend-libraries');
+    const curatedIdx = prompt.indexOf('superpowers:requesting-code-review');
+    const discoveredIdx = prompt.indexOf('reaching-for-frontend-libraries');
+    expect(discoveredIdx).toBeGreaterThan(curatedIdx);
+  });
 });
