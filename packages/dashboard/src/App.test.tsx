@@ -1,8 +1,10 @@
+import { QueryClient } from '@tanstack/react-query';
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it } from 'vitest';
 
 import { App } from './App.js';
+import type { DaemonClient } from './data/DaemonClient.js';
 import { MockDaemonClient } from './data/MockDaemonClient.js';
 import type { Agent, Project } from './data/types.js';
 import { renderWithProviders } from './test/renderWithProviders.js';
@@ -58,5 +60,21 @@ describe('App', () => {
     expect(
       await screen.findByText(/agent detail drawer ships in a follow-up plan/i),
     ).toBeInTheDocument();
+  });
+
+  it('renders the error fallback when a query rejects', async () => {
+    const failingClient: DaemonClient = {
+      listProjects: () => Promise.reject(new Error('daemon unreachable')),
+      listAgents: () => Promise.reject(new Error('daemon unreachable')),
+    };
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false, throwOnError: true } },
+    });
+
+    renderWithProviders(<App client={failingClient} />, { queryClient });
+
+    expect(await screen.findByRole('alert')).toBeInTheDocument();
+    expect(screen.getByText(/daemon unreachable/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /retry/i })).toBeInTheDocument();
   });
 });

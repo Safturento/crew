@@ -1,10 +1,12 @@
 import { useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryErrorResetBoundary } from '@tanstack/react-query';
+import { ErrorBoundary } from 'react-error-boundary';
 
 import { useAttention } from './attention/useAttention.js';
 import { useFaviconBadge } from './attention/useFaviconBadge.js';
 import { AgentDetailPlaceholder } from './components/AgentDetailPlaceholder.js';
 import { AgentsList } from './components/AgentsList.js';
+import { ErrorFallback } from './components/ErrorFallback.js';
 import { TopNav } from './components/TopNav.js';
 import { ViewportFrame } from './components/ViewportFrame.js';
 import type { DaemonClient } from './data/DaemonClient.js';
@@ -14,6 +16,17 @@ import { navigate, useHashRoute } from './routing/useHashRoute.js';
 const defaultClient: DaemonClient = new MockDaemonClient();
 
 export function App({ client = defaultClient }: { client?: DaemonClient } = {}) {
+  const { reset } = useQueryErrorResetBoundary();
+  return (
+    <ViewportFrame>
+      <ErrorBoundary FallbackComponent={ErrorFallback} onReset={reset}>
+        <AppContent client={client} />
+      </ErrorBoundary>
+    </ViewportFrame>
+  );
+}
+
+function AppContent({ client }: { client: DaemonClient }) {
   const projectsQuery = useQuery({
     queryKey: ['projects'],
     queryFn: () => client.listProjects(),
@@ -49,7 +62,7 @@ export function App({ client = defaultClient }: { client?: DaemonClient } = {}) 
   }, [route, projects, agents]);
 
   return (
-    <ViewportFrame>
+    <>
       <TopNav
         route={route}
         attentionCount={attention.count}
@@ -59,7 +72,7 @@ export function App({ client = defaultClient }: { client?: DaemonClient } = {}) 
         }}
       />
       <div className="flex-1 overflow-y-auto">{body}</div>
-    </ViewportFrame>
+    </>
   );
 }
 
