@@ -44,7 +44,7 @@ Locked through the brainstorming session in `docs/plans/...` (this file). The ch
 | Testing             | **vitest**            | Same as Recipes-App; familiar                                                                                                                                                |
 | Logging             | none initially        | `console.log` + picocolors is fine for Phase 1. Revisit (probably **pino**) when the daemon needs structured logs                                                            |
 
-**Phase 2/3 add:** chokidar (fs watching), better-sqlite3 (state), hono (daemon HTTP), vite + react (dashboard).
+**Phase 2/3 add:** chokidar (fs watching), better-sqlite3 + Kysely (state), fastify (daemon HTTP), vite + react (dashboard). Vite + React landed in Phase 3's first slice; Fastify + Kysely scaffolding land in slice 1a of Phase 3 (`docs/superpowers/specs/2026-04-28-daemon-bootstrap-and-projects-endpoint-design.md`).
 
 **Live tool-call stream rendering:** plain stdout + picocolors + ANSI cursor codes. Ink (React for CLIs) is intentionally not used — the one-line-per-tool-call shape doesn't need React to render. Re-evaluate in Phase 3 if a multi-pane TUI for "all running agents" is wanted; that's the kind of view Ink earns its keep on.
 
@@ -93,7 +93,7 @@ A single long-running Node process. Responsibilities:
 - Exposes a REST API for the CLI (`crew status`, `crew list`) and the dashboard
 - Streams live events over Server-Sent Events for the dashboard to consume
 
-Stack: Hono (lightweight web framework), better-sqlite3, chokidar for FS watching.
+Stack: Fastify + `fastify-type-provider-zod`, Kysely + `kysely-better-sqlite3` (SQLite kept for the personal-tool fit), `@fastify/awilix` for DI, pino for logging, chokidar for FS watching. Aligned with the `reaching-for-backend-patterns` skill — superseded the original Hono / raw-better-sqlite3 picks during the slice 1a brainstorm. See `docs/superpowers/specs/2026-04-28-daemon-bootstrap-and-projects-endpoint-design.md` §1 for rationale.
 
 The daemon runs on `localhost` only. No external exposure. Listens on a port read from per-user config (default `7773` for CLI/HTTP, `7774` for SSE).
 
