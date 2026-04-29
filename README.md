@@ -105,6 +105,49 @@ echo '[ -f ~/.secrets ] && source ~/.secrets' >> ~/.bashrc
 
 Open a new shell (or `source ~/.bashrc`) and verify with `echo $CREW_JIRA_EMAIL`. The token is the same Atlassian API token the MCP server uses, so you can reuse it.
 
+### Bruno smoke tests (per project, optional)
+
+Crew can run a [Bruno](https://www.usebruno.com/) HTTP smoke check as part of the dispatched agent's verification step, and ensures the agent keeps `.bru` files in sync when endpoints change. Off by default. Opt in by adding a `[bruno_smoke]` section to the project's TOML at `~/.config/crew/projects/<name>.toml`:
+
+```toml
+[bruno_smoke]
+enabled = true
+base_url = "https://localhost:{httpsPort}"   # placeholders {httpPort}, {httpsPort}, {postgresPort} are substituted from the docker .env when [docker] is present
+collection_dir = "bruno"                     # optional; defaults to "bruno"
+
+# Optional. Supplies test-user creds for the smoke run's login flow. Omit when
+# the API has no auth or the runner injects its own credentials.
+[bruno_smoke.smoke_user]
+email    = "smoke@example.com"
+username = "smoke"
+password = "hunter2"
+```
+
+When enabled, `crew run` (and `crew fix-pr`):
+
+- Generates `<worktree>/<collection_dir>/environments/<envName>.bru` containing a `vars { baseUrl, testUser.* }` block. `<envName>` is the lowercased worktree basename (e.g. `recipes-app-kan-99` for the KAN-99 worktree).
+- Exports `CREW_BRUNO_ENV=<envName>` in the agent's spawn env. The project's `npm run bruno:smoke` script reads it (e.g. `bru run --env "$CREW_BRUNO_ENV" flows/login.bru flows/main-smoke.bru`).
+- Leaves the docker stack **running** (composed with `[visual_testing]`'s lifecycle gate) so the agent has a live API to hit.
+
+When disabled (no `[bruno_smoke]` section), behaviour is unchanged.
+
+**Bootstrap a new project's Bruno collection.** Crew does **not** ship the Bruno collection — the project owns it. Per-project bootstrap (one-time, by hand):
+
+1. Create `<repo>/<collection_dir>/` (default `<repo>/bruno/`) and run `bru init` (or copy a sibling project's collection).
+2. Add `<repo>/<collection_dir>/.gitignore` containing `environments/` so generated env files never get committed.
+3. Author at least `flows/login.bru` (uses `vars.testUser.*` to authenticate and stashes the token via `vars:post-response { token: res.body.token }`) and `flows/main-smoke.bru` (the project's golden-path API call sequence).
+4. Add an npm script:
+   ```json
+   "scripts": {
+     "bruno:smoke": "bru run --env \"$CREW_BRUNO_ENV\" flows/login.bru flows/main-smoke.bru"
+   }
+   ```
+5. Install the Bruno CLI as a dev dep: `npm install --save-dev @usebruno/cli`.
+
+Once these are in place, `crew run` against a backend ticket will do the rest.
+
+**The `bruno-collection-maintenance` skill.** The agent automatically picks up the user-scope `bruno-collection-maintenance` skill at `~/.claude/skills/bruno-collection-maintenance/`. The skill teaches the file-naming conventions, the `vars:post-response` chaining pattern, and the "update `.bru` when touching endpoints" rule.
+
 ### GitHub token (once per project)
 
 `crew run` injects a GitHub token into the agent so it can push branches and open PRs. Each registered project needs one at `<repo>/.claude/secrets/gh-token`:
