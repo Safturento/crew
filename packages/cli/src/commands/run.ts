@@ -18,6 +18,7 @@ import { buildTicketPrompt } from '../lib/prompts/index.js';
 import { discoverSkills, renderDiscoveredSkillsBlock } from '../lib/prompts/skills.js';
 import { resolveAppUrl, writeMcpFile } from '../lib/visual-testing/index.js';
 import {
+  agentNeedsAppRunning,
   claudeProjectDirFor,
   dockerLogPathFor,
   findNewestTranscript,
@@ -307,7 +308,7 @@ function startDockerBringup(
 
   const dockerLogPath = dockerLogPathFor(key);
   const dockerStream = createWriteStream(dockerLogPath, { flags: 'w' });
-  const stopAfterBringup = !config.visual_testing?.enabled;
+  const stopAfterBringup = !agentNeedsAppRunning(config);
   const script = buildDockerBringupScript(config.repo_path, { stopAfterBringup });
   // See note above the claudeProcess spawn: execa v9 rejects WriteStream
   // objects whose fd is still null. Pipe after spawn instead.
