@@ -1,8 +1,9 @@
-import { asValue, createContainer, type AwilixContainer } from 'awilix';
+import { asValue, asFunction, createContainer, type AwilixContainer } from 'awilix';
 import type { Kysely } from 'kysely';
 import type { Logger } from 'pino';
 import type { DaemonConfig } from './config.js';
 import type { DaemonDatabase } from './db.js';
+import { ProjectsService } from './services/ProjectsService.js';
 
 /**
  * The daemon's Awilix cradle. Routes resolve services by these names via
@@ -19,11 +20,18 @@ export interface DaemonCradle {
   config: DaemonConfig;
   logger: Logger;
   db: Kysely<DaemonDatabase>;
+  projectsService: ProjectsService;
 }
 
 declare module '@fastify/awilix' {
   // eslint-disable-next-line @typescript-eslint/no-empty-object-type
   interface Cradle extends DaemonCradle {}
+}
+
+export interface BuildContainerDeps {
+  config: DaemonConfig;
+  logger: Logger;
+  db: Kysely<DaemonDatabase>;
 }
 
 /**
@@ -33,12 +41,20 @@ declare module '@fastify/awilix' {
  * container would let the second registration silently overwrite the
  * first.
  */
-export function buildContainer(services: DaemonCradle): AwilixContainer<DaemonCradle> {
+export function buildContainer(deps: BuildContainerDeps): AwilixContainer<DaemonCradle> {
   const container = createContainer<DaemonCradle>();
   container.register({
-    config: asValue(services.config),
-    logger: asValue(services.logger),
-    db: asValue(services.db),
+    config: asValue(deps.config),
+    logger: asValue(deps.logger),
+    db: asValue(deps.db),
+    // `config.configDir` IS the projects directory today (per CREW-35's
+    // env schema). The service param is named `projectsDir` to describe
+    // what it actually scans; if `DaemonConfig` later splits the two,
+    // change this argument, not the service's parameter name.
+    projectsService: asFunction(
+      ({ config, logger }: DaemonCradle) =>
+        new ProjectsService({ projectsDir: config.configDir, logger }),
+    ).scoped(),
   });
   return container;
 }
