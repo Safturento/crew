@@ -12,7 +12,7 @@ Source: {{feedbackSource}}.
 - **`superpowers:test-driven-development`** — for every feedback item that requires implementation work.
 - **`superpowers:verification-before-completion`** — before pushing.
 - **`superpowers:systematic-debugging`** — when something fails unexpectedly.
-- **`superpowers:requesting-code-review`** — before pushing.
+- **`superpowers:requesting-code-review`** — before pushing.{{discoveredSkillsBlock}}
 
 ## Apply the fixes
 

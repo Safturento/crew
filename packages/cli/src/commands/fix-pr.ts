@@ -18,6 +18,7 @@ import {
   spawnClaudeResume,
   tailTranscript,
 } from '../lib/index.js';
+import { discoverSkills, renderDiscoveredSkillsBlock } from '../lib/prompts/skills.js';
 
 export type FeedbackMode = { kind: 'pr' } | { kind: 'file'; path: string } | { kind: 'stdin' };
 
@@ -123,6 +124,11 @@ export const fixPrCommand = new Command('fix-pr')
     await runFixPr(key, flags);
   });
 
+function repoPathFromWorktree(worktree: string, key: string): string {
+  const suffix = `-${key}`;
+  return worktree.endsWith(suffix) ? worktree.slice(0, -suffix.length) : worktree;
+}
+
 async function runFixPr(key: string, flags: FixPrFlags): Promise<void> {
   const mode = selectMode(flags);
 
@@ -181,6 +187,9 @@ async function runFixPr(key: string, flags: FixPrFlags): Promise<void> {
     feedback,
     feedbackSource: source,
     conflictFiles: conflicts,
+    discoveredSkillsBlock: renderDiscoveredSkillsBlock(
+      discoverSkills({ repoPath: repoPathFromWorktree(worktree, key) }),
+    ),
   });
 
   const logFile = `/tmp/crew-fix-pr-${key}.log`;
