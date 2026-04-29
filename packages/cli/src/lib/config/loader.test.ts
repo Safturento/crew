@@ -194,6 +194,29 @@ test_command = "npm run test:e2e"
     expect(config.visual_testing?.authored?.test_command).toBe('npm run test:e2e');
   });
 
-  // Note: the [visual_testing.authored] partial-rejection case is tested in
-  // CREW-γ (Task 13) when the authored sub-table is added to the schema.
+  it('rejects [visual_testing.authored] missing test_command', () => {
+    const raw = `${baseToml}
+[visual_testing]
+enabled = true
+app_url = "http://localhost:5173"
+start_command = "npm run dev"
+
+[visual_testing.authored]
+tests_dir = "tests/e2e"
+`;
+    expect(() => parseProjectConfig(raw)).toThrow(/test_command/);
+  });
+
+  it('rejects [visual_testing.authored] missing tests_dir', () => {
+    const raw = `${baseToml}
+[visual_testing]
+enabled = true
+app_url = "http://localhost:5173"
+start_command = "npm run dev"
+
+[visual_testing.authored]
+test_command = "npm run test:e2e"
+`;
+    expect(() => parseProjectConfig(raw)).toThrow(/tests_dir/);
+  });
 });
