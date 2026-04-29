@@ -4,6 +4,12 @@
   "private": true,
   "type": "module",
   "description": "crew's long-running state-tracking daemon: Fastify HTTP server, SQLite state store, transcript watcher.",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
   "bin": {
     "crew-daemon": "./bin/crew-daemon"
   },

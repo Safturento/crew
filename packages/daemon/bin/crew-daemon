@@ -14,4 +14,4 @@ if [[ ! -x "$TSX" ]]; then
   exit 1
 fi
 
-exec "$TSX" "$PKG_DIR/src/index.ts" "$@"
+exec "$TSX" "$PKG_DIR/src/bin.ts" "$@"

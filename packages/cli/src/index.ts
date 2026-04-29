@@ -6,6 +6,7 @@ import { listCommand } from './commands/list.js';
 import { statusCommand } from './commands/status.js';
 import { dockerEnvCommand } from './commands/docker-env.js';
 import { dbCloneCommand } from './commands/db-clone.js';
+import { daemonCommand } from './commands/daemon.js';
 
 const program = new Command();
 
@@ -21,5 +22,6 @@ program.addCommand(listCommand);
 program.addCommand(statusCommand);
 program.addCommand(dockerEnvCommand);
 program.addCommand(dbCloneCommand);
+program.addCommand(daemonCommand);
 
 program.parse(process.argv);
