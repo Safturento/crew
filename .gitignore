@@ -18,6 +18,11 @@ vite.config.*.timestamp-*
 coverage
 .nyc_output
 
+# Playwright
+test-results
+playwright-report
+.playwright
+
 # Local env / overrides / secrets
 *.local
 .env
