@@ -35,6 +35,9 @@ export function buildFixPrPrompt(opts: BuildFixPrPromptOptions): string {
 
 function buildBrunoSmokeBlock(bs: BrunoSmokePromptOptions | undefined): string {
   if (!bs) return '';
-  // γ fills the fix-pr-bruno-smoke fragment body. For α the placeholder is wired but empty.
-  return '';
+  return render('fix-pr-bruno-smoke', {
+    baseUrl: bs.baseUrl,
+    envName: bs.envName,
+    collectionDir: bs.collectionDir,
+  });
 }

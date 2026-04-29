@@ -330,4 +330,41 @@ describe('buildFixPrPrompt', () => {
     });
     expect(a).toBe(b);
   });
+
+  it('renders the bruno-smoke section when brunoSmoke is provided', () => {
+    const prompt = buildFixPrPrompt({
+      key: 'KAN-23',
+      feedback: 'rename the field from x to y',
+      feedbackSource: 'GitHub PR comments',
+      brunoSmoke: {
+        baseUrl: 'https://localhost:18443',
+        envName: 'recipes-kan-23',
+        collectionDir: 'bruno',
+        hasSmokeUser: true,
+      },
+    });
+    expect(prompt).toContain('API smoke verification (Bruno)');
+    expect(prompt).toContain('https://localhost:18443');
+    expect(prompt).toContain('CREW_BRUNO_ENV=recipes-kan-23');
+    expect(prompt).toContain('npm run bruno:smoke');
+    expect(prompt).toMatchSnapshot();
+  });
+
+  it('renders the bruno-smoke block before the Apply the fixes section', () => {
+    const prompt = buildFixPrPrompt({
+      key: 'KAN-23',
+      feedback: 'fix the typo',
+      feedbackSource: 'stdin',
+      brunoSmoke: {
+        baseUrl: 'http://localhost:3000',
+        envName: 'recipes',
+        collectionDir: 'bruno',
+        hasSmokeUser: false,
+      },
+    });
+    const brunoIdx = prompt.indexOf('API smoke verification (Bruno)');
+    const fixesIdx = prompt.indexOf('Apply the fixes');
+    expect(brunoIdx).toBeGreaterThan(-1);
+    expect(fixesIdx).toBeGreaterThan(brunoIdx);
+  });
 });

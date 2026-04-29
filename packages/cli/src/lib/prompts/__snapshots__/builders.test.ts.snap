@@ -1,5 +1,46 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
+exports[`buildFixPrPrompt > renders the bruno-smoke section when brunoSmoke is provided 1`] = `
+"Code review feedback on the work you have already pushed for KAN-23.
+Source: GitHub PR comments.
+
+---
+
+rename the field from x to y
+
+---
+
+## Skills
+
+- **\`superpowers:test-driven-development\`** — for every feedback item that requires implementation work.
+- **\`superpowers:verification-before-completion\`** — before pushing.
+- **\`superpowers:systematic-debugging\`** — when something fails unexpectedly.
+- **\`superpowers:requesting-code-review\`** — before pushing.
+
+
+## API smoke verification (Bruno)
+
+This project has a Bruno collection at \`bruno/\`. Crew already generated \`bruno/environments/recipes-kan-23.bru\` (pointing at **https://localhost:18443**) for the original run. \`CREW_BRUNO_ENV=recipes-kan-23\` is set in your env.
+
+While applying feedback:
+
+- If your fix touches any HTTP endpoint behaviour, update the matching \`bruno/endpoints/...\` and (where relevant) \`bruno/flows/...\` files in the same set of commits.
+- Before pushing, run \`npm run bruno:smoke\`. Smoke must pass. A connection error usually means the worktree's stack isn't up — bring it up the same way the original \`crew run\` did, then re-run smoke.
+
+Treat smoke failure the same as test failure: do not push.
+
+
+## Apply the fixes
+
+- Update implementation and tests to address each point.
+- After each meaningful unit of work, \`git add\` and commit with a clear message referencing KAN-23.
+- Run \`npm run lint\`, \`npm run format\`, \`npm run typecheck\`, and \`npm run test:run\` — all must pass before pushing.
+- Push with \`git push --force-with-lease origin KAN-23\` to extend the existing PR. Do NOT open a new PR. Plain \`--force\` is never allowed.
+- If a piece of feedback is wrong or you disagree with it, write your reasoning back instead of blindly applying it.
+- Do NOT resolve review threads on GitHub yourself.
+"
+`;
+
 exports[`buildTicketPrompt > VT-off snapshot still matches the CREW-19 baseline (no regression from CREW-20) 1`] = `
 "You are running unattended on a fresh git worktree to implement Jira ticket KAN-23 end-to-end. The repo's \`CLAUDE.md\` is your authoritative project guide; read it before doing anything else.
 
