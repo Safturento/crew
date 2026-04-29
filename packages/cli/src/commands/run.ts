@@ -18,6 +18,10 @@ import { buildTicketPrompt } from '../lib/prompts/index.js';
 import { discoverSkills, renderDiscoveredSkillsBlock } from '../lib/prompts/skills.js';
 import { resolveAppUrl, writeMcpFile } from '../lib/visual-testing/index.js';
 import {
+  resolveBrunoEnvName,
+  writeEnvFile as writeBrunoEnvFile,
+} from '../lib/bruno-smoke/index.js';
+import {
   agentNeedsAppRunning,
   claudeProjectDirFor,
   dockerLogPathFor,
@@ -149,6 +153,27 @@ async function runTicket(key: string, opts: RunOptions): Promise<never> {
     }
   }
 
+  let brunoEnvName: string | undefined;
+  let resolvedBrunoBaseUrl: string | undefined;
+  if (config.bruno_smoke?.enabled) {
+    resolvedBrunoBaseUrl = resolveAppUrl(config.bruno_smoke.base_url, dockerPorts).raw;
+    brunoEnvName = resolveBrunoEnvName(worktree);
+    const writeResult = writeBrunoEnvFile(worktree, {
+      collectionDir: config.bruno_smoke.collection_dir,
+      envName: brunoEnvName,
+      baseUrl: resolvedBrunoBaseUrl,
+      smokeUser: config.bruno_smoke.smoke_user,
+    });
+    console.log(
+      pc.dim(
+        `→ wrote ${writeResult.envFilePath} (CREW_BRUNO_ENV=${brunoEnvName}, baseUrl=${resolvedBrunoBaseUrl})`,
+      ),
+    );
+    if (writeResult.existed) {
+      console.warn(pc.yellow(`  ! ${writeResult.envFilePath} already existed — overwritten`));
+    }
+  }
+
   const dockerProcess = startDockerBringup(config, worktree, key, skipDocker, childEnv);
 
   const ghToken = readFileSync(ghTokenDest, 'utf8').trim();
@@ -193,7 +218,11 @@ async function runTicket(key: string, opts: RunOptions): Promise<never> {
     stdin: 'ignore',
     stdout: 'pipe',
     stderr: 'pipe',
-    env: { ...childEnv, GH_TOKEN: ghToken },
+    env: {
+      ...childEnv,
+      GH_TOKEN: ghToken,
+      ...(brunoEnvName ? { CREW_BRUNO_ENV: brunoEnvName } : {}),
+    },
     reject: false,
   });
   claudeProcess.stdout?.pipe(logStream);
