@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+# Run the crew daemon via tsx, resolving paths from this script's own location
+# so the command works regardless of cwd.
+
+set -e
+
+BIN_DIR="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"
+PKG_DIR="$(cd "$BIN_DIR/.." && pwd)"
+WORKSPACE_ROOT="$(cd "$PKG_DIR/../.." && pwd)"
+TSX="$WORKSPACE_ROOT/node_modules/.bin/tsx"
+
+if [[ ! -x "$TSX" ]]; then
+  echo "error: tsx not found at $TSX — run 'npm install' at $WORKSPACE_ROOT" >&2
+  exit 1
+fi
+
+exec "$TSX" "$PKG_DIR/src/index.ts" "$@"
