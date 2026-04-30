@@ -1,9 +1,10 @@
 import { startCommandHint } from '../playwright/index.js';
 import { render } from './render.js';
 
-export interface VisualTestingPromptOptions {
+export interface PlaywrightPromptOptions {
   appUrl: string;
   startCommand?: string;
+  smoke?: boolean;
   authored?: {
     testsDir: string;
     testCommand: string;
@@ -21,7 +22,7 @@ export interface BuildTicketPromptOptions {
   key: string;
   githubRepo: string;
   jiraSite: string;
-  visualTesting?: VisualTestingPromptOptions;
+  playwright?: PlaywrightPromptOptions;
   brunoSmoke?: BrunoSmokePromptOptions;
   discoveredSkillsBlock?: string;
 }
@@ -31,27 +32,32 @@ export function buildTicketPrompt(opts: BuildTicketPromptOptions): string {
     key: opts.key,
     githubRepo: opts.githubRepo,
     jiraSite: opts.jiraSite,
-    visualTestingBlock: buildVisualTestingBlock(opts.visualTesting),
+    playwrightBlock: buildPlaywrightBlock(opts.playwright),
     brunoSmokeBlock: buildBrunoSmokeBlock(opts.brunoSmoke),
     discoveredSkillsBlock: opts.discoveredSkillsBlock ?? '',
   });
 }
 
-function buildVisualTestingBlock(vt: VisualTestingPromptOptions | undefined): string {
-  if (!vt) return '';
-  const smoke = render('ticket-visual-smoke', {
-    appUrl: vt.appUrl,
-    startCommandHint: startCommandHint({
-      appUrl: vt.appUrl,
-      startCommand: vt.startCommand,
-    }),
-  });
-  if (!vt.authored) return smoke;
-  const authored = render('ticket-visual-authored', {
-    testsDir: vt.authored.testsDir,
-    testCommand: vt.authored.testCommand,
-  });
-  return smoke + authored;
+function buildPlaywrightBlock(pw: PlaywrightPromptOptions | undefined): string {
+  if (!pw) return '';
+  let out = '';
+  if (pw.smoke) {
+    out += render('ticket-playwright-smoke', {
+      appUrl: pw.appUrl,
+      startCommandHint: startCommandHint({
+        appUrl: pw.appUrl,
+        startCommand: pw.startCommand,
+      }),
+    });
+  }
+  if (pw.authored) {
+    out += render('ticket-playwright-authored', {
+      appUrl: pw.appUrl,
+      testsDir: pw.authored.testsDir,
+      testCommand: pw.authored.testCommand,
+    });
+  }
+  return out;
 }
 
 function buildBrunoSmokeBlock(bs: BrunoSmokePromptOptions | undefined): string {

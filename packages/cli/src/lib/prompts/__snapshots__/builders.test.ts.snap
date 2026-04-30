@@ -41,7 +41,7 @@ Treat smoke failure the same as test failure: do not push.
 "
 `;
 
-exports[`buildTicketPrompt > VT-off snapshot still matches the CREW-19 baseline (no regression from CREW-20) 1`] = `
+exports[`buildTicketPrompt > PW-off snapshot still matches the CREW-19 baseline (no regression from CREW-20) 1`] = `
 "You are running unattended on a fresh git worktree to implement Jira ticket KAN-23 end-to-end. The repo's \`CLAUDE.md\` is your authoritative project guide; read it before doing anything else.
 
 ## Skills
@@ -159,7 +159,7 @@ The following user-level skills are equally required when their description matc
 "
 `;
 
-exports[`buildTicketPrompt > matches the baseline snapshot when visualTesting is omitted 1`] = `
+exports[`buildTicketPrompt > matches the baseline snapshot when playwright is omitted 1`] = `
 "You are running unattended on a fresh git worktree to implement Jira ticket KAN-23 end-to-end. The repo's \`CLAUDE.md\` is your authoritative project guide; read it before doing anything else.
 
 ## Skills
@@ -216,7 +216,7 @@ You are required to use these Superpowers skills as appropriate. Invoke each via
 "
 `;
 
-exports[`buildTicketPrompt > renders both visual-testing and bruno-smoke when both are provided 1`] = `
+exports[`buildTicketPrompt > renders both playwright and bruno-smoke when both are provided 1`] = `
 "You are running unattended on a fresh git worktree to implement Jira ticket KAN-23 end-to-end. The repo's \`CLAUDE.md\` is your authoritative project guide; read it before doing anything else.
 
 ## Skills
@@ -294,7 +294,7 @@ The \`bruno-collection-maintenance\` skill (auto-discovered) covers naming conve
 "
 `;
 
-exports[`buildTicketPrompt > renders the authored test section after the smoke section when authored is provided 1`] = `
+exports[`buildTicketPrompt > renders the authored test section after the smoke section when both are provided 1`] = `
 "You are running unattended on a fresh git worktree to implement Jira ticket KAN-23 end-to-end. The repo's \`CLAUDE.md\` is your authoritative project guide; read it before doing anything else.
 
 ## Skills
@@ -342,7 +342,12 @@ If the change has regression value (a user-facing flow that broke before or coul
 - One test per behaviour, not per assertion. Names describe user intent.
 - Don't add a test just because you can. Skip when the change is cosmetic, throwaway, or fully covered by existing unit tests.
 
-If \`tests/e2e/\` doesn't exist or \`npm run test:e2e\` fails because the runner isn't installed, surface the problem in the PR description and do **not** silently skip — that's a project setup gap, not your fault.
+**Two crew-managed concerns — do not duplicate:**
+
+- **Do not run \`npm run docker:up\`.** Crew has the application stack running for you at https://localhost:18443. Running it again will conflict with the live containers.
+- **Do not run \`npx playwright install\`.** Crew has installed Chromium for you before this run. If \`npm run test:e2e\` reports missing browsers or system libraries, surface the failure in the PR description and stop — that's a crew-setup gap, not your fault.
+
+If \`tests/e2e/\` doesn't exist or \`npm run test:e2e\` fails for any other reason, also surface the problem in the PR description and do **not** silently skip.
 
 
 8. **Verify.** Invoke \`superpowers:verification-before-completion\`. Run lint / format / typecheck / test:run.
@@ -440,7 +445,7 @@ The \`bruno-collection-maintenance\` skill (auto-discovered) covers naming conve
 "
 `;
 
-exports[`buildTicketPrompt > renders the smoke verification section when visualTesting is provided (docker case) 1`] = `
+exports[`buildTicketPrompt > renders the smoke verification section when playwright.smoke is provided (docker case) 1`] = `
 "You are running unattended on a fresh git worktree to implement Jira ticket KAN-23 end-to-end. The repo's \`CLAUDE.md\` is your authoritative project guide; read it before doing anything else.
 
 ## Skills

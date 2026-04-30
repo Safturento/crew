@@ -25,7 +25,7 @@ You are required to use these Superpowers skills as appropriate. Invoke each via
 6. **Plan inline (or follow an existing plan).** If a plan doc exists, invoke `superpowers:executing-plans` and let the plan drive. Otherwise decompose into commit-shaped steps via `TaskCreate`.
 
 7. **Execute, committing per step.** Use `superpowers:test-driven-development`. Frequent small commits referencing `{{key}}`.
-{{visualTestingBlock}}
+{{playwrightBlock}}
 {{brunoSmokeBlock}}
 8. **Verify.** Invoke `superpowers:verification-before-completion`. Run lint / format / typecheck / test:run.
 
