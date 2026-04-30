@@ -202,7 +202,7 @@ async function runTicket(key: string, opts: RunOptions): Promise<never> {
         ? {
             appUrl: resolvedAppUrl,
             startCommand: config.playwright?.start_command,
-            smoke: smokeEnabled(config) || undefined,
+            smoke: smokeEnabled(config),
             authored:
               authoredEnabled(config) && config.playwright?.authored
                 ? {

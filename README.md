@@ -56,34 +56,36 @@ claude mcp add atlassian --scope user \
 
 Verify with `claude mcp list` — `atlassian` should report `✓ Connected`.
 
-### Visual testing (per project, optional)
+### Playwright (per project, optional)
 
-Crew can give the dispatched agent a Playwright-driven browser pointed at the project's running app, so it can smoke-verify UI changes (and optionally author committed Playwright tests). Off by default. Opt in by adding a `[visual_testing]` section to the project's TOML at `~/.config/crew/projects/<name>.toml`:
+Crew can give the dispatched agent a Playwright-driven browser pointed at the project's running app, so it can smoke-verify UI changes and/or author committed Playwright tests. Off by default. Opt in by adding a `[playwright]` parent block to the project's TOML at `~/.config/crew/projects/<name>.toml`, plus at least one of the `smoke` or `authored` sub-blocks:
 
 ```toml
-[visual_testing]
-enabled = true
+[playwright]
 app_url = "https://localhost:{httpsPort}"   # placeholders {httpPort}, {httpsPort}, {postgresPort} are substituted from the docker .env when [docker] is present
 start_command = "npm run dev"               # required when [docker] is not configured
-```
 
-When enabled, `crew run`:
+[playwright.smoke]
+enabled = true
 
-- Generates `<worktree>/.mcp.json` declaring the [`@playwright/mcp`](https://github.com/microsoft/playwright-mcp) server (`--headless`). The agent auto-discovers it.
-- Adds `.mcp.json` to `<worktree>/.git/info/exclude` so it's never committed.
-- Leaves the docker stack **running** (today's default is to stop it after bringup) so the agent has a live URL to test against. You can hit the same URL from your own browser during the run.
-
-When disabled (no `[visual_testing]` section), behaviour is unchanged.
-
-**At agent runtime.** The dispatched agent's prompt instructs it (when `[visual_testing]` is enabled) to navigate to `app_url` after implementing UI-related changes, take a screenshot, and verify the change visually before claiming "Verify" complete. Backend-only changes skip the smoke step with an explicit note in the PR description.
-
-**Authoring committed Playwright tests.** Add a `[visual_testing.authored]` sub-table to opt the project into authored-test workflow:
-
-```toml
-[visual_testing.authored]
+[playwright.authored]
+enabled = true
 tests_dir    = "tests/e2e"
 test_command = "npm run test:e2e"
 ```
+
+At least one of `[playwright.smoke]` or `[playwright.authored]` must be present and `enabled = true`; with neither, parsing fails. Both can be on simultaneously.
+
+When `[playwright.smoke]` is enabled, `crew run`:
+
+- Generates `<worktree>/.mcp.json` declaring the [`@playwright/mcp`](https://github.com/microsoft/playwright-mcp) server (`--headless`). The agent auto-discovers it.
+- Adds `.mcp.json` to `<worktree>/.git/info/exclude` so it's never committed.
+
+When either sub-mode is enabled, `crew run` leaves the docker stack **running** (today's default is to stop it after bringup) so the agent has a live URL to test against. You can hit the same URL from your own browser during the run.
+
+When disabled (no `[playwright]` section), behaviour is unchanged.
+
+**At agent runtime.** When `[playwright.smoke]` is enabled, the dispatched agent's prompt instructs it to navigate to `app_url` after implementing UI-related changes, take a screenshot, and verify the change visually before claiming "Verify" complete. Backend-only changes skip the smoke step with an explicit note in the PR description.
 
 Crew does **not** install `@playwright/test` for you — the target repo must have it set up (config + script + folder) before the agent can run authored tests. When the prerequisite is missing, the agent surfaces it in the PR description rather than silently skipping. This matches the convention of keeping target-repo dependencies as a target-repo concern.
 
@@ -127,7 +129,7 @@ When enabled, `crew run` (and `crew fix-pr`):
 
 - Generates `<worktree>/<collection_dir>/environments/<envName>.bru` containing a `vars { baseUrl, testUser.* }` block. `<envName>` is the lowercased worktree basename (e.g. `recipes-app-kan-99` for the KAN-99 worktree).
 - Exports `CREW_BRUNO_ENV=<envName>` in the agent's spawn env. The project's `npm run bruno:smoke` script reads it (e.g. `bru run --env "$CREW_BRUNO_ENV" flows/login.bru flows/main-smoke.bru`).
-- Leaves the docker stack **running** (composed with `[visual_testing]`'s lifecycle gate) so the agent has a live API to hit.
+- Leaves the docker stack **running** (composed with `[playwright]`'s lifecycle gate) so the agent has a live API to hit.
 
 When disabled (no `[bruno_smoke]` section), behaviour is unchanged.
 
