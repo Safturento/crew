@@ -18,18 +18,30 @@ if [[ ! -f "$BIN_SOURCE" ]]; then
 fi
 
 # System deps for `crew run` — bubblewrap is the sandbox runtime, socat
-# is the network-allowlist proxy that runs alongside it.
+# is the network-allowlist proxy that runs alongside it. Chromium libs
+# are required for headless Playwright runs in projects that enable
+# [playwright] in their crew config.
 if command -v apt-get >/dev/null 2>&1; then
   missing_pkgs=()
   command -v bwrap  >/dev/null 2>&1 || missing_pkgs+=(bubblewrap)
   command -v socat  >/dev/null 2>&1 || missing_pkgs+=(socat)
+  # Chromium runtime libraries (Playwright --with-deps list for linux).
+  # Probe one canonical lib via ldconfig; if missing, install the full set.
+  if ! ldconfig -p 2>/dev/null | grep -q libnss3.so; then
+    missing_pkgs+=(
+      libnss3 libnspr4 libatk1.0-0 libatk-bridge2.0-0 libcups2 libdrm2
+      libdbus-1-3 libxcb1 libxkbcommon0 libxcomposite1 libxdamage1
+      libxfixes3 libxrandr2 libgbm1 libpango-1.0-0 libcairo2 libasound2
+      libatspi2.0-0
+    )
+  fi
   if [[ ${#missing_pkgs[@]} -gt 0 ]]; then
     echo "Installing system deps via apt: ${missing_pkgs[*]}"
     sudo apt-get install -y "${missing_pkgs[@]}"
   fi
 else
   if ! command -v bwrap >/dev/null 2>&1 || ! command -v socat >/dev/null 2>&1; then
-    echo "warning: apt-get not found. Install 'bubblewrap' and 'socat' via your package manager before running 'crew run'." >&2
+    echo "warning: apt-get not found. Install 'bubblewrap', 'socat', and Chromium runtime libs (libnss3 libnspr4 libatk1.0-0 libatk-bridge2.0-0 libcups2 libdrm2 libdbus-1-3 libxcb1 libxkbcommon0 libxcomposite1 libxdamage1 libxfixes3 libxrandr2 libgbm1 libpango-1.0-0 libcairo2 libasound2 libatspi2.0-0) via your package manager before running 'crew run'." >&2
   fi
 fi
 
