@@ -334,6 +334,8 @@ Hypothesis: it doesn't, or it works only by accident (e.g. the MCP server caches
 - *Doesn't work, fixed by browser install:* design unchanged (the new `npx playwright install chromium` step covers it because it runs before the agent boots).
 - *Doesn't work, needs more:* fold the additional fix into the implementation plan as added bullets in §6.
 
+**Phase 0 finding (2026-04-30):** *partial — sandbox-level test deferred.* The MCP server (`@playwright/mcp@latest --headless`) bootstraps cleanly outside the sandbox and lists 24 tools. In-sandbox tool-call validation could not be run from the autonomous CREW-57 agent (the crew worktree itself is not sandboxed; dispatching a parallel sandboxed sub-agent would have introduced too much complexity for an empirical pass). The sandbox-level confirmation is **deferred to plan Task 16** — the first authored e2e flow in β's manual gate is the natural place where browser-driving tool calls actually exercise the sandbox. If Task 16 surfaces an MCP-specific issue, fold it in as a follow-up. See [`2026-04-29-playwright-integration-phase-0-findings.md`](./2026-04-29-playwright-integration-phase-0-findings.md) §P0.1 for evidence and rationale.
+
 ### 7.2 P0.2 — Does Playwright write to `~/.cache/ms-playwright` at launch-time?
 
 If yes, the agent's run-time launch of Chromium fails under the current `allowWrite` list. The fix is a one-line project-side addition to `.claude/settings.json` — outside crew's scope, but must be documented.
@@ -343,6 +345,8 @@ If yes, the agent's run-time launch of Chromium fails under the current `allowWr
 **Outcomes:**
 - *No writes at launch:* nothing more to do.
 - *Yes writes at launch:* document the required `allowWrite` addition in the architecture doc; flag for the future "crew owns settings.json" follow-up (§10).
+
+**Phase 0 finding (2026-04-30):** *confirmed — no writes at launch.* Snapshot diff of `~/.cache/ms-playwright` before/after a Playwright launch is empty (601 files, identical). Corroborated by Chromium's launch flags: `--user-data-dir=/tmp/playwright_chromiumdev_profile-*` puts writable runtime state under `/tmp` (already in `allowWrite`). No project-side `.claude/settings.json` change required. See findings doc §P0.2.
 
 ### 7.3 P0.3 — Does Claude Code's sandbox allow loopback network without `allowedDomains` entries?
 
@@ -354,9 +358,11 @@ Assumption: yes (`127.0.0.1`/`localhost` aren't gated on DNS allowlists). If wro
 - *Loopback allowed:* design unchanged.
 - *Loopback blocked:* widen `[sandbox] allowed_domains` in TOML to include `localhost`, `127.0.0.1`. Small TOML doc addition.
 
+**Phase 0 finding (2026-04-30):** *partial — sandbox-level test deferred.* OS-level loopback works (`https://localhost:8489/` and `https://localhost/` both return HTTP 200). Sandbox-policy-level confirmation could not be run from the autonomous CREW-57 agent (same reason as P0.1 — the crew worktree is not sandboxed; OS-level loopback returns the same result regardless of policy). The sandbox-level confirmation is **deferred to plan Task 16** — the first authored e2e flow exercises loopback from inside a real sandboxed agent. If blocked, the documented fix (add `localhost`, `127.0.0.1` to `[sandbox] allowed_domains`) is a small TOML edit. See findings doc §P0.3.
+
 ### 7.4 Validation by design
 
-The spec **does not** depend on Phase 0's outcomes. Each later section is shaped so that worst-case outcomes only add small amendments to the implementation plan — they don't reshape the architecture.
+The spec **does not** depend on Phase 0's outcomes. Each later section is shaped so that worst-case outcomes only add small amendments to the implementation plan — they don't reshape the architecture. The 2026-04-30 findings (above) confirm one assumption (P0.2) and defer the two sandbox-level checks (P0.1, P0.3) to β's manual gate; β starts knowing those two are unverified, with documented fall-backs if they surface issues at Task 16.
 
 ## 8. Migration
 
