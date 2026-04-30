@@ -1,0 +1,29 @@
+meta {
+  name: main-smoke
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/api/projects
+}
+
+assert {
+  res.status: eq 200
+  res.body.projects: isArray
+}
+
+tests {
+  test("each project has name and repoPath strings", () => {
+    for (const project of res.body.projects) {
+      expect(project.name).to.be.a("string");
+      expect(project.repoPath).to.be.a("string");
+    }
+  });
+
+  test("projects are alphabetized by name", () => {
+    const names = res.body.projects.map((p) => p.name);
+    const sorted = [...names].sort();
+    expect(names).to.deep.equal(sorted);
+  });
+}

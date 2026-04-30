@@ -1,0 +1,6 @@
+{
+  "version": "1",
+  "name": "crew-daemon",
+  "type": "collection",
+  "ignore": ["node_modules", ".git"]
+}
