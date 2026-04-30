@@ -2,16 +2,21 @@ import { z } from 'zod';
 
 const PORT_PLACEHOLDERS = ['{httpPort}', '{httpsPort}', '{postgresPort}'] as const;
 
-const visualTestingSchema = z.object({
+const playwrightSmokeSchema = z.object({
   enabled: z.literal(true),
+});
+
+const playwrightAuthoredSchema = z.object({
+  enabled: z.literal(true),
+  tests_dir: z.string().min(1),
+  test_command: z.string().min(1),
+});
+
+const playwrightSchema = z.object({
   app_url: z.string().min(1),
   start_command: z.string().min(1).optional(),
-  authored: z
-    .object({
-      tests_dir: z.string().min(1),
-      test_command: z.string().min(1),
-    })
-    .optional(),
+  smoke: playwrightSmokeSchema.optional(),
+  authored: playwrightAuthoredSchema.optional(),
 });
 
 const brunoSmokeSchema = z.object({
@@ -61,25 +66,36 @@ export const projectConfigSchema = z
         exclude_tables: z.array(z.string()).default(['kysely_migration*']),
       })
       .prefault({}),
-    visual_testing: visualTestingSchema.optional(),
+    playwright: playwrightSchema.optional(),
     bruno_smoke: brunoSmokeSchema.optional(),
   })
   .superRefine((cfg, ctx) => {
-    const vt = cfg.visual_testing;
-    if (vt) {
-      const usesPortPlaceholder = PORT_PLACEHOLDERS.some((p) => vt.app_url.includes(p));
+    const pw = cfg.playwright;
+    if (pw) {
+      const smokeOn = Boolean(pw.smoke?.enabled);
+      const authoredOn = Boolean(pw.authored?.enabled);
+      if (!smokeOn && !authoredOn) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['playwright'],
+          message:
+            'at least one of [playwright.smoke] or [playwright.authored] must be enabled when [playwright] is configured',
+        });
+      }
+
+      const usesPortPlaceholder = PORT_PLACEHOLDERS.some((p) => pw.app_url.includes(p));
       if (usesPortPlaceholder && !cfg.docker) {
         ctx.addIssue({
           code: 'custom',
-          path: ['visual_testing', 'app_url'],
+          path: ['playwright', 'app_url'],
           message: `app_url uses a port placeholder (${PORT_PLACEHOLDERS.join(', ')}) but no [docker] section is configured`,
         });
       }
 
-      if (!vt.start_command && !cfg.docker) {
+      if (!pw.start_command && !cfg.docker) {
         ctx.addIssue({
           code: 'custom',
-          path: ['visual_testing', 'start_command'],
+          path: ['playwright', 'start_command'],
           message:
             'start_command is required when [docker] is not configured (the agent needs a command to bring the app up)',
         });
