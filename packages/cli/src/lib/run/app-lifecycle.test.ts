@@ -20,13 +20,22 @@ function baseConfig(): ProjectConfig {
 }
 
 describe('agentNeedsAppRunning', () => {
-  it('returns false when neither visual_testing nor bruno_smoke is enabled', () => {
+  it('returns false when neither playwright nor bruno_smoke is enabled', () => {
     expect(agentNeedsAppRunning(baseConfig())).toBe(false);
   });
 
-  it('returns true when visual_testing is enabled', () => {
+  it('returns true when playwright.smoke is enabled', () => {
     const cfg = baseConfig();
-    cfg.visual_testing = { enabled: true, app_url: 'http://x' };
+    cfg.playwright = { app_url: 'http://x', smoke: { enabled: true } };
+    expect(agentNeedsAppRunning(cfg)).toBe(true);
+  });
+
+  it('returns true when playwright.authored is enabled', () => {
+    const cfg = baseConfig();
+    cfg.playwright = {
+      app_url: 'http://x',
+      authored: { enabled: true, tests_dir: 'tests/e2e', test_command: 'npm run test:e2e' },
+    };
     expect(agentNeedsAppRunning(cfg)).toBe(true);
   });
 
@@ -36,9 +45,9 @@ describe('agentNeedsAppRunning', () => {
     expect(agentNeedsAppRunning(cfg)).toBe(true);
   });
 
-  it('returns true when both are enabled', () => {
+  it('returns true when both playwright and bruno are enabled', () => {
     const cfg = baseConfig();
-    cfg.visual_testing = { enabled: true, app_url: 'http://x' };
+    cfg.playwright = { app_url: 'http://x', smoke: { enabled: true } };
     cfg.bruno_smoke = { enabled: true, base_url: 'http://x', collection_dir: 'bruno' };
     expect(agentNeedsAppRunning(cfg)).toBe(true);
   });
