@@ -1,10 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import {
-  worktreePathFor,
-  runLogPathFor,
-  dockerLogPathFor,
-  playwrightLogPathFor,
-} from './paths.js';
+import { worktreePathFor, runLogPathFor, dockerLogPathFor, playwrightLogPathFor } from './paths.js';
 
 describe('worktreePathFor', () => {
   it('places the worktree as a sibling of the source repo, suffixed with the key', () => {

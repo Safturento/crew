@@ -30,13 +30,14 @@ describe('installPlaywrightBrowsers', () => {
     const proc = {
       stdout: { pipe: vi.fn() },
       stderr: { pipe: vi.fn() },
-      then: (onFulfilled: (v: unknown) => unknown) => Promise.resolve(onFulfilled({ exitCode: rc })),
+      then: (onFulfilled: (v: unknown) => unknown) =>
+        Promise.resolve(onFulfilled({ exitCode: rc })),
     };
     return Object.assign(Promise.resolve({ exitCode: rc, stdout, stderr }), proc);
   }
 
   it('spawns `npx playwright install chromium` with the given cwd and env', async () => {
-    execaMock.mockReturnValue(fakeProcess(0) as ReturnType<typeof execa>);
+    execaMock.mockReturnValue(fakeProcess(0) as unknown as ReturnType<typeof execa>);
 
     await installPlaywrightBrowsers({
       worktree: tmp,
@@ -45,7 +46,8 @@ describe('installPlaywrightBrowsers', () => {
     });
 
     expect(execaMock).toHaveBeenCalledTimes(1);
-    const [cmd, args, options] = execaMock.mock.calls[0]!;
+    const call = execaMock.mock.calls[0] as unknown as [string, string[], Record<string, unknown>];
+    const [cmd, args, options] = call;
     expect(cmd).toBe('npx');
     expect(args).toEqual(['playwright', 'install', 'chromium']);
     expect((options as { cwd: string }).cwd).toBe(tmp);
@@ -53,7 +55,7 @@ describe('installPlaywrightBrowsers', () => {
   });
 
   it('returns rc 0 and a log path on success', async () => {
-    execaMock.mockReturnValue(fakeProcess(0) as ReturnType<typeof execa>);
+    execaMock.mockReturnValue(fakeProcess(0) as unknown as ReturnType<typeof execa>);
     const result = await installPlaywrightBrowsers({
       worktree: tmp,
       key: 'KAN-99',
@@ -64,7 +66,7 @@ describe('installPlaywrightBrowsers', () => {
   });
 
   it('returns non-zero rc on failure (does not throw)', async () => {
-    execaMock.mockReturnValue(fakeProcess(1, '', 'error') as ReturnType<typeof execa>);
+    execaMock.mockReturnValue(fakeProcess(1, '', 'error') as unknown as ReturnType<typeof execa>);
     const result = await installPlaywrightBrowsers({
       worktree: tmp,
       key: 'KAN-99',
