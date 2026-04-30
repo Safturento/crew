@@ -23,7 +23,7 @@ import {
 import { writeDockerEnv } from '../lib/docker/index.js';
 import { buildTicketPrompt } from '../lib/prompts/index.js';
 import { discoverSkills, renderDiscoveredSkillsBlock } from '../lib/prompts/skills.js';
-import { resolveAppUrl, writeMcpFile } from '../lib/visual-testing/index.js';
+import { resolveAppUrl, writeMcpFile } from '../lib/playwright/index.js';
 import {
   resolveBrunoEnvName,
   writeEnvFile as writeBrunoEnvFile,

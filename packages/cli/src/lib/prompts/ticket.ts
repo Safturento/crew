@@ -1,4 +1,4 @@
-import { startCommandHint } from '../visual-testing/index.js';
+import { startCommandHint } from '../playwright/index.js';
 import { render } from './render.js';
 
 export interface VisualTestingPromptOptions {
