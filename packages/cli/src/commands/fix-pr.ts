@@ -232,11 +232,16 @@ async function runFixPr(key: string, flags: FixPrFlags): Promise<void> {
     env: resolvedAppUrl ? { CREW_APP_URL: resolvedAppUrl } : undefined,
   });
 
+  // Set the flag and kill the subprocess on SIGINT — but DO NOT call
+  // process.exit(130) inline. The inline exit short-circuits the tail
+  // loop's final drain, dropping events written between the kill and the
+  // exit. Let abort propagate from sub.finally → streamTranscript →
+  // resolved exit code.
+  let signaled = false;
   const onSignal = (): void => {
+    signaled = true;
     process.stderr.write('\n→ Aborting…\n');
     sub.kill('SIGTERM');
-    // Mirror the bash trap: exit immediately with the conventional 130 for SIGINT.
-    process.exit(130);
   };
   process.on('SIGINT', onSignal);
   process.on('SIGTERM', onSignal);
@@ -273,7 +278,7 @@ async function runFixPr(key: string, flags: FixPrFlags): Promise<void> {
     conflicts,
     claudeExitCode,
   });
-  process.exitCode = claudeExitCode;
+  process.exitCode = signaled ? 130 : claudeExitCode;
 }
 
 interface PrintFooterOptions {

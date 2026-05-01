@@ -213,6 +213,13 @@ describe('streamTranscript', () => {
     expect(lines).toEqual([]);
   });
 
+  it('throws when neither transcriptPath nor projectDir is provided', async () => {
+    const abort = new AbortController();
+    await expect(streamTranscript({ signal: abort.signal } as never)).rejects.toThrow(
+      /either transcriptPath or projectDir/,
+    );
+  });
+
   it('honours startAtEnd by skipping events already in the file', async () => {
     const transcriptPath = join(dir, 'session.jsonl');
     writeFileSync(transcriptPath, assistantToolUseEvent('Read', { file_path: '/preexisting' }));

@@ -251,4 +251,86 @@ describe('runResume', () => {
     expect(opts?.startAtEnd).toBeFalsy();
     expect(opts?.signal).toBeInstanceOf(AbortSignal);
   });
+
+  // Regression guard: the original bug was that resume's SIGINT handler
+  // called process.exit(130) inline, which short-circuited streamTranscript's
+  // final drain. The handler must now only flag + kill; abort/exit happens
+  // after streamTranscript returns.
+  it('SIGINT kills the subprocess and sets exitCode=130 without calling process.exit inline', async () => {
+    findSessionMock.mockReturnValue({
+      sessionId: 'abc-123',
+      transcriptPath: '/tmp/x.jsonl',
+    });
+
+    // Track the order of kill / streamTranscript-exit / process.exit so the
+    // assertion can prove the handler did not short-circuit the drain.
+    const events: string[] = [];
+
+    let resolveStream: (() => void) | null = null;
+    streamTranscriptMock.mockImplementation(async () => {
+      await new Promise<void>((resolve) => {
+        resolveStream = (): void => {
+          events.push('stream-resolved');
+          resolve();
+        };
+      });
+      return { transcriptPath: '/tmp/x.jsonl' };
+    });
+
+    let resolveSub: (() => void) | null = null;
+    spawnResumeMock.mockImplementation(() => {
+      const promise = new Promise<{ exitCode: number }>((resolve) => {
+        resolveSub = (): void => {
+          events.push('sub-resolved');
+          resolve({ exitCode: 0 });
+        };
+      });
+      return {
+        kill: vi.fn(() => {
+          events.push('sub-killed');
+          return true;
+        }),
+        then: promise.then.bind(promise),
+        catch: promise.catch.bind(promise),
+        finally: promise.finally.bind(promise),
+      } as never;
+    });
+
+    const prevExitCode = process.exitCode;
+    process.exitCode = undefined;
+    const run = runResume('KAN-1', {});
+
+    // Wait one microtask for streamUntilExit to register its SIGINT handler.
+    await new Promise<void>((resolve) => setImmediate(resolve));
+
+    // Fire the SIGINT handler manually. Using process.emit would invoke every
+    // SIGINT listener (including vitest's own), and exitSpy would throw if
+    // process.exit got called. Calling the registered handler directly proves
+    // the handler under test does not call process.exit.
+    const sigintListeners = process.listeners('SIGINT');
+    const handler = sigintListeners[sigintListeners.length - 1];
+    expect(handler).toBeTypeOf('function');
+    expect(exitSpy).not.toHaveBeenCalled();
+    handler!('SIGINT');
+    // Critical assertion: handler must not have called process.exit inline.
+    expect(exitSpy).not.toHaveBeenCalled();
+    expect(events).toContain('sub-killed');
+
+    // Now resolve the subprocess (which triggers abort.abort() via finally),
+    // then resolve the streamTranscript promise so the helper unwinds in the
+    // expected order: stream returns → sub awaits → exit code set.
+    expect(resolveSub).toBeTypeOf('function');
+    expect(resolveStream).toBeTypeOf('function');
+    resolveSub!();
+    // Tail's read-then-check-abort guarantees one final pass — simulate that
+    // by resolving the stream after the sub.
+    resolveStream!();
+
+    await run;
+    expect(process.exitCode).toBe(130);
+    expect(exitSpy).not.toHaveBeenCalled();
+    // Drain order: kill first, then sub resolved, then stream drained.
+    expect(events).toEqual(['sub-killed', 'sub-resolved', 'stream-resolved']);
+    process.exitCode = prevExitCode;
+  });
 });

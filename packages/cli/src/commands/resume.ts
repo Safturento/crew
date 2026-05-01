@@ -158,7 +158,12 @@ export async function runResume(key: string, opts: ResumeOptions): Promise<void>
     cwd: worktree,
     env: claudeEnv,
   });
-  await streamUntilExit(sub, { projectDir });
+  await streamUntilExit(sub, {
+    projectDir,
+    onTranscriptResolved: (path) => {
+      process.stderr.write(pc.dim(`→ watching ${path}\n\n`));
+    },
+  });
 }
 
 interface KillableSubprocess extends PromiseLike<{ exitCode?: number | null }> {
@@ -169,6 +174,7 @@ interface StreamUntilExitTarget {
   transcriptPath?: string;
   projectDir?: string;
   startAtEnd?: boolean;
+  onTranscriptResolved?: (path: string) => void;
 }
 
 /**
@@ -204,6 +210,7 @@ async function streamUntilExit(
       projectDir: target.projectDir,
       signal: abort.signal,
       startAtEnd: target.startAtEnd,
+      onTranscriptResolved: target.onTranscriptResolved,
     });
     try {
       const result = await sub;
