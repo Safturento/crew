@@ -41,9 +41,33 @@ vi.mock('../lib/run/agent-options.js', () => ({
   playwrightTicketOptsFor: vi.fn(() => undefined),
 }));
 
-vi.mock('../lib/claude/spawn.js', () => ({
-  spawnClaudeResume: vi.fn(() => Promise.resolve({ exitCode: 0 })),
-  spawnClaudeFresh: vi.fn(() => Promise.resolve({ exitCode: 0 })),
+vi.mock('../lib/claude/spawn.js', () => {
+  const fakeKillable = (): {
+    exitCode: number;
+    kill: () => boolean;
+    then: PromiseLike<unknown>['then'];
+    catch: Promise<unknown>['catch'];
+    finally: Promise<unknown>['finally'];
+  } => {
+    const promise = Promise.resolve({ exitCode: 0 });
+    return {
+      exitCode: 0,
+      kill: () => true,
+      then: promise.then.bind(promise),
+      catch: promise.catch.bind(promise),
+      finally: promise.finally.bind(promise),
+    } as never;
+  };
+  return {
+    spawnClaudeResume: vi.fn(() => fakeKillable()),
+    spawnClaudeFresh: vi.fn(() => fakeKillable()),
+  };
+});
+
+vi.mock('../lib/run/stream-transcript.js', () => ({
+  streamTranscript: vi.fn(async (opts: { transcriptPath?: string; projectDir?: string }) => ({
+    transcriptPath: opts.transcriptPath ?? opts.projectDir ?? null,
+  })),
 }));
 
 vi.mock('../lib/prompts/skills.js', () => ({
@@ -55,6 +79,7 @@ import { existsSync } from 'node:fs';
 import { discoverProjectConfig } from '../lib/discover-project-config.js';
 import { findLatestSession } from '../lib/sessions/index.js';
 import { spawnClaudeFresh, spawnClaudeResume } from '../lib/claude/spawn.js';
+import { streamTranscript } from '../lib/run/stream-transcript.js';
 import { runResume } from './resume.js';
 
 const existsMock = vi.mocked(existsSync);
@@ -62,6 +87,7 @@ const discoverMock = vi.mocked(discoverProjectConfig);
 const findSessionMock = vi.mocked(findLatestSession);
 const spawnFreshMock = vi.mocked(spawnClaudeFresh);
 const spawnResumeMock = vi.mocked(spawnClaudeResume);
+const streamTranscriptMock = vi.mocked(streamTranscript);
 
 const baseConfig: ProjectConfig = {
   name: 'test',
@@ -99,8 +125,21 @@ describe('runResume', () => {
     findSessionMock.mockReset();
     spawnFreshMock.mockReset();
     spawnResumeMock.mockReset();
-    spawnFreshMock.mockReturnValue(Promise.resolve({ exitCode: 0 }) as never);
-    spawnResumeMock.mockReturnValue(Promise.resolve({ exitCode: 0 }) as never);
+    streamTranscriptMock.mockReset();
+    streamTranscriptMock.mockImplementation(async (opts) => ({
+      transcriptPath: opts.transcriptPath ?? opts.projectDir ?? null,
+    }));
+    const makeFakeSub = (): never => {
+      const promise = Promise.resolve({ exitCode: 0 });
+      return {
+        kill: () => true,
+        then: promise.then.bind(promise),
+        catch: promise.catch.bind(promise),
+        finally: promise.finally.bind(promise),
+      } as never;
+    };
+    spawnFreshMock.mockImplementation(makeFakeSub);
+    spawnResumeMock.mockImplementation(makeFakeSub);
   });
 
   afterEach(() => {
@@ -180,5 +219,118 @@ describe('runResume', () => {
   it('rejects whitespace-only -m so users notice typos', async () => {
     await expect(runResume('KAN-1', { message: '   \n  ' })).rejects.toThrow('process.exit(1)');
     expect(logs.join('')).toMatch(/empty message provided to -m/);
+  });
+
+  it('streams the transcript via streamTranscript when resuming an existing session', async () => {
+    findSessionMock.mockReturnValue({
+      sessionId: 'abc-123',
+      transcriptPath: '/known/transcripts/abc.jsonl',
+    });
+
+    await runResume('KAN-1', {});
+
+    expect(streamTranscriptMock).toHaveBeenCalledTimes(1);
+    const opts = streamTranscriptMock.mock.calls[0]?.[0];
+    expect(opts?.transcriptPath).toBe('/known/transcripts/abc.jsonl');
+    expect(opts?.projectDir).toBeUndefined();
+    expect(opts?.startAtEnd).toBe(true);
+    expect(opts?.signal).toBeInstanceOf(AbortSignal);
+  });
+
+  it('streams the transcript via streamTranscript by polling projectDir when no prior session', async () => {
+    findSessionMock.mockReturnValue(null);
+
+    await runResume('KAN-1', {});
+
+    expect(streamTranscriptMock).toHaveBeenCalledTimes(1);
+    const opts = streamTranscriptMock.mock.calls[0]?.[0];
+    expect(opts?.transcriptPath).toBeUndefined();
+    // projectDir is derived from the worktree (~/.claude/projects/<encoded>),
+    // so just assert it's a non-empty string under .claude/projects.
+    expect(opts?.projectDir).toMatch(/\.claude\/projects\//);
+    expect(opts?.startAtEnd).toBeFalsy();
+    expect(opts?.signal).toBeInstanceOf(AbortSignal);
+  });
+
+  // Regression guard: the original bug was that resume's SIGINT handler
+  // called process.exit(130) inline, which short-circuited streamTranscript's
+  // final drain. The handler must now only flag + kill; abort/exit happens
+  // after streamTranscript returns.
+  it('SIGINT kills the subprocess and sets exitCode=130 without calling process.exit inline', async () => {
+    findSessionMock.mockReturnValue({
+      sessionId: 'abc-123',
+      transcriptPath: '/tmp/x.jsonl',
+    });
+
+    // Track the order of kill / streamTranscript-exit / process.exit so the
+    // assertion can prove the handler did not short-circuit the drain.
+    const events: string[] = [];
+
+    let resolveStream: (() => void) | null = null;
+    streamTranscriptMock.mockImplementation(async () => {
+      await new Promise<void>((resolve) => {
+        resolveStream = (): void => {
+          events.push('stream-resolved');
+          resolve();
+        };
+      });
+      return { transcriptPath: '/tmp/x.jsonl' };
+    });
+
+    let resolveSub: (() => void) | null = null;
+    spawnResumeMock.mockImplementation(() => {
+      const promise = new Promise<{ exitCode: number }>((resolve) => {
+        resolveSub = (): void => {
+          events.push('sub-resolved');
+          resolve({ exitCode: 0 });
+        };
+      });
+      return {
+        kill: vi.fn(() => {
+          events.push('sub-killed');
+          return true;
+        }),
+        then: promise.then.bind(promise),
+        catch: promise.catch.bind(promise),
+        finally: promise.finally.bind(promise),
+      } as never;
+    });
+
+    const prevExitCode = process.exitCode;
+    process.exitCode = undefined;
+    const run = runResume('KAN-1', {});
+
+    // Wait one microtask for streamUntilExit to register its SIGINT handler.
+    await new Promise<void>((resolve) => setImmediate(resolve));
+
+    // Fire the SIGINT handler manually. Using process.emit would invoke every
+    // SIGINT listener (including vitest's own), and exitSpy would throw if
+    // process.exit got called. Calling the registered handler directly proves
+    // the handler under test does not call process.exit.
+    const sigintListeners = process.listeners('SIGINT');
+    const handler = sigintListeners[sigintListeners.length - 1];
+    expect(handler).toBeTypeOf('function');
+    expect(exitSpy).not.toHaveBeenCalled();
+    handler!('SIGINT');
+    // Critical assertion: handler must not have called process.exit inline.
+    expect(exitSpy).not.toHaveBeenCalled();
+    expect(events).toContain('sub-killed');
+
+    // Now resolve the subprocess (which triggers abort.abort() via finally),
+    // then resolve the streamTranscript promise so the helper unwinds in the
+    // expected order: stream returns → sub awaits → exit code set.
+    expect(resolveSub).toBeTypeOf('function');
+    expect(resolveStream).toBeTypeOf('function');
+    resolveSub!();
+    // Tail's read-then-check-abort guarantees one final pass — simulate that
+    // by resolving the stream after the sub.
+    resolveStream!();
+
+    await run;
+    expect(process.exitCode).toBe(130);
+    expect(exitSpy).not.toHaveBeenCalled();
+    // Drain order: kill first, then sub resolved, then stream drained.
+    expect(events).toEqual(['sub-killed', 'sub-resolved', 'stream-resolved']);
+    process.exitCode = prevExitCode;
   });
 });

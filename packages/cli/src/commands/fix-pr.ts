@@ -7,15 +7,12 @@ import {
   discoverProjectConfig,
   fetchOrigin,
   findLatestSession,
-  formatToolCall,
   getPrForBranch,
   hasUncommittedChanges,
   NO_FEEDBACK_MARKER,
-  parseToolCall,
   rebaseOnto,
   resolveWorktreePath,
   spawnClaudeResume,
-  tailTranscript,
 } from '../lib/index.js';
 import { discoverSkills, renderDiscoveredSkillsBlock } from '../lib/prompts/skills.js';
 import {
@@ -24,6 +21,7 @@ import {
   playwrightFixPrOptsFor,
   prepareAgentEnvironment,
   readDockerPortsFromEnvFile,
+  streamTranscript,
 } from '../lib/run/index.js';
 import type { DockerPorts } from '../lib/playwright/index.js';
 
@@ -234,11 +232,16 @@ async function runFixPr(key: string, flags: FixPrFlags): Promise<void> {
     env: resolvedAppUrl ? { CREW_APP_URL: resolvedAppUrl } : undefined,
   });
 
+  // Set the flag and kill the subprocess on SIGINT — but DO NOT call
+  // process.exit(130) inline. The inline exit short-circuits the tail
+  // loop's final drain, dropping events written between the kill and the
+  // exit. Let abort propagate from sub.finally → streamTranscript →
+  // resolved exit code.
+  let signaled = false;
   const onSignal = (): void => {
+    signaled = true;
     process.stderr.write('\n→ Aborting…\n');
     sub.kill('SIGTERM');
-    // Mirror the bash trap: exit immediately with the conventional 130 for SIGINT.
-    process.exit(130);
   };
   process.on('SIGINT', onSignal);
   process.on('SIGTERM', onSignal);
@@ -253,13 +256,11 @@ async function runFixPr(key: string, flags: FixPrFlags): Promise<void> {
 
   let claudeExitCode = 0;
   try {
-    for await (const event of tailTranscript(session.transcriptPath, {
+    await streamTranscript({
+      transcriptPath: session.transcriptPath,
       signal: abort.signal,
       startAtEnd: true,
-    })) {
-      const call = parseToolCall(event);
-      if (call) process.stdout.write(`${formatToolCall(call)}\n`);
-    }
+    });
     try {
       await sub;
     } catch (err) {
@@ -277,7 +278,7 @@ async function runFixPr(key: string, flags: FixPrFlags): Promise<void> {
     conflicts,
     claudeExitCode,
   });
-  process.exitCode = claudeExitCode;
+  process.exitCode = signaled ? 130 : claudeExitCode;
 }
 
 interface PrintFooterOptions {

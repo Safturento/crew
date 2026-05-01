@@ -12,13 +12,7 @@ import { setTimeout as delay } from 'node:timers/promises';
 import { Command } from 'commander';
 import { execa } from 'execa';
 import pc from 'picocolors';
-import {
-  claudeProjectDirFor,
-  discoverProjectConfig,
-  formatToolCall,
-  parseToolCall,
-  tailTranscript,
-} from '../lib/index.js';
+import { claudeProjectDirFor, discoverProjectConfig } from '../lib/index.js';
 import { writeDockerEnv } from '../lib/docker/index.js';
 import { buildTicketPrompt } from '../lib/prompts/index.js';
 import { discoverSkills, renderDiscoveredSkillsBlock } from '../lib/prompts/skills.js';
@@ -35,13 +29,13 @@ import {
 } from '../lib/bruno-smoke/index.js';
 import {
   dockerLogPathFor,
-  findNewestTranscript,
   hasBinary,
   prepareAgentEnvironment,
   preflightTools,
   requireGhToken,
   requireWorktreeAvailable,
   runLogPathFor,
+  streamTranscript,
   worktreePathFor,
 } from '../lib/run/index.js';
 
@@ -298,7 +292,16 @@ export async function runRun(key: string, opts: RunOptions): Promise<never> {
 
   const projectDir = claudeProjectDirFor(worktree);
   console.log(pc.dim(`→ waiting for transcript at ${projectDir}…`));
-  const transcriptPath = await findNewestTranscript(projectDir, { signal: abort.signal });
+
+  const { transcriptPath } = await streamTranscript({
+    projectDir,
+    signal: abort.signal,
+    onTranscriptResolved: (path) => {
+      console.log(pc.dim(`→ watching ${path}`));
+      console.log(pc.dim('  (Ctrl+C to abort)'));
+      console.log();
+    },
+  });
 
   if (!transcriptPath) {
     logStream.end();
@@ -312,15 +315,6 @@ export async function runRun(key: string, opts: RunOptions): Promise<never> {
     }
     if (existsSync(logPath)) console.error(readFileSync(logPath, 'utf8'));
     process.exit(resolveExitCode(result, signaled));
-  }
-
-  console.log(pc.dim(`→ watching ${transcriptPath}`));
-  console.log(pc.dim('  (Ctrl+C to abort)'));
-  console.log();
-
-  for await (const event of tailTranscript(transcriptPath, { signal: abort.signal })) {
-    const call = parseToolCall(event);
-    if (call) console.log(formatToolCall(call));
   }
 
   const result = await claudeProcess;
