@@ -61,10 +61,10 @@ export const runCommand = new Command('run')
     'additional context to include in the ticket prompt (e.g. -m "focus on lib/x")',
   )
   .action(async (key: string, options: RunOptions) => {
-    await runTicket(key, options);
+    await runRun(key, options);
   });
 
-async function runTicket(key: string, opts: RunOptions): Promise<never> {
+export async function runRun(key: string, opts: RunOptions): Promise<never> {
   const config = await discoverProjectConfig(process.cwd());
   if (!config) {
     fail(
