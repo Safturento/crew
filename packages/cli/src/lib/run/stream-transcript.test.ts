@@ -307,7 +307,7 @@ describe('streamTranscript', () => {
     expect(lines).toEqual([]);
   });
 
-  it('renders pr-link events with PR number and URL', async () => {
+  it('does not render pr-link events (claude emits one per URL mention, not per PR creation)', async () => {
     const transcriptPath = join(dir, 'session.jsonl');
     writeFileSync(transcriptPath, '');
     const abort = new AbortController();
@@ -325,13 +325,15 @@ describe('streamTranscript', () => {
       transcriptPath,
       prLinkEvent(34, 'https://github.com/Owner/Repo/pull/34', '2025-01-01T12:35:11.000Z'),
     );
+    appendFileSync(
+      transcriptPath,
+      prLinkEvent(34, 'https://github.com/Owner/Repo/pull/34', '2025-01-01T12:35:12.000Z'),
+    );
     await delay(60);
     abort.abort();
     await promise;
 
-    const joined = lines.join('');
-    expect(joined).toMatch(/↪ PR #34/);
-    expect(joined).toMatch(/https:\/\/github\.com\/Owner\/Repo\/pull\/34/);
+    expect(lines).toEqual([]);
   });
 
   it('honours startAtEnd by skipping events already in the file', async () => {

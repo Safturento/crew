@@ -9,8 +9,6 @@ import {
   formatToolCall,
   parseAssistantText,
   formatAssistantText,
-  parsePrLink,
-  formatPrLink,
 } from './index.js';
 import type { TranscriptEvent } from './index.js';
 
@@ -167,37 +165,5 @@ describe('formatAssistantText', () => {
       timestamp: '2026-05-01T21:50:10.123Z',
     });
     expect(line).toBe('21:50:10  · short message');
-  });
-});
-
-describe('parsePrLink', () => {
-  it('extracts pr metadata from a pr-link event', () => {
-    const event = JSON.parse(
-      '{"type":"pr-link","sessionId":"abc","prNumber":34,"prUrl":"https://github.com/Owner/Repo/pull/34","prRepository":"Owner/Repo","timestamp":"2026-05-01T21:50:10.851Z"}',
-    ) as TranscriptEvent;
-    const result = parsePrLink(event);
-    expect(result).not.toBeNull();
-    expect(result?.prNumber).toBe(34);
-    expect(result?.prUrl).toBe('https://github.com/Owner/Repo/pull/34');
-    expect(result?.timestamp).toBe('2026-05-01T21:50:10.851Z');
-  });
-
-  it('returns null for non-pr-link events', () => {
-    const events = parseTranscript(readFileSync(FIXTURE, 'utf8'));
-    expect(parsePrLink(events[0]!)).toBeNull();
-    expect(parsePrLink(events[1]!)).toBeNull();
-    expect(parsePrLink(events[2]!)).toBeNull();
-  });
-});
-
-describe('formatPrLink', () => {
-  it('renders HH:MM:SS  ↪ PR #N URL', () => {
-    expect(
-      formatPrLink({
-        prNumber: 34,
-        prUrl: 'https://github.com/Owner/Repo/pull/34',
-        timestamp: '2026-05-01T21:50:10.851Z',
-      }),
-    ).toBe('21:50:10  ↪ PR #34 https://github.com/Owner/Repo/pull/34');
   });
 });

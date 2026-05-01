@@ -5,7 +5,6 @@ import type {
   ToolUseContent,
   TextContent,
   AssistantText,
-  PrLink,
 } from './types.js';
 
 export function parseTranscript(raw: string): TranscriptEvent[] {
@@ -91,20 +90,6 @@ export function formatAssistantText(text: AssistantText): string {
       ? `${oneLine.slice(0, ASSISTANT_TEXT_MAX_LEN)}…`
       : oneLine;
   return `${time}  · ${snippet}`;
-}
-
-export function parsePrLink(event: TranscriptEvent): PrLink | null {
-  if (event.type !== 'pr-link') return null;
-  return {
-    prNumber: event.prNumber,
-    prUrl: event.prUrl,
-    timestamp: event.timestamp,
-  };
-}
-
-export function formatPrLink(link: PrLink): string {
-  const time = link.timestamp.replace(/^.*T/, '').replace(/\..*Z$/, '');
-  return `${time}  ↪ PR #${link.prNumber} ${link.prUrl}`;
 }
 
 export function summarizeInput(toolName: string, input: Record<string, unknown>): string {
