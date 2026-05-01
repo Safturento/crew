@@ -19,7 +19,10 @@ export function requireGhToken(path: string): void {
 export function requireWorktreeAvailable(path: string): void {
   if (existsSync(path)) {
     throw new Error(
-      `worktree already exists at ${path}\n       remove it first: git worktree remove '${path}'`,
+      `worktree already exists at ${path}\n` +
+        `       • To continue an interrupted run:    crew resume <KEY>\n` +
+        `       • To wipe state and start fresh:    crew restart <KEY> --hard\n` +
+        `         (or, manually:                    crew reset <KEY> --hard && crew run <KEY>)`,
     );
   }
 }

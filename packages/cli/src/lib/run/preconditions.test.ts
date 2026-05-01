@@ -42,4 +42,11 @@ describe('requireWorktreeAvailable', () => {
     mkdirSync(path);
     expect(() => requireWorktreeAvailable(path)).toThrow(/already exists/i);
   });
+
+  it('points users at crew resume and crew restart --hard in the error', () => {
+    const path = join(dir, 'existing');
+    mkdirSync(path);
+    expect(() => requireWorktreeAvailable(path)).toThrow(/crew resume/);
+    expect(() => requireWorktreeAvailable(path)).toThrow(/crew restart .*--hard/);
+  });
 });

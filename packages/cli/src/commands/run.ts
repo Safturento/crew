@@ -47,6 +47,7 @@ import {
 
 interface RunOptions {
   skipDocker?: boolean;
+  message?: string;
 }
 
 export const runCommand = new Command('run')
@@ -55,6 +56,10 @@ export const runCommand = new Command('run')
   )
   .argument('<key>', 'Jira ticket key (e.g. KAN-23)', (v) => v.toUpperCase())
   .option('--skip-docker', 'skip the per-worktree docker bringup')
+  .option(
+    '-m, --message <message>',
+    'additional context to include in the ticket prompt (e.g. -m "focus on lib/x")',
+  )
   .action(async (key: string, options: RunOptions) => {
     await runTicket(key, options);
   });
@@ -200,6 +205,7 @@ async function runTicket(key: string, opts: RunOptions): Promise<never> {
     key,
     githubRepo: config.github.repo,
     jiraSite: config.jira.site,
+    userMessage: opts.message,
     playwright:
       playwrightEnabled(config) && resolvedAppUrl
         ? {
