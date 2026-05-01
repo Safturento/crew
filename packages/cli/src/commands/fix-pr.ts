@@ -1,8 +1,6 @@
 import { Command } from 'commander';
 import { execa } from 'execa';
 import { existsSync, readFileSync } from 'node:fs';
-import { join } from 'node:path';
-import type { ProjectConfig } from 'crew-shared';
 import {
   assemblePrFeedback,
   buildFixPrPrompt,
@@ -19,16 +17,15 @@ import {
   spawnClaudeResume,
   tailTranscript,
 } from '../lib/index.js';
-import { resolveBrunoEnvName } from '../lib/bruno-smoke/index.js';
-import type { BrunoSmokePromptOptions } from '../lib/prompts/index.js';
 import { discoverSkills, renderDiscoveredSkillsBlock } from '../lib/prompts/skills.js';
 import {
-  authoredEnabled,
-  playwrightEnabled,
-  resolveAppUrl,
-  type DockerPorts,
-} from '../lib/playwright/index.js';
-import { prepareAgentEnvironment } from '../lib/run/index.js';
+  brunoSmokeOptionsFor,
+  needsDockerPorts,
+  playwrightFixPrOptsFor,
+  prepareAgentEnvironment,
+  readDockerPortsFromEnvFile,
+} from '../lib/run/index.js';
+import type { DockerPorts } from '../lib/playwright/index.js';
 
 export type FeedbackMode =
   | { kind: 'pr' }
@@ -129,52 +126,6 @@ function repoPathFromWorktree(worktree: string, key: string): string {
   return worktree.endsWith(suffix) ? worktree.slice(0, -suffix.length) : worktree;
 }
 
-const PORT_PLACEHOLDER_RE = /\{[a-zA-Z]+Port\}/;
-
-export function brunoSmokeOptionsFor(
-  config: ProjectConfig,
-  worktree: string,
-  dockerPorts?: DockerPorts,
-): BrunoSmokePromptOptions | undefined {
-  const bs = config.bruno_smoke;
-  if (!bs?.enabled) return undefined;
-
-  // fix-pr does not run writeDockerEnv; the .env on disk is authoritative.
-  // Only touch disk when base_url actually has a placeholder to substitute.
-  const ports =
-    dockerPorts ??
-    (PORT_PLACEHOLDER_RE.test(bs.base_url) ? readDockerPortsFromEnvFile(worktree) : undefined);
-
-  const baseUrl = resolveAppUrl(bs.base_url, ports).raw;
-  return {
-    baseUrl,
-    envName: resolveBrunoEnvName(worktree),
-    collectionDir: bs.collection_dir,
-    hasSmokeUser: Boolean(bs.smoke_user),
-  };
-}
-
-export function readDockerPortsFromEnvFile(worktree: string): DockerPorts {
-  const envPath = join(worktree, '.env');
-  if (!existsSync(envPath)) {
-    throw new Error(
-      `fix-pr cannot resolve port placeholders: ${envPath} not found. ` +
-        `Run 'crew run <KEY>' first or remove port placeholders from app_url / base_url.`,
-    );
-  }
-  const raw = readFileSync(envPath, 'utf8');
-  const get = (key: string): number => {
-    const match = raw.match(new RegExp(`^${key}=(\\d+)$`, 'm'));
-    if (!match) throw new Error(`fix-pr: ${key} not found in ${envPath}`);
-    return Number(match[1]);
-  };
-  return {
-    httpPort: get('CADDY_HTTP_PORT'),
-    httpsPort: get('CADDY_HTTPS_PORT'),
-    postgresPort: get('POSTGRES_PORT'),
-  };
-}
-
 async function runFixPr(key: string, flags: FixPrFlags): Promise<void> {
   const mode = selectMode(flags);
 
@@ -233,16 +184,10 @@ async function runFixPr(key: string, flags: FixPrFlags): Promise<void> {
 
   // Lift the .env port read so both bruno-smoke and playwright share a single
   // source of dockerPorts. Only read when something actually needs ports.
-  const playwrightConfig =
-    projectConfig && playwrightEnabled(projectConfig) ? projectConfig.playwright : undefined;
-  const needsPorts = Boolean(
-    (projectConfig?.bruno_smoke?.enabled &&
-      PORT_PLACEHOLDER_RE.test(projectConfig.bruno_smoke.base_url)) ||
-    (playwrightConfig && PORT_PLACEHOLDER_RE.test(playwrightConfig.app_url)),
-  );
-  const dockerPorts: DockerPorts | undefined = needsPorts
-    ? readDockerPortsFromEnvFile(worktree)
-    : undefined;
+  const dockerPorts: DockerPorts | undefined =
+    projectConfig && needsDockerPorts(projectConfig)
+      ? readDockerPortsFromEnvFile(worktree)
+      : undefined;
 
   const brunoSmoke = projectConfig
     ? brunoSmokeOptionsFor(projectConfig, worktree, dockerPorts)
@@ -266,19 +211,7 @@ async function runFixPr(key: string, flags: FixPrFlags): Promise<void> {
     feedback,
     feedbackSource: source,
     conflictFiles: conflicts,
-    playwright:
-      playwrightConfig && resolvedAppUrl && projectConfig
-        ? {
-            appUrl: resolvedAppUrl,
-            authored:
-              authoredEnabled(projectConfig) && playwrightConfig.authored
-                ? {
-                    testsDir: playwrightConfig.authored.tests_dir,
-                    testCommand: playwrightConfig.authored.test_command,
-                  }
-                : undefined,
-          }
-        : undefined,
+    playwright: projectConfig ? playwrightFixPrOptsFor(projectConfig, resolvedAppUrl) : undefined,
     brunoSmoke,
     discoveredSkillsBlock: renderDiscoveredSkillsBlock(discoverSkills({ repoPath })),
   });
