@@ -10,6 +10,7 @@ describe('render', () => {
       playwrightBlock: '',
       brunoSmokeBlock: '',
       discoveredSkillsBlock: '',
+      userMessageBlock: '',
     });
 
     expect(out).toContain('ZZZ-9');
@@ -25,6 +26,7 @@ describe('render', () => {
       playwrightBlock: '',
       brunoSmokeBlock: '',
       discoveredSkillsBlock: '',
+      userMessageBlock: '',
     });
 
     // The ticket template references {{key}} many times; ensure no `{{key}}`
@@ -37,9 +39,11 @@ describe('render', () => {
       render('ticket', {
         key: 'ZZZ-9',
         // intentionally omitting githubRepo, jiraSite, playwrightBlock,
-        // brunoSmokeBlock, discoveredSkillsBlock
+        // brunoSmokeBlock, discoveredSkillsBlock, userMessageBlock
       }),
-    ).toThrow(/githubRepo|jiraSite|playwrightBlock|brunoSmokeBlock|discoveredSkillsBlock/);
+    ).toThrow(
+      /githubRepo|jiraSite|playwrightBlock|brunoSmokeBlock|discoveredSkillsBlock|userMessageBlock/,
+    );
   });
 
   it('throws when the template name does not exist', () => {
