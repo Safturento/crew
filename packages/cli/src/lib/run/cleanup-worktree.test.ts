@@ -14,7 +14,7 @@ describe('removeWorktreeAndBranch', () => {
   const key = 'KAN-1';
 
   beforeEach(() => {
-    worktree = join(tmpdir(), `crew-cleanup-wt-${process.pid}-${Date.now()}`);
+    worktree = join(tmpdir(), `crew-cleanup-wt-${process.pid}-${Date.now()}-${Math.random()}`);
     execaMock.mockReset();
   });
 
@@ -26,31 +26,67 @@ describe('removeWorktreeAndBranch', () => {
     return Promise.resolve({ exitCode: 0, stdout, stderr: '' });
   }
 
-  function fakeFail(stderr: string): unknown {
-    return Promise.resolve({ exitCode: 128, stdout: '', stderr });
+  function fakeFail(stderr: string, exitCode = 128): unknown {
+    return Promise.resolve({ exitCode, stdout: '', stderr });
   }
 
-  it('reports already-removed when worktree path does not exist', async () => {
-    execaMock.mockReturnValueOnce(fakeOk() as ReturnType<typeof execa>);
+  function fakeBranchListing(stdout: string): unknown {
+    return Promise.resolve({ exitCode: 0, stdout, stderr: '' });
+  }
+
+  it('invokes git worktree prune once at the start', async () => {
+    execaMock
+      .mockReturnValueOnce(fakeOk() as ReturnType<typeof execa>) // prune
+      .mockReturnValueOnce(fakeBranchListing('') as ReturnType<typeof execa>); // branch --list
+
+    await removeWorktreeAndBranch({ worktree, key });
+
+    const pruneCalls = execaMock.mock.calls.filter(
+      ([cmd, args]) =>
+        cmd === 'git' && Array.isArray(args) && args[0] === 'worktree' && args[1] === 'prune',
+    );
+    expect(pruneCalls).toHaveLength(1);
+    // Prune must be the very first git invocation.
+    expect(execaMock.mock.calls[0]).toEqual(['git', ['worktree', 'prune'], expect.any(Object)]);
+  });
+
+  it('reports notFound when worktree path does not exist and branch never existed', async () => {
+    execaMock
+      .mockReturnValueOnce(fakeOk() as ReturnType<typeof execa>) // prune
+      .mockReturnValueOnce(fakeBranchListing('') as ReturnType<typeof execa>); // branch --list (empty)
+
     const result = await removeWorktreeAndBranch({ worktree, key });
-    expect(result.worktreeRemoved).toBe(false);
+
+    expect(result.worktree).toBe('notFound');
+    expect(result.branch).toBe('notFound');
+    expect(result.worktreeError).toBeUndefined();
+    expect(result.branchError).toBeUndefined();
+
     expect(execaMock).not.toHaveBeenCalledWith(
       'git',
       expect.arrayContaining(['worktree', 'remove']),
       expect.any(Object),
     );
+    expect(execaMock).not.toHaveBeenCalledWith(
+      'git',
+      expect.arrayContaining(['branch', '-D']),
+      expect.any(Object),
+    );
   });
 
-  it('runs git worktree remove when the path exists', async () => {
+  it('reports removed when the worktree path exists and git accepts both removals', async () => {
     mkdirSync(worktree, { recursive: true });
     writeFileSync(join(worktree, 'sentinel'), '');
     execaMock
-      .mockReturnValueOnce(fakeOk() as ReturnType<typeof execa>)
-      .mockReturnValueOnce(fakeOk() as ReturnType<typeof execa>);
+      .mockReturnValueOnce(fakeOk() as ReturnType<typeof execa>) // prune
+      .mockReturnValueOnce(fakeOk() as ReturnType<typeof execa>) // worktree remove
+      .mockReturnValueOnce(fakeBranchListing(`  ${key}\n`) as ReturnType<typeof execa>) // branch --list
+      .mockReturnValueOnce(fakeOk() as ReturnType<typeof execa>); // branch -D
 
     const result = await removeWorktreeAndBranch({ worktree, key });
-    expect(result.worktreeRemoved).toBe(true);
-    expect(result.branchRemoved).toBe(true);
+
+    expect(result.worktree).toBe('removed');
+    expect(result.branch).toBe('removed');
     expect(execaMock).toHaveBeenCalledWith(
       'git',
       ['worktree', 'remove', worktree, '--force'],
@@ -59,27 +95,48 @@ describe('removeWorktreeAndBranch', () => {
     expect(execaMock).toHaveBeenCalledWith('git', ['branch', '-D', key], expect.any(Object));
   });
 
-  it('treats a missing branch as already-removed (rc=128)', async () => {
+  it('orphan path: git refuses, dir on disk gets cleaned up via rm -rf fallback', async () => {
     mkdirSync(worktree, { recursive: true });
+    writeFileSync(join(worktree, 'sentinel'), 'orphan content');
+
+    const stderrMessage = `fatal: '${worktree}' is not a working tree`;
     execaMock
-      .mockReturnValueOnce(fakeOk() as ReturnType<typeof execa>)
-      .mockReturnValueOnce(
-        fakeFail("error: branch 'KAN-1' not found.") as ReturnType<typeof execa>,
-      );
+      .mockReturnValueOnce(fakeOk() as ReturnType<typeof execa>) // prune
+      .mockReturnValueOnce(fakeFail(stderrMessage, 128) as ReturnType<typeof execa>) // worktree remove fails
+      .mockReturnValueOnce(fakeBranchListing('') as ReturnType<typeof execa>); // branch --list (empty)
 
     const result = await removeWorktreeAndBranch({ worktree, key });
-    expect(result.worktreeRemoved).toBe(true);
-    expect(result.branchRemoved).toBe(false);
+
+    expect(result.worktree).toBe('orphanCleaned');
+    expect(result.worktreeError).toContain('not a working tree');
+    expect(existsSync(worktree)).toBe(false);
   });
 
-  it('treats a worktree-remove failure (rc=128) as already-removed', async () => {
-    mkdirSync(worktree, { recursive: true });
+  it('branch checked out elsewhere: rc=1 surfaces the error rather than masquerading as removed', async () => {
+    const branchStderr = `error: branch '${key}' is currently checked out at /other/worktree`;
     execaMock
-      .mockReturnValueOnce(fakeFail('fatal: ... is not a working tree') as ReturnType<typeof execa>)
-      .mockReturnValueOnce(fakeOk() as ReturnType<typeof execa>);
+      .mockReturnValueOnce(fakeOk() as ReturnType<typeof execa>) // prune
+      .mockReturnValueOnce(fakeBranchListing(`  ${key}\n`) as ReturnType<typeof execa>) // branch --list
+      .mockReturnValueOnce(fakeFail(branchStderr, 1) as ReturnType<typeof execa>); // branch -D fails
 
     const result = await removeWorktreeAndBranch({ worktree, key });
-    expect(result.worktreeRemoved).toBe(false);
-    expect(result.branchRemoved).toBe(true);
+
+    expect(result.branch).toBe('failed');
+    expect(result.branchError).toContain('checked out at');
+  });
+
+  it('branch never existed: git branch -D is not invoked', async () => {
+    execaMock
+      .mockReturnValueOnce(fakeOk() as ReturnType<typeof execa>) // prune
+      .mockReturnValueOnce(fakeBranchListing('') as ReturnType<typeof execa>); // branch --list (empty)
+
+    const result = await removeWorktreeAndBranch({ worktree, key });
+
+    expect(result.branch).toBe('notFound');
+    expect(execaMock).not.toHaveBeenCalledWith(
+      'git',
+      expect.arrayContaining(['branch', '-D']),
+      expect.any(Object),
+    );
   });
 });

@@ -59,9 +59,9 @@ describe('runReset', () => {
     expect(logs.join('')).toMatch(/no sessions to delete/);
   });
 
-  it('--hard: deletes sessions, worktree, and branch', async () => {
+  it('--hard removed: deletes sessions, worktree, and branch', async () => {
     sessionsMock.mockReturnValue({ deletedCount: 2, dirExisted: true });
-    worktreeMock.mockResolvedValue({ worktreeRemoved: true, branchRemoved: true });
+    worktreeMock.mockResolvedValue({ worktree: 'removed', branch: 'removed' });
 
     await runReset('KAN-1', { hard: true });
 
@@ -69,17 +69,64 @@ describe('runReset', () => {
     expect(worktreeMock).toHaveBeenCalledTimes(1);
     const out = logs.join('');
     expect(out).toMatch(/2 session/);
-    expect(out).toMatch(/worktree removed/);
-    expect(out).toMatch(/branch removed/);
+    expect(out).toMatch(/worktree removed:/);
+    expect(out).toMatch(/branch removed: KAN-1/);
   });
 
-  it('--hard: reports already-removed for missing worktree', async () => {
+  it('--hard notFound: reports neither worktree nor branch was present', async () => {
     sessionsMock.mockReturnValue({ deletedCount: 0, dirExisted: false });
-    worktreeMock.mockResolvedValue({ worktreeRemoved: false, branchRemoved: false });
+    worktreeMock.mockResolvedValue({ worktree: 'notFound', branch: 'notFound' });
 
     await runReset('KAN-1', { hard: true });
 
     const out = logs.join('');
-    expect(out).toMatch(/already removed/);
+    expect(out).toMatch(/worktree not present:/);
+    expect(out).toMatch(/branch not present: KAN-1/);
+  });
+
+  it('--hard orphanCleaned: surfaces both the recovery action and the underlying git error', async () => {
+    sessionsMock.mockReturnValue({ deletedCount: 0, dirExisted: false });
+    worktreeMock.mockResolvedValue({
+      worktree: 'orphanCleaned',
+      worktreeError: "fatal: '/r/x' is not a working tree",
+      branch: 'notFound',
+    });
+
+    await runReset('KAN-1', { hard: true });
+
+    const out = logs.join('');
+    expect(out).toMatch(/git admin was missing; removed orphaned directory:/);
+    expect(out).toMatch(/git error: fatal: '\/r\/x' is not a working tree/);
+  });
+
+  it('--hard failed worktree: surfaces the underlying error', async () => {
+    sessionsMock.mockReturnValue({ deletedCount: 0, dirExisted: true });
+    worktreeMock.mockResolvedValue({
+      worktree: 'failed',
+      worktreeError: 'EACCES: permission denied',
+      branch: 'notFound',
+    });
+
+    await runReset('KAN-1', { hard: true });
+
+    const out = logs.join('');
+    expect(out).toMatch(/worktree removal failed:/);
+    expect(out).toMatch(/error: EACCES: permission denied/);
+  });
+
+  it('--hard failed branch: surfaces the underlying error rather than "already removed"', async () => {
+    sessionsMock.mockReturnValue({ deletedCount: 0, dirExisted: true });
+    worktreeMock.mockResolvedValue({
+      worktree: 'removed',
+      branch: 'failed',
+      branchError: "error: branch 'KAN-1' is currently checked out at /other/worktree",
+    });
+
+    await runReset('KAN-1', { hard: true });
+
+    const out = logs.join('');
+    expect(out).toMatch(/branch removal failed: KAN-1/);
+    expect(out).toMatch(/checked out at \/other\/worktree/);
+    expect(out).not.toMatch(/branch already removed/);
   });
 });
