@@ -26,10 +26,11 @@ stack was already up.
 
 ## Decisions
 
-- **`startDockerBringup` stays as a private export of `run.ts`** consumed by
-  `prepareAgentEnvironment` rather than moving to `lib/docker/`. The helper is
-  already coupled to `buildDockerBringupScript` (same file) and the diff is
-  smaller this way. The ticket explicitly leaves this to implementer's judgment.
+- **`startDockerBringup` + `buildDockerBringupScript` move to
+  `lib/docker/start-bringup.ts`** rather than staying in `run.ts`. The orchestrator
+  needs to call them, and `run.ts` already imports the orchestrator — keeping
+  the helpers in `run.ts` would require a circular import. The ticket explicitly
+  leaves this to implementer's judgment.
 - **`ensureStackRunning` returns `{ rc, logPath }` and never throws.** Mirrors
   `installPlaywrightBrowsers`. The orchestrator (`prepareAgentEnvironment`)
   decides what to do with non-zero rc — for `mode: 'resume'` it throws with the
