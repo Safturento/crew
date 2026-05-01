@@ -23,15 +23,21 @@ fi
 # [playwright] in their crew config.
 # Resolve the apt name for a chromium runtime lib. Ubuntu Noble (24.04+) renamed
 # several to t64 variants for the time_t-64-bit transition; pre-Noble distros
-# keep the original names. Probe apt-cache to avoid hardcoding distro versions.
+# keep the original names. Probe via `apt-cache policy`, not `apt-cache show`:
+# on Noble, `show libasound2` succeeds against a stub entry even though
+# `libasound2` is a virtual package with multiple providers and `apt-get
+# install libasound2` then fails ("no installation candidate"). `policy` exposes
+# that case as `Candidate: (none)`, while real installable packages report a
+# real version string. Match `Candidate: [^(]` to accept versions and reject
+# `(none)`.
 resolve_libname() {
   local base=$1
-  if apt-cache show "$base" >/dev/null 2>&1; then
+  if apt-cache policy "$base" 2>/dev/null | grep -q "Candidate: [^(]"; then
     echo "$base"
-  elif apt-cache show "${base}t64" >/dev/null 2>&1; then
+  elif apt-cache policy "${base}t64" 2>/dev/null | grep -q "Candidate: [^(]"; then
     echo "${base}t64"
   else
-    echo "$base"
+    echo "$base"  # fall back; apt will fail with a clear error
   fi
 }
 
