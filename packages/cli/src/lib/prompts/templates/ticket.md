@@ -41,6 +41,18 @@ You are required to use these Superpowers skills as appropriate. Invoke each via
 
 11. **Move {{key}} to "In Review".**
 
+12. **Final report.** As your VERY LAST action, run a single Bash:
+
+    ```
+    echo "→ PR $(gh pr view --head {{key}} --json url --jq .url)"
+    ```
+
+    Do not emit any further tool calls or prose after this. If no PR was opened (epic guard, ticket already shipped, hard failure), substitute:
+
+    ```
+    echo "→ no-pr: <one-line reason>"
+    ```
+
 ## Repo context
 
 - GitHub: {{githubRepo}}

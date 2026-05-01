@@ -311,6 +311,20 @@ describe('buildTicketPrompt', () => {
     expect(prompt).toContain('api-tests/');
     expect(prompt).not.toContain('`bruno/`');
   });
+
+  it('mandates the final-report echo contract (CREW-73)', () => {
+    const prompt = buildTicketPrompt({
+      key: 'KAN-23',
+      githubRepo: 'Safturento/Recipes',
+      jiraSite: 'https://safturento.atlassian.net',
+    });
+    expect(prompt).toContain('echo "→ PR $(gh pr view');
+    expect(prompt).toContain('--head KAN-23');
+    expect(prompt).toContain('→ no-pr:');
+    const inReviewIdx = prompt.indexOf('In Review');
+    const finalReportIdx = prompt.indexOf('Final report');
+    expect(finalReportIdx).toBeGreaterThan(inReviewIdx);
+  });
 });
 
 describe('buildFixPrPrompt', () => {
@@ -504,5 +518,18 @@ describe('buildFixPrPrompt', () => {
     const fixesIdx = prompt.indexOf('Apply the fixes');
     expect(brunoIdx).toBeGreaterThan(-1);
     expect(fixesIdx).toBeGreaterThan(brunoIdx);
+  });
+
+  it('mandates the final-report echo contract (CREW-73)', () => {
+    const prompt = buildFixPrPrompt({
+      key: 'KAN-23',
+      feedback: '...',
+      feedbackSource: 'stdin',
+    });
+    expect(prompt).toContain('echo "→ PR $(gh pr view');
+    expect(prompt).toContain('--head KAN-23');
+    const fixesIdx = prompt.indexOf('Apply the fixes');
+    const finalReportIdx = prompt.indexOf('Final report');
+    expect(finalReportIdx).toBeGreaterThan(fixesIdx);
   });
 });

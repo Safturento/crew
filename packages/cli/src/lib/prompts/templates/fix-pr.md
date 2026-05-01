@@ -24,3 +24,17 @@ Source: {{feedbackSource}}.
 - {{pushDirective}}
 - If a piece of feedback is wrong or you disagree with it, write your reasoning back instead of blindly applying it.
 - Do NOT resolve review threads on GitHub yourself.
+
+## Final report
+
+As your VERY LAST action, run a single Bash:
+
+```
+echo "→ PR $(gh pr view --head {{key}} --json url --jq .url)"
+```
+
+Do not emit any further tool calls or prose after this. If you are aborting without pushing (e.g. unresolved disagreement, blocked by upstream), substitute:
+
+```
+echo "→ no-pr: <one-line reason>"
+```

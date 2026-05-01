@@ -42,6 +42,20 @@ If \`npm run test:e2e\` (or the project's equivalent) reports missing browsers, 
 - Push with \`git push --force-with-lease origin KAN-23\` to extend the existing PR. Do NOT open a new PR. Plain \`--force\` is never allowed.
 - If a piece of feedback is wrong or you disagree with it, write your reasoning back instead of blindly applying it.
 - Do NOT resolve review threads on GitHub yourself.
+
+## Final report
+
+As your VERY LAST action, run a single Bash:
+
+\`\`\`
+echo "→ PR $(gh pr view --head KAN-23 --json url --jq .url)"
+\`\`\`
+
+Do not emit any further tool calls or prose after this. If you are aborting without pushing (e.g. unresolved disagreement, blocked by upstream), substitute:
+
+\`\`\`
+echo "→ no-pr: <one-line reason>"
+\`\`\`
 "
 `;
 
@@ -83,6 +97,20 @@ Treat smoke failure the same as test failure: do not push.
 - Push with \`git push --force-with-lease origin KAN-23\` to extend the existing PR. Do NOT open a new PR. Plain \`--force\` is never allowed.
 - If a piece of feedback is wrong or you disagree with it, write your reasoning back instead of blindly applying it.
 - Do NOT resolve review threads on GitHub yourself.
+
+## Final report
+
+As your VERY LAST action, run a single Bash:
+
+\`\`\`
+echo "→ PR $(gh pr view --head KAN-23 --json url --jq .url)"
+\`\`\`
+
+Do not emit any further tool calls or prose after this. If you are aborting without pushing (e.g. unresolved disagreement, blocked by upstream), substitute:
+
+\`\`\`
+echo "→ no-pr: <one-line reason>"
+\`\`\`
 "
 `;
 
@@ -127,6 +155,20 @@ If \`npm run test:e2e\` (or the project's equivalent) reports missing browsers, 
 - Push with \`git push --force-with-lease origin KAN-23\` to extend the existing PR. Do NOT open a new PR. Plain \`--force\` is never allowed.
 - If a piece of feedback is wrong or you disagree with it, write your reasoning back instead of blindly applying it.
 - Do NOT resolve review threads on GitHub yourself.
+
+## Final report
+
+As your VERY LAST action, run a single Bash:
+
+\`\`\`
+echo "→ PR $(gh pr view --head KAN-23 --json url --jq .url)"
+\`\`\`
+
+Do not emit any further tool calls or prose after this. If you are aborting without pushing (e.g. unresolved disagreement, blocked by upstream), substitute:
+
+\`\`\`
+echo "→ no-pr: <one-line reason>"
+\`\`\`
 "
 `;
 
@@ -173,6 +215,18 @@ You are required to use these Superpowers skills as appropriate. Invoke each via
     \`\`\`
 
 11. **Move KAN-23 to "In Review".**
+
+12. **Final report.** As your VERY LAST action, run a single Bash:
+
+    \`\`\`
+    echo "→ PR $(gh pr view --head KAN-23 --json url --jq .url)"
+    \`\`\`
+
+    Do not emit any further tool calls or prose after this. If no PR was opened (epic guard, ticket already shipped, hard failure), substitute:
+
+    \`\`\`
+    echo "→ no-pr: <one-line reason>"
+    \`\`\`
 
 ## Repo context
 
@@ -236,6 +290,18 @@ The following user-level skills are equally required when their description matc
 
 11. **Move KAN-23 to "In Review".**
 
+12. **Final report.** As your VERY LAST action, run a single Bash:
+
+    \`\`\`
+    echo "→ PR $(gh pr view --head KAN-23 --json url --jq .url)"
+    \`\`\`
+
+    Do not emit any further tool calls or prose after this. If no PR was opened (epic guard, ticket already shipped, hard failure), substitute:
+
+    \`\`\`
+    echo "→ no-pr: <one-line reason>"
+    \`\`\`
+
 ## Repo context
 
 - GitHub: Safturento/Recipes
@@ -293,6 +359,18 @@ You are required to use these Superpowers skills as appropriate. Invoke each via
     \`\`\`
 
 11. **Move KAN-23 to "In Review".**
+
+12. **Final report.** As your VERY LAST action, run a single Bash:
+
+    \`\`\`
+    echo "→ PR $(gh pr view --head KAN-23 --json url --jq .url)"
+    \`\`\`
+
+    Do not emit any further tool calls or prose after this. If no PR was opened (epic guard, ticket already shipped, hard failure), substitute:
+
+    \`\`\`
+    echo "→ no-pr: <one-line reason>"
+    \`\`\`
 
 ## Repo context
 
@@ -372,6 +450,18 @@ The \`bruno-collection-maintenance\` skill (auto-discovered) covers naming conve
     \`\`\`
 
 11. **Move KAN-23 to "In Review".**
+
+12. **Final report.** As your VERY LAST action, run a single Bash:
+
+    \`\`\`
+    echo "→ PR $(gh pr view --head KAN-23 --json url --jq .url)"
+    \`\`\`
+
+    Do not emit any further tool calls or prose after this. If no PR was opened (epic guard, ticket already shipped, hard failure), substitute:
+
+    \`\`\`
+    echo "→ no-pr: <one-line reason>"
+    \`\`\`
 
 ## Repo context
 
@@ -457,6 +547,18 @@ If \`tests/e2e/\` doesn't exist or \`npm run test:e2e\` fails for any other reas
 
 11. **Move KAN-23 to "In Review".**
 
+12. **Final report.** As your VERY LAST action, run a single Bash:
+
+    \`\`\`
+    echo "→ PR $(gh pr view --head KAN-23 --json url --jq .url)"
+    \`\`\`
+
+    Do not emit any further tool calls or prose after this. If no PR was opened (epic guard, ticket already shipped, hard failure), substitute:
+
+    \`\`\`
+    echo "→ no-pr: <one-line reason>"
+    \`\`\`
+
 ## Repo context
 
 - GitHub: Safturento/Recipes
@@ -526,6 +628,18 @@ The \`bruno-collection-maintenance\` skill (auto-discovered) covers naming conve
 
 11. **Move KAN-23 to "In Review".**
 
+12. **Final report.** As your VERY LAST action, run a single Bash:
+
+    \`\`\`
+    echo "→ PR $(gh pr view --head KAN-23 --json url --jq .url)"
+    \`\`\`
+
+    Do not emit any further tool calls or prose after this. If no PR was opened (epic guard, ticket already shipped, hard failure), substitute:
+
+    \`\`\`
+    echo "→ no-pr: <one-line reason>"
+    \`\`\`
+
 ## Repo context
 
 - GitHub: Safturento/Recipes
@@ -593,6 +707,18 @@ If your change is _clearly_ backend-only (no observable user effect), say so exp
     \`\`\`
 
 11. **Move KAN-23 to "In Review".**
+
+12. **Final report.** As your VERY LAST action, run a single Bash:
+
+    \`\`\`
+    echo "→ PR $(gh pr view --head KAN-23 --json url --jq .url)"
+    \`\`\`
+
+    Do not emit any further tool calls or prose after this. If no PR was opened (epic guard, ticket already shipped, hard failure), substitute:
+
+    \`\`\`
+    echo "→ no-pr: <one-line reason>"
+    \`\`\`
 
 ## Repo context
 
@@ -662,6 +788,18 @@ If your change is _clearly_ backend-only (no observable user effect), say so exp
 
 11. **Move CREW-99 to "In Review".**
 
+12. **Final report.** As your VERY LAST action, run a single Bash:
+
+    \`\`\`
+    echo "→ PR $(gh pr view --head CREW-99 --json url --jq .url)"
+    \`\`\`
+
+    Do not emit any further tool calls or prose after this. If no PR was opened (epic guard, ticket already shipped, hard failure), substitute:
+
+    \`\`\`
+    echo "→ no-pr: <one-line reason>"
+    \`\`\`
+
 ## Repo context
 
 - GitHub: Safturento/crew
@@ -730,6 +868,18 @@ The \`bruno-collection-maintenance\` skill (auto-discovered) covers naming conve
     \`\`\`
 
 11. **Move KAN-23 to "In Review".**
+
+12. **Final report.** As your VERY LAST action, run a single Bash:
+
+    \`\`\`
+    echo "→ PR $(gh pr view --head KAN-23 --json url --jq .url)"
+    \`\`\`
+
+    Do not emit any further tool calls or prose after this. If no PR was opened (epic guard, ticket already shipped, hard failure), substitute:
+
+    \`\`\`
+    echo "→ no-pr: <one-line reason>"
+    \`\`\`
 
 ## Repo context
 
