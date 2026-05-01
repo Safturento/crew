@@ -97,12 +97,6 @@ export interface AssistantText {
   timestamp: string;
 }
 
-export interface PrLink {
-  prNumber: number;
-  prUrl: string;
-  timestamp: string;
-}
-
 export interface AggregateUsage {
   outputTokens: number;
   cacheReadTokens: number;

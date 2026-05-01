@@ -1,9 +1,7 @@
 import {
   formatAssistantText,
-  formatPrLink,
   formatToolCall,
   parseAssistantText,
-  parsePrLink,
   parseToolCall,
   tailTranscript,
 } from 'crew-shared';
@@ -97,11 +95,6 @@ export async function streamTranscript(
     const text = parseAssistantText(event);
     if (text) {
       out.write(`${formatAssistantText(text)}\n`);
-      continue;
-    }
-    const link = parsePrLink(event);
-    if (link) {
-      out.write(`${formatPrLink(link)}\n`);
     }
   }
 
