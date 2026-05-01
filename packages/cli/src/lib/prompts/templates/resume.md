@@ -11,6 +11,7 @@ You're being resumed on {{key}} after an interruption.
 ## What to do
 
 Reassess where you left off — check your last actions in this conversation, the worktree's git state, and any uncommitted changes. Then continue toward closing the ticket. If the user-supplied context above changes your direction, factor it in before resuming.
+{{discoveredSkillsBlock}}
 
 ## Final report
 
@@ -22,4 +23,4 @@ echo "→ no-pr: <one-line reason>"
 ```
 
 Do not emit further tool calls or prose after this.
-{{discoveredSkillsBlock}}
+
