@@ -2,6 +2,7 @@ import { existsSync, readdirSync, statSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { basename, join } from 'node:path';
 
+export * from './cleanup.js';
 export * from './discovery.js';
 export * from './status.js';
 
