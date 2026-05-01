@@ -7,6 +7,7 @@ Format: see the user-level `~/.claude/CLAUDE.md` "Followup detection" section.
 ## Contents
 
 - [Active](#active)
+  - [2026-05-01 — `crew run`/`resume`/`restart` against an already-shipped ticket has no safety net](#2026-05-01--crew-runresumerestart-against-an-already-shipped-ticket-has-no-safety-net)
   - [2026-05-01 — Playwright integration self-review cleanups](#2026-05-01--playwright-integration-self-review-cleanups)
   - [2026-04-30 — Surface subagent activity in transcript outputs](#2026-04-30--surface-subagent-activity-in-transcript-outputs)
   - [2026-04-30 — `crew resume` deferred follow-ups](#2026-04-30--crew-resume-deferred-follow-ups)
@@ -30,6 +31,36 @@ Format: see the user-level `~/.claude/CLAUDE.md` "Followup detection" section.
 - [Abandoned](#abandoned)
 
 ## Active
+
+### 2026-05-01 — `crew run`/`resume`/`restart` against an already-shipped ticket has no safety net
+
+**What:** None of the agent-spawning commands check whether the target ticket has already been shipped (PR merged, ticket Done). Running `crew run CREW-X` against a ticket whose work is already on `main` produces non-deterministic agent behavior — best case the agent reads the ticket, sees AC ticked off, and reports "no work to do"; worst case it makes confused no-op edits or tries to re-implement and produces a junk PR. `crew resume` against the same key either resumes a stale session in a confused post-completion state (if the worktree exists) or errors with "no worktree." `crew restart` (default) and `crew restart --hard` would happily proceed and inherit the same problem.
+
+**Why noticed:** during the CREW-66 follow-up to CREW-65, the user asked: *"if I run `crew run CREW-65` or `crew resume CREW-65`, will it pick up the new work and establish a new PR or will it just break in a weird, new way?"* Walking through the code paths, it became clear there's no defensive check — the commands trust the user to know whether a ticket is dispatch-appropriate. Source conversation: 2026-05-01 session diagnosing the CREW-65/CREW-66 cleanup-worktree bugs.
+
+**Anchors:**
+
+- `packages/cli/src/commands/run.ts` — `runRun`. Calls `requireWorktreeAvailable` and `git worktree add -b` without consulting Jira state.
+- `packages/cli/src/commands/resume.ts` — `runResume`.
+- `packages/cli/src/commands/restart.ts` — `runRestart`.
+- `mcp__atlassian__jira_get_issue` — already used in the agent's first prompt step ("Pull the ticket"). Could be lifted into crew-side preflight so the check happens before worktree creation.
+
+**What's been considered:** nothing yet beyond surfacing the gap. Flagged in conversation, deferred to plan later.
+
+**Shape of work:** likely one ticket. Add a Jira preflight at the top of `run` / `resume` / `restart`:
+
+1. Fetch the ticket via Jira API (using the same MCP path the agent uses).
+2. If `status.statusCategory.key === "done"`, refuse with a useful error suggesting `crew fix-pr <KEY>` (for fixing post-merge feedback) or `--force` (for genuine re-runs against a Done ticket).
+3. Bonus: detect "in review" with an open PR and surface that too — point users at `crew fix-pr` rather than `crew run`.
+
+The check adds one Jira round-trip per dispatch; probably fine but worth measuring.
+
+**Open questions:**
+
+- Opt-out (`--force` to bypass) vs. opt-in? Defaulting to enforcement matches the user's "no surprises" preference but blocks legitimate re-run cases (e.g. running a known-shipped ticket to test a new command, exactly the case that surfaced this followup).
+- What states qualify as "already shipped"? `Done` is unambiguous; `In Review` (PR open, work not landed) is more nuanced — the right action there is `crew fix-pr`, not `crew run`.
+- Project-specific terminal status names vary across Jira projects. `status.statusCategory.key === "done"` is more portable than hardcoding `Done` as a status name.
+- Should the check live in `runRun` and be re-used by `runResume` / `runRestart`, or in `prepareAgentEnvironment`? `prepareAgentEnvironment` already runs early in all three; might be the natural seam.
 
 ### 2026-05-01 — Playwright integration self-review cleanups
 
