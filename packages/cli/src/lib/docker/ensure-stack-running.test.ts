@@ -36,11 +36,7 @@ describe('ensureStackRunning', () => {
     await ensureStackRunning({ worktree: tmp, key: 'KAN-99', env: { PATH: '/usr/bin' } });
 
     expect(execaMock).toHaveBeenCalledTimes(1);
-    const call = execaMock.mock.calls[0] as unknown as [
-      string,
-      string[],
-      Record<string, unknown>,
-    ];
+    const call = execaMock.mock.calls[0] as unknown as [string, string[], Record<string, unknown>];
     const [cmd, args, options] = call;
     expect(cmd).toBe('docker');
     expect(args).toEqual(['compose', 'up', '-d']);
@@ -83,7 +79,8 @@ describe('ensureStackRunning', () => {
       env: { PATH: '/usr/bin', CUSTOM: 'value' },
     });
 
-    const options = execaMock.mock.calls[0]?.[2] as { env: Record<string, string> };
+    const call = execaMock.mock.calls[0] as unknown as [string, string[], Record<string, unknown>];
+    const options = call[2] as { env: Record<string, string> };
     expect(options.env.CUSTOM).toBe('value');
   });
 });

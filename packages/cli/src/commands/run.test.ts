@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { buildDockerBringupScript, resolveExitCode, runCommand } from './run.js';
+import { buildDockerBringupScript } from '../lib/docker/start-bringup.js';
+import { resolveExitCode, runCommand } from './run.js';
 
 describe('runCommand', () => {
   it('is named "run"', () => {
