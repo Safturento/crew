@@ -21,6 +21,20 @@ fi
 # is the network-allowlist proxy that runs alongside it. Chromium libs
 # are required for headless Playwright runs in projects that enable
 # [playwright] in their crew config.
+# Resolve the apt name for a chromium runtime lib. Ubuntu Noble (24.04+) renamed
+# several to t64 variants for the time_t-64-bit transition; pre-Noble distros
+# keep the original names. Probe apt-cache to avoid hardcoding distro versions.
+resolve_libname() {
+  local base=$1
+  if apt-cache show "$base" >/dev/null 2>&1; then
+    echo "$base"
+  elif apt-cache show "${base}t64" >/dev/null 2>&1; then
+    echo "${base}t64"
+  else
+    echo "$base"
+  fi
+}
+
 if command -v apt-get >/dev/null 2>&1; then
   missing_pkgs=()
   command -v bwrap  >/dev/null 2>&1 || missing_pkgs+=(bubblewrap)
@@ -28,12 +42,12 @@ if command -v apt-get >/dev/null 2>&1; then
   # Chromium runtime libraries (Playwright --with-deps list for linux).
   # Probe one canonical lib via ldconfig; if missing, install the full set.
   if ! ldconfig -p 2>/dev/null | grep -q libnss3.so; then
-    missing_pkgs+=(
-      libnss3 libnspr4 libatk1.0-0 libatk-bridge2.0-0 libcups2 libdrm2
-      libdbus-1-3 libxcb1 libxkbcommon0 libxcomposite1 libxdamage1
-      libxfixes3 libxrandr2 libgbm1 libpango-1.0-0 libcairo2 libasound2
-      libatspi2.0-0
-    )
+    for base in libnss3 libnspr4 libatk1.0-0 libatk-bridge2.0-0 libcups2 \
+                libdrm2 libdbus-1-3 libxcb1 libxkbcommon0 libxcomposite1 \
+                libxdamage1 libxfixes3 libxrandr2 libgbm1 libpango-1.0-0 \
+                libcairo2 libasound2 libatspi2.0-0; do
+      missing_pkgs+=("$(resolve_libname "$base")")
+    done
   fi
   if [[ ${#missing_pkgs[@]} -gt 0 ]]; then
     echo "Installing system deps via apt: ${missing_pkgs[*]}"
