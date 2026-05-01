@@ -25,6 +25,7 @@ import { buildTicketPrompt } from '../lib/prompts/index.js';
 import { discoverSkills, renderDiscoveredSkillsBlock } from '../lib/prompts/skills.js';
 import {
   authoredEnabled,
+  installPlaywrightBrowsers,
   playwrightEnabled,
   resolveAppUrl,
   smokeEnabled,
@@ -189,6 +190,15 @@ async function runTicket(key: string, opts: RunOptions): Promise<never> {
 
   const dockerProcess = startDockerBringup(config, worktree, key, skipDocker, childEnv);
 
+  if (playwrightEnabled(config)) {
+    console.log(pc.dim('→ ensuring Chromium is installed for Playwright…'));
+    const result = await installPlaywrightBrowsers({ worktree, key, env: childEnv });
+    if (result.rc !== 0) {
+      fail(`playwright install failed (rc=${result.rc}). Log: ${result.logPath}`);
+    }
+    console.log(pc.dim(`    log: ${result.logPath}`));
+  }
+
   const ghToken = readFileSync(ghTokenDest, 'utf8').trim();
   const discoveredSkillsBlock = renderDiscoveredSkillsBlock(
     discoverSkills({ repoPath: config.repo_path }),
@@ -202,7 +212,7 @@ async function runTicket(key: string, opts: RunOptions): Promise<never> {
         ? {
             appUrl: resolvedAppUrl,
             startCommand: config.playwright?.start_command,
-            smoke: smokeEnabled(config),
+            smoke: smokeEnabled(config) || undefined,
             authored:
               authoredEnabled(config) && config.playwright?.authored
                 ? {
@@ -245,6 +255,7 @@ async function runTicket(key: string, opts: RunOptions): Promise<never> {
     env: {
       ...childEnv,
       GH_TOKEN: ghToken,
+      ...(resolvedAppUrl ? { CREW_APP_URL: resolvedAppUrl } : {}),
       ...(brunoEnvName ? { CREW_BRUNO_ENV: brunoEnvName } : {}),
     },
     reject: false,
