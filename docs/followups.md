@@ -7,6 +7,7 @@ Format: see the user-level `~/.claude/CLAUDE.md` "Followup detection" section.
 ## Contents
 
 - [Active](#active)
+  - [2026-05-01 — Generic `--git-common-dir` helper in `crew-shared` (third-caller trigger)](#2026-05-01--generic---git-common-dir-helper-in-crew-shared-third-caller-trigger)
   - [2026-05-01 — `crew run`/`resume`/`restart` against an already-shipped ticket has no safety net](#2026-05-01--crew-runresumerestart-against-an-already-shipped-ticket-has-no-safety-net)
   - [2026-05-01 — Playwright integration self-review cleanups](#2026-05-01--playwright-integration-self-review-cleanups)
   - [2026-04-30 — Surface subagent activity in transcript outputs](#2026-04-30--surface-subagent-activity-in-transcript-outputs)
@@ -32,11 +33,24 @@ Format: see the user-level `~/.claude/CLAUDE.md` "Followup detection" section.
 
 ## Active
 
+### 2026-05-01 — Generic `--git-common-dir` helper in `crew-shared` (third-caller trigger)
+
+**What:** `appendExcludeLine` in `packages/cli/src/lib/playwright/write-mcp-file.ts` resolves the worktree-aware path to `.git/info/exclude` by shelling out to `git rev-parse --git-common-dir` and joining (handling the relative-vs-absolute return). It's the only caller today. If a second or third call site needs the same resolution, factor a small helper into `crew-shared` rather than duplicating the execa + isAbsolute pattern.
+
+**Why noticed:** explicitly carved out of CREW-67's scope as "worth considering if a third call site needs `--git-common-dir`, but YAGNI for one." Source: CREW-67 ticket "## Out of scope" section.
+
+**Anchors:**
+
+- `packages/cli/src/lib/playwright/write-mcp-file.ts` — current sole caller of `git rev-parse --git-common-dir`.
+- CREW-67 — origin ticket; out-of-scope section.
+
+**Shape of work:** small refactor. Once a second/third caller appears, lift the resolution into `crew-shared` (e.g. `git/common-dir.ts` exporting `resolveGitCommonDir(worktreePath)`) and migrate both call sites in the same PR.
+
 ### 2026-05-01 — `crew run`/`resume`/`restart` against an already-shipped ticket has no safety net
 
 **What:** None of the agent-spawning commands check whether the target ticket has already been shipped (PR merged, ticket Done). Running `crew run CREW-X` against a ticket whose work is already on `main` produces non-deterministic agent behavior — best case the agent reads the ticket, sees AC ticked off, and reports "no work to do"; worst case it makes confused no-op edits or tries to re-implement and produces a junk PR. `crew resume` against the same key either resumes a stale session in a confused post-completion state (if the worktree exists) or errors with "no worktree." `crew restart` (default) and `crew restart --hard` would happily proceed and inherit the same problem.
 
-**Why noticed:** during the CREW-66 follow-up to CREW-65, the user asked: *"if I run `crew run CREW-65` or `crew resume CREW-65`, will it pick up the new work and establish a new PR or will it just break in a weird, new way?"* Walking through the code paths, it became clear there's no defensive check — the commands trust the user to know whether a ticket is dispatch-appropriate. Source conversation: 2026-05-01 session diagnosing the CREW-65/CREW-66 cleanup-worktree bugs.
+**Why noticed:** during the CREW-66 follow-up to CREW-65, the user asked: _"if I run `crew run CREW-65` or `crew resume CREW-65`, will it pick up the new work and establish a new PR or will it just break in a weird, new way?"_ Walking through the code paths, it became clear there's no defensive check — the commands trust the user to know whether a ticket is dispatch-appropriate. Source conversation: 2026-05-01 session diagnosing the CREW-65/CREW-66 cleanup-worktree bugs.
 
 **Anchors:**
 
