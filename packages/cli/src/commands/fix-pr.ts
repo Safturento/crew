@@ -7,15 +7,12 @@ import {
   discoverProjectConfig,
   fetchOrigin,
   findLatestSession,
-  formatToolCall,
   getPrForBranch,
   hasUncommittedChanges,
   NO_FEEDBACK_MARKER,
-  parseToolCall,
   rebaseOnto,
   resolveWorktreePath,
   spawnClaudeResume,
-  tailTranscript,
 } from '../lib/index.js';
 import { discoverSkills, renderDiscoveredSkillsBlock } from '../lib/prompts/skills.js';
 import {
@@ -24,6 +21,7 @@ import {
   playwrightFixPrOptsFor,
   prepareAgentEnvironment,
   readDockerPortsFromEnvFile,
+  streamTranscript,
 } from '../lib/run/index.js';
 import type { DockerPorts } from '../lib/playwright/index.js';
 
@@ -253,13 +251,11 @@ async function runFixPr(key: string, flags: FixPrFlags): Promise<void> {
 
   let claudeExitCode = 0;
   try {
-    for await (const event of tailTranscript(session.transcriptPath, {
+    await streamTranscript({
+      transcriptPath: session.transcriptPath,
       signal: abort.signal,
       startAtEnd: true,
-    })) {
-      const call = parseToolCall(event);
-      if (call) process.stdout.write(`${formatToolCall(call)}\n`);
-    }
+    });
     try {
       await sub;
     } catch (err) {

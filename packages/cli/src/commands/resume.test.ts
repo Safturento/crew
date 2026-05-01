@@ -41,9 +41,33 @@ vi.mock('../lib/run/agent-options.js', () => ({
   playwrightTicketOptsFor: vi.fn(() => undefined),
 }));
 
-vi.mock('../lib/claude/spawn.js', () => ({
-  spawnClaudeResume: vi.fn(() => Promise.resolve({ exitCode: 0 })),
-  spawnClaudeFresh: vi.fn(() => Promise.resolve({ exitCode: 0 })),
+vi.mock('../lib/claude/spawn.js', () => {
+  const fakeKillable = (): {
+    exitCode: number;
+    kill: () => boolean;
+    then: PromiseLike<unknown>['then'];
+    catch: Promise<unknown>['catch'];
+    finally: Promise<unknown>['finally'];
+  } => {
+    const promise = Promise.resolve({ exitCode: 0 });
+    return {
+      exitCode: 0,
+      kill: () => true,
+      then: promise.then.bind(promise),
+      catch: promise.catch.bind(promise),
+      finally: promise.finally.bind(promise),
+    } as never;
+  };
+  return {
+    spawnClaudeResume: vi.fn(() => fakeKillable()),
+    spawnClaudeFresh: vi.fn(() => fakeKillable()),
+  };
+});
+
+vi.mock('../lib/run/stream-transcript.js', () => ({
+  streamTranscript: vi.fn(async (opts: { transcriptPath?: string; projectDir?: string }) => ({
+    transcriptPath: opts.transcriptPath ?? opts.projectDir ?? null,
+  })),
 }));
 
 vi.mock('../lib/prompts/skills.js', () => ({
@@ -55,6 +79,7 @@ import { existsSync } from 'node:fs';
 import { discoverProjectConfig } from '../lib/discover-project-config.js';
 import { findLatestSession } from '../lib/sessions/index.js';
 import { spawnClaudeFresh, spawnClaudeResume } from '../lib/claude/spawn.js';
+import { streamTranscript } from '../lib/run/stream-transcript.js';
 import { runResume } from './resume.js';
 
 const existsMock = vi.mocked(existsSync);
@@ -62,6 +87,7 @@ const discoverMock = vi.mocked(discoverProjectConfig);
 const findSessionMock = vi.mocked(findLatestSession);
 const spawnFreshMock = vi.mocked(spawnClaudeFresh);
 const spawnResumeMock = vi.mocked(spawnClaudeResume);
+const streamTranscriptMock = vi.mocked(streamTranscript);
 
 const baseConfig: ProjectConfig = {
   name: 'test',
@@ -99,8 +125,21 @@ describe('runResume', () => {
     findSessionMock.mockReset();
     spawnFreshMock.mockReset();
     spawnResumeMock.mockReset();
-    spawnFreshMock.mockReturnValue(Promise.resolve({ exitCode: 0 }) as never);
-    spawnResumeMock.mockReturnValue(Promise.resolve({ exitCode: 0 }) as never);
+    streamTranscriptMock.mockReset();
+    streamTranscriptMock.mockImplementation(async (opts) => ({
+      transcriptPath: opts.transcriptPath ?? opts.projectDir ?? null,
+    }));
+    const makeFakeSub = (): never => {
+      const promise = Promise.resolve({ exitCode: 0 });
+      return {
+        kill: () => true,
+        then: promise.then.bind(promise),
+        catch: promise.catch.bind(promise),
+        finally: promise.finally.bind(promise),
+      } as never;
+    };
+    spawnFreshMock.mockImplementation(makeFakeSub);
+    spawnResumeMock.mockImplementation(makeFakeSub);
   });
 
   afterEach(() => {
@@ -180,5 +219,36 @@ describe('runResume', () => {
   it('rejects whitespace-only -m so users notice typos', async () => {
     await expect(runResume('KAN-1', { message: '   \n  ' })).rejects.toThrow('process.exit(1)');
     expect(logs.join('')).toMatch(/empty message provided to -m/);
+  });
+
+  it('streams the transcript via streamTranscript when resuming an existing session', async () => {
+    findSessionMock.mockReturnValue({
+      sessionId: 'abc-123',
+      transcriptPath: '/known/transcripts/abc.jsonl',
+    });
+
+    await runResume('KAN-1', {});
+
+    expect(streamTranscriptMock).toHaveBeenCalledTimes(1);
+    const opts = streamTranscriptMock.mock.calls[0]?.[0];
+    expect(opts?.transcriptPath).toBe('/known/transcripts/abc.jsonl');
+    expect(opts?.projectDir).toBeUndefined();
+    expect(opts?.startAtEnd).toBe(true);
+    expect(opts?.signal).toBeInstanceOf(AbortSignal);
+  });
+
+  it('streams the transcript via streamTranscript by polling projectDir when no prior session', async () => {
+    findSessionMock.mockReturnValue(null);
+
+    await runResume('KAN-1', {});
+
+    expect(streamTranscriptMock).toHaveBeenCalledTimes(1);
+    const opts = streamTranscriptMock.mock.calls[0]?.[0];
+    expect(opts?.transcriptPath).toBeUndefined();
+    // projectDir is derived from the worktree (~/.claude/projects/<encoded>),
+    // so just assert it's a non-empty string under .claude/projects.
+    expect(opts?.projectDir).toMatch(/\.claude\/projects\//);
+    expect(opts?.startAtEnd).toBeFalsy();
+    expect(opts?.signal).toBeInstanceOf(AbortSignal);
   });
 });

@@ -32,6 +32,12 @@ export interface StreamTranscriptOptions {
   out?: NodeJS.WritableStream;
   /** Forwarded to `findNewestTranscript` and `tailTranscript`. */
   pollMs?: number;
+  /**
+   * Invoked once the transcript path is known — synchronously before the
+   * tail loop starts. Lets callers print `→ watching <path>` without
+   * duplicating the discovery branch outside the helper.
+   */
+  onTranscriptResolved?: (path: string) => void;
 }
 
 export interface StreamTranscriptResult {
@@ -68,6 +74,7 @@ export async function streamTranscript(
     });
   }
   if (!transcriptPath) return { transcriptPath: null };
+  opts.onTranscriptResolved?.(transcriptPath);
 
   for await (const event of tailTranscript(transcriptPath, {
     signal: opts.signal,

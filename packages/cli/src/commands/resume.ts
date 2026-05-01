@@ -2,6 +2,7 @@ import { Command } from 'commander';
 import { execa } from 'execa';
 import { existsSync } from 'node:fs';
 import pc from 'picocolors';
+import { claudeProjectDirFor } from 'crew-shared';
 import { discoverProjectConfig } from '../lib/discover-project-config.js';
 import { findLatestSession } from '../lib/sessions/index.js';
 import { spawnClaudeFresh, spawnClaudeResume } from '../lib/claude/spawn.js';
@@ -17,6 +18,7 @@ import {
 } from '../lib/run/agent-options.js';
 import { prepareAgentEnvironment } from '../lib/run/agent-environment.js';
 import { worktreePathFor } from '../lib/run/paths.js';
+import { streamTranscript } from '../lib/run/stream-transcript.js';
 import { readWorktreeState } from '../lib/run/worktree-state.js';
 import {
   type DockerPorts,
@@ -119,7 +121,8 @@ export async function runResume(key: string, opts: ResumeOptions): Promise<void>
       `→ Resuming session for ${key}\n` +
         `  worktree: ${worktree}\n` +
         `  session:  ${session.sessionId}\n` +
-        `  log:      ${logFile}\n\n`,
+        `  log:      ${logFile}\n\n` +
+        `→ Watching ${session.transcriptPath} (new events only). Ctrl+C to abort.\n\n`,
     );
     const sub = spawnClaudeResume({
       sessionId: session.sessionId,
@@ -128,7 +131,7 @@ export async function runResume(key: string, opts: ResumeOptions): Promise<void>
       cwd: worktree,
       env: claudeEnv,
     });
-    await wireSignalsAndWait(sub);
+    await streamUntilExit(sub, { transcriptPath: session.transcriptPath, startAtEnd: true });
     return;
   }
 
@@ -142,10 +145,12 @@ export async function runResume(key: string, opts: ResumeOptions): Promise<void>
     brunoSmoke,
     discoveredSkillsBlock,
   });
+  const projectDir = claudeProjectDirFor(worktree);
   process.stderr.write(
     `→ Spawning fresh agent for ${key}\n` +
       `  worktree: ${worktree}\n` +
-      `  log:      ${logFile}\n\n`,
+      `  log:      ${logFile}\n\n` +
+      `→ Waiting for transcript at ${projectDir}…  Ctrl+C to abort.\n\n`,
   );
   const sub = spawnClaudeFresh({
     prompt,
@@ -153,26 +158,68 @@ export async function runResume(key: string, opts: ResumeOptions): Promise<void>
     cwd: worktree,
     env: claudeEnv,
   });
-  await wireSignalsAndWait(sub);
+  await streamUntilExit(sub, { projectDir });
 }
 
 interface KillableSubprocess extends PromiseLike<{ exitCode?: number | null }> {
   kill(signal?: NodeJS.Signals | number): boolean;
 }
 
-async function wireSignalsAndWait(sub: KillableSubprocess): Promise<void> {
+interface StreamUntilExitTarget {
+  transcriptPath?: string;
+  projectDir?: string;
+  startAtEnd?: boolean;
+}
+
+/**
+ * Wire SIGINT/SIGTERM to terminate the spawned claude, then stream its
+ * transcript to stdout until the subprocess exits. Mirrors the bridge in
+ * `runFixPr`: kill on signal, let the abort propagate from the subprocess
+ * lifecycle to the tail loop, and the tail's read-then-check-abort
+ * guarantees a final drain. Resume's process exit code is set to 130 if
+ * the user aborted, matching the bash convention.
+ */
+async function streamUntilExit(
+  sub: KillableSubprocess,
+  target: StreamUntilExitTarget,
+): Promise<void> {
+  let signaled = false;
   const onSignal = (): void => {
+    signaled = true;
     process.stderr.write(pc.yellow('\n→ Aborting…\n'));
     sub.kill('SIGTERM');
-    process.exit(130);
   };
   process.on('SIGINT', onSignal);
   process.on('SIGTERM', onSignal);
+
+  const abort = new AbortController();
+  void Promise.resolve(sub)
+    .catch(() => {})
+    .finally(() => abort.abort());
+
+  let exitCode: number | null | undefined;
   try {
-    await sub;
+    await streamTranscript({
+      transcriptPath: target.transcriptPath,
+      projectDir: target.projectDir,
+      signal: abort.signal,
+      startAtEnd: target.startAtEnd,
+    });
+    try {
+      const result = await sub;
+      exitCode = result.exitCode;
+    } catch (err) {
+      exitCode = (err as { exitCode?: number }).exitCode ?? 1;
+    }
   } finally {
     process.off('SIGINT', onSignal);
     process.off('SIGTERM', onSignal);
+  }
+
+  if (signaled) {
+    process.exitCode = 130;
+  } else if (typeof exitCode === 'number') {
+    process.exitCode = exitCode;
   }
 }
 
