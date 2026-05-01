@@ -2,7 +2,17 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { join, dirname } from 'node:path';
-import { parseTranscript, parseToolCall, aggregateUsage, formatToolCall } from './index.js';
+import {
+  parseTranscript,
+  parseToolCall,
+  aggregateUsage,
+  formatToolCall,
+  parseAssistantText,
+  formatAssistantText,
+  parsePrLink,
+  formatPrLink,
+} from './index.js';
+import type { TranscriptEvent } from './index.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const FIXTURE = join(__dirname, '../../test/fixtures/transcript-sample.jsonl');
@@ -68,5 +78,126 @@ describe('formatToolCall', () => {
     const call = parseToolCall(parseTranscript(readFileSync(FIXTURE, 'utf8'))[0]!);
     expect(formatToolCall(call!)).toContain('Read');
     expect(formatToolCall(call!)).toContain('/home/x/repo/foo.ts');
+  });
+});
+
+function assistantTextEvent(text: string, timestamp = '2026-05-01T21:50:10.123Z'): TranscriptEvent {
+  return {
+    type: 'assistant',
+    timestamp,
+    message: {
+      id: 'msg-text',
+      model: 'claude-opus-4-7',
+      role: 'assistant',
+      content: [{ type: 'text', text }],
+      usage: {
+        input_tokens: 0,
+        cache_creation_input_tokens: 0,
+        cache_read_input_tokens: 0,
+        output_tokens: 50,
+      },
+    },
+  };
+}
+
+describe('parseAssistantText', () => {
+  it('extracts the first text block from an assistant event', () => {
+    const result = parseAssistantText(assistantTextEvent('Hello world'));
+    expect(result).not.toBeNull();
+    expect(result?.text).toBe('Hello world');
+    expect(result?.timestamp).toBe('2026-05-01T21:50:10.123Z');
+  });
+
+  it('returns null when the assistant event has no text block', () => {
+    const event: TranscriptEvent = {
+      type: 'assistant',
+      timestamp: '2026-05-01T21:50:10.123Z',
+      message: {
+        id: 'msg',
+        model: 'claude',
+        role: 'assistant',
+        content: [{ type: 'tool_use', id: 't1', name: 'Read', input: { file_path: '/x' } }],
+        usage: {
+          input_tokens: 0,
+          cache_creation_input_tokens: 0,
+          cache_read_input_tokens: 0,
+          output_tokens: 1,
+        },
+      },
+    };
+    expect(parseAssistantText(event)).toBeNull();
+  });
+
+  it('returns null for non-assistant events', () => {
+    const events = parseTranscript(readFileSync(FIXTURE, 'utf8'));
+    expect(parseAssistantText(events[1]!)).toBeNull();
+    expect(parseAssistantText(events[2]!)).toBeNull();
+  });
+
+  it('returns null for empty/whitespace-only text', () => {
+    expect(parseAssistantText(assistantTextEvent(''))).toBeNull();
+    expect(parseAssistantText(assistantTextEvent('   \n  '))).toBeNull();
+  });
+});
+
+describe('formatAssistantText', () => {
+  it('emits HH:MM:SS · text with a single-line snippet', () => {
+    const line = formatAssistantText({
+      text: 'Hello',
+      timestamp: '2026-05-01T21:50:10.123Z',
+    });
+    expect(line).toBe('21:50:10  · Hello');
+  });
+
+  it('collapses multi-paragraph text to one line and truncates to ~120 chars', () => {
+    const text =
+      '## Summary\n\n**Code state.** The KAN-40 implementation was already on the branch from a previous run, ' +
+      'and the ticket has additional context about the stream tail behaviour that drives this change.';
+    const line = formatAssistantText({ text, timestamp: '2026-05-01T21:50:10.123Z' });
+    expect(line).not.toMatch(/\n/);
+    expect(line).toContain('⏎');
+    expect(line).toContain('## Summary');
+    expect(line.length).toBeLessThanOrEqual(140);
+    expect(line.endsWith('…')).toBe(true);
+  });
+
+  it('does not truncate or append ellipsis for short text', () => {
+    const line = formatAssistantText({
+      text: 'short message',
+      timestamp: '2026-05-01T21:50:10.123Z',
+    });
+    expect(line).toBe('21:50:10  · short message');
+  });
+});
+
+describe('parsePrLink', () => {
+  it('extracts pr metadata from a pr-link event', () => {
+    const event = JSON.parse(
+      '{"type":"pr-link","sessionId":"abc","prNumber":34,"prUrl":"https://github.com/Owner/Repo/pull/34","prRepository":"Owner/Repo","timestamp":"2026-05-01T21:50:10.851Z"}',
+    ) as TranscriptEvent;
+    const result = parsePrLink(event);
+    expect(result).not.toBeNull();
+    expect(result?.prNumber).toBe(34);
+    expect(result?.prUrl).toBe('https://github.com/Owner/Repo/pull/34');
+    expect(result?.timestamp).toBe('2026-05-01T21:50:10.851Z');
+  });
+
+  it('returns null for non-pr-link events', () => {
+    const events = parseTranscript(readFileSync(FIXTURE, 'utf8'));
+    expect(parsePrLink(events[0]!)).toBeNull();
+    expect(parsePrLink(events[1]!)).toBeNull();
+    expect(parsePrLink(events[2]!)).toBeNull();
+  });
+});
+
+describe('formatPrLink', () => {
+  it('renders HH:MM:SS  ↪ PR #N URL', () => {
+    expect(
+      formatPrLink({
+        prNumber: 34,
+        prUrl: 'https://github.com/Owner/Repo/pull/34',
+        timestamp: '2026-05-01T21:50:10.851Z',
+      }),
+    ).toBe('21:50:10  ↪ PR #34 https://github.com/Owner/Repo/pull/34');
   });
 });

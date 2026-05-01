@@ -1,4 +1,12 @@
-import type { TranscriptEvent, ToolCall, AggregateUsage, ToolUseContent } from './types.js';
+import type {
+  TranscriptEvent,
+  ToolCall,
+  AggregateUsage,
+  ToolUseContent,
+  TextContent,
+  AssistantText,
+  PrLink,
+} from './types.js';
 
 export function parseTranscript(raw: string): TranscriptEvent[] {
   const events: TranscriptEvent[] = [];
@@ -60,6 +68,43 @@ function formatTokens(n: number): string {
   if (n >= 10000) return `${Math.floor(n / 1000)}k tok`;
   if (n >= 1000) return `${(Math.floor((n * 10) / 1000) / 10).toString()}k tok`;
   return `${n} tok`;
+}
+
+const ASSISTANT_TEXT_MAX_LEN = 120;
+
+export function parseAssistantText(event: TranscriptEvent): AssistantText | null {
+  if (event.type !== 'assistant') return null;
+  const textBlock = event.message.content.find((c): c is TextContent => c.type === 'text');
+  if (!textBlock) return null;
+  if (!textBlock.text.trim()) return null;
+  return { text: textBlock.text, timestamp: event.timestamp };
+}
+
+export function formatAssistantText(text: AssistantText): string {
+  const time = text.timestamp.replace(/^.*T/, '').replace(/\..*Z$/, '');
+  const oneLine = text.text
+    .replace(/\r?\n+/g, ' ⏎ ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  const snippet =
+    oneLine.length > ASSISTANT_TEXT_MAX_LEN
+      ? `${oneLine.slice(0, ASSISTANT_TEXT_MAX_LEN)}…`
+      : oneLine;
+  return `${time}  · ${snippet}`;
+}
+
+export function parsePrLink(event: TranscriptEvent): PrLink | null {
+  if (event.type !== 'pr-link') return null;
+  return {
+    prNumber: event.prNumber,
+    prUrl: event.prUrl,
+    timestamp: event.timestamp,
+  };
+}
+
+export function formatPrLink(link: PrLink): string {
+  const time = link.timestamp.replace(/^.*T/, '').replace(/\..*Z$/, '');
+  return `${time}  ↪ PR #${link.prNumber} ${link.prUrl}`;
 }
 
 export function summarizeInput(toolName: string, input: Record<string, unknown>): string {

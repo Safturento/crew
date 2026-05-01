@@ -17,10 +17,16 @@ export interface ThinkingContent {
   signature: string;
 }
 
+export interface TextContent {
+  type: 'text';
+  text: string;
+}
+
 export type MessageContent =
   | ToolUseContent
   | ToolResultContent
   | ThinkingContent
+  | TextContent
   | { type: string };
 
 export interface UsageBlock {
@@ -68,13 +74,33 @@ export interface LastPromptEvent {
   sessionId: string;
 }
 
-export type TranscriptEvent = AssistantEvent | UserEvent | LastPromptEvent;
+export interface PrLinkEvent {
+  type: 'pr-link';
+  sessionId: string;
+  prNumber: number;
+  prUrl: string;
+  prRepository?: string;
+  timestamp: string;
+}
+
+export type TranscriptEvent = AssistantEvent | UserEvent | LastPromptEvent | PrLinkEvent;
 
 export interface ToolCall {
   name: string;
   input: Record<string, unknown>;
   timestamp: string;
   outputTokens: number;
+}
+
+export interface AssistantText {
+  text: string;
+  timestamp: string;
+}
+
+export interface PrLink {
+  prNumber: number;
+  prUrl: string;
+  timestamp: string;
 }
 
 export interface AggregateUsage {
