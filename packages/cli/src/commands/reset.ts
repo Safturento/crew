@@ -30,7 +30,7 @@ export async function runReset(key: string, opts: ResetOptions): Promise<void> {
 
   if (!opts.hard) return;
 
-  const result = await removeWorktreeAndBranch({ worktree, key });
+  const result = await removeWorktreeAndBranch({ worktree, key, repoPath: config.repo_path });
   writeWorktreeMessage(worktree, result.worktree, result.worktreeError);
   writeBranchMessage(key, result.branch, result.branchError);
 }

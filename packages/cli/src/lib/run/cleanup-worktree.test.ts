@@ -11,10 +11,12 @@ const execaMock = vi.mocked(execa);
 
 describe('removeWorktreeAndBranch', () => {
   let worktree: string;
+  let repoPath: string;
   const key = 'KAN-1';
 
   beforeEach(() => {
     worktree = join(tmpdir(), `crew-cleanup-wt-${process.pid}-${Date.now()}-${Math.random()}`);
+    repoPath = join(tmpdir(), `crew-cleanup-repo-${process.pid}-${Date.now()}-${Math.random()}`);
     execaMock.mockReset();
   });
 
@@ -39,7 +41,7 @@ describe('removeWorktreeAndBranch', () => {
       .mockReturnValueOnce(fakeOk() as ReturnType<typeof execa>) // prune
       .mockReturnValueOnce(fakeBranchListing('') as ReturnType<typeof execa>); // branch --list
 
-    await removeWorktreeAndBranch({ worktree, key });
+    await removeWorktreeAndBranch({ worktree, key, repoPath });
 
     const pruneCalls = execaMock.mock.calls.filter(
       ([cmd, args]) =>
@@ -55,7 +57,7 @@ describe('removeWorktreeAndBranch', () => {
       .mockReturnValueOnce(fakeOk() as ReturnType<typeof execa>) // prune
       .mockReturnValueOnce(fakeBranchListing('') as ReturnType<typeof execa>); // branch --list (empty)
 
-    const result = await removeWorktreeAndBranch({ worktree, key });
+    const result = await removeWorktreeAndBranch({ worktree, key, repoPath });
 
     expect(result.worktree).toBe('notFound');
     expect(result.branch).toBe('notFound');
@@ -83,7 +85,7 @@ describe('removeWorktreeAndBranch', () => {
       .mockReturnValueOnce(fakeBranchListing(`  ${key}\n`) as ReturnType<typeof execa>) // branch --list
       .mockReturnValueOnce(fakeOk() as ReturnType<typeof execa>); // branch -D
 
-    const result = await removeWorktreeAndBranch({ worktree, key });
+    const result = await removeWorktreeAndBranch({ worktree, key, repoPath });
 
     expect(result.worktree).toBe('removed');
     expect(result.branch).toBe('removed');
@@ -105,7 +107,7 @@ describe('removeWorktreeAndBranch', () => {
       .mockReturnValueOnce(fakeFail(stderrMessage, 128) as ReturnType<typeof execa>) // worktree remove fails
       .mockReturnValueOnce(fakeBranchListing('') as ReturnType<typeof execa>); // branch --list (empty)
 
-    const result = await removeWorktreeAndBranch({ worktree, key });
+    const result = await removeWorktreeAndBranch({ worktree, key, repoPath });
 
     expect(result.worktree).toBe('orphanCleaned');
     expect(result.worktreeError).toContain('not a working tree');
@@ -119,7 +121,7 @@ describe('removeWorktreeAndBranch', () => {
       .mockReturnValueOnce(fakeBranchListing(`  ${key}\n`) as ReturnType<typeof execa>) // branch --list
       .mockReturnValueOnce(fakeFail(branchStderr, 1) as ReturnType<typeof execa>); // branch -D fails
 
-    const result = await removeWorktreeAndBranch({ worktree, key });
+    const result = await removeWorktreeAndBranch({ worktree, key, repoPath });
 
     expect(result.branch).toBe('failed');
     expect(result.branchError).toContain('checked out at');
@@ -130,7 +132,7 @@ describe('removeWorktreeAndBranch', () => {
       .mockReturnValueOnce(fakeOk() as ReturnType<typeof execa>) // prune
       .mockReturnValueOnce(fakeBranchListing('') as ReturnType<typeof execa>); // branch --list (empty)
 
-    const result = await removeWorktreeAndBranch({ worktree, key });
+    const result = await removeWorktreeAndBranch({ worktree, key, repoPath });
 
     expect(result.branch).toBe('notFound');
     expect(execaMock).not.toHaveBeenCalledWith(
@@ -138,5 +140,35 @@ describe('removeWorktreeAndBranch', () => {
       expect.arrayContaining(['branch', '-D']),
       expect.any(Object),
     );
+  });
+
+  it('worktree gone, branch alive: identifies and deletes the branch (regression for wrong-cwd bug)', async () => {
+    execaMock
+      .mockReturnValueOnce(fakeOk() as ReturnType<typeof execa>) // prune
+      .mockReturnValueOnce(fakeBranchListing(`  ${key}\n`) as ReturnType<typeof execa>) // branch --list (alive)
+      .mockReturnValueOnce(fakeOk() as ReturnType<typeof execa>); // branch -D succeeds
+
+    const result = await removeWorktreeAndBranch({ worktree, key, repoPath });
+
+    expect(result.worktree).toBe('notFound');
+    expect(result.branch).toBe('removed');
+  });
+
+  it('every git invocation uses opts.repoPath as cwd', async () => {
+    mkdirSync(worktree, { recursive: true });
+    execaMock
+      .mockReturnValueOnce(fakeOk() as ReturnType<typeof execa>) // prune
+      .mockReturnValueOnce(fakeOk() as ReturnType<typeof execa>) // worktree remove
+      .mockReturnValueOnce(fakeBranchListing(`  ${key}\n`) as ReturnType<typeof execa>) // branch --list
+      .mockReturnValueOnce(fakeOk() as ReturnType<typeof execa>); // branch -D
+
+    await removeWorktreeAndBranch({ worktree, key, repoPath });
+
+    expect(execaMock.mock.calls.length).toBeGreaterThan(0);
+    for (const call of execaMock.mock.calls) {
+      const [cmd, , options] = call as unknown as [string, string[], { cwd?: string }];
+      expect(cmd).toBe('git');
+      expect(options).toMatchObject({ cwd: repoPath });
+    }
   });
 });

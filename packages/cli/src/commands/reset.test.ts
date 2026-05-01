@@ -67,6 +67,7 @@ describe('runReset', () => {
 
     expect(sessionsMock).toHaveBeenCalledTimes(1);
     expect(worktreeMock).toHaveBeenCalledTimes(1);
+    expect(worktreeMock).toHaveBeenCalledWith(expect.objectContaining({ repoPath: '/repo' }));
     const out = logs.join('');
     expect(out).toMatch(/2 session/);
     expect(out).toMatch(/worktree removed:/);

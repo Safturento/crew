@@ -1,10 +1,10 @@
 import { execa } from 'execa';
 import { existsSync, rmSync } from 'node:fs';
-import { dirname } from 'node:path';
 
 export interface RemoveWorktreeOptions {
   worktree: string;
   key: string;
+  repoPath: string;
 }
 
 export type WorktreeRemovalState =
@@ -25,14 +25,14 @@ export interface RemoveWorktreeResult {
 /**
  * Idempotent `git worktree remove` + `git branch -D` with orphan recovery.
  *
- * git is invoked from the *parent* of the worktree path. `dirname`
- * returns a directory that should always be inside the source repo
- * (worktree paths from `worktreePathFor` are siblings of the source).
+ * All git invocations run with `opts.repoPath` as cwd — branch queries need
+ * to resolve against the source repo, not whatever happens to surround the
+ * worktree path on disk.
  */
 export async function removeWorktreeAndBranch(
   opts: RemoveWorktreeOptions,
 ): Promise<RemoveWorktreeResult> {
-  const cwd = dirname(opts.worktree);
+  const cwd = opts.repoPath;
 
   // Cheap, safe upfront — clears stale admin entries that may confuse the remove call.
   await execa('git', ['worktree', 'prune'], { cwd, reject: false });
