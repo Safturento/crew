@@ -255,7 +255,9 @@ Insert `{{userMessageBlock}}` between the opening line and `## Skills`. When `-m
 
 ### 6.4 Modified: `fix-pr.md`
 
-Replace today's stdin-feedback content slot with `{{userMessageBlock}}`. PR-comment-sourced and `--file`-sourced feedback still flow through their existing slots — `-m` is a third source, not a replacement for those.
+`fix-pr.md` already has a single `{{feedback}}` slot fed by `loadFeedback`'s output regardless of source. The `-m` flag adds a fourth source to `loadFeedback` (`{kind: 'message', message: string}` returning `{feedback: message, source: 'inline message'}`). The template is **unchanged** — the new mode flows through the existing `{{feedback}}` plumbing alongside PR / file modes.
+
+Consequence: `userMessageBlock` partial is consumed only by `ticket.md` and `resume.md`; fix-pr's `-m` is wired at the `loadFeedback` layer rather than the prompt layer. The user-visible flag (`-m`) is shared across all four commands; the implementation seam differs because fix-pr already has a feedback-source abstraction worth reusing.
 
 ## 7. Acceptance criteria
 
