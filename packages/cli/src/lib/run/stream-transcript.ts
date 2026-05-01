@@ -1,4 +1,12 @@
-import { formatToolCall, parseToolCall, tailTranscript } from 'crew-shared';
+import {
+  formatAssistantText,
+  formatPrLink,
+  formatToolCall,
+  parseAssistantText,
+  parsePrLink,
+  parseToolCall,
+  tailTranscript,
+} from 'crew-shared';
 import { findNewestTranscript } from './discover-transcript.js';
 
 export interface StreamTranscriptOptions {
@@ -82,7 +90,19 @@ export async function streamTranscript(
     pollMs: opts.pollMs,
   })) {
     const call = parseToolCall(event);
-    if (call) out.write(`${formatToolCall(call)}\n`);
+    if (call) {
+      out.write(`${formatToolCall(call)}\n`);
+      continue;
+    }
+    const text = parseAssistantText(event);
+    if (text) {
+      out.write(`${formatAssistantText(text)}\n`);
+      continue;
+    }
+    const link = parsePrLink(event);
+    if (link) {
+      out.write(`${formatPrLink(link)}\n`);
+    }
   }
 
   return { transcriptPath };

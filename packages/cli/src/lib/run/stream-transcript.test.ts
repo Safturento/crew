@@ -58,6 +58,36 @@ function assistantToolUseEvent(toolName: string, input: Record<string, unknown>)
   })}\n`;
 }
 
+function assistantTextEvent(text: string, timestamp = '2025-01-01T12:35:10.123Z'): string {
+  return `${JSON.stringify({
+    type: 'assistant',
+    timestamp,
+    message: {
+      id: `msg-text-${timestamp}`,
+      model: 'claude',
+      role: 'assistant',
+      content: [{ type: 'text', text }],
+      usage: {
+        input_tokens: 0,
+        cache_creation_input_tokens: 0,
+        cache_read_input_tokens: 0,
+        output_tokens: 50,
+      },
+    },
+  })}\n`;
+}
+
+function prLinkEvent(prNumber: number, prUrl: string, timestamp: string): string {
+  return `${JSON.stringify({
+    type: 'pr-link',
+    sessionId: 'sess',
+    prNumber,
+    prUrl,
+    prRepository: 'Owner/Repo',
+    timestamp,
+  })}\n`;
+}
+
 describe('streamTranscript', () => {
   it('emits formatted tool-call lines for events appended after the call begins', async () => {
     const transcriptPath = join(dir, 'session.jsonl');
@@ -218,6 +248,90 @@ describe('streamTranscript', () => {
     await expect(streamTranscript({ signal: abort.signal } as never)).rejects.toThrow(
       /either transcriptPath or projectDir/,
     );
+  });
+
+  it('renders assistant.text events as a single-line truncated snippet', async () => {
+    const transcriptPath = join(dir, 'session.jsonl');
+    writeFileSync(transcriptPath, '');
+    const abort = new AbortController();
+    const { out, lines } = makeSink();
+
+    const promise = streamTranscript({
+      transcriptPath,
+      signal: abort.signal,
+      out,
+      pollMs: 20,
+    });
+
+    await delay(30);
+    appendFileSync(
+      transcriptPath,
+      assistantTextEvent(
+        '## Summary\n\n**Code state.** Multi-paragraph wrap-up that should collapse to a single line.',
+      ),
+    );
+    await delay(60);
+    abort.abort();
+    await promise;
+
+    const joined = lines.join('');
+    expect(joined).toMatch(/· /);
+    expect(joined).toMatch(/## Summary/);
+    expect(joined).toMatch(/⏎/);
+    // Each rendered chunk is a single-line write ending with \n.
+    for (const line of lines) {
+      expect(line.replace(/\n$/, '')).not.toMatch(/\n/);
+    }
+  });
+
+  it('skips empty assistant.text events', async () => {
+    const transcriptPath = join(dir, 'session.jsonl');
+    writeFileSync(transcriptPath, '');
+    const abort = new AbortController();
+    const { out, lines } = makeSink();
+
+    const promise = streamTranscript({
+      transcriptPath,
+      signal: abort.signal,
+      out,
+      pollMs: 20,
+    });
+
+    await delay(30);
+    appendFileSync(transcriptPath, assistantTextEvent(''));
+    appendFileSync(transcriptPath, assistantTextEvent('   \n  '));
+    await delay(60);
+    abort.abort();
+    await promise;
+
+    expect(lines).toEqual([]);
+  });
+
+  it('renders pr-link events with PR number and URL', async () => {
+    const transcriptPath = join(dir, 'session.jsonl');
+    writeFileSync(transcriptPath, '');
+    const abort = new AbortController();
+    const { out, lines } = makeSink();
+
+    const promise = streamTranscript({
+      transcriptPath,
+      signal: abort.signal,
+      out,
+      pollMs: 20,
+    });
+
+    await delay(30);
+    appendFileSync(
+      transcriptPath,
+      prLinkEvent(34, 'https://github.com/Owner/Repo/pull/34', '2025-01-01T12:35:11.000Z'),
+    );
+    await delay(60);
+    abort.abort();
+    await promise;
+
+    const joined = lines.join('');
+    expect(joined).toMatch(/↪ PR #34/);
+    expect(joined).toMatch(/https:\/\/github\.com\/Owner\/Repo\/pull\/34/);
   });
 
   it('honours startAtEnd by skipping events already in the file', async () => {

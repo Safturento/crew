@@ -8,6 +8,7 @@ Format: see the user-level `~/.claude/CLAUDE.md` "Followup detection" section.
 
 - [Active](#active)
   - [2026-05-01 — Structured final-report contract for agent dispatches (dashboard prerequisite)](#2026-05-01--structured-final-report-contract-for-agent-dispatches-dashboard-prerequisite)
+  - [2026-05-01 — Render assistant.text preamble alongside same-event tool calls](#2026-05-01--render-assistanttext-preamble-alongside-same-event-tool-calls)
   - [2026-05-01 — Crew owns DB replication end-to-end (off per-project shim scripts)](#2026-05-01--crew-owns-db-replication-end-to-end-off-per-project-shim-scripts)
   - [2026-05-01 — Generic `--git-common-dir` helper in `crew-shared` (third-caller trigger)](#2026-05-01--generic---git-common-dir-helper-in-crew-shared-third-caller-trigger)
   - [2026-05-01 — `crew run`/`resume`/`restart` against an already-shipped ticket has no safety net](#2026-05-01--crew-runresumerestart-against-an-already-shipped-ticket-has-no-safety-net)
@@ -66,6 +67,28 @@ Format: see the user-level `~/.claude/CLAUDE.md` "Followup detection" section.
 - JSON line vs. multi-line key-value vs. a dedicated tool-call shape (e.g. a fake "ReportFinalStatus" tool the agent invokes). The fake-tool variant pipes through the existing tool-call rendering for free.
 - Where does the warnings/follow-ups contract come from? `docs/followups.md` is project-scoped, lives in the repo — the agent can append directly. So the structured report's "follow-ups" field might just be "did you append to followups.md? path:lineno of new entries." Same question for warnings — could live in the PR description's known sections rather than the report.
 - Backwards-compat: how do older crew agents (running an older prompt that doesn't know to emit a report) interact with a parser that expects one? Probably "absent report" → "status: unknown, no data" rather than an error.
+
+### 2026-05-01 — Render assistant.text preamble alongside same-event tool calls
+
+**What:** `streamTranscript` parses each assistant event with `parseToolCall` first and short-circuits on a hit, so the common Claude Code shape `[TextContent("Let me read the file."), ToolUseContent(...)]` only renders the tool-call line — the preamble text is dropped. CREW-72 added `assistant.text` rendering for *standalone* text events (the wrap-up prose case), but mixed-content events still drop the text half.
+
+**Why noticed:** Surfaced during CREW-72 self-review by superpowers:code-reviewer. The reviewer's read: ticket framing ("agent's wrap-up phase") implies you'd probably want the preamble too, but it's strictly out-of-scope for the silent-tail bug. Source conversation: CREW-72 implementation, 2026-05-01.
+
+**Anchors:**
+
+- `packages/cli/src/lib/run/stream-transcript.ts:92-105` — the if/continue chain that short-circuits on the tool-call branch.
+- `packages/shared/src/transcripts/parser.ts` — `parseToolCall` and `parseAssistantText` both look at `message.content` but the streaming loop only takes one verdict per event.
+
+**What's been considered:**
+
+- Two text snippets per event (preamble line + tool-call line) is the natural rendering. Same `· ` prefix the standalone-text branch already uses; same time prefix for both lines so they read as a pair.
+- Alternative: collapse the preamble into the tool-call line (`21:49:56  · Let me read the file.  [Read][42 tok] /tmp/foo.ts`). Denser but mixes two visual prefixes per line; rejected on legibility.
+
+**Shape of work:** small. Drop the early `continue` after the tool-call branch and let the same event also hit the text branch — `parseAssistantText` already returns a non-null result for these events. One added test in `stream-transcript.test.ts`.
+
+**Open questions:**
+
+- Should the preamble line precede or follow the tool-call line? Transcript order is text-then-tool_use, so preamble first is faithful, but for terminal-tail readability it might be nicer to keep tool calls visually aligned (tool-call line first, text-prefix below).
 
 ### 2026-05-01 — Crew owns DB replication end-to-end (off per-project shim scripts)
 
