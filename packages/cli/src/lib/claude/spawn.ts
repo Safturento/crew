@@ -14,6 +14,12 @@ export interface SpawnClaudeResumeOptions {
    * "No conversation found" when fix-pr is invoked from outside the worktree.
    */
   cwd: string;
+  /**
+   * Extra env vars to merge on top of `process.env`. PATH is always
+   * augmented with `~/.local/bin` after this merge, so callers cannot
+   * override the helper's PATH handling.
+   */
+  env?: NodeJS.ProcessEnv;
 }
 
 /**
@@ -31,7 +37,11 @@ export function spawnClaudeResume(opts: SpawnClaudeResumeOptions): ResultPromise
     ['--dangerously-skip-permissions', '--resume', opts.sessionId, '-p', opts.prompt],
     {
       cwd: opts.cwd,
-      env: { ...process.env, PATH: ensureLocalBinOnPath(process.env.PATH) },
+      env: {
+        ...process.env,
+        ...(opts.env ?? {}),
+        PATH: ensureLocalBinOnPath(process.env.PATH),
+      },
     },
   );
   const log = createWriteStream(opts.logFile);

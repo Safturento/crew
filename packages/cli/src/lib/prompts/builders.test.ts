@@ -366,6 +366,93 @@ describe('buildFixPrPrompt', () => {
     expect(prompt).toMatchSnapshot();
   });
 
+  it('renders identically when playwright is undefined as when omitted', () => {
+    const a = buildFixPrPrompt({
+      key: 'KAN-23',
+      feedback: 'fix the typo',
+      feedbackSource: 'stdin',
+    });
+    const b = buildFixPrPrompt({
+      key: 'KAN-23',
+      feedback: 'fix the typo',
+      feedbackSource: 'stdin',
+      playwright: undefined,
+    });
+    expect(a).toBe(b);
+  });
+
+  it('omits the playwright block when playwright is not provided', () => {
+    const prompt = buildFixPrPrompt({
+      key: 'KAN-23',
+      feedback: 'fix it',
+      feedbackSource: 'stdin',
+    });
+    expect(prompt).not.toContain('Playwright e2e');
+  });
+
+  it('renders the playwright block (smoke-only / no authored)', () => {
+    const prompt = buildFixPrPrompt({
+      key: 'KAN-23',
+      feedback: 'fix it',
+      feedbackSource: 'stdin',
+      playwright: { appUrl: 'https://localhost:8443' },
+    });
+    expect(prompt).toContain('Playwright e2e');
+    expect(prompt).toContain('https://localhost:8443');
+    expect(prompt).toContain('Do not run `npm run docker:up`');
+    expect(prompt).toContain('Do not run `npx playwright install`');
+    expect(prompt).not.toContain('authors Playwright tests under');
+    expect(prompt).toMatchSnapshot();
+  });
+
+  it('renders the authored clause when playwright.authored is set', () => {
+    const prompt = buildFixPrPrompt({
+      key: 'KAN-23',
+      feedback: 'fix it',
+      feedbackSource: 'stdin',
+      playwright: {
+        appUrl: 'https://localhost:8443',
+        authored: { testsDir: 'tests/e2e', testCommand: 'npm run test:e2e' },
+      },
+    });
+    expect(prompt).toContain('authors Playwright tests under **tests/e2e/**');
+    expect(prompt).toContain('npm run test:e2e');
+    expect(prompt).toMatchSnapshot();
+  });
+
+  it('renders the playwright block before the Apply the fixes section', () => {
+    const prompt = buildFixPrPrompt({
+      key: 'KAN-23',
+      feedback: 'fix the typo',
+      feedbackSource: 'stdin',
+      playwright: { appUrl: 'https://localhost:8443' },
+    });
+    const pwIdx = prompt.indexOf('Playwright e2e');
+    const fixesIdx = prompt.indexOf('Apply the fixes');
+    expect(pwIdx).toBeGreaterThan(-1);
+    expect(fixesIdx).toBeGreaterThan(pwIdx);
+  });
+
+  it('renders both playwright and bruno-smoke when both are provided', () => {
+    const prompt = buildFixPrPrompt({
+      key: 'KAN-23',
+      feedback: 'fix the typo',
+      feedbackSource: 'stdin',
+      playwright: { appUrl: 'https://localhost:8443' },
+      brunoSmoke: {
+        baseUrl: 'https://localhost:8443',
+        envName: 'recipes-kan-23',
+        collectionDir: 'bruno',
+        hasSmokeUser: false,
+      },
+    });
+    expect(prompt).toContain('Playwright e2e');
+    expect(prompt).toContain('API smoke verification (Bruno)');
+    const pwIdx = prompt.indexOf('Playwright e2e');
+    const brunoIdx = prompt.indexOf('API smoke verification (Bruno)');
+    expect(brunoIdx).toBeGreaterThan(pwIdx);
+  });
+
   it('renders the bruno-smoke block before the Apply the fixes section', () => {
     const prompt = buildFixPrPrompt({
       key: 'KAN-23',
