@@ -7,6 +7,7 @@ Format: see the user-level `~/.claude/CLAUDE.md` "Followup detection" section.
 ## Contents
 
 - [Active](#active)
+  - [2026-05-01 — Structured final-report contract for agent dispatches (dashboard prerequisite)](#2026-05-01--structured-final-report-contract-for-agent-dispatches-dashboard-prerequisite)
   - [2026-05-01 — Crew owns DB replication end-to-end (off per-project shim scripts)](#2026-05-01--crew-owns-db-replication-end-to-end-off-per-project-shim-scripts)
   - [2026-05-01 — Generic `--git-common-dir` helper in `crew-shared` (third-caller trigger)](#2026-05-01--generic---git-common-dir-helper-in-crew-shared-third-caller-trigger)
   - [2026-05-01 — `crew run`/`resume`/`restart` against an already-shipped ticket has no safety net](#2026-05-01--crew-runresumerestart-against-an-already-shipped-ticket-has-no-safety-net)
@@ -33,6 +34,38 @@ Format: see the user-level `~/.claude/CLAUDE.md` "Followup detection" section.
 - [Abandoned](#abandoned)
 
 ## Active
+
+### 2026-05-01 — Structured final-report contract for agent dispatches (dashboard prerequisite)
+
+**What:** Define a machine-readable "final report" that every `crew run` / `resume` / `restart` / `fix-pr` dispatch emits as its last action — at minimum: status (success/failure), PR URL (or "no PR opened" with reason), notable warnings, follow-up flags. Crew parses it and renders a real footer; the dashboard later reads it for run outcomes, success-rate metrics, attention queues. Today there's no contract — wrap-up shape is whatever the agent decides, which is exactly the gap CREW-72 (render `assistant.text`) and the tight-scope companion ticket (mandate a final `echo '→ PR <url>'` in the prompt) are working around.
+
+**Why noticed:** during diagnosis of the "tail goes silent at end of run" complaint (KAN-40 session `18dc92c6-0c16-4c85-b864-c734abea5ecd`, 2026-05-01). Two scopes surfaced: tight (just make the prompt mandate a one-line echo so the tail catches a final tool call) and broad (define a structured contract for downstream consumers). User picked the tight scope for now and explicitly parked the broader one as "definitely important for reporting in the dashboard later." This entry exists so we don't lose that conversation.
+
+**Anchors:**
+
+- `packages/cli/src/lib/prompts/templates/ticket.md` (Step 10 "Push and PR"), `templates/resume.md`, `templates/fix-pr.md` — the three places the contract has to be authored on the producer side.
+- `packages/cli/src/lib/run/stream-transcript.ts` — the consumer-side surface that today only renders tool calls; the parser for the final-report event would land here or in `crew-shared`.
+- `packages/dashboard/` — the eventual downstream consumer; today has no notion of run outcome beyond exit code.
+- CREW-72 — companion ticket for rendering `assistant.text` inline (covers the prose-during-wrap-up half of the same UX gap).
+- The yet-to-be-filed tight-scope ticket — mandates a `Bash echo '→ PR <url>'` final action; this followup is the proper structural successor.
+
+**What's been considered:**
+
+- Two shapes for the report payload. **Inline echo:** agent ends with `echo '→ PR <url>'` (or `echo '✗ aborted: <reason>'`). Cheap, parseable by simple regex, no schema. Doesn't extend cleanly past PR URL. **Structured JSON line:** agent ends with `echo 'CREW_REPORT={"status":"success","pr":{"number":34,"url":"..."},"warnings":[...],"followups":[...]}'`. Crew parses, validates, renders. Extensible, but the prompt has to spec the schema and the agent has to assemble the JSON.
+- Tradeoff: inline echo is what we're shipping in the tight-scope ticket. Structured JSON is what the dashboard needs. Bridging them later means: (a) widen the prompt contract, (b) add a parser in `stream-transcript.ts` (or a new `parseFinalReport` in `crew-shared`), (c) add a consumer in the dashboard once the daemon API surfaces the parsed payload.
+- A third option — have crew assemble the report itself from existing signals (exit code, `pr-link` event, transcript scan) rather than asking the agent to emit one — is attractive because it doesn't depend on the agent doing the right thing. But it can't capture agent-judgment fields (warnings, follow-up flags) that the dashboard will likely want. Probably a hybrid: crew assembles the objective fields, agent contributes the judgment fields via the structured echo.
+
+**Shape of work:** design pass first, before any code.
+
+1. Spec doc (`docs/superpowers/specs/<date>-final-report-contract.md`) covering: payload schema, who's authoritative for which field (crew vs. agent), how partial / failed runs report, how a non-PR-opening dispatch (epic-guard exit, ticket-already-shipped exit) reports.
+2. Plan doc decomposing into tickets — likely 3-ish: prompt contract (touches the three templates), parser + footer renderer (touches `stream-transcript.ts` + `crew-shared`), daemon API surface (`/runs/:id/report` or similar).
+3. Don't start until the dashboard work needs it — premature without a concrete consumer. Signal: dashboard ticket asks for "show last run outcome per ticket" or "filter by status" and there's no field to back it.
+
+**Open questions:**
+
+- JSON line vs. multi-line key-value vs. a dedicated tool-call shape (e.g. a fake "ReportFinalStatus" tool the agent invokes). The fake-tool variant pipes through the existing tool-call rendering for free.
+- Where does the warnings/follow-ups contract come from? `docs/followups.md` is project-scoped, lives in the repo — the agent can append directly. So the structured report's "follow-ups" field might just be "did you append to followups.md? path:lineno of new entries." Same question for warnings — could live in the PR description's known sections rather than the report.
+- Backwards-compat: how do older crew agents (running an older prompt that doesn't know to emit a report) interact with a parser that expects one? Probably "absent report" → "status: unknown, no data" rather than an error.
 
 ### 2026-05-01 — Crew owns DB replication end-to-end (off per-project shim scripts)
 
