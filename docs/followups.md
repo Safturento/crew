@@ -7,6 +7,7 @@ Format: see the user-level `~/.claude/CLAUDE.md` "Followup detection" section.
 ## Contents
 
 - [Active](#active)
+  - [2026-05-01 — Crew owns DB replication end-to-end (off per-project shim scripts)](#2026-05-01--crew-owns-db-replication-end-to-end-off-per-project-shim-scripts)
   - [2026-05-01 — Generic `--git-common-dir` helper in `crew-shared` (third-caller trigger)](#2026-05-01--generic---git-common-dir-helper-in-crew-shared-third-caller-trigger)
   - [2026-05-01 — `crew run`/`resume`/`restart` against an already-shipped ticket has no safety net](#2026-05-01--crew-runresumerestart-against-an-already-shipped-ticket-has-no-safety-net)
   - [2026-05-01 — Playwright integration self-review cleanups](#2026-05-01--playwright-integration-self-review-cleanups)
@@ -32,6 +33,41 @@ Format: see the user-level `~/.claude/CLAUDE.md` "Followup detection" section.
 - [Abandoned](#abandoned)
 
 ## Active
+
+### 2026-05-01 — Crew owns DB replication end-to-end (off per-project shim scripts)
+
+**What:** Crew's per-worktree DB replication today is split awkwardly between crew and the project. The bringup script (`buildDockerBringupScript` in `start-bringup.ts`) calls a project-side shim — `<repo>/scripts/db-clone-from-main.sh` — which in turn calls `crew db-clone <branch>`. Meanwhile the project's own backend container runs migrations + seed via its `entrypoint.sh`, on the same database, with no coordination. The result is a brittle three-way handshake between (a) the project's docker-compose entrypoint, (b) crew's bringup orchestration, and (c) crew's `runDbClone` primitive. Generalize this so crew owns the whole DB lifecycle for a worktree dispatch and the project just declares the contract via config (the existing `[db_clone]` block, possibly extended).
+
+**Why noticed:** filed CREW-68 to fix the immediate race between db_clone and backend seed (concurrent TRUNCATE and INSERT on the same tables corrupts the worktree DB and exits the backend container). The fix lands as a quick-win — wait-for-healthcheck + better log on clone failure — but the underlying brittleness is structural, not local. The user's framing: *"this feels like a symptom of being in this middle state where crew is still relying on some scripts that are a part of recipe's infrastructure."* Source conversation: 2026-05-01 session debugging KAN-40's failed dispatch under CREW-61's playwright manual gate.
+
+**Anchors:**
+
+- `packages/cli/src/lib/docker/start-bringup.ts` — `buildDockerBringupScript`, the orchestration that races today.
+- `packages/cli/src/lib/db-clone/clone.ts` — `runDbClone`, the primitive crew already owns.
+- `packages/cli/src/commands/db-clone.ts` — the CLI surface the project's shim invokes.
+- `<recipes>/scripts/db-clone-from-main.sh` — the per-project shim. One-liner that re-enters `crew db-clone`. Indicative of the awkward split.
+- `<recipes>/packages/backend/entrypoint.sh` — runs migrations + seed unconditionally on every container start; no awareness of whether crew is about to clone over the result.
+- CREW-68 — the immediate-fix ticket; this followup is the proper architectural successor.
+
+**What's been considered:**
+
+- Two near-term fixes were on the table for CREW-68. **Path A (chosen):** add a backend healthcheck, have crew's bringup `--wait` for it before running clone. Project still owns seed; crew sequences. **Path B:** crew sets `CREW_SKIP_SEED=1` env on the backend container when db_clone is configured; the project's entrypoint honors it. Avoids the wasted seed-then-truncate-then-restore work but couples the project's entrypoint to crew's contract.
+- Both are bandages. Path A leaves the project running its own seed/migrate that crew then overwrites. Path B introduces a secret handshake the project has to opt into. Neither lets a future project just declare `[db_clone]` and have crew do the right thing.
+- The deeper move — what this followup is really about — is to invert ownership: crew brings the DB up (postgres-only first), runs migrations, runs the clone (or seed, depending on dispatch type), THEN brings up the rest of the stack. The project's `entrypoint.sh` becomes purely "run the dev server" with no DB lifecycle. The contract surface is the `[db_clone]` config block plus (likely) one or two new fields naming the migration/seed commands.
+
+**Shape of work:** design pass first — this is a contract change touching every project that uses `[db_clone]` (today: just Recipes, but the whole point of generalizing is to enable more). Likely sequence:
+
+1. Spec doc (`docs/superpowers/specs/<date>-crew-owns-db-lifecycle.md`) covering: what crew brings up vs. what the project brings up, where migrations run, where seed lives (canonical-only? optional? gated?), how a project without a canonical worktree handles fresh setup.
+2. Plan doc decomposing into tickets — likely a small Epic. At minimum: contract definition + crew-side orchestration + Recipes-side migration off `entrypoint.sh`.
+3. Watch for second adopters before generalizing — if Recipes is still the only consumer, the abstraction will be premature. The signal to do this is when a second project hits the same brittleness.
+
+**Open questions:**
+
+- Does crew's bringup need to run migrations directly (via psql or by spawning a one-shot migration container), or does it stay in the project's hands? Migrations are toolchain-specific (kysely vs. typeorm vs. alembic vs. flyway) — pushing them into crew means a pluggable layer.
+- Where does seed live? Three plausible answers: (a) on canonical only, never on dispatched worktrees (clone is the source of truth); (b) opt-in via config (`[db_clone] seed_after_clone = true`); (c) seed on canonical, optional incremental seed on worktrees. (a) is simplest; (b) handles \"I want a deterministic synthetic dataset, not a copy of dev.\"
+- What about projects with no canonical worktree (brand-new setups, CI environments)? Probably falls back to project-side seed. The contract has to handle this gracefully.
+- Should crew take over `docker compose up` orchestration entirely (split into postgres-up → migrate → clone → rest-up phases), or stay declarative via healthchecks and `--wait`? The first is more invasive but eliminates the race class entirely; the second keeps docker-compose's behavior intact and just sequences correctly.
+- Is the project config currently expressive enough? The `[db_clone]` block names tables but doesn't name the migration command or the dev-server boot command — those would need to be added.
 
 ### 2026-05-01 — Generic `--git-common-dir` helper in `crew-shared` (third-caller trigger)
 
