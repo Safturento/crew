@@ -10,7 +10,7 @@ import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import { Command } from 'commander';
-import { execa, type ResultPromise } from 'execa';
+import { execa } from 'execa';
 import pc from 'picocolors';
 import {
   claudeProjectDirFor,
@@ -18,14 +18,12 @@ import {
   formatToolCall,
   parseToolCall,
   tailTranscript,
-  type ProjectConfig,
 } from '../lib/index.js';
 import { writeDockerEnv } from '../lib/docker/index.js';
 import { buildTicketPrompt } from '../lib/prompts/index.js';
 import { discoverSkills, renderDiscoveredSkillsBlock } from '../lib/prompts/skills.js';
 import {
   authoredEnabled,
-  installPlaywrightBrowsers,
   playwrightEnabled,
   resolveAppUrl,
   smokeEnabled,
@@ -36,10 +34,10 @@ import {
   writeEnvFile as writeBrunoEnvFile,
 } from '../lib/bruno-smoke/index.js';
 import {
-  agentNeedsAppRunning,
   dockerLogPathFor,
   findNewestTranscript,
   hasBinary,
+  prepareAgentEnvironment,
   preflightTools,
   requireGhToken,
   requireWorktreeAvailable,
@@ -154,16 +152,12 @@ async function runTicket(key: string, opts: RunOptions): Promise<never> {
     console.log(pc.dim(`    url:     ${env.appUrl}`));
   }
 
-  let resolvedAppUrl: string | undefined;
-  if (playwrightEnabled(config) && config.playwright) {
+  if (playwrightEnabled(config) && config.playwright && smokeEnabled(config)) {
     const resolved = resolveAppUrl(config.playwright.app_url, dockerPorts);
-    resolvedAppUrl = resolved.raw;
-    if (smokeEnabled(config)) {
-      const writeResult = writeMcpFile(worktree, { appUrl: resolved.raw });
-      console.log(pc.dim(`→ wrote ${join(worktree, '.mcp.json')} (CREW_APP_URL=${resolved.raw})`));
-      if (writeResult.existed) {
-        console.warn(pc.yellow('  ! .mcp.json already existed in worktree — overwritten'));
-      }
+    const writeResult = writeMcpFile(worktree, { appUrl: resolved.raw });
+    console.log(pc.dim(`→ wrote ${join(worktree, '.mcp.json')} (CREW_APP_URL=${resolved.raw})`));
+    if (writeResult.existed) {
+      console.warn(pc.yellow('  ! .mcp.json already existed in worktree — overwritten'));
     }
   }
 
@@ -188,16 +182,15 @@ async function runTicket(key: string, opts: RunOptions): Promise<never> {
     }
   }
 
-  const dockerProcess = startDockerBringup(config, worktree, key, skipDocker, childEnv);
-
-  if (playwrightEnabled(config)) {
-    console.log(pc.dim('→ ensuring Chromium is installed for Playwright…'));
-    const result = await installPlaywrightBrowsers({ worktree, key, env: childEnv });
-    if (result.rc !== 0) {
-      fail(`playwright install failed (rc=${result.rc}). Log: ${result.logPath}`);
-    }
-    console.log(pc.dim(`    log: ${result.logPath}`));
-  }
+  const { dockerProcess, resolvedAppUrl } = await prepareAgentEnvironment({
+    config,
+    worktree,
+    key,
+    env: childEnv,
+    dockerPorts,
+    mode: 'fresh',
+    skipDocker,
+  }).catch((err: unknown): never => fail(err instanceof Error ? err.message : String(err)));
 
   const ghToken = readFileSync(ghTokenDest, 'utf8').trim();
   const discoveredSkillsBlock = renderDiscoveredSkillsBlock(
@@ -356,81 +349,6 @@ export function resolveExitCode(result: ExecResult, signaled: boolean): number {
   // matching run-ticket.sh's `exit 130` after a Ctrl+C trap.
   if (signaled || result.signal === 'SIGINT' || result.signal === 'SIGTERM') return 130;
   return typeof result.exitCode === 'number' ? result.exitCode : 1;
-}
-
-function startDockerBringup(
-  config: ProjectConfig,
-  worktree: string,
-  key: string,
-  skip: boolean,
-  env: NodeJS.ProcessEnv,
-): ResultPromise | null {
-  if (skip || !config.docker) {
-    console.log(pc.dim('→ docker bringup skipped'));
-    return null;
-  }
-
-  const dockerLogPath = dockerLogPathFor(key);
-  const dockerStream = createWriteStream(dockerLogPath, { flags: 'w' });
-  const stopAfterBringup = !agentNeedsAppRunning(config);
-  const script = buildDockerBringupScript(config.repo_path, { stopAfterBringup });
-  // See note above the claudeProcess spawn: execa v9 rejects WriteStream
-  // objects whose fd is still null. Pipe after spawn instead.
-  const proc = execa('bash', ['-c', script], {
-    cwd: worktree,
-    stdin: 'ignore',
-    stdout: 'pipe',
-    stderr: 'pipe',
-    detached: true,
-    reject: false,
-    env,
-  });
-  proc.stdout?.pipe(dockerStream);
-  proc.stderr?.pipe(dockerStream);
-  proc.unref();
-  proc.finally(() => dockerStream.end()).catch(() => {});
-
-  console.log(pc.dim(`→ docker bringup running in background (log: ${dockerLogPath})`));
-  return proc;
-}
-
-export interface BringupScriptOptions {
-  stopAfterBringup: boolean;
-}
-
-export function buildDockerBringupScript(repoPath: string, opts: BringupScriptOptions): string {
-  // Bring the worktree's compose stack up, optionally clone data from the
-  // canonical worktree's stack. When stopAfterBringup is true (default for
-  // ticket runs without playwright), stop the containers afterward so
-  // they're warm but idle. When false (playwright enabled), leave the
-  // stack running so the agent can hit the live URL via Playwright MCP.
-  const dbCloneScript = join(repoPath, 'scripts', 'db-clone-from-main.sh');
-  const stopBlock = opts.stopAfterBringup
-    ? `  echo "[$(date +%T)] docker compose stop (leaving stack warm-but-stopped)"
-  docker compose stop 2>&1
-  echo "[$(date +%T)] ✓ stack stopped"`
-    : `  echo "[$(date +%T)] ✓ leaving stack running for visual testing"`;
-  return `set -u
-echo "[$(date +%T)] docker compose up --build --detach"
-if docker compose up --build --detach 2>&1; then
-  echo "[$(date +%T)] ✓ docker stack up"
-  if [ -x ${shellQuote(dbCloneScript)} ]; then
-    echo "[$(date +%T)] db-clone-from-main"
-    if ${shellQuote(dbCloneScript)} 2>&1; then
-      echo "[$(date +%T)] ✓ data cloned from main"
-    else
-      echo "[$(date +%T)] ! data clone skipped (main's stack isn't running)"
-    fi
-  fi
-${stopBlock}
-else
-  echo "[$(date +%T)] ! docker stack failed to come up"
-fi
-`;
-}
-
-function shellQuote(s: string): string {
-  return `'${s.replace(/'/g, `'\\''`)}'`;
 }
 
 function fail(message: string): never {

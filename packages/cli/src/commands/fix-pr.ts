@@ -26,11 +26,11 @@ import type { BrunoSmokePromptOptions } from '../lib/prompts/index.js';
 import { discoverSkills, renderDiscoveredSkillsBlock } from '../lib/prompts/skills.js';
 import {
   authoredEnabled,
-  installPlaywrightBrowsers,
   playwrightEnabled,
   resolveAppUrl,
   type DockerPorts,
 } from '../lib/playwright/index.js';
+import { prepareAgentEnvironment } from '../lib/run/index.js';
 
 export type FeedbackMode = { kind: 'pr' } | { kind: 'file'; path: string } | { kind: 'stdin' };
 
@@ -261,21 +261,16 @@ async function runFixPr(key: string, flags: FixPrFlags): Promise<void> {
     : undefined;
 
   let resolvedAppUrl: string | undefined;
-  if (playwrightConfig) {
-    resolvedAppUrl = resolveAppUrl(playwrightConfig.app_url, dockerPorts).raw;
-
-    process.stderr.write('→ ensuring Chromium is installed for Playwright…\n');
-    const installResult = await installPlaywrightBrowsers({
+  if (projectConfig) {
+    const env = await prepareAgentEnvironment({
+      config: projectConfig,
       worktree,
       key,
       env: process.env,
+      dockerPorts,
+      mode: 'resume',
     });
-    if (installResult.rc !== 0) {
-      throw new Error(
-        `playwright install failed (rc=${installResult.rc}). Log: ${installResult.logPath}`,
-      );
-    }
-    process.stderr.write(`    log: ${installResult.logPath}\n`);
+    resolvedAppUrl = env.resolvedAppUrl;
   }
 
   const prompt = buildFixPrPrompt({
