@@ -7,6 +7,7 @@ const EXCLUDE_LINE = '.mcp.json';
 
 export interface WriteMcpFileResult {
   existed: boolean;
+  chromiumPath: string | null;
 }
 
 export async function writeMcpFile(
@@ -16,11 +17,31 @@ export async function writeMcpFile(
   const mcpPath = join(worktreePath, '.mcp.json');
   const existed = existsSync(mcpPath);
 
-  const config = buildMcpConfig({ appUrl: opts.appUrl });
+  const chromiumPath = await resolveChromiumExecutablePath(worktreePath);
+  const config = buildMcpConfig({
+    appUrl: opts.appUrl,
+    chromiumPath: chromiumPath ?? undefined,
+  });
   writeFileSync(mcpPath, JSON.stringify(config, null, 2) + '\n');
 
   await appendExcludeLine(worktreePath);
-  return { existed };
+  return { existed, chromiumPath };
+}
+
+// Ask the worktree's @playwright/test which chromium binary it would launch.
+// Returns null when the project doesn't have @playwright/test installed yet
+// or when the resolved path doesn't exist on disk — caller falls back to the
+// default MCP behavior (system chrome channel).
+async function resolveChromiumExecutablePath(worktreePath: string): Promise<string | null> {
+  const result = await execa(
+    'node',
+    ['-e', 'console.log(require("@playwright/test").chromium.executablePath())'],
+    { cwd: worktreePath, reject: false },
+  );
+  if (result.exitCode !== 0) return null;
+  const path = result.stdout.trim();
+  if (!path || !existsSync(path)) return null;
+  return path;
 }
 
 async function appendExcludeLine(worktreePath: string): Promise<void> {
