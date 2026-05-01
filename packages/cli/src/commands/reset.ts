@@ -3,7 +3,11 @@ import pc from 'picocolors';
 import { discoverProjectConfig } from '../lib/discover-project-config.js';
 import { worktreePathFor } from '../lib/run/paths.js';
 import { deleteSessionsForWorktree } from '../lib/sessions/cleanup.js';
-import { removeWorktreeAndBranch } from '../lib/run/cleanup-worktree.js';
+import {
+  removeWorktreeAndBranch,
+  type BranchRemovalState,
+  type WorktreeRemovalState,
+} from '../lib/run/cleanup-worktree.js';
 
 interface ResetOptions {
   hard?: boolean;
@@ -26,20 +30,53 @@ export async function runReset(key: string, opts: ResetOptions): Promise<void> {
 
   if (!opts.hard) return;
 
-  const { worktreeRemoved, branchRemoved } = await removeWorktreeAndBranch({
-    worktree,
-    key,
-  });
-  process.stderr.write(
-    pc.dim(
-      worktreeRemoved
-        ? `→ worktree removed: ${worktree}\n`
-        : `→ worktree already removed: ${worktree}\n`,
-    ),
-  );
-  process.stderr.write(
-    pc.dim(branchRemoved ? `→ branch removed: ${key}\n` : `→ branch already removed: ${key}\n`),
-  );
+  const result = await removeWorktreeAndBranch({ worktree, key });
+  writeWorktreeMessage(worktree, result.worktree, result.worktreeError);
+  writeBranchMessage(key, result.branch, result.branchError);
+}
+
+function writeWorktreeMessage(
+  worktree: string,
+  state: WorktreeRemovalState,
+  error: string | undefined,
+): void {
+  switch (state) {
+    case 'removed':
+      process.stderr.write(pc.dim(`→ worktree removed: ${worktree}\n`));
+      return;
+    case 'notFound':
+      process.stderr.write(pc.dim(`→ worktree not present: ${worktree}\n`));
+      return;
+    case 'orphanCleaned':
+      process.stderr.write(
+        pc.yellow(`→ worktree's git admin was missing; removed orphaned directory: ${worktree}\n`),
+      );
+      if (error) process.stderr.write(pc.dim(`   (git error: ${error})\n`));
+      return;
+    case 'failed':
+      process.stderr.write(pc.red(`→ worktree removal failed: ${worktree}\n`));
+      if (error) process.stderr.write(pc.dim(`   (error: ${error})\n`));
+      return;
+  }
+}
+
+function writeBranchMessage(
+  key: string,
+  state: BranchRemovalState,
+  error: string | undefined,
+): void {
+  switch (state) {
+    case 'removed':
+      process.stderr.write(pc.dim(`→ branch removed: ${key}\n`));
+      return;
+    case 'notFound':
+      process.stderr.write(pc.dim(`→ branch not present: ${key}\n`));
+      return;
+    case 'failed':
+      process.stderr.write(pc.red(`→ branch removal failed: ${key}\n`));
+      if (error) process.stderr.write(pc.dim(`   (error: ${error})\n`));
+      return;
+  }
 }
 
 export const resetCommand = new Command('reset')

@@ -1,5 +1,5 @@
 import { execa } from 'execa';
-import { existsSync } from 'node:fs';
+import { existsSync, rmSync } from 'node:fs';
 import { dirname } from 'node:path';
 
 export interface RemoveWorktreeOptions {
@@ -7,18 +7,23 @@ export interface RemoveWorktreeOptions {
   key: string;
 }
 
+export type WorktreeRemovalState =
+  | 'removed' // git successfully removed it
+  | 'notFound' // path didn't exist at start
+  | 'orphanCleaned' // git refused, dir existed, fell back to rm -rf (succeeded)
+  | 'failed'; // git refused AND fallback failed (or unrelated error)
+
+export type BranchRemovalState = 'removed' | 'notFound' | 'failed';
+
 export interface RemoveWorktreeResult {
-  /** True if `git worktree remove` ran and succeeded. False if path didn't exist or removal returned non-zero. */
-  worktreeRemoved: boolean;
-  /** True if `git branch -D` ran and succeeded. False if branch didn't exist. */
-  branchRemoved: boolean;
+  worktree: WorktreeRemovalState;
+  worktreeError?: string;
+  branch: BranchRemovalState;
+  branchError?: string;
 }
 
 /**
- * Idempotent `git worktree remove` + `git branch -D`. Treats either
- * artifact's absence as "already removed" rather than an error — so
- * `crew reset --hard` can run after a partial manual cleanup without
- * blowing up.
+ * Idempotent `git worktree remove` + `git branch -D` with orphan recovery.
  *
  * git is invoked from the *parent* of the worktree path. `dirname`
  * returns a directory that should always be inside the source repo
@@ -29,21 +34,48 @@ export async function removeWorktreeAndBranch(
 ): Promise<RemoveWorktreeResult> {
   const cwd = dirname(opts.worktree);
 
-  let worktreeRemoved = false;
+  // Cheap, safe upfront — clears stale admin entries that may confuse the remove call.
+  await execa('git', ['worktree', 'prune'], { cwd, reject: false });
+
+  let worktree: WorktreeRemovalState = 'notFound';
+  let worktreeError: string | undefined;
   if (existsSync(opts.worktree)) {
     const result = await execa('git', ['worktree', 'remove', opts.worktree, '--force'], {
       cwd,
       reject: false,
     });
-    worktreeRemoved = result.exitCode === 0;
+    if (result.exitCode === 0) {
+      worktree = 'removed';
+    } else if (existsSync(opts.worktree)) {
+      // Orphan: git refused, dir still there. --hard intent is "make it gone."
+      try {
+        rmSync(opts.worktree, { recursive: true, force: true });
+        worktree = 'orphanCleaned';
+        worktreeError = result.stderr.trim() || `git worktree remove rc=${result.exitCode}`;
+      } catch (err) {
+        worktree = 'failed';
+        worktreeError = err instanceof Error ? err.message : String(err);
+      }
+    } else {
+      // Race: dir disappeared between existsSync and remove. Treat as removed.
+      worktree = 'removed';
+    }
   }
 
-  // Try branch deletion regardless of worktree state — branch can outlive the worktree dir.
-  const branchResult = await execa('git', ['branch', '-D', opts.key], {
-    cwd,
-    reject: false,
-  });
-  const branchRemoved = branchResult.exitCode === 0;
+  const listResult = await execa('git', ['branch', '--list', opts.key], { cwd, reject: false });
+  const branchExists = listResult.stdout.trim().length > 0;
 
-  return { worktreeRemoved, branchRemoved };
+  let branch: BranchRemovalState = 'notFound';
+  let branchError: string | undefined;
+  if (branchExists) {
+    const result = await execa('git', ['branch', '-D', opts.key], { cwd, reject: false });
+    if (result.exitCode === 0) {
+      branch = 'removed';
+    } else {
+      branch = 'failed';
+      branchError = result.stderr.trim() || `git branch -D rc=${result.exitCode}`;
+    }
+  }
+
+  return { worktree, worktreeError, branch, branchError };
 }
