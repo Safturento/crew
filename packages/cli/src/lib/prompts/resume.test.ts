@@ -93,4 +93,18 @@ describe('buildResumePrompt', () => {
     });
     expect(prompt).toContain('reaching-for-backend-patterns');
   });
+
+  it('mandates the final-report echo contract (CREW-73)', () => {
+    const prompt = buildResumePrompt({
+      key: 'KAN-23',
+      branch: 'KAN-23',
+      commitsAhead: 0,
+      uncommittedCount: 0,
+      defaultBranch: 'main',
+    });
+    expect(prompt).toContain('echo "→ PR $(gh pr view');
+    expect(prompt).toContain('--head KAN-23');
+    expect(prompt).toContain('Final report');
+    expect(prompt).toContain('→ no-pr:');
+  });
 });
