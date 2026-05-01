@@ -8,6 +8,9 @@ export interface BuildResumePromptOptions {
   branch: string;
   commitsAhead: number;
   uncommittedCount: number;
+  /** Project default branch (e.g. 'main', 'master') used in the
+   * "commits ahead of origin/<branch>" line. */
+  defaultBranch: string;
   userMessage?: string;
   playwright?: PlaywrightFixPrOptions;
   brunoSmoke?: BrunoSmokePromptOptions;
@@ -20,6 +23,7 @@ export function buildResumePrompt(opts: BuildResumePromptOptions): string {
     branch: opts.branch,
     commitsAhead: String(opts.commitsAhead),
     uncommittedCount: String(opts.uncommittedCount),
+    defaultBranch: opts.defaultBranch,
     userMessageBlock: renderUserMessageBlock(opts.userMessage),
     playwrightBlock: buildPlaywrightBlock(opts.playwright),
     brunoSmokeBlock: buildBrunoSmokeBlock(opts.brunoSmoke),

@@ -1,4 +1,5 @@
 export * from './agent-environment.js';
+export * from './agent-options.js';
 export * from './app-lifecycle.js';
 export * from './cleanup-worktree.js';
 export * from './discover-transcript.js';

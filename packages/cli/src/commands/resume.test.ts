@@ -16,9 +16,8 @@ vi.mock('../lib/discover-project-config.js', () => ({
   discoverProjectConfig: vi.fn(),
 }));
 
-vi.mock('../lib/sessions/discovery.js', () => ({
+vi.mock('../lib/sessions/index.js', () => ({
   findLatestSession: vi.fn(),
-  encodeWorktreeProjectPath: vi.fn(),
 }));
 
 vi.mock('../lib/run/agent-environment.js', () => ({
@@ -30,6 +29,7 @@ vi.mock('../lib/run/worktree-state.js', () => ({
     branch: 'KAN-1',
     commitsAhead: 0,
     uncommittedCount: 0,
+    defaultBranch: 'main',
   })),
 }));
 
@@ -53,7 +53,7 @@ vi.mock('../lib/prompts/skills.js', () => ({
 
 import { existsSync } from 'node:fs';
 import { discoverProjectConfig } from '../lib/discover-project-config.js';
-import { findLatestSession } from '../lib/sessions/discovery.js';
+import { findLatestSession } from '../lib/sessions/index.js';
 import { spawnClaudeFresh, spawnClaudeResume } from '../lib/claude/spawn.js';
 import { runResume } from './resume.js';
 
@@ -165,5 +165,20 @@ describe('runResume', () => {
     const call = spawnFreshMock.mock.calls[0]?.[0];
     expect(call?.prompt).toContain('Additional context from the user');
     expect(call?.prompt).toContain('focus on lib/x');
+  });
+
+  it('threads --skip-docker through to prepareAgentEnvironment', async () => {
+    findSessionMock.mockReturnValue(null);
+    const { prepareAgentEnvironment } = await import('../lib/run/agent-environment.js');
+    const prepMock = vi.mocked(prepareAgentEnvironment);
+
+    await runResume('KAN-1', { skipDocker: true });
+
+    expect(prepMock).toHaveBeenCalledWith(expect.objectContaining({ skipDocker: true }));
+  });
+
+  it('rejects whitespace-only -m so users notice typos', async () => {
+    await expect(runResume('KAN-1', { message: '   \n  ' })).rejects.toThrow('process.exit(1)');
+    expect(logs.join('')).toMatch(/empty message provided to -m/);
   });
 });

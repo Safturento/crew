@@ -4,7 +4,7 @@ You're being resumed on {{key}} after an interruption.
 ## Worktree state
 
 - Branch: {{branch}}
-- {{commitsAhead}} commits ahead of origin/main
+- {{commitsAhead}} commits ahead of origin/{{defaultBranch}}
 - {{uncommittedCount}} uncommitted files (preserved as-is from before the interruption)
 
 {{playwrightBlock}}{{brunoSmokeBlock}}

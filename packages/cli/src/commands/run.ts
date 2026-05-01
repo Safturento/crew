@@ -65,6 +65,9 @@ export const runCommand = new Command('run')
   });
 
 export async function runRun(key: string, opts: RunOptions): Promise<never> {
+  if (opts.message !== undefined && opts.message.trim().length === 0) {
+    fail('empty message provided to -m');
+  }
   const config = await discoverProjectConfig(process.cwd());
   if (!config) {
     fail(

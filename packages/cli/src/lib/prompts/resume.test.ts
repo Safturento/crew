@@ -8,11 +8,23 @@ describe('buildResumePrompt', () => {
       branch: 'KAN-23',
       commitsAhead: 2,
       uncommittedCount: 1,
+      defaultBranch: 'main',
     });
     expect(prompt).toContain("You're being resumed on KAN-23");
     expect(prompt).toContain('Branch: KAN-23');
-    expect(prompt).toContain('2 commits ahead');
+    expect(prompt).toContain('2 commits ahead of origin/main');
     expect(prompt).toContain('1 uncommitted files');
+  });
+
+  it('uses the provided defaultBranch in the rendered "commits ahead" line', () => {
+    const prompt = buildResumePrompt({
+      key: 'KAN-23',
+      branch: 'KAN-23',
+      commitsAhead: 2,
+      uncommittedCount: 0,
+      defaultBranch: 'develop',
+    });
+    expect(prompt).toContain('2 commits ahead of origin/develop');
   });
 
   it('omits the user-message block when userMessage is undefined', () => {
@@ -21,6 +33,7 @@ describe('buildResumePrompt', () => {
       branch: 'KAN-23',
       commitsAhead: 0,
       uncommittedCount: 0,
+      defaultBranch: 'main',
     });
     expect(prompt).not.toContain('Additional context from the user');
   });
@@ -31,6 +44,7 @@ describe('buildResumePrompt', () => {
       branch: 'KAN-23',
       commitsAhead: 0,
       uncommittedCount: 0,
+      defaultBranch: 'main',
       userMessage: 'stop trying X, do Y instead',
     });
     expect(prompt).toContain('Additional context from the user');
@@ -43,6 +57,7 @@ describe('buildResumePrompt', () => {
       branch: 'KAN-23',
       commitsAhead: 0,
       uncommittedCount: 0,
+      defaultBranch: 'main',
       playwright: { appUrl: 'https://localhost:18443' },
     });
     expect(prompt).toContain('https://localhost:18443');
@@ -55,6 +70,7 @@ describe('buildResumePrompt', () => {
       branch: 'KAN-23',
       commitsAhead: 0,
       uncommittedCount: 0,
+      defaultBranch: 'main',
       brunoSmoke: {
         baseUrl: 'http://localhost:7773',
         envName: 'recipes-kan-23',
@@ -71,6 +87,7 @@ describe('buildResumePrompt', () => {
       branch: 'KAN-23',
       commitsAhead: 0,
       uncommittedCount: 0,
+      defaultBranch: 'main',
       discoveredSkillsBlock:
         '\n\nUser-level skills:\n- **`reaching-for-backend-patterns`** — Use when implementing Node backend code.',
     });

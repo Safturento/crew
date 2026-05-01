@@ -3,7 +3,7 @@ import { execa } from 'execa';
 import { existsSync } from 'node:fs';
 import pc from 'picocolors';
 import { discoverProjectConfig } from '../lib/discover-project-config.js';
-import { findLatestSession } from '../lib/sessions/discovery.js';
+import { findLatestSession } from '../lib/sessions/index.js';
 import { spawnClaudeFresh, spawnClaudeResume } from '../lib/claude/spawn.js';
 import { buildResumePrompt } from '../lib/prompts/resume.js';
 import { buildTicketPrompt } from '../lib/prompts/ticket.js';
@@ -26,6 +26,10 @@ interface ResumeOptions {
 }
 
 export async function runResume(key: string, opts: ResumeOptions): Promise<void> {
+  if (opts.message !== undefined && opts.message.trim().length === 0) {
+    process.stderr.write(pc.red(`error: empty message provided to -m\n`));
+    process.exit(1);
+  }
   const config = await discoverProjectConfig(process.cwd());
   if (!config) {
     process.stderr.write(pc.red(`error: no crew project config found from ${process.cwd()}\n`));
@@ -43,7 +47,7 @@ export async function runResume(key: string, opts: ResumeOptions): Promise<void>
   process.stderr.write(pc.dim(`→ git fetch origin (refresh refs)\n`));
   await execa('git', ['fetch', 'origin'], { cwd: worktree, reject: false });
 
-  const state = await readWorktreeState(worktree);
+  const state = await readWorktreeState(worktree, { defaultBranch: config.default_branch });
   process.stderr.write(
     pc.dim(
       `→ worktree state: ${state.branch} (${state.commitsAhead} commits ahead, ${state.uncommittedCount} uncommitted)\n`,
@@ -78,6 +82,7 @@ export async function runResume(key: string, opts: ResumeOptions): Promise<void>
       branch: state.branch,
       commitsAhead: state.commitsAhead,
       uncommittedCount: state.uncommittedCount,
+      defaultBranch: state.defaultBranch,
       userMessage: opts.message,
       playwright: playwrightFixPrOptsFor(config, env.resolvedAppUrl),
       brunoSmoke,
@@ -124,11 +129,14 @@ export async function runResume(key: string, opts: ResumeOptions): Promise<void>
   await wireSignalsAndWait(sub);
 }
 
-async function wireSignalsAndWait(sub: PromiseLike<{ exitCode?: number | null }>): Promise<void> {
+interface KillableSubprocess extends PromiseLike<{ exitCode?: number | null }> {
+  kill(signal?: NodeJS.Signals | number): boolean;
+}
+
+async function wireSignalsAndWait(sub: KillableSubprocess): Promise<void> {
   const onSignal = (): void => {
     process.stderr.write(pc.yellow('\n→ Aborting…\n'));
-    // The spawned process inherits SIGTERM via the parent; in tests this is
-    // mocked so we just resolve the promise.
+    sub.kill('SIGTERM');
     process.exit(130);
   };
   process.on('SIGINT', onSignal);
