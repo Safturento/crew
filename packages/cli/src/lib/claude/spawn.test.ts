@@ -89,6 +89,32 @@ describe('spawnClaudeResume', () => {
     }
   });
 
+  it('merges caller-supplied env vars on top of process.env (preserving PATH augmentation)', () => {
+    mockedExeca.mockReturnValueOnce({
+      stdout: { pipe: vi.fn() },
+      stderr: { pipe: vi.fn() },
+    } as never);
+
+    spawnClaudeResume({
+      sessionId: 's',
+      prompt: 'p',
+      logFile: '/tmp/x.log',
+      cwd: '/tmp/wt',
+      env: { CREW_APP_URL: 'https://localhost:8443' },
+    });
+
+    expect(mockedExeca).toHaveBeenCalledWith(
+      'claude',
+      expect.any(Array),
+      expect.objectContaining({
+        env: expect.objectContaining({
+          CREW_APP_URL: 'https://localhost:8443',
+          PATH: expect.any(String),
+        }),
+      }),
+    );
+  });
+
   it('leaves PATH alone if ~/.local/bin is already present', () => {
     const original = process.env.PATH;
     const home = process.env.HOME ?? '/home/x';

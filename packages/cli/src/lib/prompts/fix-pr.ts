@@ -1,11 +1,17 @@
 import { render } from './render.js';
 import type { BrunoSmokePromptOptions } from './ticket.js';
 
+export interface PlaywrightFixPrOptions {
+  appUrl: string;
+  authored?: { testsDir: string; testCommand: string };
+}
+
 export interface BuildFixPrPromptOptions {
   key: string;
   feedback: string;
   feedbackSource: string;
   conflictFiles?: string[];
+  playwright?: PlaywrightFixPrOptions;
   brunoSmoke?: BrunoSmokePromptOptions;
   discoveredSkillsBlock?: string;
 }
@@ -28,8 +34,20 @@ export function buildFixPrPrompt(opts: BuildFixPrPromptOptions): string {
     feedbackSource: opts.feedbackSource,
     conflictPreamble,
     pushDirective,
+    playwrightBlock: buildPlaywrightFixPrBlock(opts.playwright),
     brunoSmokeBlock: buildBrunoSmokeBlock(opts.brunoSmoke),
     discoveredSkillsBlock: opts.discoveredSkillsBlock ?? '',
+  });
+}
+
+function buildPlaywrightFixPrBlock(pw: PlaywrightFixPrOptions | undefined): string {
+  if (!pw) return '';
+  const authoredClause = pw.authored
+    ? `\n- This project authors Playwright tests under **${pw.authored.testsDir}/** runnable via \`${pw.authored.testCommand}\`. If your fix touches a user-facing flow with regression value, ensure the relevant tests pass before pushing.`
+    : '';
+  return render('fix-pr-playwright', {
+    appUrl: pw.appUrl,
+    authoredClause,
   });
 }
 
