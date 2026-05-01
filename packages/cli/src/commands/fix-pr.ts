@@ -2,8 +2,6 @@ import { Command } from 'commander';
 import { execa } from 'execa';
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { stdin as processStdin } from 'node:process';
-import type { Readable } from 'node:stream';
 import type { ProjectConfig } from 'crew-shared';
 import {
   assemblePrFeedback,
@@ -32,16 +30,15 @@ import {
 } from '../lib/playwright/index.js';
 import { prepareAgentEnvironment } from '../lib/run/index.js';
 
-export type FeedbackMode = { kind: 'pr' } | { kind: 'file'; path: string } | { kind: 'stdin' };
+export type FeedbackMode =
+  | { kind: 'pr' }
+  | { kind: 'file'; path: string }
+  | { kind: 'message'; message: string };
 
 export interface LoadFeedbackOptions {
   key: string;
   mode: FeedbackMode;
   branch?: string;
-}
-
-export interface LoadFeedbackDeps {
-  stdin?: Readable;
 }
 
 export interface LoadedFeedback {
@@ -57,10 +54,7 @@ export function parseGithubPrUrl(url: string): { owner: string; repo: string } |
   return { owner, repo };
 }
 
-export async function loadFeedback(
-  opts: LoadFeedbackOptions,
-  deps: LoadFeedbackDeps = {},
-): Promise<LoadedFeedback> {
+export async function loadFeedback(opts: LoadFeedbackOptions): Promise<LoadedFeedback> {
   if (opts.mode.kind === 'file') {
     const path = opts.mode.path;
     if (!existsSync(path)) {
@@ -69,20 +63,19 @@ export async function loadFeedback(
     return { feedback: readFileSync(path, 'utf8'), source: `file: ${path}` };
   }
 
-  if (opts.mode.kind === 'stdin') {
-    const stream = deps.stdin ?? processStdin;
-    const text = await readStreamToString(stream);
-    if (text.length === 0) {
-      throw new Error('empty feedback on stdin');
+  if (opts.mode.kind === 'message') {
+    const msg = opts.mode.message;
+    if (msg.trim().length === 0) {
+      throw new Error('empty message provided to -m');
     }
-    return { feedback: text, source: 'stdin' };
+    return { feedback: msg, source: 'inline message' };
   }
 
   const branch = opts.branch ?? opts.key;
   const pr = await getPrForBranch(branch, 'open');
   if (!pr) {
     throw new Error(
-      `no open PR found on branch ${branch}. Open one first or use --from-file / --from-stdin.`,
+      `no open PR found on branch ${branch}. Open one first or use --from-file or -m '<msg>'.`,
     );
   }
   const slug = parseGithubPrUrl(pr.url);
@@ -98,31 +91,23 @@ export async function loadFeedback(
   return { feedback: md, source: `auto-pulled from GitHub PR for ${opts.key}` };
 }
 
-async function readStreamToString(stream: Readable): Promise<string> {
-  const chunks: Buffer[] = [];
-  for await (const chunk of stream) {
-    chunks.push(typeof chunk === 'string' ? Buffer.from(chunk) : (chunk as Buffer));
-  }
-  return Buffer.concat(chunks).toString('utf8');
-}
-
 interface FixPrFlags {
   fromPr?: boolean;
   fromFile?: string;
-  fromStdin?: boolean;
+  message?: string;
 }
 
 function selectMode(flags: FixPrFlags): FeedbackMode {
   const explicit = [
     flags.fromPr ? 'pr' : null,
     flags.fromFile !== undefined ? 'file' : null,
-    flags.fromStdin ? 'stdin' : null,
+    flags.message !== undefined ? 'message' : null,
   ].filter(Boolean);
   if (explicit.length > 1) {
-    throw new Error('--from-pr, --from-file, and --from-stdin are mutually exclusive');
+    throw new Error('--from-pr, --from-file, and -m are mutually exclusive');
   }
   if (flags.fromFile !== undefined) return { kind: 'file', path: flags.fromFile };
-  if (flags.fromStdin) return { kind: 'stdin' };
+  if (flags.message !== undefined) return { kind: 'message', message: flags.message };
   return { kind: 'pr' };
 }
 
@@ -131,7 +116,10 @@ export const fixPrCommand = new Command('fix-pr')
   .argument('<key>', 'Jira ticket key (e.g. KAN-23)', (v) => v.toUpperCase())
   .option('--from-pr', 'Auto-pull feedback from the open PR for the branch (default)')
   .option('--from-file <path>', 'Read feedback from a file at <path>')
-  .option('--from-stdin', 'Read feedback piped on stdin')
+  .option(
+    '-m, --message <message>',
+    "inline feedback message (e.g. -m 'the test on line 42 is failing')",
+  )
   .action(async (key: string, flags: FixPrFlags) => {
     await runFixPr(key, flags);
   });

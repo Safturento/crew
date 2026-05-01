@@ -2,8 +2,12 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { Readable } from 'node:stream';
-import { brunoSmokeOptionsFor, loadFeedback, parseGithubPrUrl } from './fix-pr.js';
+import {
+  brunoSmokeOptionsFor,
+  loadFeedback,
+  parseGithubPrUrl,
+  type FeedbackMode,
+} from './fix-pr.js';
 import type { ProjectConfig } from 'crew-shared';
 
 describe('parseGithubPrUrl', () => {
@@ -45,38 +49,56 @@ describe('loadFeedback (file mode)', () => {
     const path = join(tmp, 'fb.md');
     writeFileSync(path, 'real feedback');
 
-    const result = await loadFeedback(
-      { key: 'KAN-1', mode: { kind: 'file', path } },
-      { stdin: Readable.from(['ignored']) },
-    );
+    const result = await loadFeedback({ key: 'KAN-1', mode: { kind: 'file', path } });
 
     expect(result).toEqual({ feedback: 'real feedback', source: `file: ${path}` });
   });
 
   it('throws on a missing file', async () => {
     await expect(
-      loadFeedback(
-        { key: 'KAN-1', mode: { kind: 'file', path: join(tmp, 'nope.md') } },
-        { stdin: Readable.from(['']) },
-      ),
+      loadFeedback({ key: 'KAN-1', mode: { kind: 'file', path: join(tmp, 'nope.md') } }),
     ).rejects.toThrow(/not found/);
   });
 });
 
-describe('loadFeedback (stdin mode)', () => {
-  it('reads piped stdin and reports the source', async () => {
-    const result = await loadFeedback(
-      { key: 'KAN-1', mode: { kind: 'stdin' } },
-      { stdin: Readable.from(['piped\nfeedback\n']) },
-    );
-
-    expect(result).toEqual({ feedback: 'piped\nfeedback\n', source: 'stdin' });
+describe('loadFeedback — message mode', () => {
+  it('returns the message as feedback verbatim', async () => {
+    const result = await loadFeedback({
+      key: 'KAN-1',
+      mode: { kind: 'message', message: 'hello world' },
+    });
+    expect(result.feedback).toBe('hello world');
+    expect(result.source).toBe('inline message');
   });
 
-  it('throws on empty stdin', async () => {
+  it('preserves multi-line content', async () => {
+    const msg = 'line one\nline two\n  - bullet';
+    const result = await loadFeedback({
+      key: 'KAN-1',
+      mode: { kind: 'message', message: msg },
+    });
+    expect(result.feedback).toBe(msg);
+  });
+
+  it('throws on empty message', async () => {
     await expect(
-      loadFeedback({ key: 'KAN-1', mode: { kind: 'stdin' } }, { stdin: Readable.from(['']) }),
-    ).rejects.toThrow(/empty/);
+      loadFeedback({ key: 'KAN-1', mode: { kind: 'message', message: '' } }),
+    ).rejects.toThrow(/empty/i);
+  });
+
+  it('throws on whitespace-only message', async () => {
+    await expect(
+      loadFeedback({ key: 'KAN-1', mode: { kind: 'message', message: '   \n  ' } }),
+    ).rejects.toThrow(/empty/i);
+  });
+});
+
+describe('loadFeedback — stdin mode removed', () => {
+  it("does not have a 'stdin' kind in FeedbackMode", () => {
+    type Kind = FeedbackMode['kind'];
+    const valid: Kind[] = ['pr', 'file', 'message'];
+    expect(valid).toContain('message');
+    expect(valid as string[]).not.toContain('stdin');
   });
 });
 
