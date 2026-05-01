@@ -1,5 +1,6 @@
 You are running unattended on a fresh git worktree to implement Jira ticket {{key}} end-to-end. The repo's `CLAUDE.md` is your authoritative project guide; read it before doing anything else.
 
+{{userMessageBlock}}
 ## Skills
 
 You are required to use these Superpowers skills as appropriate. Invoke each via the `Skill` tool when its trigger condition fires:

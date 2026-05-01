@@ -1,5 +1,6 @@
 import { startCommandHint } from '../playwright/index.js';
 import { render } from './render.js';
+import { renderUserMessageBlock } from './user-message.js';
 
 export interface PlaywrightPromptOptions {
   appUrl: string;
@@ -25,6 +26,7 @@ export interface BuildTicketPromptOptions {
   playwright?: PlaywrightPromptOptions;
   brunoSmoke?: BrunoSmokePromptOptions;
   discoveredSkillsBlock?: string;
+  userMessage?: string;
 }
 
 export function buildTicketPrompt(opts: BuildTicketPromptOptions): string {
@@ -35,6 +37,7 @@ export function buildTicketPrompt(opts: BuildTicketPromptOptions): string {
     playwrightBlock: buildPlaywrightBlock(opts.playwright),
     brunoSmokeBlock: buildBrunoSmokeBlock(opts.brunoSmoke),
     discoveredSkillsBlock: opts.discoveredSkillsBlock ?? '',
+    userMessageBlock: renderUserMessageBlock(opts.userMessage),
   });
 }
 

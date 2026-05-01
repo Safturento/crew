@@ -19,6 +19,13 @@ describe('runCommand', () => {
     expect(skip).toBeDefined();
   });
 
+  it('exposes a -m / --message option', () => {
+    const opts = runCommand.options;
+    const message = opts.find((o) => o.long === '--message');
+    expect(message).toBeDefined();
+    expect(message?.short).toBe('-m');
+  });
+
   it('has a non-empty description', () => {
     expect(runCommand.description().length).toBeGreaterThan(0);
   });
@@ -44,4 +51,3 @@ describe('resolveExitCode', () => {
     expect(resolveExitCode({}, false)).toBe(1);
   });
 });
-

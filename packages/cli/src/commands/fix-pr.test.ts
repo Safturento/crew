@@ -2,9 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { Readable } from 'node:stream';
-import { brunoSmokeOptionsFor, loadFeedback, parseGithubPrUrl } from './fix-pr.js';
-import type { ProjectConfig } from 'crew-shared';
+import { loadFeedback, parseGithubPrUrl, type FeedbackMode } from './fix-pr.js';
 
 describe('parseGithubPrUrl', () => {
   it('splits owner and repo from a github pr url', () => {
@@ -45,121 +43,55 @@ describe('loadFeedback (file mode)', () => {
     const path = join(tmp, 'fb.md');
     writeFileSync(path, 'real feedback');
 
-    const result = await loadFeedback(
-      { key: 'KAN-1', mode: { kind: 'file', path } },
-      { stdin: Readable.from(['ignored']) },
-    );
+    const result = await loadFeedback({ key: 'KAN-1', mode: { kind: 'file', path } });
 
     expect(result).toEqual({ feedback: 'real feedback', source: `file: ${path}` });
   });
 
   it('throws on a missing file', async () => {
     await expect(
-      loadFeedback(
-        { key: 'KAN-1', mode: { kind: 'file', path: join(tmp, 'nope.md') } },
-        { stdin: Readable.from(['']) },
-      ),
+      loadFeedback({ key: 'KAN-1', mode: { kind: 'file', path: join(tmp, 'nope.md') } }),
     ).rejects.toThrow(/not found/);
   });
 });
 
-describe('loadFeedback (stdin mode)', () => {
-  it('reads piped stdin and reports the source', async () => {
-    const result = await loadFeedback(
-      { key: 'KAN-1', mode: { kind: 'stdin' } },
-      { stdin: Readable.from(['piped\nfeedback\n']) },
-    );
-
-    expect(result).toEqual({ feedback: 'piped\nfeedback\n', source: 'stdin' });
+describe('loadFeedback — message mode', () => {
+  it('returns the message as feedback verbatim', async () => {
+    const result = await loadFeedback({
+      key: 'KAN-1',
+      mode: { kind: 'message', message: 'hello world' },
+    });
+    expect(result.feedback).toBe('hello world');
+    expect(result.source).toBe('inline message');
   });
 
-  it('throws on empty stdin', async () => {
+  it('preserves multi-line content', async () => {
+    const msg = 'line one\nline two\n  - bullet';
+    const result = await loadFeedback({
+      key: 'KAN-1',
+      mode: { kind: 'message', message: msg },
+    });
+    expect(result.feedback).toBe(msg);
+  });
+
+  it('throws on empty message', async () => {
     await expect(
-      loadFeedback({ key: 'KAN-1', mode: { kind: 'stdin' } }, { stdin: Readable.from(['']) }),
-    ).rejects.toThrow(/empty/);
+      loadFeedback({ key: 'KAN-1', mode: { kind: 'message', message: '' } }),
+    ).rejects.toThrow(/empty/i);
+  });
+
+  it('throws on whitespace-only message', async () => {
+    await expect(
+      loadFeedback({ key: 'KAN-1', mode: { kind: 'message', message: '   \n  ' } }),
+    ).rejects.toThrow(/empty/i);
   });
 });
 
-function baseConfig(): ProjectConfig {
-  return {
-    name: 'test',
-    repo_path: '/repo',
-    default_branch: 'main',
-    jira: { project_key: 'X', site: 'https://x.atlassian.net' },
-    github: { repo: 'a/b' },
-    db_clone: {
-      postgres_service: 'postgres',
-      postgres_user: 'postgres',
-      postgres_database: 'postgres',
-      required_tables: [],
-      exclude_tables: ['kysely_migration*'],
-    },
-  } as ProjectConfig;
-}
-
-describe('brunoSmokeOptionsFor', () => {
-  it('returns undefined when bruno_smoke is not enabled', () => {
-    expect(brunoSmokeOptionsFor(baseConfig(), '/wt/main')).toBeUndefined();
-  });
-
-  it('throws when bruno_smoke uses a port placeholder without [docker]', () => {
-    const cfg = baseConfig();
-    cfg.bruno_smoke = {
-      enabled: true,
-      base_url: 'https://localhost:{httpsPort}',
-      collection_dir: 'bruno',
-    };
-    expect(() => brunoSmokeOptionsFor(cfg, '/wt/main')).toThrow(/port|docker/i);
-  });
-
-  it('returns the resolved options when bruno_smoke is enabled', () => {
-    const cfg = baseConfig();
-    cfg.bruno_smoke = {
-      enabled: true,
-      base_url: 'http://localhost:3000',
-      collection_dir: 'bruno',
-    };
-    const opts = brunoSmokeOptionsFor(cfg, '/wt/Recipes-App-KAN-99');
-    expect(opts).toEqual({
-      baseUrl: 'http://localhost:3000',
-      envName: 'recipes-app-kan-99',
-      collectionDir: 'bruno',
-      hasSmokeUser: false,
-    });
-  });
-
-  it('reports hasSmokeUser true when smoke_user is configured', () => {
-    const cfg = baseConfig();
-    cfg.bruno_smoke = {
-      enabled: true,
-      base_url: 'http://localhost:3000',
-      collection_dir: 'bruno',
-      smoke_user: { email: 'a', username: 'b', password: 'c' },
-    };
-    const opts = brunoSmokeOptionsFor(cfg, '/wt/main');
-    expect(opts?.hasSmokeUser).toBe(true);
-  });
-
-  it('does not read .env when base_url has no port placeholder, even with [docker] set', () => {
-    const cfg = baseConfig();
-    cfg.docker = {
-      canonical_worktree: 'main',
-      http_port_base: 8000,
-      https_port_base: 8400,
-      postgres_port_base: 15400,
-    };
-    cfg.bruno_smoke = {
-      enabled: true,
-      base_url: 'http://localhost:3000',
-      collection_dir: 'bruno',
-    };
-    // /wt/missing has no .env file. If the helper reads disk, this throws.
-    const opts = brunoSmokeOptionsFor(cfg, '/wt/missing');
-    expect(opts).toEqual({
-      baseUrl: 'http://localhost:3000',
-      envName: 'missing',
-      collectionDir: 'bruno',
-      hasSmokeUser: false,
-    });
+describe('loadFeedback — stdin mode removed', () => {
+  it("does not have a 'stdin' kind in FeedbackMode", () => {
+    type Kind = FeedbackMode['kind'];
+    const valid: Kind[] = ['pr', 'file', 'message'];
+    expect(valid).toContain('message');
+    expect(valid as string[]).not.toContain('stdin');
   });
 });

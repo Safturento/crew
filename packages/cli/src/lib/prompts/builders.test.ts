@@ -63,6 +63,41 @@ describe('buildTicketPrompt', () => {
     expect(a).toBe(b);
   });
 
+  it('includes the user-message block when userMessage is provided', () => {
+    const prompt = buildTicketPrompt({
+      key: 'KAN-23',
+      githubRepo: 'Safturento/Recipes',
+      jiraSite: 'https://safturento.atlassian.net',
+      userMessage: 'start by looking at lib/recipe-list/',
+    });
+    expect(prompt).toContain('Additional context from the user');
+    expect(prompt).toContain('start by looking at lib/recipe-list/');
+  });
+
+  it('omits the user-message block when userMessage is undefined', () => {
+    const prompt = buildTicketPrompt({
+      key: 'KAN-23',
+      githubRepo: 'Safturento/Recipes',
+      jiraSite: 'https://safturento.atlassian.net',
+    });
+    expect(prompt).not.toContain('Additional context from the user');
+  });
+
+  it('renders identically when userMessage is undefined as when omitted', () => {
+    const a = buildTicketPrompt({
+      key: 'KAN-23',
+      githubRepo: 'Safturento/Recipes',
+      jiraSite: 'https://safturento.atlassian.net',
+    });
+    const b = buildTicketPrompt({
+      key: 'KAN-23',
+      githubRepo: 'Safturento/Recipes',
+      jiraSite: 'https://safturento.atlassian.net',
+      userMessage: undefined,
+    });
+    expect(a).toBe(b);
+  });
+
   it('appends the discoveredSkillsBlock after the curated bullets when populated', () => {
     const discoveredSkillsBlock = renderDiscoveredSkillsBlock([
       {

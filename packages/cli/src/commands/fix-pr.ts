@@ -1,10 +1,6 @@
 import { Command } from 'commander';
 import { execa } from 'execa';
 import { existsSync, readFileSync } from 'node:fs';
-import { join } from 'node:path';
-import { stdin as processStdin } from 'node:process';
-import type { Readable } from 'node:stream';
-import type { ProjectConfig } from 'crew-shared';
 import {
   assemblePrFeedback,
   buildFixPrPrompt,
@@ -21,27 +17,25 @@ import {
   spawnClaudeResume,
   tailTranscript,
 } from '../lib/index.js';
-import { resolveBrunoEnvName } from '../lib/bruno-smoke/index.js';
-import type { BrunoSmokePromptOptions } from '../lib/prompts/index.js';
 import { discoverSkills, renderDiscoveredSkillsBlock } from '../lib/prompts/skills.js';
 import {
-  authoredEnabled,
-  playwrightEnabled,
-  resolveAppUrl,
-  type DockerPorts,
-} from '../lib/playwright/index.js';
-import { prepareAgentEnvironment } from '../lib/run/index.js';
+  brunoSmokeOptionsFor,
+  needsDockerPorts,
+  playwrightFixPrOptsFor,
+  prepareAgentEnvironment,
+  readDockerPortsFromEnvFile,
+} from '../lib/run/index.js';
+import type { DockerPorts } from '../lib/playwright/index.js';
 
-export type FeedbackMode = { kind: 'pr' } | { kind: 'file'; path: string } | { kind: 'stdin' };
+export type FeedbackMode =
+  | { kind: 'pr' }
+  | { kind: 'file'; path: string }
+  | { kind: 'message'; message: string };
 
 export interface LoadFeedbackOptions {
   key: string;
   mode: FeedbackMode;
   branch?: string;
-}
-
-export interface LoadFeedbackDeps {
-  stdin?: Readable;
 }
 
 export interface LoadedFeedback {
@@ -57,10 +51,7 @@ export function parseGithubPrUrl(url: string): { owner: string; repo: string } |
   return { owner, repo };
 }
 
-export async function loadFeedback(
-  opts: LoadFeedbackOptions,
-  deps: LoadFeedbackDeps = {},
-): Promise<LoadedFeedback> {
+export async function loadFeedback(opts: LoadFeedbackOptions): Promise<LoadedFeedback> {
   if (opts.mode.kind === 'file') {
     const path = opts.mode.path;
     if (!existsSync(path)) {
@@ -69,20 +60,19 @@ export async function loadFeedback(
     return { feedback: readFileSync(path, 'utf8'), source: `file: ${path}` };
   }
 
-  if (opts.mode.kind === 'stdin') {
-    const stream = deps.stdin ?? processStdin;
-    const text = await readStreamToString(stream);
-    if (text.length === 0) {
-      throw new Error('empty feedback on stdin');
+  if (opts.mode.kind === 'message') {
+    const msg = opts.mode.message;
+    if (msg.trim().length === 0) {
+      throw new Error('empty message provided to -m');
     }
-    return { feedback: text, source: 'stdin' };
+    return { feedback: msg, source: 'inline message' };
   }
 
   const branch = opts.branch ?? opts.key;
   const pr = await getPrForBranch(branch, 'open');
   if (!pr) {
     throw new Error(
-      `no open PR found on branch ${branch}. Open one first or use --from-file / --from-stdin.`,
+      `no open PR found on branch ${branch}. Open one first or use --from-file or -m '<msg>'.`,
     );
   }
   const slug = parseGithubPrUrl(pr.url);
@@ -98,31 +88,23 @@ export async function loadFeedback(
   return { feedback: md, source: `auto-pulled from GitHub PR for ${opts.key}` };
 }
 
-async function readStreamToString(stream: Readable): Promise<string> {
-  const chunks: Buffer[] = [];
-  for await (const chunk of stream) {
-    chunks.push(typeof chunk === 'string' ? Buffer.from(chunk) : (chunk as Buffer));
-  }
-  return Buffer.concat(chunks).toString('utf8');
-}
-
 interface FixPrFlags {
   fromPr?: boolean;
   fromFile?: string;
-  fromStdin?: boolean;
+  message?: string;
 }
 
 function selectMode(flags: FixPrFlags): FeedbackMode {
   const explicit = [
     flags.fromPr ? 'pr' : null,
     flags.fromFile !== undefined ? 'file' : null,
-    flags.fromStdin ? 'stdin' : null,
+    flags.message !== undefined ? 'message' : null,
   ].filter(Boolean);
   if (explicit.length > 1) {
-    throw new Error('--from-pr, --from-file, and --from-stdin are mutually exclusive');
+    throw new Error('--from-pr, --from-file, and -m are mutually exclusive');
   }
   if (flags.fromFile !== undefined) return { kind: 'file', path: flags.fromFile };
-  if (flags.fromStdin) return { kind: 'stdin' };
+  if (flags.message !== undefined) return { kind: 'message', message: flags.message };
   return { kind: 'pr' };
 }
 
@@ -131,7 +113,10 @@ export const fixPrCommand = new Command('fix-pr')
   .argument('<key>', 'Jira ticket key (e.g. KAN-23)', (v) => v.toUpperCase())
   .option('--from-pr', 'Auto-pull feedback from the open PR for the branch (default)')
   .option('--from-file <path>', 'Read feedback from a file at <path>')
-  .option('--from-stdin', 'Read feedback piped on stdin')
+  .option(
+    '-m, --message <message>',
+    "inline feedback message (e.g. -m 'the test on line 42 is failing')",
+  )
   .action(async (key: string, flags: FixPrFlags) => {
     await runFixPr(key, flags);
   });
@@ -139,52 +124,6 @@ export const fixPrCommand = new Command('fix-pr')
 function repoPathFromWorktree(worktree: string, key: string): string {
   const suffix = `-${key}`;
   return worktree.endsWith(suffix) ? worktree.slice(0, -suffix.length) : worktree;
-}
-
-const PORT_PLACEHOLDER_RE = /\{[a-zA-Z]+Port\}/;
-
-export function brunoSmokeOptionsFor(
-  config: ProjectConfig,
-  worktree: string,
-  dockerPorts?: DockerPorts,
-): BrunoSmokePromptOptions | undefined {
-  const bs = config.bruno_smoke;
-  if (!bs?.enabled) return undefined;
-
-  // fix-pr does not run writeDockerEnv; the .env on disk is authoritative.
-  // Only touch disk when base_url actually has a placeholder to substitute.
-  const ports =
-    dockerPorts ??
-    (PORT_PLACEHOLDER_RE.test(bs.base_url) ? readDockerPortsFromEnvFile(worktree) : undefined);
-
-  const baseUrl = resolveAppUrl(bs.base_url, ports).raw;
-  return {
-    baseUrl,
-    envName: resolveBrunoEnvName(worktree),
-    collectionDir: bs.collection_dir,
-    hasSmokeUser: Boolean(bs.smoke_user),
-  };
-}
-
-export function readDockerPortsFromEnvFile(worktree: string): DockerPorts {
-  const envPath = join(worktree, '.env');
-  if (!existsSync(envPath)) {
-    throw new Error(
-      `fix-pr cannot resolve port placeholders: ${envPath} not found. ` +
-        `Run 'crew run <KEY>' first or remove port placeholders from app_url / base_url.`,
-    );
-  }
-  const raw = readFileSync(envPath, 'utf8');
-  const get = (key: string): number => {
-    const match = raw.match(new RegExp(`^${key}=(\\d+)$`, 'm'));
-    if (!match) throw new Error(`fix-pr: ${key} not found in ${envPath}`);
-    return Number(match[1]);
-  };
-  return {
-    httpPort: get('CADDY_HTTP_PORT'),
-    httpsPort: get('CADDY_HTTPS_PORT'),
-    postgresPort: get('POSTGRES_PORT'),
-  };
 }
 
 async function runFixPr(key: string, flags: FixPrFlags): Promise<void> {
@@ -245,16 +184,10 @@ async function runFixPr(key: string, flags: FixPrFlags): Promise<void> {
 
   // Lift the .env port read so both bruno-smoke and playwright share a single
   // source of dockerPorts. Only read when something actually needs ports.
-  const playwrightConfig =
-    projectConfig && playwrightEnabled(projectConfig) ? projectConfig.playwright : undefined;
-  const needsPorts = Boolean(
-    (projectConfig?.bruno_smoke?.enabled &&
-      PORT_PLACEHOLDER_RE.test(projectConfig.bruno_smoke.base_url)) ||
-    (playwrightConfig && PORT_PLACEHOLDER_RE.test(playwrightConfig.app_url)),
-  );
-  const dockerPorts: DockerPorts | undefined = needsPorts
-    ? readDockerPortsFromEnvFile(worktree)
-    : undefined;
+  const dockerPorts: DockerPorts | undefined =
+    projectConfig && needsDockerPorts(projectConfig)
+      ? readDockerPortsFromEnvFile(worktree)
+      : undefined;
 
   const brunoSmoke = projectConfig
     ? brunoSmokeOptionsFor(projectConfig, worktree, dockerPorts)
@@ -278,19 +211,7 @@ async function runFixPr(key: string, flags: FixPrFlags): Promise<void> {
     feedback,
     feedbackSource: source,
     conflictFiles: conflicts,
-    playwright:
-      playwrightConfig && resolvedAppUrl && projectConfig
-        ? {
-            appUrl: resolvedAppUrl,
-            authored:
-              authoredEnabled(projectConfig) && playwrightConfig.authored
-                ? {
-                    testsDir: playwrightConfig.authored.tests_dir,
-                    testCommand: playwrightConfig.authored.test_command,
-                  }
-                : undefined,
-          }
-        : undefined,
+    playwright: projectConfig ? playwrightFixPrOptsFor(projectConfig, resolvedAppUrl) : undefined,
     brunoSmoke,
     discoveredSkillsBlock: renderDiscoveredSkillsBlock(discoverSkills({ repoPath })),
   });

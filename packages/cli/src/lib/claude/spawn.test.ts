@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { execa } from 'execa';
-import { spawnClaudeResume } from './spawn.js';
+import { spawnClaudeFresh, spawnClaudeResume } from './spawn.js';
 
 vi.mock('execa', () => ({ execa: vi.fn() }));
 
@@ -136,5 +136,70 @@ describe('spawnClaudeResume', () => {
     } finally {
       process.env.PATH = original;
     }
+  });
+});
+
+describe('spawnClaudeFresh', () => {
+  it('spawns claude without --resume so a fresh conversation starts', () => {
+    mockedExeca.mockReturnValueOnce({
+      stdout: { pipe: vi.fn() },
+      stderr: { pipe: vi.fn() },
+    } as never);
+
+    spawnClaudeFresh({
+      prompt: 'do the thing',
+      logFile: '/tmp/x.log',
+      cwd: '/tmp/worktree',
+    });
+
+    expect(mockedExeca).toHaveBeenCalledWith(
+      'claude',
+      ['--dangerously-skip-permissions', '-p', 'do the thing'],
+      expect.objectContaining({ env: expect.any(Object) }),
+    );
+  });
+
+  it('passes cwd to execa so claude resolves the worktree project', () => {
+    mockedExeca.mockReturnValueOnce({
+      stdout: { pipe: vi.fn() },
+      stderr: { pipe: vi.fn() },
+    } as never);
+
+    spawnClaudeFresh({
+      prompt: 'p',
+      logFile: '/tmp/x.log',
+      cwd: '/home/me/Repos/Recipes-KAN-13',
+    });
+
+    expect(mockedExeca).toHaveBeenCalledWith(
+      'claude',
+      expect.any(Array),
+      expect.objectContaining({ cwd: '/home/me/Repos/Recipes-KAN-13' }),
+    );
+  });
+
+  it('merges caller-supplied env vars (preserving PATH augmentation)', () => {
+    mockedExeca.mockReturnValueOnce({
+      stdout: { pipe: vi.fn() },
+      stderr: { pipe: vi.fn() },
+    } as never);
+
+    spawnClaudeFresh({
+      prompt: 'p',
+      logFile: '/tmp/x.log',
+      cwd: '/tmp/wt',
+      env: { CREW_APP_URL: 'https://localhost:8443' },
+    });
+
+    expect(mockedExeca).toHaveBeenCalledWith(
+      'claude',
+      expect.any(Array),
+      expect.objectContaining({
+        env: expect.objectContaining({
+          CREW_APP_URL: 'https://localhost:8443',
+          PATH: expect.any(String),
+        }),
+      }),
+    );
   });
 });
