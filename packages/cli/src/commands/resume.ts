@@ -18,7 +18,14 @@ import {
 import { prepareAgentEnvironment } from '../lib/run/agent-environment.js';
 import { worktreePathFor } from '../lib/run/paths.js';
 import { readWorktreeState } from '../lib/run/worktree-state.js';
-import type { DockerPorts } from '../lib/playwright/index.js';
+import {
+  type DockerPorts,
+  playwrightEnabled,
+  resolveAppUrl,
+  smokeEnabled,
+  writeMcpFile,
+} from '../lib/playwright/index.js';
+import { join } from 'node:path';
 
 interface ResumeOptions {
   message?: string;
@@ -67,6 +74,26 @@ export async function runResume(key: string, opts: ResumeOptions): Promise<void>
     mode: 'resume',
     skipDocker: opts.skipDocker,
   });
+
+  // Refresh .mcp.json so this resume picks up any changes to the config shape
+  // shipped by newer crew code (e.g. --executable-path for the bundled chromium,
+  // updated CREW_APP_URL, etc.). Stale .mcp.json from an older crew is a real
+  // footgun — the agent silently uses the old config, e.g. falls back to the
+  // system chrome channel when crew now wires the bundled chromium directly.
+  if (playwrightEnabled(config) && config.playwright && smokeEnabled(config)) {
+    const resolved = resolveAppUrl(config.playwright.app_url, dockerPorts);
+    const writeResult = await writeMcpFile(worktree, { appUrl: resolved.raw });
+    process.stderr.write(
+      pc.dim(`→ refreshed ${join(worktree, '.mcp.json')} (CREW_APP_URL=${resolved.raw})\n`),
+    );
+    if (writeResult.chromiumPath) {
+      process.stderr.write(pc.dim(`    chromium: ${writeResult.chromiumPath}\n`));
+    } else {
+      process.stderr.write(
+        pc.dim(`    chromium: <unresolved> — MCP will fall back to system chrome channel\n`),
+      );
+    }
+  }
 
   const session = findLatestSession({ worktree });
   const discoveredSkillsBlock = renderDiscoveredSkillsBlock(

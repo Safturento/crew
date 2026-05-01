@@ -160,15 +160,6 @@ export async function runRun(key: string, opts: RunOptions): Promise<never> {
     console.log(pc.dim(`    url:     ${env.appUrl}`));
   }
 
-  if (playwrightEnabled(config) && config.playwright && smokeEnabled(config)) {
-    const resolved = resolveAppUrl(config.playwright.app_url, dockerPorts);
-    const writeResult = await writeMcpFile(worktree, { appUrl: resolved.raw });
-    console.log(pc.dim(`→ wrote ${join(worktree, '.mcp.json')} (CREW_APP_URL=${resolved.raw})`));
-    if (writeResult.existed) {
-      console.warn(pc.yellow('  ! .mcp.json already existed in worktree — overwritten'));
-    }
-  }
-
   let brunoEnvName: string | undefined;
   let resolvedBrunoBaseUrl: string | undefined;
   if (config.bruno_smoke?.enabled) {
@@ -199,6 +190,27 @@ export async function runRun(key: string, opts: RunOptions): Promise<never> {
     mode: 'fresh',
     skipDocker,
   }).catch((err: unknown): never => fail(err instanceof Error ? err.message : String(err)));
+
+  // .mcp.json is written AFTER prepareAgentEnvironment so the chromium binary
+  // exists on disk when writeMcpFile resolves --executable-path. Resolving
+  // before install would emit a stale path that points at a not-yet-extracted
+  // binary, and the existsSync guard would fall back to MCP's system-chrome
+  // default (the bug CREW-70 fixed).
+  if (playwrightEnabled(config) && config.playwright && smokeEnabled(config)) {
+    const resolved = resolveAppUrl(config.playwright.app_url, dockerPorts);
+    const writeResult = await writeMcpFile(worktree, { appUrl: resolved.raw });
+    console.log(pc.dim(`→ wrote ${join(worktree, '.mcp.json')} (CREW_APP_URL=${resolved.raw})`));
+    if (writeResult.chromiumPath) {
+      console.log(pc.dim(`    chromium: ${writeResult.chromiumPath}`));
+    } else {
+      console.log(
+        pc.dim(`    chromium: <unresolved> — MCP will fall back to system chrome channel`),
+      );
+    }
+    if (writeResult.existed) {
+      console.warn(pc.yellow('  ! .mcp.json already existed in worktree — overwritten'));
+    }
+  }
 
   const ghToken = readFileSync(ghTokenDest, 'utf8').trim();
   const discoveredSkillsBlock = renderDiscoveredSkillsBlock(
