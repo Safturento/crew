@@ -7,7 +7,7 @@ describe('render', () => {
       key: 'ZZZ-9',
       githubRepo: 'owner/repo',
       jiraSite: 'https://example.atlassian.net',
-      visualTestingBlock: '',
+      playwrightBlock: '',
       brunoSmokeBlock: '',
       discoveredSkillsBlock: '',
     });
@@ -22,7 +22,7 @@ describe('render', () => {
       key: 'ZZZ-9',
       githubRepo: 'owner/repo',
       jiraSite: 'https://example.atlassian.net',
-      visualTestingBlock: '',
+      playwrightBlock: '',
       brunoSmokeBlock: '',
       discoveredSkillsBlock: '',
     });
@@ -36,10 +36,10 @@ describe('render', () => {
     expect(() =>
       render('ticket', {
         key: 'ZZZ-9',
-        // intentionally omitting githubRepo, jiraSite, visualTestingBlock,
+        // intentionally omitting githubRepo, jiraSite, playwrightBlock,
         // brunoSmokeBlock, discoveredSkillsBlock
       }),
-    ).toThrow(/githubRepo|jiraSite|visualTestingBlock|brunoSmokeBlock|discoveredSkillsBlock/);
+    ).toThrow(/githubRepo|jiraSite|playwrightBlock|brunoSmokeBlock|discoveredSkillsBlock/);
   });
 
   it('throws when the template name does not exist', () => {

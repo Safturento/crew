@@ -23,7 +23,13 @@ import {
 import { writeDockerEnv } from '../lib/docker/index.js';
 import { buildTicketPrompt } from '../lib/prompts/index.js';
 import { discoverSkills, renderDiscoveredSkillsBlock } from '../lib/prompts/skills.js';
-import { resolveAppUrl, writeMcpFile } from '../lib/visual-testing/index.js';
+import {
+  authoredEnabled,
+  playwrightEnabled,
+  resolveAppUrl,
+  smokeEnabled,
+  writeMcpFile,
+} from '../lib/playwright/index.js';
 import {
   resolveBrunoEnvName,
   writeEnvFile as writeBrunoEnvFile,
@@ -148,13 +154,15 @@ async function runTicket(key: string, opts: RunOptions): Promise<never> {
   }
 
   let resolvedAppUrl: string | undefined;
-  if (config.visual_testing?.enabled) {
-    const resolved = resolveAppUrl(config.visual_testing.app_url, dockerPorts);
+  if (playwrightEnabled(config) && config.playwright) {
+    const resolved = resolveAppUrl(config.playwright.app_url, dockerPorts);
     resolvedAppUrl = resolved.raw;
-    const writeResult = writeMcpFile(worktree, { appUrl: resolved.raw });
-    console.log(pc.dim(`→ wrote ${join(worktree, '.mcp.json')} (CREW_APP_URL=${resolved.raw})`));
-    if (writeResult.existed) {
-      console.warn(pc.yellow('  ! .mcp.json already existed in worktree — overwritten'));
+    if (smokeEnabled(config)) {
+      const writeResult = writeMcpFile(worktree, { appUrl: resolved.raw });
+      console.log(pc.dim(`→ wrote ${join(worktree, '.mcp.json')} (CREW_APP_URL=${resolved.raw})`));
+      if (writeResult.existed) {
+        console.warn(pc.yellow('  ! .mcp.json already existed in worktree — overwritten'));
+      }
     }
   }
 
@@ -189,17 +197,19 @@ async function runTicket(key: string, opts: RunOptions): Promise<never> {
     key,
     githubRepo: config.github.repo,
     jiraSite: config.jira.site,
-    visualTesting:
-      config.visual_testing?.enabled && resolvedAppUrl
+    playwright:
+      playwrightEnabled(config) && resolvedAppUrl
         ? {
             appUrl: resolvedAppUrl,
-            startCommand: config.visual_testing.start_command,
-            authored: config.visual_testing.authored
-              ? {
-                  testsDir: config.visual_testing.authored.tests_dir,
-                  testCommand: config.visual_testing.authored.test_command,
-                }
-              : undefined,
+            startCommand: config.playwright?.start_command,
+            smoke: smokeEnabled(config),
+            authored:
+              authoredEnabled(config) && config.playwright?.authored
+                ? {
+                    testsDir: config.playwright.authored.tests_dir,
+                    testCommand: config.playwright.authored.test_command,
+                  }
+                : undefined,
           }
         : undefined,
     brunoSmoke:
@@ -380,8 +390,8 @@ export interface BringupScriptOptions {
 export function buildDockerBringupScript(repoPath: string, opts: BringupScriptOptions): string {
   // Bring the worktree's compose stack up, optionally clone data from the
   // canonical worktree's stack. When stopAfterBringup is true (default for
-  // ticket runs without visual_testing), stop the containers afterward so
-  // they're warm but idle. When false (visual_testing enabled), leave the
+  // ticket runs without playwright), stop the containers afterward so
+  // they're warm but idle. When false (playwright enabled), leave the
   // stack running so the agent can hit the live URL via Playwright MCP.
   const dbCloneScript = join(repoPath, 'scripts', 'db-clone-from-main.sh');
   const stopBlock = opts.stopAfterBringup

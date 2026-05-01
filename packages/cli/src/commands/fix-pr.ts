@@ -24,7 +24,7 @@ import {
 import { resolveBrunoEnvName } from '../lib/bruno-smoke/index.js';
 import type { BrunoSmokePromptOptions } from '../lib/prompts/index.js';
 import { discoverSkills, renderDiscoveredSkillsBlock } from '../lib/prompts/skills.js';
-import { resolveAppUrl } from '../lib/visual-testing/index.js';
+import { resolveAppUrl } from '../lib/playwright/index.js';
 
 export type FeedbackMode = { kind: 'pr' } | { kind: 'file'; path: string } | { kind: 'stdin' };
 

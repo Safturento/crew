@@ -156,6 +156,17 @@ http_port_base = 8000
 https_port_base = 8400
 postgres_port_base = 15400
 
+[playwright]
+app_url = "https://localhost:{httpsPort}"
+
+[playwright.smoke]
+enabled = true
+
+[playwright.authored]
+enabled = true
+tests_dir = "tests/e2e"
+test_command = "npm run test:e2e"
+
 [sandbox]
 allowed_domains = [
   "github.com", "api.github.com", "objects.githubusercontent.com",

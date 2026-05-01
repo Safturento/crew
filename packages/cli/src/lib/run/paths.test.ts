@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { worktreePathFor, runLogPathFor, dockerLogPathFor } from './paths.js';
+import { worktreePathFor, runLogPathFor, dockerLogPathFor, playwrightLogPathFor } from './paths.js';
 
 describe('worktreePathFor', () => {
   it('places the worktree as a sibling of the source repo, suffixed with the key', () => {
@@ -24,5 +24,11 @@ describe('runLogPathFor', () => {
 describe('dockerLogPathFor', () => {
   it('lives in /tmp and is keyed by ticket', () => {
     expect(dockerLogPathFor('KAN-23')).toBe('/tmp/crew-docker-KAN-23.log');
+  });
+});
+
+describe('playwrightLogPathFor', () => {
+  it('returns /tmp/crew-playwright-<key>.log', () => {
+    expect(playwrightLogPathFor('KAN-99')).toBe('/tmp/crew-playwright-KAN-99.log');
   });
 });

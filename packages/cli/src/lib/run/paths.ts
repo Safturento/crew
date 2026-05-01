@@ -17,3 +17,7 @@ export function runLogPathFor(key: string): string {
 export function dockerLogPathFor(key: string): string {
   return `/tmp/crew-docker-${key}.log`;
 }
+
+export function playwrightLogPathFor(key: string): string {
+  return `/tmp/crew-playwright-${key}.log`;
+}
