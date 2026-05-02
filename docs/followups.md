@@ -295,7 +295,7 @@ Worth verifying whether the daemon's `tool_calls` table already captures sidecha
 
 **What:** A single subcommand for project setup, both new and existing:
 
-- **New project**: walk through writing the TOML, run `npm install -D @playwright/test` if Playwright is opted in, scaffold `playwright.config.ts` + `tests/e2e/` skeleton, scaffold Bruno collection skeleton if opted in.
+- **New project**: walk through writing the TOML, **scaffold an `env.toml` at the project repo root** (prompt for orchestration ports, app vars, contexts; populate sensible defaults), run `npm install -D @playwright/test` if Playwright is opted in, scaffold `playwright.config.ts` + `tests/e2e/` skeleton, scaffold Bruno collection skeleton if opted in.
 - **Existing project**: modify the TOML in place (toggle blocks, change URLs), run machine-wide health checks (apt deps present, Chromium installed for every configured project, docker socket reachable).
 
 The two halves can ship as one subcommand (single pane of glass) rather than splitting into `crew init` + `crew doctor`.
