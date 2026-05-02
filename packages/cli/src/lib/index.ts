@@ -3,6 +3,7 @@ export * from 'crew-shared';
 export * from './discover-project-config.js';
 export * from './db-clone/index.js';
 export * from './docker/index.js';
+export * from './env-spec/index.js';
 export * from './git/index.js';
 export * from './github/index.js';
 export * from './jira/index.js';
