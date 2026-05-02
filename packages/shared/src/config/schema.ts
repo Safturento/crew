@@ -10,6 +10,8 @@ const playwrightAuthoredSchema = z.object({
   enabled: z.literal(true),
   tests_dir: z.string().min(1),
   test_command: z.string().min(1),
+  verify_after_run: z.boolean().default(false),
+  verify_max_attempts: z.number().int().min(1).default(2),
 });
 
 const playwrightSchema = z.object({

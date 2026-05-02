@@ -325,6 +325,62 @@ describe('buildTicketPrompt', () => {
     const finalReportIdx = prompt.indexOf('Final report');
     expect(finalReportIdx).toBeGreaterThan(inReviewIdx);
   });
+
+  it('renders the external-gate disclosure on the authored block when verifyAfterRun is true', () => {
+    const prompt = buildTicketPrompt({
+      key: 'KAN-23',
+      githubRepo: 'Safturento/Recipes',
+      jiraSite: 'https://safturento.atlassian.net',
+      playwright: {
+        appUrl: 'https://localhost:18443',
+        authored: {
+          testsDir: 'tests/e2e',
+          testCommand: 'npm run test:e2e',
+          verifyAfterRun: true,
+        },
+      },
+    });
+    expect(prompt).toContain('Authored Playwright test');
+    expect(prompt).toContain('Crew runs');
+    expect(prompt).toContain('externally');
+    expect(prompt).not.toContain('Sandbox limitation');
+  });
+
+  it('omits the external-gate disclosure when verifyAfterRun is undefined or false', () => {
+    const prompt = buildTicketPrompt({
+      key: 'KAN-23',
+      githubRepo: 'Safturento/Recipes',
+      jiraSite: 'https://safturento.atlassian.net',
+      playwright: {
+        appUrl: 'https://localhost:18443',
+        authored: {
+          testsDir: 'tests/e2e',
+          testCommand: 'npm run test:e2e',
+        },
+      },
+    });
+    expect(prompt).not.toMatch(/Crew runs.*externally/);
+  });
+
+  it('renders a docker_unavailable disclosure when dockerUnavailable is true', () => {
+    const prompt = buildTicketPrompt({
+      key: 'KAN-23',
+      githubRepo: 'Safturento/Recipes',
+      jiraSite: 'https://safturento.atlassian.net',
+      dockerUnavailable: true,
+    });
+    expect(prompt).toContain('Docker stack is not available');
+    expect(prompt).toContain('PR description');
+  });
+
+  it('omits the docker_unavailable disclosure by default', () => {
+    const prompt = buildTicketPrompt({
+      key: 'KAN-23',
+      githubRepo: 'Safturento/Recipes',
+      jiraSite: 'https://safturento.atlassian.net',
+    });
+    expect(prompt).not.toContain('Docker stack is not available');
+  });
 });
 
 describe('buildFixPrPrompt', () => {

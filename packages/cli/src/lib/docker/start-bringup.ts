@@ -86,6 +86,7 @@ if docker compose up --build --wait 2>&1; then
 ${stopBlock}
 else
   echo "[$(date +%T)] ! docker stack failed to come up"
+  exit 1
 fi
 `;
 }

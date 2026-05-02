@@ -160,6 +160,55 @@ test_command = "npm run test:e2e"
     expect(config.playwright?.authored?.test_command).toBe('npm run test:e2e');
   });
 
+  it('parses authored with verify_after_run + verify_max_attempts defaults', () => {
+    const raw = `${baseToml}
+[playwright]
+app_url = "http://localhost:5173"
+start_command = "npm run dev"
+
+[playwright.authored]
+enabled = true
+tests_dir = "tests/e2e"
+test_command = "npm run test:e2e"
+`;
+    const config = parseProjectConfig(raw);
+    expect(config.playwright?.authored?.verify_after_run).toBe(false);
+    expect(config.playwright?.authored?.verify_max_attempts).toBe(2);
+  });
+
+  it('parses authored with verify_after_run = true and a custom verify_max_attempts', () => {
+    const raw = `${baseToml}
+[playwright]
+app_url = "http://localhost:5173"
+start_command = "npm run dev"
+
+[playwright.authored]
+enabled = true
+tests_dir = "tests/e2e"
+test_command = "npm run test:e2e"
+verify_after_run = true
+verify_max_attempts = 4
+`;
+    const config = parseProjectConfig(raw);
+    expect(config.playwright?.authored?.verify_after_run).toBe(true);
+    expect(config.playwright?.authored?.verify_max_attempts).toBe(4);
+  });
+
+  it('rejects verify_max_attempts < 1', () => {
+    const raw = `${baseToml}
+[playwright]
+app_url = "http://localhost:5173"
+start_command = "npm run dev"
+
+[playwright.authored]
+enabled = true
+tests_dir = "tests/e2e"
+test_command = "npm run test:e2e"
+verify_max_attempts = 0
+`;
+    expect(() => parseProjectConfig(raw)).toThrow();
+  });
+
   it('parses [playwright] with both modes enabled', () => {
     const raw = `${baseToml}
 [playwright]

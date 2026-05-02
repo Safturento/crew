@@ -20,6 +20,8 @@ import { prepareAgentEnvironment } from '../lib/run/agent-environment.js';
 import { worktreePathFor } from '../lib/run/paths.js';
 import { streamTranscript } from '../lib/run/stream-transcript.js';
 import { readWorktreeState } from '../lib/run/worktree-state.js';
+import { checkE2eBaseline, type BaselineCheckResult } from '../lib/run/baseline.js';
+import { verifyAfterRunEnabled } from '../lib/playwright/mode-flags.js';
 import {
   type DockerPorts,
   playwrightEnabled,
@@ -27,6 +29,7 @@ import {
   smokeEnabled,
   writeMcpFile,
 } from '../lib/playwright/index.js';
+import { maybeRunE2eGate } from './run.js';
 import { join } from 'node:path';
 
 interface ResumeOptions {
@@ -105,6 +108,25 @@ export async function runResume(key: string, opts: ResumeOptions): Promise<void>
   const logFile = `/tmp/crew-resume-${key}.log`;
   const claudeEnv = env.resolvedAppUrl ? { CREW_APP_URL: env.resolvedAppUrl } : undefined;
 
+  // Pre-flight baseline check so the agent's prompt declares verify_after_run
+  // only when the gate will actually fire post-run (mirrors run.ts).
+  let baseline: BaselineCheckResult | undefined;
+  let gateWillRun = false;
+  if (verifyAfterRunEnabled(config)) {
+    baseline = await checkE2eBaseline({
+      projectName: config.name,
+      repoPath: config.repo_path,
+      defaultBranch: config.default_branch,
+    });
+    if (baseline.green && !opts.skipDocker) {
+      gateWillRun = true;
+    } else if (!baseline.green) {
+      process.stderr.write(
+        pc.yellow(`  ! e2e baseline non-green (${baseline.reason}); gate disabled for this run\n`),
+      );
+    }
+  }
+
   if (session) {
     const prompt = buildResumePrompt({
       key,
@@ -132,6 +154,18 @@ export async function runResume(key: string, opts: ResumeOptions): Promise<void>
       env: claudeEnv,
     });
     await streamUntilExit(sub, { transcriptPath: session.transcriptPath, startAtEnd: true });
+    await maybeRunE2eGate({
+      config,
+      key,
+      worktree,
+      env: process.env,
+      skipDocker: Boolean(opts.skipDocker),
+      dockerUnavailable: false,
+      resolvedAppUrl: env.resolvedAppUrl,
+      repoPath: config.repo_path,
+      defaultBranch: config.default_branch,
+      baseline,
+    });
     return;
   }
 
@@ -141,7 +175,7 @@ export async function runResume(key: string, opts: ResumeOptions): Promise<void>
     githubRepo: config.github.repo,
     jiraSite: config.jira.site,
     userMessage: opts.message,
-    playwright: playwrightTicketOptsFor(config, env.resolvedAppUrl),
+    playwright: playwrightTicketOptsFor(config, env.resolvedAppUrl, gateWillRun),
     brunoSmoke,
     discoveredSkillsBlock,
   });
@@ -163,6 +197,17 @@ export async function runResume(key: string, opts: ResumeOptions): Promise<void>
     onTranscriptResolved: (path) => {
       process.stderr.write(pc.dim(`→ watching ${path}\n\n`));
     },
+  });
+  await maybeRunE2eGate({
+    config,
+    key,
+    worktree,
+    env: process.env,
+    skipDocker: Boolean(opts.skipDocker),
+    dockerUnavailable: false,
+    resolvedAppUrl: env.resolvedAppUrl,
+    repoPath: config.repo_path,
+    defaultBranch: config.default_branch,
   });
 }
 

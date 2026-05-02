@@ -1,4 +1,4 @@
-You are running unattended on a fresh git worktree to implement Jira ticket {{key}} end-to-end. The repo's `CLAUDE.md` is your authoritative project guide; read it before doing anything else.
+You are running unattended on a fresh git worktree to implement Jira ticket {{key}} end-to-end. The repo's `CLAUDE.md` is your authoritative project guide; read it before doing anything else.{{dockerUnavailableBlock}}
 
 {{userMessageBlock}}
 ## Skills

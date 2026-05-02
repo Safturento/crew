@@ -11,6 +11,7 @@ describe('render', () => {
       brunoSmokeBlock: '',
       discoveredSkillsBlock: '',
       userMessageBlock: '',
+      dockerUnavailableBlock: '',
     });
 
     expect(out).toContain('ZZZ-9');
@@ -27,6 +28,7 @@ describe('render', () => {
       brunoSmokeBlock: '',
       discoveredSkillsBlock: '',
       userMessageBlock: '',
+      dockerUnavailableBlock: '',
     });
 
     // The ticket template references {{key}} many times; ensure no `{{key}}`
@@ -42,7 +44,7 @@ describe('render', () => {
         // brunoSmokeBlock, discoveredSkillsBlock, userMessageBlock
       }),
     ).toThrow(
-      /githubRepo|jiraSite|playwrightBlock|brunoSmokeBlock|discoveredSkillsBlock|userMessageBlock/,
+      /githubRepo|jiraSite|playwrightBlock|brunoSmokeBlock|discoveredSkillsBlock|userMessageBlock|dockerUnavailableBlock/,
     );
   });
 

@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { authoredEnabled, playwrightEnabled, smokeEnabled } from './mode-flags.js';
+import {
+  authoredEnabled,
+  playwrightEnabled,
+  smokeEnabled,
+  verifyAfterRunEnabled,
+} from './mode-flags.js';
 import type { ProjectConfig } from 'crew-shared';
 
 function baseConfig(): ProjectConfig {
@@ -39,7 +44,13 @@ describe('mode-flags accessors', () => {
     const cfg = baseConfig();
     cfg.playwright = {
       app_url: 'http://x',
-      authored: { enabled: true, tests_dir: 'tests/e2e', test_command: 'npm run test:e2e' },
+      authored: {
+        enabled: true,
+        tests_dir: 'tests/e2e',
+        test_command: 'npm run test:e2e',
+        verify_after_run: false,
+        verify_max_attempts: 2,
+      },
     };
     expect(playwrightEnabled(cfg)).toBe(true);
     expect(smokeEnabled(cfg)).toBe(false);
@@ -51,10 +62,52 @@ describe('mode-flags accessors', () => {
     cfg.playwright = {
       app_url: 'http://x',
       smoke: { enabled: true },
-      authored: { enabled: true, tests_dir: 'tests/e2e', test_command: 'npm run test:e2e' },
+      authored: {
+        enabled: true,
+        tests_dir: 'tests/e2e',
+        test_command: 'npm run test:e2e',
+        verify_after_run: false,
+        verify_max_attempts: 2,
+      },
     };
     expect(playwrightEnabled(cfg)).toBe(true);
     expect(smokeEnabled(cfg)).toBe(true);
     expect(authoredEnabled(cfg)).toBe(true);
+  });
+});
+
+describe('verifyAfterRunEnabled', () => {
+  it('returns false when authored is absent', () => {
+    expect(verifyAfterRunEnabled(baseConfig())).toBe(false);
+  });
+
+  it('returns false when authored is enabled but verify_after_run is unset/false', () => {
+    const cfg = baseConfig();
+    cfg.playwright = {
+      app_url: 'http://x',
+      authored: {
+        enabled: true,
+        tests_dir: 'tests/e2e',
+        test_command: 'npm run test:e2e',
+        verify_after_run: false,
+        verify_max_attempts: 2,
+      },
+    };
+    expect(verifyAfterRunEnabled(cfg)).toBe(false);
+  });
+
+  it('returns true when authored is enabled and verify_after_run is true', () => {
+    const cfg = baseConfig();
+    cfg.playwright = {
+      app_url: 'http://x',
+      authored: {
+        enabled: true,
+        tests_dir: 'tests/e2e',
+        test_command: 'npm run test:e2e',
+        verify_after_run: true,
+        verify_max_attempts: 2,
+      },
+    };
+    expect(verifyAfterRunEnabled(cfg)).toBe(true);
   });
 });
