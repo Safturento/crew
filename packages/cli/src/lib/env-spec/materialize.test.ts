@@ -128,6 +128,23 @@ env_var   = "JWK_PATH"
     expect(result.base.JWK_PATH).toBe(target);
   });
 
+  it('lets app literals reference a [files.*] env_var (files run before resolution loop)', () => {
+    const target = join(dir, 'jwk.pem');
+    const fileSpec = `
+schema = 1
+[orchestration]
+[app]
+JWK_DESC = { source = "literal", value = "key at \${JWK_PATH}" }
+[files.JWK]
+path      = "${target.replaceAll('\\', '/')}"
+generator = "echo --- > \${path}"
+env_var   = "JWK_PATH"
+`;
+    const spec = parseEnvSpec(fileSpec);
+    const result = materialize(spec, opts());
+    expect(result.base.JWK_DESC).toBe(`key at ${target}`);
+  });
+
   it('throws on a cycle in templates', () => {
     const cycle = `
 schema = 1

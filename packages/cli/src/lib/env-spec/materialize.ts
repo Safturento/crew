@@ -1,5 +1,5 @@
 import type { EnvSpec } from './types.js';
-import { collectAllKeys, substitute, topoSortKeys } from './resolve.js';
+import { collectAllKeys, ENV_SPEC_BUILTINS, substitute, topoSortKeys } from './resolve.js';
 import { allocatePort } from './allocate-port.js';
 import { runGenerator, runFileGenerator } from './generate.js';
 
@@ -25,19 +25,29 @@ export interface MaterializeResult {
   contexts: Record<string, Record<string, string>>;
 }
 
-const BUILTIN_KEYS = ['BASE_NAME', 'WORKTREE_ID'];
-
 export function materialize(spec: EnvSpec, opts: MaterializeOptions): MaterializeResult {
   const map: Record<string, string> = {
     BASE_NAME: opts.baseName,
     WORKTREE_ID: opts.worktreeId,
   };
 
-  const deps = collectAllKeys({ spec, builtins: BUILTIN_KEYS });
+  // Files first: their `${path}` substitution is self-contained, and populating
+  // `map[envVar]` upfront lets later orchestration templates / app literals
+  // reference a `[files.*]` env_var without triggering a missing-ref throw.
+  for (const fileEntry of Object.values(spec.files)) {
+    runFileGenerator({
+      path: fileEntry.path,
+      generator: fileEntry.generator,
+      pathSubstitution: fileEntry.path,
+    });
+    if (fileEntry.env_var) map[fileEntry.env_var] = fileEntry.path;
+  }
+
+  const deps = collectAllKeys({ spec, builtins: [...ENV_SPEC_BUILTINS] });
   const order = topoSortKeys(deps);
 
   for (const key of order) {
-    if (BUILTIN_KEYS.includes(key)) continue;
+    if (key in map) continue; // built-ins + already-populated file env_vars
 
     const orchEntry = spec.orchestration[key];
     if (orchEntry) {
@@ -72,20 +82,7 @@ export function materialize(spec: EnvSpec, opts: MaterializeOptions): Materializ
           map[key] = runGenerator(appEntry.command);
         }
       }
-      continue;
     }
-
-    // Falls through here only if the key was added by collectAllKeys for a [files.*]
-    // env_var, or is a built-in we already populated.
-  }
-
-  for (const fileEntry of Object.values(spec.files)) {
-    runFileGenerator({
-      path: fileEntry.path,
-      generator: fileEntry.generator,
-      pathSubstitution: fileEntry.path,
-    });
-    if (fileEntry.env_var) map[fileEntry.env_var] = fileEntry.path;
   }
 
   const take = (k: string): string => {

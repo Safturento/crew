@@ -1,5 +1,11 @@
 import type { EnvSpec } from './types.js';
 
+/**
+ * Built-in variable names available before any spec key resolves. New built-ins
+ * land here and propagate to validateSpec + materialize via this single source.
+ */
+export const ENV_SPEC_BUILTINS = ['BASE_NAME', 'WORKTREE_ID'] as const;
+
 /** Match `${NAME}` where NAME is identifier-shaped. */
 const REF_RE = /\$\{([A-Za-z_][A-Za-z0-9_]*)\}/g;
 
@@ -99,8 +105,7 @@ export function collectAllKeys(ctx: ResolutionContext): Map<string, string[]> {
  * `crew env validate`.
  */
 export function validateSpec(spec: EnvSpec): void {
-  const builtins = ['BASE_NAME', 'WORKTREE_ID'];
-  const deps = collectAllKeys({ spec, builtins });
+  const deps = collectAllKeys({ spec, builtins: [...ENV_SPEC_BUILTINS] });
   topoSortKeys(deps); // throws on cycle or missing ref
 
   const known = new Set(deps.keys());
