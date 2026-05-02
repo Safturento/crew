@@ -113,12 +113,9 @@ describe('AgentRow', () => {
 
   const NON_ATTENTION_STATES: AgentState[] = ['initializing', 'running', 'idle', 'finished'];
 
-  it.each(NON_ATTENTION_STATES)(
-    'uses neutral border for non-attention state %s',
-    (state) => {
-      render(<AgentRow agent={{ ...baseAgent, state }} onSelect={() => {}} />);
-      const row = screen.getByRole('button', { name: /KAN-31/ });
-      expect(row.className).toContain('border-white/10');
-    },
-  );
+  it.each(NON_ATTENTION_STATES)('uses neutral border for non-attention state %s', (state) => {
+    render(<AgentRow agent={{ ...baseAgent, state }} onSelect={() => {}} />);
+    const row = screen.getByRole('button', { name: /KAN-31/ });
+    expect(row.className).toContain('border-white/10');
+  });
 });
