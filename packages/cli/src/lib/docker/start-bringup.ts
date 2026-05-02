@@ -68,16 +68,19 @@ export function buildDockerBringupScript(repoPath: string, opts: BringupScriptOp
   docker compose stop 2>&1
   echo "[$(date +%T)] ✓ stack stopped"`
     : `  echo "[$(date +%T)] ✓ leaving stack running for visual testing"`;
+  // `--wait` blocks until services with healthchecks reach `healthy` (services
+  // without one are treated as healthy when `running`). Without it, the clone
+  // step below races the backend container's own seed (CREW-68).
   return `set -u
-echo "[$(date +%T)] docker compose up --build --detach"
-if docker compose up --build --detach 2>&1; then
+echo "[$(date +%T)] docker compose up --build --wait"
+if docker compose up --build --wait 2>&1; then
   echo "[$(date +%T)] ✓ docker stack up"
   if [ -x ${shellQuote(dbCloneScript)} ]; then
     echo "[$(date +%T)] db-clone-from-main"
     if ${shellQuote(dbCloneScript)} 2>&1; then
       echo "[$(date +%T)] ✓ data cloned from main"
     else
-      echo "[$(date +%T)] ! data clone skipped (main's stack isn't running)"
+      echo "[$(date +%T)] ! data clone failed (see log above for cause)"
     fi
   fi
 ${stopBlock}
