@@ -166,6 +166,73 @@ chmod 600 .claude/secrets/gh-token
 
 The `.claude/secrets/` path is gitignored. Re-run after a token rotation.
 
+## Project setup with `env.toml`
+
+Projects can ship a declarative `env.toml` at their repo root that describes the env vars + generated files they need. Crew materializes per-worktree `.env` (and per-context override files) from the spec. The same spec can be consumed by a project-side bundled script for users who don't have crew installed (canonical-worktree path only).
+
+Skip this section for projects without `env.toml` — they continue to use the legacy `crew docker-env` (fixed-shape `COMPOSE_PROJECT_NAME` + 3 ports) which `crew run` falls back to automatically.
+
+### Schema
+
+```toml
+schema = 1   # gates compatibility; bump only with a corresponding crew change
+
+# Per-worktree, mutated when crew spawns a worktree.
+# Two `kind`s: "port" and "template".
+[orchestration]
+COMPOSE_PROJECT_NAME = { kind = "template", value = "${BASE_NAME}-${WORKTREE_ID}" }
+CADDY_HTTP_PORT      = { kind = "port", default = 80 }
+CADDY_HTTPS_PORT     = { kind = "port", default = 443 }
+APP_URL              = { kind = "template", value = "https://localhost:${CADDY_HTTPS_PORT}" }
+
+# Project-wide, set once per project.
+# Two `source`s: "literal" and "generate".
+[app]
+DATABASE_URL       = { source = "literal",  value = "postgres://..." }
+BETTER_AUTH_SECRET = { source = "generate", command = "openssl rand -base64 32" }
+
+# Files materialized once per worktree (or per project, if path is shared).
+[files.JWK_PRIVATE_KEY]
+path      = "./secrets/jwk.pem"
+generator = "openssl genpkey -algorithm RSA -out ${path}"
+env_var   = "JWK_PRIVATE_KEY_PATH"   # optional: exposes ${path} as this env var
+
+# Per-runtime-context overrides. Each emits a separate .env.<context> file.
+[contexts.docker-backend]
+DATABASE_URL = "postgres://...@postgres:5432/db"
+```
+
+`${BASE_NAME}` (project canonical name) and `${WORKTREE_ID}` (`main` for canonical, the worktree's directory suffix otherwise) are built-ins. References are resolved as a DAG; cycles error.
+
+### Materialization rules
+
+- **Orchestration**: ports use `default` for the canonical worktree, allocator-derived per-worktree values otherwise. Templates substitute previously-resolved values.
+- **App**: literals substitute. `source = "generate"` runs `command` once and caches the value in `.env`; non-canonical worktrees copy from the canonical worktree's `.env` by default. Opt out with `share = false`.
+- **Files**: `generator` runs only if `path` is missing on disk. `${path}` is substituted into the command. `env_var` (optional) exposes the path as that env var.
+- **Contexts**: each `[contexts.<name>]` block emits a `.env.<name>` file containing only its overrides. Compose's `env_file:` list applies them on top of `.env` (later files win).
+
+### Commands
+
+- `crew env init` — materialize `.env` from `env.toml` in the current worktree (canonical or fresh).
+- `crew env refresh` — re-materialize after editing `env.toml`. Preserves cached generated values.
+- `crew env validate` — schema-check `env.toml` without writing anything. Exit non-zero on cycles or unknown schema.
+
+### Maintaining the schema
+
+Most env-spec work is done by agents. When extending the schema, **all** of the following must be updated together; treat the list as a verification checklist:
+
+1. Bump `ENV_SPEC_SCHEMA_VERSION` in `packages/cli/src/lib/env-spec/types.ts`.
+2. Update the Zod schema in the same file to accept new `kind`, `source`, or section types.
+3. Update `packages/cli/src/lib/env-spec/resolve.ts` if new entry types affect dependency extraction.
+4. Update `packages/cli/src/lib/env-spec/materialize.ts` to handle new resolution rules.
+5. Update this README section (schema example + materialization rules).
+6. **Update each project's bundled `scripts/setup.mjs`** so it accepts the new schema version. If the new operator is crew-only (e.g., a future `kind = "free-port"` requiring allocation), the script must reject the new schema version with a clear error rather than silently skip.
+7. Bump `schema = N` in each project's `env.toml` once the new crew version is released and the project's bundled script has been updated.
+8. Add tests in `env-spec/*.test.ts` covering the new behavior.
+9. Update the inputs to `crew env validate` if any new validation rules apply.
+
+The schema-version field is the contract; if any of the steps above are skipped, validation will surface the mismatch but the materializer may produce surprising output.
+
 ## Status
 
 Pre-MVP. See [`docs/plans/architecture.md`](./docs/plans/architecture.md) for the design and phased rollout.
