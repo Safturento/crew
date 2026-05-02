@@ -7,14 +7,19 @@ import {
   readFileSync,
 } from 'node:fs';
 import { homedir } from 'node:os';
-import { join } from 'node:path';
+import { basename, join } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import { Command } from 'commander';
 import { execa } from 'execa';
 import pc from 'picocolors';
 import type { ProjectConfig } from 'crew-shared';
 import { claudeProjectDirFor, discoverProjectConfig } from '../lib/index.js';
-import { dockerDaemonReachable, writeDockerEnv } from '../lib/docker/index.js';
+import {
+  dockerDaemonReachable,
+  writeDockerEnv,
+  type WriteDockerEnvResult,
+} from '../lib/docker/index.js';
+import { emit, loadEnvSpec, materialize, parseEnvFile } from '../lib/env-spec/index.js';
 import { buildTicketPrompt } from '../lib/prompts/index.js';
 import { discoverSkills, renderDiscoveredSkillsBlock } from '../lib/prompts/skills.js';
 import {
@@ -50,6 +55,52 @@ import {
 interface RunOptions {
   skipDocker?: boolean;
   message?: string;
+}
+
+export interface BringUpWorktreeEnvOpts {
+  worktree: string;
+  canonicalWorktreeName: string;
+  projectName: string;
+}
+
+export type BringUpWorktreeEnvResult =
+  | { kind: 'env-spec' }
+  | { kind: 'legacy'; legacy: WriteDockerEnvResult };
+
+/**
+ * Materialize per-worktree env files. Uses env.toml when present at the
+ * worktree root, else falls back to the legacy fixed-shape writeDockerEnv.
+ *
+ * Lives here (rather than under lib/) because the legacy-vs-new branching is
+ * a `crew run` concern, not a generic library responsibility.
+ */
+export async function bringUpWorktreeEnv(
+  opts: BringUpWorktreeEnvOpts,
+): Promise<BringUpWorktreeEnvResult> {
+  const specPath = join(opts.worktree, 'env.toml');
+  if (existsSync(specPath)) {
+    const spec = loadEnvSpec(specPath);
+    const wtBasename = basename(opts.worktree);
+    const isCanonical = wtBasename === opts.canonicalWorktreeName;
+    const cacheEnv = existsSync(join(opts.worktree, '.env'))
+      ? parseEnvFile(readFileSync(join(opts.worktree, '.env'), 'utf8'))
+      : {};
+    const result = materialize(spec, {
+      baseName: opts.projectName,
+      worktreeId: isCanonical ? 'main' : wtBasename.replace(`${opts.canonicalWorktreeName}-`, ''),
+      worktreeBasename: wtBasename,
+      isCanonical,
+      cacheEnv,
+      canonicalEnv: undefined,
+    });
+    emit({ worktreeRoot: opts.worktree, base: result.base, contexts: result.contexts });
+    return { kind: 'env-spec' };
+  }
+
+  const legacy = writeDockerEnv(opts.worktree, {
+    canonicalWorktree: opts.canonicalWorktreeName,
+  });
+  return { kind: 'legacy', legacy };
 }
 
 export const runCommand = new Command('run')
@@ -194,18 +245,27 @@ export async function runRun(key: string, opts: RunOptions): Promise<never> {
 
   let dockerPorts: { httpPort: number; httpsPort: number; postgresPort: number } | undefined;
   if (config.docker) {
-    const env = writeDockerEnv(worktree, { canonicalWorktree: config.docker.canonical_worktree });
-    dockerPorts = {
-      httpPort: env.caddyHttpPort,
-      httpsPort: env.caddyHttpsPort,
-      postgresPort: env.postgresPort,
-    };
-    console.log(pc.dim(`→ wrote ${env.envPath}`));
-    console.log(pc.dim(`    project: ${env.composeProjectName}`));
-    console.log(pc.dim(`    http:    ${env.caddyHttpPort}`));
-    console.log(pc.dim(`    https:   ${env.caddyHttpsPort}`));
-    console.log(pc.dim(`    pg:      ${env.postgresPort}`));
-    console.log(pc.dim(`    url:     ${env.appUrl}`));
+    const result = await bringUpWorktreeEnv({
+      worktree,
+      canonicalWorktreeName: config.docker.canonical_worktree,
+      projectName: config.name,
+    });
+    if (result.kind === 'legacy') {
+      const env = result.legacy;
+      dockerPorts = {
+        httpPort: env.caddyHttpPort,
+        httpsPort: env.caddyHttpsPort,
+        postgresPort: env.postgresPort,
+      };
+      console.log(pc.dim(`→ wrote ${env.envPath}`));
+      console.log(pc.dim(`    project: ${env.composeProjectName}`));
+      console.log(pc.dim(`    http:    ${env.caddyHttpPort}`));
+      console.log(pc.dim(`    https:   ${env.caddyHttpsPort}`));
+      console.log(pc.dim(`    pg:      ${env.postgresPort}`));
+      console.log(pc.dim(`    url:     ${env.appUrl}`));
+    } else {
+      console.log(pc.dim(`→ materialized ${join(worktree, '.env')} from env.toml`));
+    }
   }
 
   let brunoEnvName: string | undefined;
