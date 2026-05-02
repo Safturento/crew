@@ -34,7 +34,13 @@ describe('agentNeedsAppRunning', () => {
     const cfg = baseConfig();
     cfg.playwright = {
       app_url: 'http://x',
-      authored: { enabled: true, tests_dir: 'tests/e2e', test_command: 'npm run test:e2e' },
+      authored: {
+        enabled: true,
+        tests_dir: 'tests/e2e',
+        test_command: 'npm run test:e2e',
+        verify_after_run: false,
+        verify_max_attempts: 2,
+      },
     };
     expect(agentNeedsAppRunning(cfg)).toBe(true);
   });

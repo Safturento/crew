@@ -12,8 +12,9 @@ import { setTimeout as delay } from 'node:timers/promises';
 import { Command } from 'commander';
 import { execa } from 'execa';
 import pc from 'picocolors';
+import type { ProjectConfig } from 'crew-shared';
 import { claudeProjectDirFor, discoverProjectConfig } from '../lib/index.js';
-import { writeDockerEnv } from '../lib/docker/index.js';
+import { dockerDaemonReachable, writeDockerEnv } from '../lib/docker/index.js';
 import { buildTicketPrompt } from '../lib/prompts/index.js';
 import { discoverSkills, renderDiscoveredSkillsBlock } from '../lib/prompts/skills.js';
 import {
@@ -21,6 +22,7 @@ import {
   playwrightEnabled,
   resolveAppUrl,
   smokeEnabled,
+  verifyAfterRunEnabled,
   writeMcpFile,
 } from '../lib/playwright/index.js';
 import {
@@ -28,15 +30,21 @@ import {
   writeEnvFile as writeBrunoEnvFile,
 } from '../lib/bruno-smoke/index.js';
 import {
+  checkE2eBaseline,
+  computeGateSkip,
   dockerLogPathFor,
   hasBinary,
   prepareAgentEnvironment,
   preflightTools,
+  readWorktreeState,
   requireGhToken,
   requireWorktreeAvailable,
   runLogPathFor,
+  runVerifyGate,
   streamTranscript,
+  verifyGateLogPathFor,
   worktreePathFor,
+  type BaselineCheckResult,
 } from '../lib/run/index.js';
 
 interface RunOptions {
@@ -82,6 +90,52 @@ export async function runRun(key: string, opts: RunOptions): Promise<never> {
   })();
 
   const skipDocker = opts.skipDocker || !hasBinary('docker', childPath);
+
+  // Pre-flight docker daemon probe: when docker is configured but the daemon
+  // doesn't answer, we won't be able to bring up the stack. Surface that to
+  // the agent up front via the prompt's docker_unavailable disclosure rather
+  // than letting the agent rediscover it mid-run.
+  let dockerUnavailable = false;
+  if (!skipDocker && config.docker) {
+    const reachable = await dockerDaemonReachable({ env: { ...process.env, PATH: childPath } });
+    if (!reachable) {
+      dockerUnavailable = true;
+      console.warn(
+        pc.yellow(
+          '  ! docker daemon unreachable — the agent prompt will declare docker_unavailable',
+        ),
+      );
+    }
+  }
+
+  // Pre-flight baseline check: the gate's "we'll run e2e externally" promise
+  // in the prompt only holds when the project's default branch is known-green
+  // (otherwise the gate gets disabled at fire time). Compute this BEFORE
+  // building the prompt so the agent's prompt reflects whether the gate will
+  // actually fire.
+  let baseline: BaselineCheckResult | undefined;
+  let gateWillRun = false;
+  if (verifyAfterRunEnabled(config)) {
+    baseline = await checkE2eBaseline({
+      projectName: config.name,
+      repoPath: config.repo_path,
+      defaultBranch: config.default_branch,
+    });
+    if (baseline.green && !skipDocker && !dockerUnavailable) {
+      gateWillRun = true;
+    } else if (!baseline.green) {
+      console.warn(
+        pc.yellow(
+          `  ! e2e baseline non-green (${baselineSkipDetail(baseline)}); gate disabled for this run`,
+        ),
+      );
+      console.warn(
+        pc.dim(
+          `    update once main is green:  echo $(git -C ${config.repo_path} rev-parse origin/${config.default_branch}) > ${baseline.cachePath}`,
+        ),
+      );
+    }
+  }
 
   const required = ['claude', 'gh', 'jq', 'bwrap'];
   const missing = preflightTools(required, childPath);
@@ -226,10 +280,12 @@ export async function runRun(key: string, opts: RunOptions): Promise<never> {
                 ? {
                     testsDir: config.playwright.authored.tests_dir,
                     testCommand: config.playwright.authored.test_command,
+                    verifyAfterRun: gateWillRun,
                   }
                 : undefined,
           }
         : undefined,
+    dockerUnavailable,
     brunoSmoke:
       config.bruno_smoke?.enabled && brunoEnvName && resolvedBrunoBaseUrl
         ? {
@@ -323,7 +379,9 @@ export async function runRun(key: string, opts: RunOptions): Promise<never> {
   process.off('SIGTERM', sigintHandler);
 
   // Wait up to 120s for the docker bringup to finish so the summary can include
-  // its outcome; if it's still going, abandon it to the background.
+  // its outcome; if it's still going, treat it as failed for gate purposes
+  // (we can't verify against a stack that didn't come up in 2 minutes).
+  let dockerFailed = dockerUnavailable;
   if (dockerProcess) {
     console.log();
     console.log(pc.dim('→ waiting up to 120s for docker bringup…'));
@@ -334,11 +392,28 @@ export async function runRun(key: string, opts: RunOptions): Promise<never> {
     if (!finished) {
       console.warn(
         pc.yellow(
-          `  ! docker bringup still running after 120s — continuing in background (${dockerLogPathFor(key)})`,
+          `  ! docker bringup still running after 120s — treating as unavailable for the gate (${dockerLogPathFor(key)})`,
         ),
       );
+      dockerFailed = true;
+    } else {
+      const rc = await dockerProcess.then((r) => r.exitCode);
+      if (typeof rc === 'number' && rc !== 0) dockerFailed = true;
     }
   }
+
+  await maybeRunE2eGate({
+    config,
+    key,
+    worktree,
+    env: childEnv,
+    skipDocker,
+    dockerUnavailable: dockerFailed,
+    resolvedAppUrl,
+    repoPath: config.repo_path,
+    defaultBranch: config.default_branch,
+    baseline,
+  });
 
   console.log();
   console.log(pc.dim('─────────────────────────────────────────────────────────────'));
@@ -369,4 +444,109 @@ export function resolveExitCode(result: ExecResult, signaled: boolean): number {
 function fail(message: string): never {
   console.error(pc.red(`error: ${message}`));
   process.exit(1);
+}
+
+interface MaybeRunE2eGateOptions {
+  config: ProjectConfig;
+  key: string;
+  worktree: string;
+  env: NodeJS.ProcessEnv;
+  skipDocker: boolean;
+  dockerUnavailable: boolean;
+  resolvedAppUrl: string | undefined;
+  repoPath: string;
+  defaultBranch: string;
+  /** Pre-computed baseline result. Hoisted from caller so the agent's prompt
+   * was built with the same baseline state the gate sees. Optional only so
+   * resume's no-config path stays simple; when undefined, the gate computes
+   * it lazily. */
+  baseline?: BaselineCheckResult;
+}
+
+export function baselineSkipDetail(baseline: BaselineCheckResult): string {
+  if (baseline.green) return 'green';
+  if (baseline.reason === 'mismatch') {
+    return `recorded ${baseline.recordedSha?.slice(0, 7) ?? '?'} ≠ origin ${baseline.actualSha?.slice(0, 7) ?? '?'}`;
+  }
+  if (baseline.reason === 'no-record') return 'no record';
+  return 'no remote ref';
+}
+
+/**
+ * Shared end-of-run gate: invoke the authored e2e suite from the host, and on
+ * failure resume the agent with the captured output (up to
+ * `verify_max_attempts`). Skips silently when any precondition fails.
+ *
+ * Used by `crew run` (post-stream) and `crew resume` (post-stream). Errors
+ * inside the gate are caught and logged but do not crash the surrounding
+ * command — the agent's PR has already been opened.
+ */
+export async function maybeRunE2eGate(opts: MaybeRunE2eGateOptions): Promise<void> {
+  if (!verifyAfterRunEnabled(opts.config)) return;
+
+  const state = await readWorktreeState(opts.worktree, { defaultBranch: opts.defaultBranch });
+  const baseline =
+    opts.baseline ??
+    (await checkE2eBaseline({
+      projectName: opts.config.name,
+      repoPath: opts.repoPath,
+      defaultBranch: opts.defaultBranch,
+    }));
+
+  const skip = computeGateSkip({
+    verifyAfterRun: true,
+    commitsAhead: state.commitsAhead,
+    skipDocker: opts.skipDocker,
+    dockerUnavailable: opts.dockerUnavailable,
+    baseline,
+  });
+  if (skip) {
+    console.log(pc.dim(`→ e2e gate: ${skip.reason}`));
+    if (!baseline.green) {
+      console.log(
+        pc.dim(
+          `    update the baseline once main is green:  echo $(git -C ${opts.repoPath} rev-parse origin/${opts.defaultBranch}) > ${baseline.cachePath}`,
+        ),
+      );
+    }
+    return;
+  }
+
+  console.log();
+  console.log(pc.dim('─────────────────────────────────────────────────────────────'));
+  console.log(pc.bold('→ post-agent e2e verify gate'));
+  console.log(pc.dim('─────────────────────────────────────────────────────────────'));
+
+  try {
+    const result = await runVerifyGate({
+      config: opts.config,
+      worktree: opts.worktree,
+      key: opts.key,
+      env: opts.env,
+      resolvedAppUrl: opts.resolvedAppUrl,
+      resumeLogFile: verifyGateLogPathFor(opts.key),
+    });
+    if (result.kind === 'pass') {
+      console.log(pc.green(`  ✓ e2e gate passed (attempts: ${result.attempts})`));
+    } else if (result.kind === 'aborted') {
+      console.warn(pc.yellow(`  ! e2e gate aborted by user after ${result.attempts} attempt(s)`));
+    } else {
+      console.error(
+        pc.red(
+          `  ✗ e2e gate failed after ${result.attempts} attempt(s); last distinguisher: ${result.lastDistinguisher}`,
+        ),
+      );
+      console.error(pc.dim(`    log: ${verifyGateLogPathFor(opts.key)}`));
+      console.error(pc.dim('    last captured output:'));
+      for (const line of result.lastOutput.split('\n').slice(0, 80)) {
+        console.error(pc.dim(`    ${line}`));
+      }
+    }
+  } catch (err) {
+    console.error(
+      pc.red(
+        `  ! e2e gate orchestration error — manual verification required: ${err instanceof Error ? err.message : String(err)}`,
+      ),
+    );
+  }
 }

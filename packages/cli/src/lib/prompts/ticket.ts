@@ -9,6 +9,9 @@ export interface PlaywrightPromptOptions {
   authored?: {
     testsDir: string;
     testCommand: string;
+    /** When true, the agent is told crew runs the e2e suite externally
+     * after handoff (and resumes them with the failure output if it fails). */
+    verifyAfterRun?: boolean;
   };
 }
 
@@ -27,6 +30,10 @@ export interface BuildTicketPromptOptions {
   brunoSmoke?: BrunoSmokePromptOptions;
   discoveredSkillsBlock?: string;
   userMessage?: string;
+  /** When true, render a one-line disclosure telling the agent the docker
+   * stack is unavailable so they call out the gap in the PR description
+   * rather than silently shipping. */
+  dockerUnavailable?: boolean;
 }
 
 export function buildTicketPrompt(opts: BuildTicketPromptOptions): string {
@@ -38,6 +45,9 @@ export function buildTicketPrompt(opts: BuildTicketPromptOptions): string {
     brunoSmokeBlock: buildBrunoSmokeBlock(opts.brunoSmoke),
     discoveredSkillsBlock: opts.discoveredSkillsBlock ?? '',
     userMessageBlock: renderUserMessageBlock(opts.userMessage),
+    dockerUnavailableBlock: opts.dockerUnavailable
+      ? '\n\n> **Docker stack is not available for this run.** The application is not reachable, so any verification that needs the running stack (e2e, bruno smoke, manual checks) cannot run. Surface this gap in the PR description as an uncompleted test item rather than silently shipping.'
+      : '',
   });
 }
 
@@ -58,6 +68,13 @@ function buildPlaywrightBlock(pw: PlaywrightPromptOptions | undefined): string {
       appUrl: pw.appUrl,
       testsDir: pw.authored.testsDir,
       testCommand: pw.authored.testCommand,
+      externalGateBlock: pw.authored.verifyAfterRun
+        ? '\n\n**Crew runs `' +
+          pw.authored.testCommand +
+          '` externally** after your transcript stream resolves and will resume you with the captured output if it fails. You do not need to run it yourself from inside the sandbox — the host runner has full reachability to the docker stack at ' +
+          pw.appUrl +
+          ' that the sandbox does not.'
+        : '',
     });
   }
   return out;

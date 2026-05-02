@@ -188,6 +188,8 @@ describe('playwrightFixPrOptsFor', () => {
         enabled: true,
         tests_dir: 'tests/e2e',
         test_command: 'npm run test:e2e',
+        verify_after_run: false,
+        verify_max_attempts: 2,
       },
     };
     const opts = playwrightFixPrOptsFor(cfg, 'https://localhost:18443');
@@ -233,6 +235,8 @@ describe('playwrightTicketOptsFor', () => {
         enabled: true,
         tests_dir: 'tests/e2e',
         test_command: 'npm run test:e2e',
+        verify_after_run: false,
+        verify_max_attempts: 2,
       },
     };
     const opts = playwrightTicketOptsFor(cfg, 'https://localhost:18443');
@@ -240,6 +244,23 @@ describe('playwrightTicketOptsFor', () => {
     expect(opts?.authored).toEqual({
       testsDir: 'tests/e2e',
       testCommand: 'npm run test:e2e',
+      verifyAfterRun: false,
     });
+  });
+
+  it('propagates verifyAfterRun=true when configured', () => {
+    const cfg = baseConfig();
+    cfg.playwright = {
+      app_url: 'https://localhost:18443',
+      authored: {
+        enabled: true,
+        tests_dir: 'tests/e2e',
+        test_command: 'npm run test:e2e',
+        verify_after_run: true,
+        verify_max_attempts: 2,
+      },
+    };
+    const opts = playwrightTicketOptsFor(cfg, 'https://localhost:18443');
+    expect(opts?.authored?.verifyAfterRun).toBe(true);
   });
 });

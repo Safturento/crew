@@ -7,6 +7,7 @@ import {
   playwrightEnabled,
   resolveAppUrl,
   smokeEnabled,
+  verifyAfterRunEnabled,
   type DockerPorts,
 } from '../playwright/index.js';
 import type {
@@ -113,10 +114,16 @@ export function playwrightFixPrOptsFor(
  * `buildTicketPrompt` (richer than the fix-pr shape — includes smoke +
  * start_command). Returns undefined when playwright is disabled or the
  * app URL has not been resolved.
+ *
+ * `gateWillRun` overrides the prompt's `verifyAfterRun` flag — pass true
+ * only when the baseline check has confirmed the gate will actually fire.
+ * Defaults to the config-level `verify_after_run` value (back-compat for
+ * callers that haven't done the baseline pre-flight).
  */
 export function playwrightTicketOptsFor(
   config: ProjectConfig,
   resolvedAppUrl: string | undefined,
+  gateWillRun?: boolean,
 ): PlaywrightPromptOptions | undefined {
   if (!playwrightEnabled(config) || !resolvedAppUrl || !config.playwright) return undefined;
   return {
@@ -128,6 +135,7 @@ export function playwrightTicketOptsFor(
         ? {
             testsDir: config.playwright.authored.tests_dir,
             testCommand: config.playwright.authored.test_command,
+            verifyAfterRun: gateWillRun ?? verifyAfterRunEnabled(config),
           }
         : undefined,
   };

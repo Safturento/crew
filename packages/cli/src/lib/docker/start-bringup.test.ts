@@ -30,4 +30,12 @@ describe('buildDockerBringupScript', () => {
     expect(script).not.toContain("main's stack isn't running");
     expect(script).toMatch(/data clone failed/);
   });
+
+  it('exits non-zero when docker compose up fails so callers can detect bringup failure', () => {
+    // Without `exit 1`, the bash wrapper would always return 0 and the
+    // post-agent e2e gate (CREW-76) couldn't tell a healthy stack from a
+    // dead one.
+    const script = buildDockerBringupScript('/repo', { stopAfterBringup: true });
+    expect(script).toMatch(/!\s+docker stack failed to come up[\s\S]*exit 1/);
+  });
 });
