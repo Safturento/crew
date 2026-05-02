@@ -18,6 +18,7 @@ export function runGenerator(command: string): string {
     const stderr = (e.stderr ?? '').toString().trim();
     throw new Error(
       `generator command failed (exit ${e.status ?? '?'}): \`${command}\`\n${stderr || e.message}`,
+      { cause: err },
     );
   }
 }

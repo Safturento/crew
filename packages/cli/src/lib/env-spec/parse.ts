@@ -11,7 +11,7 @@ export function parseEnvSpec(raw: string): EnvSpec {
   try {
     parsed = parseToml(raw);
   } catch (err) {
-    throw new Error(`env.toml parse error: ${(err as Error).message}`);
+    throw new Error(`env.toml parse error: ${(err as Error).message}`, { cause: err });
   }
 
   const top = parsed as { schema?: unknown };

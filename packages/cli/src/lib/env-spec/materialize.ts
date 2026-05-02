@@ -42,8 +42,9 @@ export function materialize(spec: EnvSpec, opts: MaterializeOptions): Materializ
     const orchEntry = spec.orchestration[key];
     if (orchEntry) {
       if (orchEntry.kind === 'port') {
-        if (key in opts.cacheEnv) {
-          map[key] = opts.cacheEnv[key]!;
+        const cached = opts.cacheEnv[key];
+        if (cached !== undefined) {
+          map[key] = cached;
         } else if (opts.isCanonical && orchEntry.default !== undefined) {
           map[key] = String(orchEntry.default);
         } else {
@@ -60,15 +61,13 @@ export function materialize(spec: EnvSpec, opts: MaterializeOptions): Materializ
       if (appEntry.source === 'literal') {
         map[key] = substitute(appEntry.value, map);
       } else {
-        if (key in opts.cacheEnv) {
-          map[key] = opts.cacheEnv[key]!;
-        } else if (
-          !opts.isCanonical &&
-          appEntry.share !== false &&
-          opts.canonicalEnv &&
-          key in opts.canonicalEnv
-        ) {
-          map[key] = opts.canonicalEnv[key]!;
+        const cached = opts.cacheEnv[key];
+        const shared =
+          !opts.isCanonical && appEntry.share !== false ? opts.canonicalEnv?.[key] : undefined;
+        if (cached !== undefined) {
+          map[key] = cached;
+        } else if (shared !== undefined) {
+          map[key] = shared;
         } else {
           map[key] = runGenerator(appEntry.command);
         }
@@ -89,11 +88,21 @@ export function materialize(spec: EnvSpec, opts: MaterializeOptions): Materializ
     if (fileEntry.env_var) map[fileEntry.env_var] = fileEntry.path;
   }
 
+  const take = (k: string): string => {
+    const v = map[k];
+    if (v === undefined) {
+      throw new Error(
+        `env.toml: internal error — \`${k}\` was not resolved during materialization`,
+      );
+    }
+    return v;
+  };
+
   const base: Record<string, string> = {};
-  for (const k of Object.keys(spec.orchestration)) base[k] = map[k]!;
-  for (const k of Object.keys(spec.app)) base[k] = map[k]!;
+  for (const k of Object.keys(spec.orchestration)) base[k] = take(k);
+  for (const k of Object.keys(spec.app)) base[k] = take(k);
   for (const f of Object.values(spec.files)) {
-    if (f.env_var) base[f.env_var] = map[f.env_var]!;
+    if (f.env_var) base[f.env_var] = take(f.env_var);
   }
 
   const contexts: Record<string, Record<string, string>> = {};

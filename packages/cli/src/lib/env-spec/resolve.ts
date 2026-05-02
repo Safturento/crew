@@ -8,7 +8,8 @@ export function extractRefs(value: string): string[] {
   const seen = new Set<string>();
   const out: string[] = [];
   for (const m of value.matchAll(REF_RE)) {
-    const name = m[1]!;
+    const name = m[1];
+    if (name === undefined) continue;
     if (!seen.has(name)) {
       seen.add(name);
       out.push(name);
@@ -33,9 +34,7 @@ export function topoSortKeys(deps: Map<string, string[]>): string[] {
     }
     const depList = deps.get(key);
     if (depList === undefined) {
-      throw new Error(
-        `env.toml: \`${path.at(-1) ?? '<root>'}\` references unknown key \`${key}\``,
-      );
+      throw new Error(`env.toml: \`${path.at(-1) ?? '<root>'}\` references unknown key \`${key}\``);
     }
     onStack.add(key);
     for (const d of depList) visit(d, [...path, key]);
@@ -51,10 +50,11 @@ export function topoSortKeys(deps: Map<string, string[]>): string[] {
 /** Replace every `${...}` in `value` with the corresponding entry from `map`. */
 export function substitute(value: string, map: Record<string, string>): string {
   return value.replace(REF_RE, (_full, name: string) => {
-    if (!(name in map)) {
+    const resolved = map[name];
+    if (resolved === undefined) {
       throw new Error(`env.toml: substitution failed — \`\${${name}}\` is not resolved`);
     }
-    return map[name]!;
+    return resolved;
   });
 }
 
