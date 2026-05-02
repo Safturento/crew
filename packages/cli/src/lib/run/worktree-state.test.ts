@@ -44,7 +44,9 @@ describe('readWorktreeState', () => {
       .mockReturnValueOnce(ok('') as ReturnType<typeof execa>);
 
     await readWorktreeState('/some/worktree', { defaultBranch: 'main' });
-    for (const call of execaMock.mock.calls as unknown as Array<[string, string[], { cwd: string }]>) {
+    for (const call of execaMock.mock.calls as unknown as Array<
+      [string, string[], { cwd: string }]
+    >) {
       expect(call[2]).toMatchObject({ cwd: '/some/worktree' });
     }
   });
