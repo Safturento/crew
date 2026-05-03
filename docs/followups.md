@@ -9,7 +9,6 @@ Format: see the user-level `~/.claude/CLAUDE.md` "Followup detection" section.
 - [Active](#active)
   - [2026-05-03 — `crew run` swallows background-task failures into `/tmp` logs](#2026-05-03--crew-run-swallows-background-task-failures-into-tmp-logs)
   - [2026-05-03 — Transcript line printer truncates tool-call inputs mid-string](#2026-05-03--transcript-line-printer-truncates-tool-call-inputs-mid-string)
-  - [2026-05-03 — `crew resume` / `crew fix-pr` env-spec parity for `${VAR}` syntax](#2026-05-03--crew-resume--crew-fix-pr-env-spec-parity-for-var-syntax)
   - [2026-05-02 — `crew restart --hard` should not silently bail when a PR exists](#2026-05-02--crew-restart---hard-should-not-silently-bail-when-a-pr-exists)
   - [2026-05-02 — `crew fix-pr` skips env materialization and full verification](#2026-05-02--crew-fix-pr-skips-env-materialization-and-full-verification)
   - [2026-05-01 — Structured final-report contract for agent dispatches (dashboard prerequisite)](#2026-05-01--structured-final-report-contract-for-agent-dispatches-dashboard-prerequisite)
@@ -37,6 +36,7 @@ Format: see the user-level `~/.claude/CLAUDE.md` "Followup detection" section.
   - [2026-04-27 — Dashboard mobile responsive layout polish](#2026-04-27--dashboard-mobile-responsive-layout-polish)
   - [2026-04-26 — Architecture doc open questions still unresolved](#2026-04-26--architecture-doc-open-questions-still-unresolved)
 - [Resolved](#resolved)
+  - [2026-05-03 — `crew resume` / `crew fix-pr` env-spec parity for `${VAR}` syntax](#2026-05-03--crew-resume--crew-fix-pr-env-spec-parity-for-var-syntax)
 - [Abandoned](#abandoned)
 
 ## Active
@@ -94,28 +94,6 @@ The right answer is per-tool policy, not a global constant. Default-blind slicin
 
 - Does `formatAssistantText`'s `ASSISTANT_TEXT_MAX_LEN = 120` get the same treatment, or stay capped (it's a multi-line preamble, different shape)?
 - Is there a max-line config knob users will want (`CREW_TRANSCRIPT_MAX_LINE_CHARS`)? Probably no — start with sensible defaults; add when someone asks.
-
-### 2026-05-03 — `crew resume` / `crew fix-pr` env-spec parity for `${VAR}` syntax
-
-**What:** CREW-81 wired the materialized `env.toml` base map through `crew run`'s `resolveAppUrl` callsites so projects can use `${VAR}` placeholders in `[playwright].app_url` / `[bruno_smoke].base_url`. The resume / fix-pr code paths were left out of scope. They still go through `readDockerPortsFromEnvFile` (which only knows the legacy fixed-shape `CADDY_HTTP_PORT` / `CADDY_HTTPS_PORT` / `POSTGRES_PORT` keys) and pass `envVars: undefined` to `resolveAppUrl`. Result: on an env.toml project with `${APP_URL}` in its project TOML, `crew resume KEY` and `crew fix-pr KEY` will throw `${APP_URL} used but env vars were not provided`.
-
-**Why noticed:** Self-review of CREW-81 surfaced this. Pre-CREW-81 these paths were already broken on env.toml projects (the legacy `{httpsPort}` placeholder hit `readDockerPortsFromEnvFile`, which fails to find `CADDY_HTTPS_PORT` in an env-spec `.env` file unless the project happened to declare it under that exact name). So it's not a new regression — it's a parity gap CREW-81 didn't close. The error message is now actionable ("use `${VAR}` syntax"), but the user-side fix is "wait for this followup," not "edit the TOML."
-
-**Anchors:**
-
-- `packages/cli/src/commands/resume.ts:69-71,89` — calls `readDockerPortsFromEnvFile` then `resolveAppUrl(..., dockerPorts)` with no envVars.
-- `packages/cli/src/lib/run/agent-options.ts:69-88` (`brunoSmokeOptionsFor`) — same shape, used by resume + fix-pr.
-- `packages/cli/src/commands/run.ts` (CREW-81 baseline) — the model: `bringUpWorktreeEnv` returns the materialized base map, runRun threads it through.
-- `docs/superpowers/plans/2026-05-02-env-toml-app-url-resolution.md` — explicitly scoped to runRun.
-
-**What's been considered:** The shape is fairly mechanical: rerun `bringUpWorktreeEnv` (or read `.env` and reconstruct `Record<string, string>`) at resume/fix-pr entry, then thread `envVars` through `prepareAgentEnvironment` (already accepts it from CREW-81), `playwrightFixPrOptsFor`, `playwrightTicketOptsFor`, and `brunoSmokeOptionsFor`. The wrinkle: resume MUST NOT re-run port allocation (allocator is non-idempotent across worktrees) — read-only materialization is required, which CREW-81's `bringUpWorktreeEnv` doesn't currently support. So either add a `bringUpWorktreeEnv({ readOnly: true })` mode that skips writes, or parse the existing `.env` file into a base map directly.
-
-**Shape of work:** One ticket. ~3 small commits. Likely `readEnvBaseMap(worktree): Record<string, string>` helper alongside `readDockerPortsFromEnvFile`, then update `resume.ts`, `fix-pr.ts`, and `agent-options.ts:brunoSmokeOptionsFor` to call it for env-spec projects (detect via env.toml presence at the worktree root). Tests mirror CREW-81's `run.test.ts` integration tests but for the resume entry point.
-
-**Open questions:**
-
-- New helper `readEnvBaseMap` vs. add a `readOnly` flag to `bringUpWorktreeEnv`? The latter would also re-run file generators, which we don't want at resume time.
-- For env-spec projects, do we want resume to detect `env.toml` mtime newer than `.env` and refuse / warn / refresh? Out-of-band, but worth thinking through with the same ticket so the UX is coherent.
 
 ### 2026-05-02 — `crew restart --hard` should not silently bail when a PR exists
 
@@ -691,6 +669,30 @@ The other two open questions (sandbox config drift, Phase 2 + Phase 3 separation
 ## Resolved
 
 (items move here when ticketed and shipped, or fixed inline — keep for historical context, prune when the file gets long)
+
+### 2026-05-03 — `crew resume` / `crew fix-pr` env-spec parity for `${VAR}` syntax
+
+**Resolved 2026-05-03:** Fast-tracked as a non-trivial-but-small fix on `fix/env-spec-parity-resume-fix-pr`. Added `readEnvBaseMap(worktree)` helper (read-only — no re-materialize / port re-allocation), threaded `envVars` through `resume.ts` (3 call sites), `fix-pr.ts` (2 call sites), and `brunoSmokeOptionsFor` (new optional 4th param). The "readOnly bringUpWorktreeEnv" alternative was rejected — it'd also re-run `source = "generate"` commands, which is not what we want during a resume.
+
+**What:** CREW-81 wired the materialized `env.toml` base map through `crew run`'s `resolveAppUrl` callsites so projects can use `${VAR}` placeholders in `[playwright].app_url` / `[bruno_smoke].base_url`. The resume / fix-pr code paths were left out of scope. They still go through `readDockerPortsFromEnvFile` (which only knows the legacy fixed-shape `CADDY_HTTP_PORT` / `CADDY_HTTPS_PORT` / `POSTGRES_PORT` keys) and pass `envVars: undefined` to `resolveAppUrl`. Result: on an env.toml project with `${APP_URL}` in its project TOML, `crew resume KEY` and `crew fix-pr KEY` will throw `${APP_URL} used but env vars were not provided`.
+
+**Why noticed:** Self-review of CREW-81 surfaced this. Pre-CREW-81 these paths were already broken on env.toml projects (the legacy `{httpsPort}` placeholder hit `readDockerPortsFromEnvFile`, which fails to find `CADDY_HTTPS_PORT` in an env-spec `.env` file unless the project happened to declare it under that exact name). So it's not a new regression — it's a parity gap CREW-81 didn't close. The error message is now actionable ("use `${VAR}` syntax"), but the user-side fix is "wait for this followup," not "edit the TOML."
+
+**Anchors:**
+
+- `packages/cli/src/commands/resume.ts:69-71,89` — calls `readDockerPortsFromEnvFile` then `resolveAppUrl(..., dockerPorts)` with no envVars.
+- `packages/cli/src/lib/run/agent-options.ts:69-88` (`brunoSmokeOptionsFor`) — same shape, used by resume + fix-pr.
+- `packages/cli/src/commands/run.ts` (CREW-81 baseline) — the model: `bringUpWorktreeEnv` returns the materialized base map, runRun threads it through.
+- `docs/superpowers/plans/2026-05-02-env-toml-app-url-resolution.md` — explicitly scoped to runRun.
+
+**What's been considered:** The shape is fairly mechanical: rerun `bringUpWorktreeEnv` (or read `.env` and reconstruct `Record<string, string>`) at resume/fix-pr entry, then thread `envVars` through `prepareAgentEnvironment` (already accepts it from CREW-81), `playwrightFixPrOptsFor`, `playwrightTicketOptsFor`, and `brunoSmokeOptionsFor`. The wrinkle: resume MUST NOT re-run port allocation (allocator is non-idempotent across worktrees) — read-only materialization is required, which CREW-81's `bringUpWorktreeEnv` doesn't currently support. So either add a `bringUpWorktreeEnv({ readOnly: true })` mode that skips writes, or parse the existing `.env` file into a base map directly.
+
+**Shape of work:** One ticket. ~3 small commits. Likely `readEnvBaseMap(worktree): Record<string, string>` helper alongside `readDockerPortsFromEnvFile`, then update `resume.ts`, `fix-pr.ts`, and `agent-options.ts:brunoSmokeOptionsFor` to call it for env-spec projects (detect via env.toml presence at the worktree root). Tests mirror CREW-81's `run.test.ts` integration tests but for the resume entry point.
+
+**Open questions:**
+
+- ~~New helper `readEnvBaseMap` vs. add a `readOnly` flag to `bringUpWorktreeEnv`?~~ Resolved: separate helper. The readOnly flag would still re-run `source = "generate"` commands.
+- For env-spec projects, do we want resume to detect `env.toml` mtime newer than `.env` and refuse / warn / refresh? Out-of-band — deferred. Not part of this fix.
 
 ## Abandoned
 
