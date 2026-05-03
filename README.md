@@ -211,6 +211,26 @@ DATABASE_URL = "postgres://...@postgres:5432/db"
 - **Files**: `generator` runs only if `path` is missing on disk. `${path}` is substituted into the command. `env_var` (optional) exposes the path as that env var.
 - **Contexts**: each `[contexts.<name>]` block emits a `.env.<name>` file containing only its overrides. Compose's `env_file:` list applies them on top of `.env` (later files win).
 
+### App URL resolution in project TOML
+
+`[playwright].app_url` and `[bruno_smoke].base_url` in your `~/.config/crew/projects/<name>.toml` resolve placeholders before crew passes the URL to the agent. Two syntaxes are supported:
+
+- **`${VAR}`** — substitutes from the materialized `env.toml` base map. Use this for projects with an `env.toml`. Example:
+
+  ```toml
+  [playwright]
+  app_url = "${APP_URL}"
+
+  [bruno_smoke]
+  base_url = "${APP_URL}"
+  ```
+
+  Any variable declared in the project's `env.toml` (orchestration, app, files-with-`env_var`, even built-ins like `${BASE_NAME}`) can be referenced.
+
+- **`{httpPort}` / `{httpsPort}` / `{postgresPort}`** — legacy syntax for projects *without* `env.toml`. Substitutes from the fixed `writeDockerEnv` port shape. Don't use this for env.toml projects — crew can't populate the legacy ports map from a generic env.toml schema, and you'll get a clear error pointing you at the `${VAR}` form.
+
+Both syntaxes can coexist in one template (e.g., `${BASE_URL}:{httpsPort}/api`), but in practice projects use one or the other. The `${VAR}` form is the modern way.
+
 ### Commands
 
 - `crew env init` — materialize `.env` from `env.toml` in the current worktree (canonical or fresh).

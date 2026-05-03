@@ -17,6 +17,7 @@ export interface AgentEnvironmentOptions {
   key: string;
   env: NodeJS.ProcessEnv;
   dockerPorts?: DockerPorts;
+  envVars?: Record<string, string>;
   mode: 'fresh' | 'resume';
   skipDocker?: boolean;
 }
@@ -40,11 +41,11 @@ export interface AgentEnvironmentResult {
 export async function prepareAgentEnvironment(
   opts: AgentEnvironmentOptions,
 ): Promise<AgentEnvironmentResult> {
-  const { config, worktree, key, env, dockerPorts, mode, skipDocker } = opts;
+  const { config, worktree, key, env, dockerPorts, envVars, mode, skipDocker } = opts;
   const result: AgentEnvironmentResult = {};
 
   if (playwrightEnabled(config) && config.playwright) {
-    result.resolvedAppUrl = resolveAppUrl(config.playwright.app_url, dockerPorts).raw;
+    result.resolvedAppUrl = resolveAppUrl(config.playwright.app_url, dockerPorts, envVars).raw;
   }
 
   if (mode === 'fresh') {

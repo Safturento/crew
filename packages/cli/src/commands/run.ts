@@ -64,7 +64,7 @@ export interface BringUpWorktreeEnvOpts {
 }
 
 export type BringUpWorktreeEnvResult =
-  | { kind: 'env-spec' }
+  | { kind: 'env-spec'; base: Record<string, string> }
   | { kind: 'legacy'; legacy: WriteDockerEnvResult };
 
 /**
@@ -94,7 +94,7 @@ export async function bringUpWorktreeEnv(
       canonicalEnv: undefined,
     });
     emit({ worktreeRoot: opts.worktree, base: result.base, contexts: result.contexts });
-    return { kind: 'env-spec' };
+    return { kind: 'env-spec', base: result.base };
   }
 
   const legacy = writeDockerEnv(opts.worktree, {
@@ -244,6 +244,7 @@ export async function runRun(key: string, opts: RunOptions): Promise<never> {
   chmodSync(ghTokenDest, 0o600);
 
   let dockerPorts: { httpPort: number; httpsPort: number; postgresPort: number } | undefined;
+  let envVars: Record<string, string> | undefined;
   if (config.docker) {
     const result = await bringUpWorktreeEnv({
       worktree,
@@ -264,14 +265,18 @@ export async function runRun(key: string, opts: RunOptions): Promise<never> {
       console.log(pc.dim(`    pg:      ${env.postgresPort}`));
       console.log(pc.dim(`    url:     ${env.appUrl}`));
     } else {
+      envVars = result.base;
       console.log(pc.dim(`→ materialized ${join(worktree, '.env')} from env.toml`));
+      if (envVars.APP_URL) {
+        console.log(pc.dim(`    url:     ${envVars.APP_URL}`));
+      }
     }
   }
 
   let brunoEnvName: string | undefined;
   let resolvedBrunoBaseUrl: string | undefined;
   if (config.bruno_smoke?.enabled) {
-    resolvedBrunoBaseUrl = resolveAppUrl(config.bruno_smoke.base_url, dockerPorts).raw;
+    resolvedBrunoBaseUrl = resolveAppUrl(config.bruno_smoke.base_url, dockerPorts, envVars).raw;
     brunoEnvName = resolveBrunoEnvName(worktree);
     const writeResult = writeBrunoEnvFile(worktree, {
       collectionDir: config.bruno_smoke.collection_dir,
@@ -295,6 +300,7 @@ export async function runRun(key: string, opts: RunOptions): Promise<never> {
     key,
     env: childEnv,
     dockerPorts,
+    envVars,
     mode: 'fresh',
     skipDocker,
   }).catch((err: unknown): never => fail(err instanceof Error ? err.message : String(err)));
@@ -305,7 +311,7 @@ export async function runRun(key: string, opts: RunOptions): Promise<never> {
   // binary, and the existsSync guard would fall back to MCP's system-chrome
   // default (the bug CREW-70 fixed).
   if (playwrightEnabled(config) && config.playwright && smokeEnabled(config)) {
-    const resolved = resolveAppUrl(config.playwright.app_url, dockerPorts);
+    const resolved = resolveAppUrl(config.playwright.app_url, dockerPorts, envVars);
     const writeResult = await writeMcpFile(worktree, { appUrl: resolved.raw });
     console.log(pc.dim(`→ wrote ${join(worktree, '.mcp.json')} (CREW_APP_URL=${resolved.raw})`));
     if (writeResult.chromiumPath) {
