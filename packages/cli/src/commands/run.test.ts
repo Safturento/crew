@@ -109,3 +109,77 @@ SECRET = { source = "literal", value = "static" }
     expect(readFileSync(join(canonical, '.env'), 'utf8')).toMatch(/COMPOSE_PROJECT_NAME=/);
   });
 });
+
+describe('crew run + env.toml: app URL resolution', () => {
+  let dir: string;
+
+  beforeEach(() => {
+    dir = mkdtempSync(join(tmpdir(), 'crew-run-appurl-'));
+  });
+
+  afterEach(() => {
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it('resolves ${APP_URL} from the materialized env-spec base map', async () => {
+    const canonical = join(dir, 'fake-project');
+    mkdirSync(canonical);
+    writeFileSync(
+      join(canonical, 'env.toml'),
+      `
+schema = 1
+[orchestration]
+HTTPS_PORT = { kind = "port", default = 443 }
+APP_URL    = { kind = "template", value = "https://localhost:\${HTTPS_PORT}" }
+[app]
+`,
+    );
+
+    const { bringUpWorktreeEnv } = await import('./run.js');
+    const result = await bringUpWorktreeEnv({
+      worktree: canonical,
+      canonicalWorktreeName: 'fake-project',
+      projectName: 'fake-project',
+    });
+
+    expect(result.kind).toBe('env-spec');
+    if (result.kind !== 'env-spec') return;
+    expect(result.base.APP_URL).toBe('https://localhost:443');
+    expect(result.base.HTTPS_PORT).toBe('443');
+
+    const { resolveAppUrl } = await import('../lib/playwright/resolve-app-url.js');
+    const resolved = resolveAppUrl('${APP_URL}/health', undefined, result.base);
+    expect(resolved.raw).toBe('https://localhost:443/health');
+  });
+
+  it('errors clearly when project TOML uses {httpsPort} on an env.toml project', async () => {
+    const canonical = join(dir, 'fake-project-mixed');
+    mkdirSync(canonical);
+    writeFileSync(
+      join(canonical, 'env.toml'),
+      `
+schema = 1
+[orchestration]
+HTTPS_PORT = { kind = "port", default = 443 }
+[app]
+`,
+    );
+
+    const { bringUpWorktreeEnv } = await import('./run.js');
+    const result = await bringUpWorktreeEnv({
+      worktree: canonical,
+      canonicalWorktreeName: 'fake-project-mixed',
+      projectName: 'fake-project-mixed',
+    });
+    expect(result.kind).toBe('env-spec');
+
+    const { resolveAppUrl } = await import('../lib/playwright/resolve-app-url.js');
+    expect(() =>
+      resolveAppUrl(
+        'https://localhost:{httpsPort}',
+        undefined,
+        result.kind === 'env-spec' ? result.base : undefined,
+      ),
+    ).toThrow(/should use \$\{VAR\} syntax/i);
+  });
+});
