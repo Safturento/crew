@@ -359,7 +359,7 @@ Worth verifying whether the daemon's `tool_calls` table already captures sidecha
 
 **What:** A single subcommand for project setup, both new and existing:
 
-- **New project**: walk through writing the TOML, **scaffold an `env.toml` at the project repo root** (prompt for orchestration ports, app vars, contexts; populate sensible defaults), run `npm install -D @playwright/test` if Playwright is opted in, scaffold `playwright.config.ts` + `tests/e2e/` skeleton, scaffold Bruno collection skeleton if opted in.
+- **New project**: walk through writing the TOML, **scaffold an `env.toml` at the project repo root** (prompt for orchestration ports, app vars, contexts; populate sensible defaults). The scaffolded project TOML at `~/.config/crew/projects/<name>.toml` MUST use `${VAR}`-style references (e.g. `app_url = "${APP_URL}"`) for `[playwright].app_url` and `[bruno_smoke].base_url`, never the legacy `{httpsPort}` placeholders — `${VAR}` is the only correct syntax for env.toml projects, even though crew still accepts legacy `{httpsPort}` for projects without env.toml. Run `npm install -D @playwright/test` if Playwright is opted in, scaffold `playwright.config.ts` + `tests/e2e/` skeleton, scaffold Bruno collection skeleton if opted in.
 - **Existing project**: modify the TOML in place (toggle blocks, change URLs), run machine-wide health checks (apt deps present, Chromium installed for every configured project, docker socket reachable).
 
 The two halves can ship as one subcommand (single pane of glass) rather than splitting into `crew init` + `crew doctor`.
