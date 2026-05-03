@@ -21,6 +21,7 @@ import {
   playwrightFixPrOptsFor,
   prepareAgentEnvironment,
   readDockerPortsFromEnvFile,
+  readEnvBaseMap,
   streamTranscript,
 } from '../lib/run/index.js';
 import type { DockerPorts } from '../lib/playwright/index.js';
@@ -186,9 +187,12 @@ async function runFixPr(key: string, flags: FixPrFlags): Promise<void> {
     projectConfig && needsDockerPorts(projectConfig)
       ? readDockerPortsFromEnvFile(worktree)
       : undefined;
+  // env-spec projects: read the materialized .env so ${VAR} placeholders in
+  // app_url / base_url resolve. undefined for legacy projects.
+  const envVars = projectConfig ? readEnvBaseMap(worktree) : undefined;
 
   const brunoSmoke = projectConfig
-    ? brunoSmokeOptionsFor(projectConfig, worktree, dockerPorts)
+    ? brunoSmokeOptionsFor(projectConfig, worktree, dockerPorts, envVars)
     : undefined;
 
   let resolvedAppUrl: string | undefined;
@@ -199,6 +203,7 @@ async function runFixPr(key: string, flags: FixPrFlags): Promise<void> {
       key,
       env: process.env,
       dockerPorts,
+      envVars,
       mode: 'resume',
     });
     resolvedAppUrl = env.resolvedAppUrl;

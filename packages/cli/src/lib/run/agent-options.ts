@@ -2,6 +2,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { ProjectConfig } from 'crew-shared';
 import { resolveBrunoEnvName } from '../bruno-smoke/index.js';
+import { parseEnvFile } from '../env-spec/index.js';
 import {
   authoredEnabled,
   playwrightEnabled,
@@ -45,6 +46,24 @@ export function readDockerPortsFromEnvFile(worktree: string): DockerPorts {
 }
 
 /**
+ * Read a worktree's materialized `.env` as a `${VAR}` substitution map for
+ * `resolveAppUrl` in the resume / fix-pr paths. Returns `undefined` for
+ * legacy projects without `env.toml`.
+ *
+ * Read-only: does NOT call `materialize()` — re-running the port
+ * allocator on resume would shift host ports out from under a live agent
+ * (the allocator is hash-based on the worktree basename and stable, but
+ * `source = "generate"` entries would also re-execute, which we don't
+ * want during a resume).
+ */
+export function readEnvBaseMap(worktree: string): Record<string, string> | undefined {
+  if (!existsSync(join(worktree, 'env.toml'))) return undefined;
+  const envPath = join(worktree, '.env');
+  if (!existsSync(envPath)) return undefined;
+  return parseEnvFile(readFileSync(envPath, 'utf8'));
+}
+
+/**
  * Whether the resolved app/base URLs need the worktree's docker port
  * substitutions. Returns true if either bruno-smoke or playwright has a
  * `{httpPort}` / `{httpsPort}` / `{postgresPort}` placeholder.
@@ -70,6 +89,7 @@ export function brunoSmokeOptionsFor(
   config: ProjectConfig,
   worktree: string,
   dockerPorts?: DockerPorts,
+  envVars?: Record<string, string>,
 ): BrunoSmokePromptOptions | undefined {
   const bs = config.bruno_smoke;
   if (!bs?.enabled) return undefined;
@@ -78,7 +98,7 @@ export function brunoSmokeOptionsFor(
     dockerPorts ??
     (PORT_PLACEHOLDER_RE.test(bs.base_url) ? readDockerPortsFromEnvFile(worktree) : undefined);
 
-  const baseUrl = resolveAppUrl(bs.base_url, ports).raw;
+  const baseUrl = resolveAppUrl(bs.base_url, ports, envVars).raw;
   return {
     baseUrl,
     envName: resolveBrunoEnvName(worktree),

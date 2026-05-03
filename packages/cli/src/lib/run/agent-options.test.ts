@@ -9,6 +9,7 @@ import {
   playwrightFixPrOptsFor,
   playwrightTicketOptsFor,
   readDockerPortsFromEnvFile,
+  readEnvBaseMap,
 } from './agent-options.js';
 
 function baseConfig(): ProjectConfig {
@@ -58,6 +59,37 @@ describe('readDockerPortsFromEnvFile', () => {
   it('throws when a required port is missing', () => {
     writeFileSync(join(tmp, '.env'), 'CADDY_HTTP_PORT=8001\n');
     expect(() => readDockerPortsFromEnvFile(tmp)).toThrow(/CADDY_HTTPS_PORT/);
+  });
+});
+
+describe('readEnvBaseMap', () => {
+  let tmp: string;
+
+  beforeEach(() => {
+    tmp = mkdtempSync(join(tmpdir(), 'crew-env-base-'));
+  });
+
+  afterEach(() => {
+    rmSync(tmp, { recursive: true, force: true });
+  });
+
+  it('returns the parsed .env when env.toml is present', () => {
+    writeFileSync(join(tmp, 'env.toml'), 'schema = 1\n');
+    writeFileSync(join(tmp, '.env'), 'APP_URL=https://localhost:28905\nFOO=bar\n');
+    expect(readEnvBaseMap(tmp)).toEqual({
+      APP_URL: 'https://localhost:28905',
+      FOO: 'bar',
+    });
+  });
+
+  it('returns undefined for legacy projects without env.toml', () => {
+    writeFileSync(join(tmp, '.env'), 'CADDY_HTTP_PORT=8001\n');
+    expect(readEnvBaseMap(tmp)).toBeUndefined();
+  });
+
+  it('returns undefined when env.toml is present but .env has not been materialized', () => {
+    writeFileSync(join(tmp, 'env.toml'), 'schema = 1\n');
+    expect(readEnvBaseMap(tmp)).toBeUndefined();
   });
 });
 
@@ -137,6 +169,29 @@ describe('brunoSmokeOptionsFor', () => {
     };
     const opts = brunoSmokeOptionsFor(cfg, '/wt/main');
     expect(opts?.hasSmokeUser).toBe(true);
+  });
+
+  it('substitutes ${VAR} in base_url from envVars (env-spec projects)', () => {
+    const cfg = baseConfig();
+    cfg.bruno_smoke = {
+      enabled: true,
+      base_url: '${APP_URL}',
+      collection_dir: 'bruno',
+    };
+    const opts = brunoSmokeOptionsFor(cfg, '/wt/main', undefined, {
+      APP_URL: 'https://localhost:28905',
+    });
+    expect(opts?.baseUrl).toBe('https://localhost:28905');
+  });
+
+  it('throws when base_url has ${VAR} but envVars was not provided', () => {
+    const cfg = baseConfig();
+    cfg.bruno_smoke = {
+      enabled: true,
+      base_url: '${APP_URL}',
+      collection_dir: 'bruno',
+    };
+    expect(() => brunoSmokeOptionsFor(cfg, '/wt/main')).toThrow(/env vars were not provided/);
   });
 
   it('does not read .env when base_url has no port placeholder, even with [docker] set', () => {
