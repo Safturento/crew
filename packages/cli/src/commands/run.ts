@@ -64,7 +64,7 @@ export interface BringUpWorktreeEnvOpts {
 }
 
 export type BringUpWorktreeEnvResult =
-  | { kind: 'env-spec' }
+  | { kind: 'env-spec'; base: Record<string, string> }
   | { kind: 'legacy'; legacy: WriteDockerEnvResult };
 
 /**
@@ -94,7 +94,7 @@ export async function bringUpWorktreeEnv(
       canonicalEnv: undefined,
     });
     emit({ worktreeRoot: opts.worktree, base: result.base, contexts: result.contexts });
-    return { kind: 'env-spec' };
+    return { kind: 'env-spec', base: result.base };
   }
 
   const legacy = writeDockerEnv(opts.worktree, {
