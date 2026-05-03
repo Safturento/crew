@@ -4,9 +4,18 @@ import { allocatePort } from './allocate-port.js';
 import { runGenerator, runFileGenerator } from './generate.js';
 
 export interface MaterializeOptions {
-  /** Project canonical name (e.g. "recipes"). Built-in: ${BASE_NAME}. */
+  /**
+   * Project canonical name (e.g. "recipes"). Built-in: ${BASE_NAME}.
+   *
+   * Lowercased before substitution: BASE_NAME and WORKTREE_ID flow into
+   * docker compose project / network / container names, hostnames, and
+   * URLs — all of which require lowercase. Callers may pass any casing.
+   */
   baseName: string;
-  /** Worktree identifier (e.g. "main", "kan-23"). Built-in: ${WORKTREE_ID}. */
+  /**
+   * Worktree identifier (e.g. "main", "kan-23"). Built-in: ${WORKTREE_ID}.
+   * Lowercased before substitution — see `baseName`.
+   */
   worktreeId: string;
   /** Worktree directory basename — input to the port allocator. */
   worktreeBasename: string;
@@ -27,8 +36,8 @@ export interface MaterializeResult {
 
 export function materialize(spec: EnvSpec, opts: MaterializeOptions): MaterializeResult {
   const map: Record<string, string> = {
-    BASE_NAME: opts.baseName,
-    WORKTREE_ID: opts.worktreeId,
+    BASE_NAME: opts.baseName.toLowerCase(),
+    WORKTREE_ID: opts.worktreeId.toLowerCase(),
   };
 
   // Files first: their `${path}` substitution is self-contained, and populating

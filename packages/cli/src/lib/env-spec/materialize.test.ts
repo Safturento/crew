@@ -145,6 +145,23 @@ env_var   = "JWK_PATH"
     expect(result.base.JWK_DESC).toBe(`key at ${target}`);
   });
 
+  it('lowercases BASE_NAME and WORKTREE_ID built-ins before substitution', () => {
+    // Real-world trigger: ticket key "KAN-12" preserves uppercase through
+    // wtBasename.replace("Recipes-", ""), then ${BASE_NAME}-${WORKTREE_ID}
+    // produces a compose project name docker rejects.
+    const spec = parseEnvSpec(baseSpec);
+    const result = materialize(
+      spec,
+      opts({
+        isCanonical: false,
+        baseName: 'Recipes',
+        worktreeId: 'KAN-12',
+        worktreeBasename: 'Recipes-KAN-12',
+      }),
+    );
+    expect(result.base.COMPOSE_PROJECT_NAME).toBe('recipes-kan-12');
+  });
+
   it('throws on a cycle in templates', () => {
     const cycle = `
 schema = 1
