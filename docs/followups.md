@@ -7,6 +7,8 @@ Format: see the user-level `~/.claude/CLAUDE.md` "Followup detection" section.
 ## Contents
 
 - [Active](#active)
+  - [2026-05-02 — `crew restart --hard` should not silently bail when a PR exists](#2026-05-02--crew-restart---hard-should-not-silently-bail-when-a-pr-exists)
+  - [2026-05-02 — `crew fix-pr` skips env materialization and full verification](#2026-05-02--crew-fix-pr-skips-env-materialization-and-full-verification)
   - [2026-05-01 — Structured final-report contract for agent dispatches (dashboard prerequisite)](#2026-05-01--structured-final-report-contract-for-agent-dispatches-dashboard-prerequisite)
   - [2026-05-01 — Render assistant.text preamble alongside same-event tool calls](#2026-05-01--render-assistanttext-preamble-alongside-same-event-tool-calls)
   - [2026-05-01 — Crew owns DB replication end-to-end (off per-project shim scripts)](#2026-05-01--crew-owns-db-replication-end-to-end-off-per-project-shim-scripts)
@@ -35,6 +37,68 @@ Format: see the user-level `~/.claude/CLAUDE.md` "Followup detection" section.
 - [Abandoned](#abandoned)
 
 ## Active
+
+### 2026-05-02 — `crew restart --hard` should not silently bail when a PR exists
+
+**What:** `crew restart --hard` is the "blow away local state and redo this ticket from scratch" command. When the ticket already has an open PR, restart bails (presumably steering the user toward `crew fix-pr` instead). That's the wrong default when the user has *materially changed the ticket scope* mid-flight — added a new task to the Jira description, swapped the design, etc. The user's intent is "redo against the new scope," not "patch the existing branch with one more diff." `fix-pr` is for incremental review-comment application, not for a fresh start.
+
+**Why noticed:** During Recipes [KAN-45](https://safturento.atlassian.net/browse/KAN-45) (env.toml migration), a runtime bug surfaced post-merge — Better Auth's `signUpEmail` rejected `bruno-smoke@local` because `z.email()` requires a TLD. The bug was preexisting from KAN-37 but only surfaced when KAN-45 first ran the seed end-to-end. The Jira description was updated mid-flight with a new Task 10 covering the fix. The user tried `crew restart --hard KAN-45` to re-run the agent against the now-expanded scope; crew bailed because the PR existed. Forced fallback to `crew fix-pr` — which doesn't read the Jira description at all (only PR review comments), so Task 10 was never picked up.
+
+**Anchors:**
+
+- crew's restart command implementation (likely under `packages/cli/src/commands/restart.ts` or wherever the PR-existence check lives).
+- `crew fix-pr` command — the fallback path that picked up nothing useful in this case.
+- KAN-45 (Recipes [#42](https://github.com/Safturento/Recipes/pull/42)) — the ticket that surfaced the gap.
+- Companion debugging transcript at `~/.claude/projects/-home-safturento-Repos-Recipes-KAN-45/acbbad62-77cf-4afa-a6ce-a83d4d564806.jsonl`.
+
+**What's been considered:**
+
+- **Bail with steering message** (current). Too restrictive when scope has actually changed.
+- **Allow restart with `--force-overwrite-pr` flag.** Explicit opt-in; the user proves they meant it.
+- **Auto-detect Jira-vs-PR drift.** If the Jira description's `updated` timestamp is newer than the PR's `created`, restart's overwrite is probably what the user wants — surface the drift in the bail message ("Jira ticket was edited 2 hours after PR opened — proceed with `--force` to redo against new scope?").
+- **Always proceed and force-push.** Most permissive; risks accidental work loss.
+
+The auto-detect option is the most user-friendly. The flag option is the cheapest first step.
+
+**Shape of work:** Small command-flag addition + decision on default behavior. If the auto-detect path is chosen, needs a Jira API call (`getJiraIssue` for `updated`) plus a GitHub API call (`gh pr view --json createdAt`) inside restart's pre-flight check.
+
+**Open questions:**
+
+- Is the bail driven by branch protection rules on the remote, or crew's own pre-flight logic? Determines where the fix lives.
+- Should restart auto-detect Jira-vs-PR drift and surface it before deciding, or just expose a flag and let the user judge?
+
+### 2026-05-02 — `crew fix-pr` skips env materialization and full verification
+
+**What:** `crew fix-pr` dispatches an agent with a prompt that names `superpowers:verification-before-completion` as required, but the dispatched agent applies review-comment changes and exits without running the project's verify cycle (docker bringup, db setup, smoke tests). Two related gaps surface together:
+
+1. **Env materialization is skipped before agent dispatch.** Generated files like `.env.docker-backend` (from `[contexts.docker-backend]` in env.toml) are missing on the worktree if a previous restart wiped local state. The agent inherits a worktree where `docker compose up` would fail immediately — but never tries it.
+2. **Verification is skipped after agent edits.** A successfully-applied 6-line change ships without proving the broader stack still works. The verification skill named in the prompt is documented but not invoked.
+
+**Why noticed:** During Recipes [KAN-45](https://safturento.atlassian.net/browse/KAN-45) the user fell back to `crew fix-pr` after restart-hard bailed (paired followup above). The agent applied a small test-regex tightening per PR review feedback, pushed `db04c38`, reported the PR URL, and exited. No `docker:up`, no `db:setup`, no `bruno:smoke` in the entire transcript. When the user then ran `npm run docker:up` themselves, it failed: `env file .env.docker-backend not found`. That's a generated context file the new env-spec pipeline produces — `crew env init` (or `bringUpWorktreeEnv` in the run path) is what materializes it. fix-pr never called either.
+
+**Anchors:**
+
+- `crew fix-pr` command (`packages/cli/src/commands/fix-pr.ts` or similar).
+- `superpowers:verification-before-completion` skill — named in the prompt, not invoked by the agent.
+- The env-materialization integration from CREW-79 / `bringUpWorktreeEnv` — works in `crew run`'s worktree-bringup path; appears not to be wired into fix-pr's pre-dispatch step.
+- Transcript at `~/.claude/projects/-home-safturento-Repos-Recipes-KAN-45/acbbad62-77cf-4afa-a6ce-a83d4d564806.jsonl` (search for "docker" — zero hits).
+- KAN-45 (Recipes [#42](https://github.com/Safturento/Recipes/pull/42)).
+
+**What's been considered:**
+
+- For (1): fix-pr should call `bringUpWorktreeEnv` (or equivalent `crew env init`) before agent dispatch, mirroring `crew run`'s behavior. The current assumption that the worktree's local state is correct is wrong after restart-hard wipes — and probably wrong in other cases too.
+- For (2): two options — make the verification skill more forceful in the prompt (best-effort, prompt-compliance is unreliable), or add an explicit "always run the project's verify command after agent exits" step to fix-pr's wrapper (reliable, doesn't depend on agent compliance). The latter pairs well with the auto-detect failure-and-loop behavior under the dispatch contract followup (2026-05-01 — Structured final-report contract).
+
+**Shape of work:** Two related changes in fix-pr:
+
+- Add env-bringup step before agent dispatch.
+- Add post-agent verify step. On failure, either auto-trigger a follow-up agent loop (with the failure as input) or surface to the user for manual intervention — a real design decision since "loop on verify-fail" can mask repeat agent flailing.
+
+**Open questions:**
+
+- Should fix-pr's verify failure automatically trigger another agent iteration, or surface to the user for a manual decision?
+- Is "the project's verify command" already implicit in crew's project config (e.g. derived from `[playwright]`/`[bruno_smoke]`), or does it need a new TOML option?
+- Does the same gap affect `crew resume`?
 
 ### 2026-05-01 — Structured final-report contract for agent dispatches (dashboard prerequisite)
 
