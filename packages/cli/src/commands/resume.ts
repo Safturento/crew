@@ -15,6 +15,7 @@ import {
   playwrightFixPrOptsFor,
   playwrightTicketOptsFor,
   readDockerPortsFromEnvFile,
+  readEnvBaseMap,
 } from '../lib/run/agent-options.js';
 import { prepareAgentEnvironment } from '../lib/run/agent-environment.js';
 import { worktreePathFor } from '../lib/run/paths.js';
@@ -69,6 +70,7 @@ export async function runResume(key: string, opts: ResumeOptions): Promise<void>
   const dockerPorts: DockerPorts | undefined = needsDockerPorts(config)
     ? readDockerPortsFromEnvFile(worktree)
     : undefined;
+  const envVars = readEnvBaseMap(worktree);
 
   const env = await prepareAgentEnvironment({
     config,
@@ -76,6 +78,7 @@ export async function runResume(key: string, opts: ResumeOptions): Promise<void>
     key,
     env: process.env,
     dockerPorts,
+    envVars,
     mode: 'resume',
     skipDocker: opts.skipDocker,
   });
@@ -86,7 +89,7 @@ export async function runResume(key: string, opts: ResumeOptions): Promise<void>
   // footgun — the agent silently uses the old config, e.g. falls back to the
   // system chrome channel when crew now wires the bundled chromium directly.
   if (playwrightEnabled(config) && config.playwright && smokeEnabled(config)) {
-    const resolved = resolveAppUrl(config.playwright.app_url, dockerPorts);
+    const resolved = resolveAppUrl(config.playwright.app_url, dockerPorts, envVars);
     const writeResult = await writeMcpFile(worktree, { appUrl: resolved.raw });
     process.stderr.write(
       pc.dim(`→ refreshed ${join(worktree, '.mcp.json')} (CREW_APP_URL=${resolved.raw})\n`),
@@ -104,7 +107,7 @@ export async function runResume(key: string, opts: ResumeOptions): Promise<void>
   const discoveredSkillsBlock = renderDiscoveredSkillsBlock(
     discoverSkills({ repoPath: config.repo_path }),
   );
-  const brunoSmoke = brunoSmokeOptionsFor(config, worktree, dockerPorts);
+  const brunoSmoke = brunoSmokeOptionsFor(config, worktree, dockerPorts, envVars);
   const logFile = `/tmp/crew-resume-${key}.log`;
   const claudeEnv = env.resolvedAppUrl ? { CREW_APP_URL: env.resolvedAppUrl } : undefined;
 

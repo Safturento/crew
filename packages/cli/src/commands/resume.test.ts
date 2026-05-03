@@ -36,6 +36,7 @@ vi.mock('../lib/run/worktree-state.js', () => ({
 vi.mock('../lib/run/agent-options.js', () => ({
   needsDockerPorts: vi.fn(() => false),
   readDockerPortsFromEnvFile: vi.fn(),
+  readEnvBaseMap: vi.fn(() => undefined),
   brunoSmokeOptionsFor: vi.fn(() => undefined),
   playwrightFixPrOptsFor: vi.fn(() => undefined),
   playwrightTicketOptsFor: vi.fn(() => undefined),
@@ -204,6 +205,27 @@ describe('runResume', () => {
     const call = spawnFreshMock.mock.calls[0]?.[0];
     expect(call?.prompt).toContain('Additional context from the user');
     expect(call?.prompt).toContain('focus on lib/x');
+  });
+
+  it('threads envVars from readEnvBaseMap through to prepareAgentEnvironment + brunoSmokeOptionsFor', async () => {
+    findSessionMock.mockReturnValue(null);
+    const fakeEnvVars = { APP_URL: 'https://localhost:28905', POSTGRES_PORT: '15432' };
+    const { readEnvBaseMap, brunoSmokeOptionsFor } = await import('../lib/run/agent-options.js');
+    const readEnvMock = vi.mocked(readEnvBaseMap);
+    const brunoMock = vi.mocked(brunoSmokeOptionsFor);
+    readEnvMock.mockReturnValueOnce(fakeEnvVars);
+    const { prepareAgentEnvironment } = await import('../lib/run/agent-environment.js');
+    const prepMock = vi.mocked(prepareAgentEnvironment);
+
+    await runResume('KAN-1', {});
+
+    expect(prepMock).toHaveBeenCalledWith(expect.objectContaining({ envVars: fakeEnvVars }));
+    expect(brunoMock).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.anything(),
+      undefined,
+      fakeEnvVars,
+    );
   });
 
   it('threads --skip-docker through to prepareAgentEnvironment', async () => {
