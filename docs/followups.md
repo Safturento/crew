@@ -7,6 +7,7 @@ Format: see the user-level `~/.claude/CLAUDE.md` "Followup detection" section.
 ## Contents
 
 - [Active](#active)
+  - [2026-05-03 — `@playwright/mcp` ignores crew's `--executable-path` override](#2026-05-03--playwrightmcp-ignores-crews---executable-path-override)
   - [2026-05-03 — `crew run` swallows background-task failures into `/tmp` logs](#2026-05-03--crew-run-swallows-background-task-failures-into-tmp-logs)
   - [2026-05-03 — Transcript line printer truncates tool-call inputs mid-string](#2026-05-03--transcript-line-printer-truncates-tool-call-inputs-mid-string)
   - [2026-05-02 — `crew restart --hard` should not silently bail when a PR exists](#2026-05-02--crew-restart---hard-should-not-silently-bail-when-a-pr-exists)
@@ -40,6 +41,34 @@ Format: see the user-level `~/.claude/CLAUDE.md` "Followup detection" section.
 - [Abandoned](#abandoned)
 
 ## Active
+
+### 2026-05-03 — `@playwright/mcp` ignores crew's `--executable-path` override
+
+**What:** `crew run` installs Playwright's bundled chromium (`~/.cache/ms-playwright/chromium-1217/...`) and writes a `.mcp.json` that passes `--executable-path <chromium-1217 path>` to `npx -y @playwright/mcp@latest`. The intent (per `build-mcp-config.ts:14-21`) is to override `@playwright/mcp`'s default `chrome` channel and use the playwright-bundled chromium crew already installed. **The MCP doesn't honor it.** Agents on the dispatched session see `mcp__playwright__browser_*` calls fail with `Chromium distribution 'chrome' is not found at /opt/google/chrome/chrome`, and `~/.cache/ms-playwright/mcp-chrome-<hash>/` contains its own (sometimes empty) bundle the MCP tried to set up separately. The repo-side `playwright` runner (driven by `npm run test:e2e`) works fine because it uses `chromium-1217` directly, but the MCP tool is unusable for any agent step that wants live-browser interaction.
+
+**Why noticed:** Recipes KAN-14 ([PR #47](https://github.com/Safturento/Recipes/pull/47), 2026-05-03) shipped with a "Crew-setup notes" section in the PR body flagging this. Agent worked around it by using the repo's own Playwright fixture for `tests/e2e/meal-plan-day.spec.ts` (which is fine for authored tests) but couldn't drive the MCP tool for ad-hoc browser exploration during ticket work. Same shape was implicit in earlier KAN-* runs that listed `chromium: <unresolved>` even when the install log showed success.
+
+**Anchors:**
+
+- `packages/cli/src/lib/playwright/build-mcp-config.ts:23-37` — where `--executable-path` gets appended to the MCP args.
+- `packages/cli/src/lib/playwright/write-mcp-file.ts` — caller, resolves the chromium path before invoking buildMcpConfig.
+- Reference `.mcp.json` shape generated for any KAN-* worktree: `cat ~/Repos/Recipes-KAN-12/.mcp.json` (when the worktree exists).
+- `~/.cache/ms-playwright/` — `chromium-1217/` (crew install), `mcp-chrome-0306d4e/` + `mcp-chrome-8449268/` (MCP's own bundles, separate hashes).
+- KAN-14 PR body "Crew-setup notes" — quoted incident.
+- `@playwright/mcp` repo / npm — for the actual flag semantics. Worth checking `npx -y @playwright/mcp@latest --help` and the upstream changelog to see if `--executable-path` was renamed, deprecated, or made conditional on `--browser chromium`.
+
+**What's been considered:**
+
+- **Pair `--executable-path` with `--browser chromium`.** Hypothesis: `--executable-path` only applies when `--browser` is explicitly set to chromium; otherwise the MCP keeps its default chrome-channel semantics. Cheapest experiment: add `'--browser', 'chromium'` to the args in `build-mcp-config.ts` and re-run.
+- **Use the MCP's own bundle path.** `mcp-chrome-<hash>/` directories are populated when the MCP downloads its own Chrome on first run. We could let it own the bundle (don't pass `--executable-path` at all, just preflight `npx @playwright/mcp@latest install` once) and accept the disk duplication.
+- **Pin `@playwright/mcp` to a version we know respects the flag.** Currently we pull `@latest` on every spawn — vulnerable to upstream behavior drift. Pinning would also let us write a `crew --version`-style preflight that warns when a newer MCP version's flag semantics changed.
+
+**Shape of work:** One ticket. First commit is the empirical: try the four shapes (`--executable-path` alone / `+ --browser chromium` / no `--executable-path` + preflight install / pin version) and pick the one that actually drives the bundled chromium. Once known: code change is small (`build-mcp-config.ts` + maybe one preflight in `prepareAgentEnvironment`). Tests assert the resulting MCP args.
+
+**Open questions:**
+
+- Should crew preflight `npx @playwright/mcp@latest install` once at machine setup so the `mcp-chrome-<hash>/` bundle is always populated, regardless of which override path we end up choosing?
+- Worth pinning the MCP package version in the project config (`[playwright].mcp_version`?) so upstream drift doesn't silently break agent flows?
 
 ### 2026-05-03 — `crew run` swallows background-task failures into `/tmp` logs
 
