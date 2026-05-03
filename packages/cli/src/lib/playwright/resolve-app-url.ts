@@ -58,13 +58,13 @@ export function resolveAppUrl(
           `${match} is only valid for projects with env.toml.`,
       );
     }
-    if (!(name in envVars)) {
+    const value = envVars[name];
+    if (value === undefined) {
       throw new Error(
         `resolveAppUrl: ${match} used but no such variable in materialized env. ` +
           `Available: ${Object.keys(envVars).sort().join(', ')}`,
       );
     }
-    const value = envVars[name]!;
     substitutions[match] = value;
     return value;
   });
