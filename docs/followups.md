@@ -7,6 +7,8 @@ Format: see the user-level `~/.claude/CLAUDE.md` "Followup detection" section.
 ## Contents
 
 - [Active](#active)
+  - [2026-05-03 — `crew run` swallows background-task failures into `/tmp` logs](#2026-05-03--crew-run-swallows-background-task-failures-into-tmp-logs)
+  - [2026-05-03 — Transcript line printer truncates tool-call inputs mid-string](#2026-05-03--transcript-line-printer-truncates-tool-call-inputs-mid-string)
   - [2026-05-03 — `crew resume` / `crew fix-pr` env-spec parity for `${VAR}` syntax](#2026-05-03--crew-resume--crew-fix-pr-env-spec-parity-for-var-syntax)
   - [2026-05-02 — `crew restart --hard` should not silently bail when a PR exists](#2026-05-02--crew-restart---hard-should-not-silently-bail-when-a-pr-exists)
   - [2026-05-02 — `crew fix-pr` skips env materialization and full verification](#2026-05-02--crew-fix-pr-skips-env-materialization-and-full-verification)
@@ -38,6 +40,60 @@ Format: see the user-level `~/.claude/CLAUDE.md` "Followup detection" section.
 - [Abandoned](#abandoned)
 
 ## Active
+
+### 2026-05-03 — `crew run` swallows background-task failures into `/tmp` logs
+
+**What:** `crew run` kicks off docker bringup and Playwright/Chromium install as background processes, prints `→ docker bringup running in background (log: /tmp/crew-docker-<KEY>.log)` once, and never surfaces failures back to the user once the foreground transcript stream begins. If the background task fails, the user only finds out by tailing the `/tmp` log themselves — and typically only after watching the agent flail for several minutes against missing infrastructure (no DB → integration tests fail; no docker stack → bruno smoke / verify-after-run can't run).
+
+**Why noticed:** Recipes KAN-12 was started on 2026-05-03. The docker bringup failed immediately (`invalid project name "recipes-KAN-12": must consist only of lowercase alphanumeric characters...` — the underlying bug is the materialize() lowercase fix landing in this branch). The user watched the agent stream for ~5 minutes assuming the env had been set up correctly because `crew run`'s output had moved on to streaming the agent. Diagnosis required jumping to `/tmp/crew-docker-KAN-12.log` and reading the compose error directly. The Playwright background install has a similar shape: `chromium: <unresolved> — MCP will fall back to system chrome channel` is at least surfaced (good), but only as a one-line note buried between other startup messages, with no separate signal that the install itself succeeded vs. fell back.
+
+**Anchors:**
+
+- `packages/cli/src/lib/docker/start-bringup.ts` — the background-task launcher.
+- `packages/cli/src/commands/run.ts` — call site, plus the foreground transcript-stream loop that runs concurrently.
+- `/tmp/crew-docker-<KEY>.log`, `/tmp/crew-playwright-<KEY>.log` — where the output goes.
+- The conversation that surfaced this: 2026-05-03 chat where the user asked "why didn't docker spin up?" after seeing the env materialize but no containers in `docker ps`.
+
+**What's been considered:**
+
+- **Pre-flight wait + fail-fast:** Block the `→ launching claude in headless mode` step on docker bringup completion. If bringup failed, abort `crew run` with a clear error before the agent ever spawns. Tradeoff: longer wall-clock before the agent starts (docker `--wait` can take 30-60s on a cold start). Probably worth it — running the agent against a broken stack is a net loss.
+- **Streaming background-task status into the foreground:** Concurrent watcher that tees the `/tmp` log into the user's stream once a failure is detected, with a clear `! docker bringup FAILED — see /tmp/...` banner. Doesn't block the agent but at least the user knows.
+- **Surface in the agent prompt:** The agent's startup prompt already mentions `docker_unavailable` when the daemon probe fails. Extend the same shape to "docker stack failed to come up" so the agent's first action is to read the log and either fix or abort gracefully.
+- Combination: pre-flight wait for the docker case (most common dependency), streaming watcher for Playwright (less critical, MCP falls back).
+
+**Shape of work:** One ticket. Probably two commits — the docker pre-flight wait is straightforward (await the bringup promise + check exit code before spawning claude); the Playwright surfacing is more about formatting / structured logging. Tests would mock `start-bringup` to return failure and assert `crew run` aborts with the expected message before any agent spawn.
+
+**Open questions:**
+
+- For docker bringup: do we wait for `docker compose up --wait` to finish before launching the agent (slower happy path, faster failure path), or only fail-fast on the validation step that rejected the project name (lets the heavy `up --build` keep running in parallel)?
+- Should the agent's prompt receive a `docker_failed` disclosure for graceful-degrade behavior, or is hard-aborting `crew run` better UX?
+
+### 2026-05-03 — Transcript line printer truncates tool-call inputs mid-string
+
+**What:** `summarizeInput` in the shared transcript parser slices Bash command summaries to 140 chars and all other tool inputs to 120 chars. As a result, `crew run`'s live transcript stream regularly shows lines that end mid-string (`[TodoWrite][622 tok] {"todos":[{"content":"Read KAN-12 context","status":"in_progress","activeForm":` — cut off). The user can't tell what the agent is actually doing for inputs longer than the cap.
+
+**Why noticed:** Same conversation as the bringup-visibility followup above (2026-05-03 chat about KAN-12). The user explicitly called out the truncated `[TodoWrite]` line and said "we should be printing full lines."
+
+**Anchors:**
+
+- `packages/shared/src/transcripts/parser.ts:95-112` — `summarizeInput` (`.slice(0, 120)` default, `.slice(0, 140)` for Bash).
+- `packages/shared/src/transcripts/parser.ts:72,82-93` — `ASSISTANT_TEXT_MAX_LEN = 120` + `formatAssistantText`. Same constant pattern; question is whether assistant-text snippets and tool-input summaries should share or diverge from this rule.
+- `packages/cli/src/lib/run/stream-transcript.ts` — call site that writes formatted lines to `process.stdout`.
+
+**What's been considered:**
+
+- **Print full lines, no truncation.** Simplest. Risk: a 50KB Edit input or Write content blows up the terminal scrollback. Mitigation: TodoWrite/Edit/Write printers should still summarize structurally (e.g. "TodoWrite: 4 todos, 1 in_progress" instead of dumping the JSON), but for everything that's already a short identifier, drop the slice.
+- **Per-tool truncation policy.** Bash → full command. TodoWrite → structured summary (count + active form). Edit/Write → file path only (already does this). Read → file path only (already does this). Default JSON dump → either full or smart-summarized via tool-name allowlist, never blind slice.
+- **Terminal-width awareness.** `process.stdout.columns` could cap to 1-2 lines wrapped. Tradeoff: makes copy/paste-into-issue behavior weirder and re-introduces the same "where did the content go" problem.
+
+The right answer is per-tool policy, not a global constant. Default-blind slicing is the bug; the cure isn't "longer constant" but "smarter summarizers."
+
+**Shape of work:** One ticket. A `summarizeInput` rewrite that dispatches per tool name (TodoWrite, MultiEdit, NotebookEdit get structured summaries; everything else gets full content with a soft-cap that's only hit when the input itself is unreasonably long, e.g. > 4KB). New tests in `packages/shared/src/transcripts/parser.test.ts` for each summarizer branch.
+
+**Open questions:**
+
+- Does `formatAssistantText`'s `ASSISTANT_TEXT_MAX_LEN = 120` get the same treatment, or stay capped (it's a multi-line preamble, different shape)?
+- Is there a max-line config knob users will want (`CREW_TRANSCRIPT_MAX_LINE_CHARS`)? Probably no — start with sensible defaults; add when someone asks.
 
 ### 2026-05-03 — `crew resume` / `crew fix-pr` env-spec parity for `${VAR}` syntax
 
