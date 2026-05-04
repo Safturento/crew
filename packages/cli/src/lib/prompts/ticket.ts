@@ -1,5 +1,6 @@
 import { startCommandHint } from '../playwright/index.js';
 import { render } from './render.js';
+import { buildSandboxNetworkBlock } from './sandbox-network-note.js';
 import { renderUserMessageBlock } from './user-message.js';
 
 export interface PlaywrightPromptOptions {
@@ -43,6 +44,12 @@ export function buildTicketPrompt(opts: BuildTicketPromptOptions): string {
     jiraSite: opts.jiraSite,
     playwrightBlock: buildPlaywrightBlock(opts.playwright),
     brunoSmokeBlock: buildBrunoSmokeBlock(opts.brunoSmoke),
+    sandboxNetworkBlock: buildSandboxNetworkBlock({
+      key: opts.key,
+      appUrl: opts.playwright?.appUrl ?? opts.brunoSmoke?.baseUrl,
+      hasBrunoSmoke: Boolean(opts.brunoSmoke),
+      authoredTestCommand: opts.playwright?.authored?.testCommand,
+    }),
     discoveredSkillsBlock: opts.discoveredSkillsBlock ?? '',
     userMessageBlock: renderUserMessageBlock(opts.userMessage),
     dockerUnavailableBlock: opts.dockerUnavailable

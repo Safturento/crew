@@ -9,6 +9,7 @@ describe('render', () => {
       jiraSite: 'https://example.atlassian.net',
       playwrightBlock: '',
       brunoSmokeBlock: '',
+      sandboxNetworkBlock: '',
       discoveredSkillsBlock: '',
       userMessageBlock: '',
       dockerUnavailableBlock: '',
@@ -26,6 +27,7 @@ describe('render', () => {
       jiraSite: 'https://example.atlassian.net',
       playwrightBlock: '',
       brunoSmokeBlock: '',
+      sandboxNetworkBlock: '',
       discoveredSkillsBlock: '',
       userMessageBlock: '',
       dockerUnavailableBlock: '',
@@ -44,7 +46,7 @@ describe('render', () => {
         // brunoSmokeBlock, discoveredSkillsBlock, userMessageBlock
       }),
     ).toThrow(
-      /githubRepo|jiraSite|playwrightBlock|brunoSmokeBlock|discoveredSkillsBlock|userMessageBlock|dockerUnavailableBlock/,
+      /githubRepo|jiraSite|playwrightBlock|brunoSmokeBlock|sandboxNetworkBlock|discoveredSkillsBlock|userMessageBlock|dockerUnavailableBlock/,
     );
   });
 

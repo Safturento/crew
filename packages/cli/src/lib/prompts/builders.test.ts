@@ -383,6 +383,52 @@ describe('buildTicketPrompt', () => {
   });
 });
 
+describe('buildTicketPrompt — sandbox-network-note', () => {
+  it('renders the sandbox-network-note when playwright is configured', () => {
+    const out = buildTicketPrompt({
+      key: 'KAN-17',
+      githubRepo: 'Safturento/Recipes',
+      jiraSite: 'safturento.atlassian.net',
+      playwright: {
+        appUrl: 'https://localhost:17253',
+        authored: { testsDir: 'tests/e2e', testCommand: 'npm run test:e2e' },
+      },
+    });
+    expect(out).toContain('Sandboxed-curl is misleading');
+    expect(out).toContain('https://localhost:17253');
+    expect(out).toContain('`npm run test:e2e`');
+    expect(out).toContain('crew restart KAN-17 --hard');
+  });
+
+  it('omits the block when neither playwright nor bruno_smoke is configured', () => {
+    const out = buildTicketPrompt({
+      key: 'KAN-17',
+      githubRepo: 'Safturento/Recipes',
+      jiraSite: 'safturento.atlassian.net',
+    });
+    expect(out).not.toContain('Sandboxed-curl is misleading');
+  });
+
+  it('lists both whitelisted commands when bruno + playwright both configured', () => {
+    const out = buildTicketPrompt({
+      key: 'KAN-17',
+      githubRepo: 'Safturento/Recipes',
+      jiraSite: 'safturento.atlassian.net',
+      playwright: {
+        appUrl: 'https://localhost:17253',
+        authored: { testsDir: 'tests/e2e', testCommand: 'npm run test:e2e' },
+      },
+      brunoSmoke: {
+        baseUrl: 'https://localhost:17253',
+        envName: 'KAN-17',
+        collectionDir: 'bruno',
+        hasSmokeUser: false,
+      },
+    });
+    expect(out).toContain('`npm run bruno:smoke` and `npm run test:e2e`');
+  });
+});
+
 describe('buildFixPrPrompt', () => {
   it('substitutes the ticket key and feedback body', () => {
     const prompt = buildFixPrPrompt({

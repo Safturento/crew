@@ -60,6 +60,7 @@ describe('prepareAgentEnvironment — fresh mode', () => {
     startBringupMock.mockReset();
     installMock.mockReset();
     vi.spyOn(console, 'log').mockImplementation(() => {});
+    vi.spyOn(buildChecksModule, 'buildPreflightChecks').mockReturnValue([]);
   });
 
   it('delegates docker bringup to startDockerBringup and returns the handle', async () => {
@@ -154,6 +155,7 @@ describe('prepareAgentEnvironment — resume mode docker step', () => {
     startBringupMock.mockReset();
     installMock.mockReset();
     vi.spyOn(console, 'log').mockImplementation(() => {});
+    vi.spyOn(buildChecksModule, 'buildPreflightChecks').mockReturnValue([]);
   });
 
   it('calls ensureStackRunning when agent needs app and [docker] is set', async () => {
@@ -261,6 +263,7 @@ describe('prepareAgentEnvironment — playwright steps', () => {
     startBringupMock.mockReset();
     installMock.mockReset();
     vi.spyOn(console, 'log').mockImplementation(() => {});
+    vi.spyOn(buildChecksModule, 'buildPreflightChecks').mockReturnValue([]);
   });
 
   it('resolves playwright.app_url against dockerPorts when enabled', async () => {
@@ -343,6 +346,7 @@ describe('prepareAgentEnvironment — preflight integration', () => {
     startBringupMock.mockReset();
     installMock.mockReset();
     vi.spyOn(console, 'log').mockImplementation(() => {});
+    vi.spyOn(buildChecksModule, 'buildPreflightChecks').mockReturnValue([]);
   });
 
   it('runs preflight after docker bringup completes', async () => {
