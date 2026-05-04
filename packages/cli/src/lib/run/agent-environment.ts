@@ -56,7 +56,16 @@ export async function prepareAgentEnvironment(
       skip: Boolean(skipDocker),
       env,
     });
-    if (proc) result.dockerProcess = proc;
+    if (proc) {
+      console.log(pc.dim('→ awaiting docker bringup…'));
+      const finished = await proc;
+      if (finished.exitCode !== 0) {
+        throw new Error(
+          `docker bringup failed (rc=${finished.exitCode}). Check /tmp/crew-docker-${key}.log`,
+        );
+      }
+      result.dockerProcess = proc;
+    }
   } else if (!skipDocker && agentNeedsAppRunning(config) && config.docker) {
     console.log(pc.dim('→ ensuring docker stack is running…'));
     const ensure = await ensureStackRunning({ worktree, key, env });
