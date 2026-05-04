@@ -1,11 +1,16 @@
 import type { ProjectConfig } from 'crew-shared';
+import { verifyExcludedCommandsCheck } from './verify-excluded-commands.js';
 import type { PreflightCheck } from './types.js';
 
 /**
  * Decides which preflight checks apply to a given project config.
- * Tickets B and C extend this as their checks land.
  */
 export function buildPreflightChecks(config: ProjectConfig): PreflightCheck[] {
-  void config;
-  return [];
+  const checks: PreflightCheck[] = [];
+
+  if (config.bruno_smoke?.enabled || config.playwright?.authored?.enabled) {
+    checks.push(verifyExcludedCommandsCheck());
+  }
+
+  return checks;
 }
