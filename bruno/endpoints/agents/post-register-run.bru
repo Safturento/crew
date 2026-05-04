@@ -1,0 +1,44 @@
+meta {
+  name: POST /api/agents/runs
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/api/agents/runs
+  body: json
+}
+
+body:json {
+  {
+    "key": "BRUNO-1",
+    "projectName": "bruno-smoke",
+    "ticketTitle": "Bruno smoke run",
+    "worktreePath": "/tmp/bruno-smoke-worktree",
+    "branch": "BRUNO-1",
+    "sessionId": "{{$randomUUID}}",
+    "command": "run",
+    "startedAt": "2026-04-29T12:00:00Z"
+  }
+}
+
+assert {
+  res.status: eq 201
+  res.body.agent.key: eq BRUNO-1
+  res.body.run.id: isNumber
+}
+
+tests {
+  test("agent payload has the registered fields", () => {
+    expect(res.body.agent.projectName).to.equal("bruno-smoke");
+    expect(res.body.agent.ticketTitle).to.equal("Bruno smoke run");
+    expect(res.body.agent.worktreePath).to.equal("/tmp/bruno-smoke-worktree");
+    expect(res.body.agent.branch).to.equal("BRUNO-1");
+  });
+
+  test("run payload echoes session + command", () => {
+    expect(res.body.run.command).to.equal("run");
+    expect(res.body.run.sessionId).to.be.a("string");
+    expect(res.body.run.startedAt).to.equal("2026-04-29T12:00:00Z");
+  });
+}

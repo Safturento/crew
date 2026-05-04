@@ -1,11 +1,15 @@
 import { describe, it, expect } from 'vitest';
 import { writeFileSync, mkdirSync } from 'node:fs';
-import { join } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { pino, type Logger } from 'pino';
 import { buildApp } from '../app.js';
 import { parseDaemonConfig } from '../config.js';
-import { createDb } from '../db.js';
+import { createDb, runMigrations } from '../db.js';
 import { useTmpDir } from '../test/tmpdir.js';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const MIGRATIONS_DIR = resolve(__dirname, '..', 'migrations');
 
 const tmp = useTmpDir();
 const silentLogger: Logger = pino({ level: 'silent' });
@@ -31,6 +35,7 @@ async function setup() {
     CREW_DB_FILE: ':memory:',
   });
   const db = createDb(config.dbFile);
+  await runMigrations(db, MIGRATIONS_DIR);
   const app = await buildApp({ config, logger: silentLogger, db });
   return { app, db, projectsDir };
 }

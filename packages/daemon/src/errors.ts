@@ -16,6 +16,18 @@ export class NotFoundError extends Error {
   }
 }
 
+export class ConflictError extends Error {
+  readonly code: string;
+  readonly details: Record<string, unknown>;
+
+  constructor(code: string, message?: string, details: Record<string, unknown> = {}) {
+    super(message ?? code);
+    this.name = 'ConflictError';
+    this.code = code;
+    this.details = details;
+  }
+}
+
 export class ConfigDirNotFoundError extends Error {
   readonly configDir: string;
 
