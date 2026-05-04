@@ -18,6 +18,7 @@ import {
   readEnvBaseMap,
 } from '../lib/run/agent-options.js';
 import { prepareAgentEnvironment } from '../lib/run/agent-environment.js';
+import { PreflightError, renderPreflightError } from '../lib/preflight/index.js';
 import { worktreePathFor } from '../lib/run/paths.js';
 import { streamTranscript } from '../lib/run/stream-transcript.js';
 import { readWorktreeState } from '../lib/run/worktree-state.js';
@@ -81,6 +82,12 @@ export async function runResume(key: string, opts: ResumeOptions): Promise<void>
     envVars,
     mode: 'resume',
     skipDocker: opts.skipDocker,
+  }).catch((err: unknown): never => {
+    if (err instanceof PreflightError) {
+      process.stderr.write(renderPreflightError(err) + '\n');
+      process.exit(1);
+    }
+    throw err;
   });
 
   // Refresh .mcp.json so this resume picks up any changes to the config shape

@@ -14,6 +14,8 @@ vi.mock('../playwright/install-browsers.js', () => ({
 import { ensureStackRunning } from '../docker/ensure-stack-running.js';
 import { startDockerBringup } from '../docker/start-bringup.js';
 import { installPlaywrightBrowsers } from '../playwright/install-browsers.js';
+import * as buildChecksModule from '../preflight/build-checks.js';
+import { PreflightError } from '../preflight/index.js';
 import { prepareAgentEnvironment } from './agent-environment.js';
 
 const ensureMock = vi.mocked(ensureStackRunning);
@@ -332,5 +334,67 @@ describe('prepareAgentEnvironment — playwright steps', () => {
         mode: 'fresh',
       }),
     ).rejects.toThrow(/playwright.*KAN-1\.log/);
+  });
+});
+
+describe('prepareAgentEnvironment — preflight integration', () => {
+  beforeEach(() => {
+    ensureMock.mockReset();
+    startBringupMock.mockReset();
+    installMock.mockReset();
+    vi.spyOn(console, 'log').mockImplementation(() => {});
+  });
+
+  it('runs preflight after docker bringup completes', async () => {
+    const events: string[] = [];
+
+    startBringupMock.mockImplementation(() => {
+      events.push('docker-started');
+      return Promise.resolve({ exitCode: 0 }) as unknown as ReturnType<typeof startDockerBringup>;
+    });
+
+    vi.spyOn(buildChecksModule, 'buildPreflightChecks').mockReturnValue([
+      {
+        name: 'fake',
+        run: async () => {
+          events.push('preflight-ran');
+        },
+      },
+    ]);
+
+    await prepareAgentEnvironment({
+      config: configWithDocker(),
+      worktree: '/wt',
+      key: 'KAN-1',
+      env: process.env,
+      mode: 'fresh',
+    });
+
+    expect(events).toEqual(['docker-started', 'preflight-ran']);
+  });
+
+  it('propagates PreflightError out of prepareAgentEnvironment', async () => {
+    startBringupMock.mockReturnValue(
+      Promise.resolve({ exitCode: 0 }) as unknown as ReturnType<typeof startDockerBringup>,
+    );
+
+    vi.spyOn(buildChecksModule, 'buildPreflightChecks').mockReturnValue([
+      {
+        name: 'fail',
+        run: async () => {
+          throw new PreflightError('fail', 'forced failure', 'fix it');
+        },
+      },
+    ]);
+
+    await expect(
+      prepareAgentEnvironment({
+        config: configWithDocker(),
+        worktree: '/wt',
+        key: 'KAN-1',
+        env: process.env,
+        mode: 'fresh',
+      }),
+    ).rejects.toBeInstanceOf(PreflightError);
   });
 });

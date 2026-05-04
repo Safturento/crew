@@ -9,6 +9,8 @@ import {
   resolveAppUrl,
   type DockerPorts,
 } from '../playwright/index.js';
+import { runPreflight } from '../preflight/index.js';
+import { buildPreflightChecks } from '../preflight/build-checks.js';
 import { agentNeedsAppRunning } from './app-lifecycle.js';
 
 export interface AgentEnvironmentOptions {
@@ -84,6 +86,12 @@ export async function prepareAgentEnvironment(
     }
     console.log(pc.dim(`    log: ${install.logPath}`));
   }
+
+  await runPreflight({
+    config,
+    worktree,
+    checks: buildPreflightChecks(config),
+  });
 
   return result;
 }

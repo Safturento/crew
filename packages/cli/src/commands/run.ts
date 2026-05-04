@@ -51,6 +51,7 @@ import {
   worktreePathFor,
   type BaselineCheckResult,
 } from '../lib/run/index.js';
+import { PreflightError, renderPreflightError } from '../lib/preflight/index.js';
 
 interface RunOptions {
   skipDocker?: boolean;
@@ -303,7 +304,13 @@ export async function runRun(key: string, opts: RunOptions): Promise<never> {
     envVars,
     mode: 'fresh',
     skipDocker,
-  }).catch((err: unknown): never => fail(err instanceof Error ? err.message : String(err)));
+  }).catch((err: unknown): never => {
+    if (err instanceof PreflightError) {
+      process.stderr.write(renderPreflightError(err) + '\n');
+      process.exit(1);
+    }
+    fail(err instanceof Error ? err.message : String(err));
+  });
 
   // .mcp.json is written AFTER prepareAgentEnvironment so the chromium binary
   // exists on disk when writeMcpFile resolves --executable-path. Resolving
