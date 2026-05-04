@@ -22,6 +22,7 @@ import type { DaemonDatabase } from './db.js';
 import { ConfigDirNotFoundError, NotFoundError } from './errors.js';
 import { buildContainer } from './container.js';
 import { registerProjectsRoutes } from './routes/projects.js';
+import { registerAgentsRoutes } from './routes/agents.js';
 
 const PLACEHOLDER_HTML = `<!DOCTYPE html>
 <html>
@@ -116,6 +117,7 @@ export async function buildApp({
   app.get('/health', async () => ({ ok: true }));
 
   await registerProjectsRoutes(app);
+  await registerAgentsRoutes(app);
 
   if (dashboardDistDir && existsSync(join(dashboardDistDir, 'index.html'))) {
     await app.register(fastifyStatic, { root: dashboardDistDir, prefix: '/' });
