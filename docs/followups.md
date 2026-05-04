@@ -7,6 +7,7 @@ Format: see the user-level `~/.claude/CLAUDE.md` "Followup detection" section.
 ## Contents
 
 - [Active](#active)
+  - [2026-05-04 — Crew sandbox/preflight self-opt-in (slot into first dashboard plan that adds e2e coverage)](#2026-05-04--crew-sandboxpreflight-self-opt-in-slot-into-first-dashboard-plan-that-adds-e2e-coverage)
   - [2026-05-03 — `crew run` post-stream "waiting up to 120s for docker bringup" log is misleading after CREW-83](#2026-05-03--crew-run-post-stream-waiting-up-to-120s-for-docker-bringup-log-is-misleading-after-crew-83)
   - [2026-05-03 — `chokidar` dep added to daemon but no code imports it](#2026-05-03--chokidar-dep-added-to-daemon-but-no-code-imports-it)
   - [2026-05-03 — `@playwright/mcp` ignores crew's `--executable-path` override](#2026-05-03--playwrightmcp-ignores-crews---executable-path-override)
@@ -43,6 +44,106 @@ Format: see the user-level `~/.claude/CLAUDE.md` "Followup detection" section.
 - [Abandoned](#abandoned)
 
 ## Active
+
+### 2026-05-04 — Crew sandbox/preflight self-opt-in (slot into first dashboard plan that adds e2e coverage)
+
+**What:** Opt the crew project into the preflight machinery CREW-82 introduced (`<repo>/.claude/settings.json` with sandbox baseline + `excludedCommands`, `[playwright]` / `[bruno_smoke]` enabled in `~/.config/crew/projects/crew.toml`, and a root-level `test:e2e` npm script that delegates to the dashboard workspace). Today crew dispatches itself via `crew run CREW-*` against a TOML that has neither `[playwright]` nor `[bruno_smoke]` enabled, so the preflight no-ops and crew agents run with no committed sandbox baseline (allowed-domains, allowWrite paths, etc.). Once the dashboard e2e suite has enough coverage that gating on it carries weight, flipping the opt-in turns crew into its own dogfood for the preflight + sandbox machinery and starts exercising dashboard tests on every CREW-* dispatch.
+
+**Why noticed:** 2026-05-04 conversation about CREW-82 (agent dispatch preflight) — surfaced that crew has every prerequisite in place (`packages/dashboard/playwright.config.ts` + a `tests/e2e/dashboard.spec.ts` exists per CREW-22, the bruno collection exists with a smoke flow) but `[playwright].authored` isn't enabled in the project TOML, so none of it is wired in. Decision was to defer the opt-in rather than land it ahead of value: dashboard e2e is one spec today, and turning on the gate now would just add ceremony without catching real regressions. The deliberate plan is to pair the opt-in with the first dashboard plan that adds enough e2e coverage to make the gate meaningful — explicit ask was that this lands at the **beginning** of that plan, so all subsequent dashboard tests get exercised by the preflight from day one rather than retrofitted later.
+
+**Anchors:**
+
+- `packages/dashboard/playwright.config.ts` — already configured with `webServer` block (auto-starts vite at `http://localhost:5173`), one spec at `packages/dashboard/tests/e2e/dashboard.spec.ts`.
+- `packages/dashboard/package.json` — has `test:e2e: playwright test` script. Root `package.json` does **not** delegate yet.
+- `~/.config/crew/projects/crew.toml` — minimal today (only `[jira]` + `[github]`); needs the `[playwright]` / `[playwright.smoke]` / `[playwright.authored]` / `[bruno_smoke]` blocks added.
+- `~/.config/crew/projects/recipes.toml` — reference config showing the full opt-in shape (with `[docker]` — crew's version drops that since there's no compose stack and uses `[playwright].start_command` instead).
+- `bruno/bruno.json` + `bruno/endpoints/health/get.bru` + `bruno/flows/main-smoke.bru` + root `bruno:smoke` script — already in place; daemon defaults to `CREW_PORT=7773`.
+- CREW-22 (Done) — set up `@playwright/test` in dashboard package; the prereq this followup builds on.
+- CREW-82 / CREW-83 / CREW-84 / CREW-85 — the preflight Epic + child tickets that introduced the machinery being opted into.
+
+**What's been considered:** Full config drafted in the 2026-05-04 conversation, ready to paste when triggered.
+
+`<repo>/package.json` — add to `scripts`:
+
+```json
+"test:e2e": "npm run test:e2e --workspace=crew-dashboard"
+```
+
+`<repo>/.claude/settings.json` (new file):
+
+```json
+{
+  "sandbox": {
+    "enabled": true,
+    "allowUnsandboxedCommands": false,
+    "excludedCommands": [
+      "npm run bruno:smoke",
+      "npm run test:e2e"
+    ],
+    "filesystem": {
+      "allowWrite": [
+        "~/.npm",
+        "~/.cache/node",
+        "~/.cache/claude-cli",
+        "~/.cache/claude",
+        "/tmp"
+      ]
+    },
+    "network": {
+      "allowedDomains": [
+        "github.com",
+        "api.github.com",
+        "objects.githubusercontent.com",
+        "codeload.github.com",
+        "registry.npmjs.org",
+        "registry.yarnpkg.com",
+        "safturento.atlassian.net",
+        "api.atlassian.com",
+        "mcp.atlassian.com",
+        "auth.atlassian.com",
+        "api.anthropic.com",
+        "statsig.anthropic.com",
+        "claude.ai"
+      ]
+    }
+  }
+}
+```
+
+`~/.config/crew/projects/crew.toml` — add (no `[docker]` block; crew has no compose stack):
+
+```toml
+[playwright]
+app_url = "http://localhost:5173"
+start_command = "npm run dev --workspace=crew-dashboard"
+
+[playwright.smoke]
+enabled = true
+
+[playwright.authored]
+enabled = true
+tests_dir = "packages/dashboard/tests/e2e"
+test_command = "npm run test:e2e"
+
+[bruno_smoke]
+enabled = true
+base_url = "http://localhost:7773"
+collection_dir = "bruno"
+```
+
+Effect once both PRs (CREW-84 + CREW-85) are merged AND this opt-in lands:
+
+- Check 1 (URL probe) **skips entirely** — no `[docker]`, and `[playwright].start_command` is set → agent owns app lifecycle.
+- Check 2 (`excludedCommands` verifier) **runs** — asserts both `npm run bruno:smoke` and `npm run test:e2e` are listed.
+- Check 3 (sandbox-network-note) **renders** in the agent prompt with `http://localhost:5173` + the ticket key substituted.
+
+**Shape of work:** ~30 min mechanical, single PR. The plan it slots into is whichever dashboard plan first adds substantive e2e coverage. Suggested ordering inside that plan: a "wire crew into its own preflight" ticket as task 1 (commits the three files above), then the dashboard-feature tickets that grow `tests/e2e/`. That way every test added in the rest of the plan is exercised by `crew run CREW-*` dispatches the moment it lands.
+
+**Open questions:**
+
+- Set `[playwright].authored.verify_after_run = true` for crew? It would make crew re-run the e2e suite externally after agent handoff (host-side, with fix-pr loopback if it fails). Recipes uses `false`. For crew, the dashboard suite is small and fast — `true` would add extra reliability for self-dispatched tickets without much wall-clock cost. Decide at trigger time based on how flaky-prone the suite has become.
+- Daemon must be running for `npm run bruno:smoke` to pass. That's already the case for any `crew run` (the dispatcher hits the daemon), but if a CI integration ever runs crew dispatches headless, the bruno smoke needs the daemon up — worth flagging in the plan that adds this.
+- Bruno smoke against a shared host-port-7773 daemon means concurrent `crew run` agents share state. No worktree-port-hashing analog (no docker). Probably fine since crew dispatches are usually serialized, but if this ever becomes a parallelism issue it's a separate followup.
 
 ### 2026-05-03 — `crew run` post-stream "waiting up to 120s for docker bringup" log is misleading after CREW-83
 
