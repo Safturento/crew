@@ -15,6 +15,7 @@ Source: {{feedbackSource}}.
 - **`superpowers:requesting-code-review`** — before pushing.{{discoveredSkillsBlock}}
 
 {{playwrightBlock}}{{brunoSmokeBlock}}
+{{sandboxNetworkBlock}}
 
 ## Apply the fixes
 

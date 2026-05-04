@@ -34,6 +34,13 @@ Crew has prepared this worktree for Playwright runs:
 If \`npm run test:e2e\` (or the project's equivalent) reports missing browsers, missing system libs, or "no app to test", surface the failure in your fix description and stop — that's a crew-setup gap, not your fault.
 
 
+## Sandboxed-curl is misleading
+
+Your Bash tool runs in a sandbox with its own loopback, isolated from the host's. Direct \`curl\` / \`wget\` / Node \`fetch\` calls from your shell to **https://localhost:8443** will always return \`ECONNREFUSED\` — that is **not** evidence the stack is down. Crew has whitelisted \`npm run test:e2e\` to run un-sandboxed, and those are the only valid reachability tests for the docker stack.
+
+If \`npm run bruno:smoke\` succeeds, that confirms the daemon is up — but it says nothing about the worktree app port. If \`npm run test:e2e\` fails with \`ECONNREFUSED\`, that's a real signal: the docker stack is not serving at the expected port. Investigate \`/tmp/crew-docker-KAN-23.log\` and consider \`crew restart KAN-23 --hard\`.
+
+
 ## Apply the fixes
 
 - Update implementation and tests to address each point.
@@ -87,6 +94,13 @@ While applying feedback:
 - Before pushing, run \`npm run bruno:smoke\`. Smoke must pass. A connection error usually means the worktree's stack isn't up — bring it up the same way the original \`crew run\` did, then re-run smoke.
 
 Treat smoke failure the same as test failure: do not push.
+
+
+## Sandboxed-curl is misleading
+
+Your Bash tool runs in a sandbox with its own loopback, isolated from the host's. Direct \`curl\` / \`wget\` / Node \`fetch\` calls from your shell to **https://localhost:18443** will always return \`ECONNREFUSED\` — that is **not** evidence the stack is down. Crew has whitelisted \`npm run bruno:smoke\` to run un-sandboxed, and those are the only valid reachability tests for the docker stack.
+
+If \`npm run bruno:smoke\` succeeds, that confirms the daemon is up — but it says nothing about the worktree app port. If \`npm run test:e2e\` fails with \`ECONNREFUSED\`, that's a real signal: the docker stack is not serving at the expected port. Investigate \`/tmp/crew-docker-KAN-23.log\` and consider \`crew restart KAN-23 --hard\`.
 
 
 ## Apply the fixes
@@ -145,6 +159,7 @@ Crew has prepared this worktree for Playwright runs:
 - **Do not run \`npx playwright install\`.** Chromium is already installed.
 
 If \`npm run test:e2e\` (or the project's equivalent) reports missing browsers, missing system libs, or "no app to test", surface the failure in your fix description and stop — that's a crew-setup gap, not your fault.
+
 
 
 ## Apply the fixes

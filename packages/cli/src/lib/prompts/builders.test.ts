@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildTicketPrompt, buildFixPrPrompt } from './index.js';
+import { buildTicketPrompt, buildFixPrPrompt, buildResumePrompt } from './index.js';
 import { renderDiscoveredSkillsBlock } from './skills.js';
 
 describe('buildTicketPrompt', () => {
@@ -633,5 +633,103 @@ describe('buildFixPrPrompt', () => {
     const fixesIdx = prompt.indexOf('Apply the fixes');
     const finalReportIdx = prompt.indexOf('Final report');
     expect(finalReportIdx).toBeGreaterThan(fixesIdx);
+  });
+});
+
+describe('buildResumePrompt — sandbox-network-note', () => {
+  it('renders the sandbox-network-note when playwright is configured', () => {
+    const out = buildResumePrompt({
+      key: 'KAN-17',
+      branch: 'KAN-17',
+      commitsAhead: 0,
+      uncommittedCount: 0,
+      defaultBranch: 'main',
+      playwright: {
+        appUrl: 'https://localhost:17253',
+        authored: { testsDir: 'tests/e2e', testCommand: 'npm run test:e2e' },
+      },
+    });
+    expect(out).toContain('Sandboxed-curl is misleading');
+    expect(out).toContain('https://localhost:17253');
+    expect(out).toContain('`npm run test:e2e`');
+    expect(out).toContain('crew restart KAN-17 --hard');
+  });
+
+  it('omits the block when neither playwright nor bruno_smoke is configured', () => {
+    const out = buildResumePrompt({
+      key: 'KAN-17',
+      branch: 'KAN-17',
+      commitsAhead: 0,
+      uncommittedCount: 0,
+      defaultBranch: 'main',
+    });
+    expect(out).not.toContain('Sandboxed-curl is misleading');
+  });
+
+  it('lists both whitelisted commands when bruno + playwright both configured', () => {
+    const out = buildResumePrompt({
+      key: 'KAN-17',
+      branch: 'KAN-17',
+      commitsAhead: 0,
+      uncommittedCount: 0,
+      defaultBranch: 'main',
+      playwright: {
+        appUrl: 'https://localhost:17253',
+        authored: { testsDir: 'tests/e2e', testCommand: 'npm run test:e2e' },
+      },
+      brunoSmoke: {
+        baseUrl: 'https://localhost:17253',
+        envName: 'KAN-17',
+        collectionDir: 'bruno',
+        hasSmokeUser: false,
+      },
+    });
+    expect(out).toContain('`npm run bruno:smoke` and `npm run test:e2e`');
+  });
+});
+
+describe('buildFixPrPrompt — sandbox-network-note', () => {
+  it('renders the sandbox-network-note when playwright is configured', () => {
+    const out = buildFixPrPrompt({
+      key: 'KAN-17',
+      feedback: 'fix it',
+      feedbackSource: 'stdin',
+      playwright: {
+        appUrl: 'https://localhost:17253',
+        authored: { testsDir: 'tests/e2e', testCommand: 'npm run test:e2e' },
+      },
+    });
+    expect(out).toContain('Sandboxed-curl is misleading');
+    expect(out).toContain('https://localhost:17253');
+    expect(out).toContain('`npm run test:e2e`');
+    expect(out).toContain('crew restart KAN-17 --hard');
+  });
+
+  it('omits the block when neither playwright nor bruno_smoke is configured', () => {
+    const out = buildFixPrPrompt({
+      key: 'KAN-17',
+      feedback: 'fix it',
+      feedbackSource: 'stdin',
+    });
+    expect(out).not.toContain('Sandboxed-curl is misleading');
+  });
+
+  it('lists both whitelisted commands when bruno + playwright both configured', () => {
+    const out = buildFixPrPrompt({
+      key: 'KAN-17',
+      feedback: 'fix it',
+      feedbackSource: 'stdin',
+      playwright: {
+        appUrl: 'https://localhost:17253',
+        authored: { testsDir: 'tests/e2e', testCommand: 'npm run test:e2e' },
+      },
+      brunoSmoke: {
+        baseUrl: 'https://localhost:17253',
+        envName: 'KAN-17',
+        collectionDir: 'bruno',
+        hasSmokeUser: false,
+      },
+    });
+    expect(out).toContain('`npm run bruno:smoke` and `npm run test:e2e`');
   });
 });

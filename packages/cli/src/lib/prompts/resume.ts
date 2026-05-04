@@ -1,4 +1,5 @@
 import { render } from './render.js';
+import { buildSandboxNetworkBlock } from './sandbox-network-note.js';
 import { renderUserMessageBlock } from './user-message.js';
 import type { PlaywrightFixPrOptions } from './fix-pr.js';
 import type { BrunoSmokePromptOptions } from './ticket.js';
@@ -27,6 +28,12 @@ export function buildResumePrompt(opts: BuildResumePromptOptions): string {
     userMessageBlock: renderUserMessageBlock(opts.userMessage),
     playwrightBlock: buildPlaywrightBlock(opts.playwright),
     brunoSmokeBlock: buildBrunoSmokeBlock(opts.brunoSmoke),
+    sandboxNetworkBlock: buildSandboxNetworkBlock({
+      key: opts.key,
+      appUrl: opts.playwright?.appUrl ?? opts.brunoSmoke?.baseUrl,
+      hasBrunoSmoke: Boolean(opts.brunoSmoke),
+      authoredTestCommand: opts.playwright?.authored?.testCommand,
+    }),
     discoveredSkillsBlock: opts.discoveredSkillsBlock ?? '',
   });
 }
