@@ -9,6 +9,8 @@ import {
   resolveAppUrl,
   type DockerPorts,
 } from '../playwright/index.js';
+import { runPreflight } from '../preflight/index.js';
+import { buildPreflightChecks } from '../preflight/build-checks.js';
 import { agentNeedsAppRunning } from './app-lifecycle.js';
 
 export interface AgentEnvironmentOptions {
@@ -56,7 +58,16 @@ export async function prepareAgentEnvironment(
       skip: Boolean(skipDocker),
       env,
     });
-    if (proc) result.dockerProcess = proc;
+    if (proc) {
+      console.log(pc.dim('→ awaiting docker bringup…'));
+      const finished = await proc;
+      if (finished.exitCode !== 0) {
+        throw new Error(
+          `docker bringup failed (rc=${finished.exitCode}). Check /tmp/crew-docker-${key}.log`,
+        );
+      }
+      result.dockerProcess = proc;
+    }
   } else if (!skipDocker && agentNeedsAppRunning(config) && config.docker) {
     console.log(pc.dim('→ ensuring docker stack is running…'));
     const ensure = await ensureStackRunning({ worktree, key, env });
@@ -75,6 +86,12 @@ export async function prepareAgentEnvironment(
     }
     console.log(pc.dim(`    log: ${install.logPath}`));
   }
+
+  await runPreflight({
+    config,
+    worktree,
+    checks: buildPreflightChecks(config),
+  });
 
   return result;
 }

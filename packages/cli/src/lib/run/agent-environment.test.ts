@@ -14,6 +14,8 @@ vi.mock('../playwright/install-browsers.js', () => ({
 import { ensureStackRunning } from '../docker/ensure-stack-running.js';
 import { startDockerBringup } from '../docker/start-bringup.js';
 import { installPlaywrightBrowsers } from '../playwright/install-browsers.js';
+import * as buildChecksModule from '../preflight/build-checks.js';
+import { PreflightError } from '../preflight/index.js';
 import { prepareAgentEnvironment } from './agent-environment.js';
 
 const ensureMock = vi.mocked(ensureStackRunning);
@@ -48,6 +50,10 @@ function configWithDocker(): ProjectConfig {
   return cfg;
 }
 
+function fakeBringupProc(exitCode = 0): ReturnType<typeof startDockerBringup> {
+  return Promise.resolve({ exitCode }) as unknown as ReturnType<typeof startDockerBringup>;
+}
+
 describe('prepareAgentEnvironment — fresh mode', () => {
   beforeEach(() => {
     ensureMock.mockReset();
@@ -57,7 +63,7 @@ describe('prepareAgentEnvironment — fresh mode', () => {
   });
 
   it('delegates docker bringup to startDockerBringup and returns the handle', async () => {
-    const fakeProc = { fake: 'proc' } as unknown as ReturnType<typeof startDockerBringup>;
+    const fakeProc = fakeBringupProc();
     startBringupMock.mockReturnValue(fakeProc);
 
     const result = await prepareAgentEnvironment({
@@ -76,7 +82,7 @@ describe('prepareAgentEnvironment — fresh mode', () => {
   it('does not call ensureStackRunning even when agent needs app', async () => {
     const cfg = configWithDocker();
     cfg.bruno_smoke = { enabled: true, base_url: 'http://x', collection_dir: 'b' };
-    startBringupMock.mockReturnValue({} as ReturnType<typeof startDockerBringup>);
+    startBringupMock.mockReturnValue(fakeBringupProc());
 
     await prepareAgentEnvironment({
       config: cfg,
@@ -103,6 +109,42 @@ describe('prepareAgentEnvironment — fresh mode', () => {
 
     const call = startBringupMock.mock.calls[0]?.[0] as { skip: boolean };
     expect(call.skip).toBe(true);
+  });
+
+  it('awaits the bringup process before returning', async () => {
+    const events: string[] = [];
+    startBringupMock.mockImplementation(() => {
+      const proc = (async () => {
+        await new Promise((r) => setTimeout(r, 10));
+        events.push('docker-done');
+        return { exitCode: 0 };
+      })() as unknown as ReturnType<typeof startDockerBringup>;
+      return proc;
+    });
+
+    await prepareAgentEnvironment({
+      config: configWithDocker(),
+      worktree: '/wt',
+      key: 'KAN-1',
+      env: process.env,
+      mode: 'fresh',
+    });
+    events.push('returned');
+    expect(events).toEqual(['docker-done', 'returned']);
+  });
+
+  it('throws when fresh-mode bringup exits non-zero', async () => {
+    startBringupMock.mockReturnValue(fakeBringupProc(2));
+
+    await expect(
+      prepareAgentEnvironment({
+        config: configWithDocker(),
+        worktree: '/wt',
+        key: 'KAN-1',
+        env: process.env,
+        mode: 'fresh',
+      }),
+    ).rejects.toThrow(/docker bringup failed/i);
   });
 });
 
@@ -292,5 +334,67 @@ describe('prepareAgentEnvironment — playwright steps', () => {
         mode: 'fresh',
       }),
     ).rejects.toThrow(/playwright.*KAN-1\.log/);
+  });
+});
+
+describe('prepareAgentEnvironment — preflight integration', () => {
+  beforeEach(() => {
+    ensureMock.mockReset();
+    startBringupMock.mockReset();
+    installMock.mockReset();
+    vi.spyOn(console, 'log').mockImplementation(() => {});
+  });
+
+  it('runs preflight after docker bringup completes', async () => {
+    const events: string[] = [];
+
+    startBringupMock.mockImplementation(() => {
+      events.push('docker-started');
+      return Promise.resolve({ exitCode: 0 }) as unknown as ReturnType<typeof startDockerBringup>;
+    });
+
+    vi.spyOn(buildChecksModule, 'buildPreflightChecks').mockReturnValue([
+      {
+        name: 'fake',
+        run: async () => {
+          events.push('preflight-ran');
+        },
+      },
+    ]);
+
+    await prepareAgentEnvironment({
+      config: configWithDocker(),
+      worktree: '/wt',
+      key: 'KAN-1',
+      env: process.env,
+      mode: 'fresh',
+    });
+
+    expect(events).toEqual(['docker-started', 'preflight-ran']);
+  });
+
+  it('propagates PreflightError out of prepareAgentEnvironment', async () => {
+    startBringupMock.mockReturnValue(
+      Promise.resolve({ exitCode: 0 }) as unknown as ReturnType<typeof startDockerBringup>,
+    );
+
+    vi.spyOn(buildChecksModule, 'buildPreflightChecks').mockReturnValue([
+      {
+        name: 'fail',
+        run: async () => {
+          throw new PreflightError('fail', 'forced failure', 'fix it');
+        },
+      },
+    ]);
+
+    await expect(
+      prepareAgentEnvironment({
+        config: configWithDocker(),
+        worktree: '/wt',
+        key: 'KAN-1',
+        env: process.env,
+        mode: 'fresh',
+      }),
+    ).rejects.toBeInstanceOf(PreflightError);
   });
 });

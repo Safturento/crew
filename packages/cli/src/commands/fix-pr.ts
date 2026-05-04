@@ -24,6 +24,7 @@ import {
   readEnvBaseMap,
   streamTranscript,
 } from '../lib/run/index.js';
+import { PreflightError, renderPreflightError } from '../lib/preflight/index.js';
 import type { DockerPorts } from '../lib/playwright/index.js';
 
 export type FeedbackMode =
@@ -205,6 +206,12 @@ async function runFixPr(key: string, flags: FixPrFlags): Promise<void> {
       dockerPorts,
       envVars,
       mode: 'resume',
+    }).catch((err: unknown): never => {
+      if (err instanceof PreflightError) {
+        process.stderr.write(renderPreflightError(err) + '\n');
+        process.exit(1);
+      }
+      throw err;
     });
     resolvedAppUrl = env.resolvedAppUrl;
   }
