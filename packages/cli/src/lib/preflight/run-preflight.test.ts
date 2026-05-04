@@ -56,6 +56,27 @@ describe('runPreflight', () => {
     expect(observed.worktree).toBe('/tmp/wt-x');
   });
 
+  it('forwards optional dockerPorts and envVars to each check', async () => {
+    const observed: { dockerPorts?: unknown; envVars?: unknown } = {};
+    const check: PreflightCheck = {
+      name: 'observe',
+      run: async (ctx) => {
+        observed.dockerPorts = ctx.dockerPorts;
+        observed.envVars = ctx.envVars;
+      },
+    };
+
+    await runPreflight({
+      config: baseConfig,
+      worktree: '/tmp/wt',
+      checks: [check],
+      dockerPorts: { httpPort: 8001, httpsPort: 8401, postgresPort: 15401 },
+      envVars: { APP_HOST: 'localhost' },
+    });
+    expect(observed.dockerPorts).toEqual({ httpPort: 8001, httpsPort: 8401, postgresPort: 15401 });
+    expect(observed.envVars).toEqual({ APP_HOST: 'localhost' });
+  });
+
   it('throws PreflightError on first failing check and stops', async () => {
     const aRan = vi.fn();
     const bRan = vi.fn();

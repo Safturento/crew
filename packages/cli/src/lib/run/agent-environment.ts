@@ -91,6 +91,8 @@ export async function prepareAgentEnvironment(
     config,
     worktree,
     checks: buildPreflightChecks(config),
+    dockerPorts,
+    envVars,
   });
 
   return result;

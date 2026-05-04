@@ -1,4 +1,5 @@
 import type { ProjectConfig } from 'crew-shared';
+import { probeAppUrlsCheck } from './probe-app-urls.js';
 import { verifyExcludedCommandsCheck } from './verify-excluded-commands.js';
 import type { PreflightCheck } from './types.js';
 
@@ -7,6 +8,10 @@ import type { PreflightCheck } from './types.js';
  */
 export function buildPreflightChecks(config: ProjectConfig): PreflightCheck[] {
   const checks: PreflightCheck[] = [];
+
+  if (config.docker && (config.playwright || config.bruno_smoke)) {
+    checks.push(probeAppUrlsCheck());
+  }
 
   if (config.bruno_smoke?.enabled || config.playwright?.authored?.enabled) {
     checks.push(verifyExcludedCommandsCheck());
