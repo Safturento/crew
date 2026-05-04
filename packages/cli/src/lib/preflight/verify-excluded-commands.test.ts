@@ -81,6 +81,9 @@ describe('verifyExcludedCommandsCheck', () => {
       const pe = err as PreflightError;
       expect(pe.headline).toContain('missing required excludedCommands');
       expect(pe.details.path).toContain('(file not found)');
+      // spec §4.2: hint pointing at the Option B Epic for context
+      expect(pe.details.hint).toMatch(/Option B Epic|hand-authored/i);
+      expect(pe.remediation).toMatch(/create \.claude\/settings\.json/);
     }
   });
 

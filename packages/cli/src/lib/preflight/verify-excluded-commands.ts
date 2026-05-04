@@ -44,10 +44,11 @@ export function verifyExcludedCommandsCheck(): PreflightCheck {
           throw new PreflightError(
             'excluded-commands',
             '.claude/settings.json missing required excludedCommands',
-            'add the entry to sandbox.excludedCommands and commit',
+            'create .claude/settings.json with sandbox.excludedCommands containing the listed entries and commit',
             {
               missing: required.map((r) => `"${r.command}"`).join(', '),
               path: `${settingsPath} (file not found)`,
+              hint: "the file is hand-authored today; see docs/followups.md 'Crew owns .claude/settings.json per worktree' for the larger Epic context",
             },
           );
         }
@@ -59,6 +60,10 @@ export function verifyExcludedCommandsCheck(): PreflightCheck {
       };
       const excluded = parsed.sandbox?.excludedCommands ?? [];
 
+      // Conservative-match: require exact string equality. The Claude Code
+      // sandbox may accept prefix-style entries at runtime, but for the *check*
+      // we only trust an exact match — looser-than-required prefixes still pass
+      // at runtime, we just don't certify them here.
       for (const entry of required) {
         if (!excluded.includes(entry.command)) {
           throw new PreflightError(
