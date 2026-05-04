@@ -26,6 +26,25 @@ structured `PreflightError` on failure pointing at the bringup log + the
 
 ## Decisions
 
+- **Resolve URLs through `resolveAppUrl` before probing** — spec §4.1 says
+  "For each qualifying block: resolve via the existing `lib/playwright/resolve-app-url.ts`
+  (env-var substitution applied)." `[playwright].app_url` and
+  `[bruno_smoke].base_url` commonly use `{httpsPort}` placeholders or
+  `${VAR}` env-var refs; without resolution the probe would `fetch` the
+  template string verbatim. To plumb the resolution context, extended
+  `PreflightCheckContext` with optional `dockerPorts` and `envVars`,
+  threaded both through `RunPreflightOptions` and `prepareAgentEnvironment`.
+  The check calls `resolveAppUrl(template, dockerPorts, envVars).raw`
+  before probing, and the failure-shape `url` field reports the resolved
+  URL (not the template) so the user sees what was actually attempted.
+
+- **Use `playwrightEnabled(config)` for the playwright skip-rule** — spec
+  §4.1 says "when `[playwright]` is enabled." The schema's superRefine
+  already ensures at least one of `smoke`/`authored` is `enabled` when
+  `[playwright]` is present, so the original `config.playwright` truthy
+  check was functionally equivalent for valid configs. Using the named
+  helper makes intent explicit and the code line up with the spec wording.
+
 - **Add `undici` as a direct dep of `crew-cli`** — the plan claimed it was
   "already a transitive dep via Node's native fetch," but `node:undici` is
   bundled into Node's runtime and not exposed as a regular import.

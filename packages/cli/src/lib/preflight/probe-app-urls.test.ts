@@ -84,6 +84,101 @@ describe('probeAppUrlsCheck', () => {
     expect(probeSpy).toHaveBeenCalledWith('https://localhost:17253');
   });
 
+  it('skips when [playwright] config block is set but no smoke/authored modes are enabled', async () => {
+    const probeSpy = vi.spyOn(probeUrlModule, 'probeUrl');
+    const check = probeAppUrlsCheck();
+    await check.run({
+      config: {
+        ...cfgWithDockerAndPlaywright(),
+        playwright: {
+          app_url: 'https://localhost:17253',
+        },
+      } as unknown as ProjectConfig,
+      worktree: '/tmp/wt',
+    });
+    expect(probeSpy).not.toHaveBeenCalled();
+  });
+
+  it('resolves {httpsPort} placeholder via dockerPorts before probing', async () => {
+    const probeSpy = vi
+      .spyOn(probeUrlModule, 'probeUrl')
+      .mockResolvedValue({ reachable: true, attempts: 1 });
+    const check = probeAppUrlsCheck();
+    await check.run({
+      config: cfgWithDockerAndPlaywright({
+        playwright: {
+          app_url: 'https://localhost:{httpsPort}',
+          authored: {
+            enabled: true,
+            tests_dir: 'tests/e2e',
+            test_command: 'npm run test:e2e',
+            verify_after_run: false,
+            verify_max_attempts: 2,
+          },
+        },
+      } as unknown as Partial<ProjectConfig>),
+      worktree: '/tmp/wt',
+      dockerPorts: { httpPort: 8001, httpsPort: 8401, postgresPort: 15401 },
+    });
+    expect(probeSpy).toHaveBeenCalledWith('https://localhost:8401');
+  });
+
+  it('resolves ${VAR} placeholder via envVars before probing', async () => {
+    const probeSpy = vi
+      .spyOn(probeUrlModule, 'probeUrl')
+      .mockResolvedValue({ reachable: true, attempts: 1 });
+    const check = probeAppUrlsCheck();
+    await check.run({
+      config: cfgWithDockerAndPlaywright({
+        playwright: {
+          app_url: 'https://${APP_HOST}:${APP_PORT}',
+          authored: {
+            enabled: true,
+            tests_dir: 'tests/e2e',
+            test_command: 'npm run test:e2e',
+            verify_after_run: false,
+            verify_max_attempts: 2,
+          },
+        },
+      } as unknown as Partial<ProjectConfig>),
+      worktree: '/tmp/wt',
+      envVars: { APP_HOST: 'localhost', APP_PORT: '17253' },
+    });
+    expect(probeSpy).toHaveBeenCalledWith('https://localhost:17253');
+  });
+
+  it('reports the resolved URL (not the template) in PreflightError details', async () => {
+    vi.spyOn(probeUrlModule, 'probeUrl').mockResolvedValue({
+      reachable: false,
+      attempts: 5,
+      lastError: Object.assign(new Error('connect ECONNREFUSED'), { code: 'ECONNREFUSED' }),
+    });
+
+    const check = probeAppUrlsCheck();
+    try {
+      await check.run({
+        config: cfgWithDockerAndPlaywright({
+          playwright: {
+            app_url: 'https://localhost:{httpsPort}',
+            authored: {
+              enabled: true,
+              tests_dir: 'tests/e2e',
+              test_command: 'npm run test:e2e',
+              verify_after_run: false,
+              verify_max_attempts: 2,
+            },
+          },
+        } as unknown as Partial<ProjectConfig>),
+        worktree: '/tmp/wt',
+        dockerPorts: { httpPort: 8001, httpsPort: 8401, postgresPort: 15401 },
+      });
+      expect.fail('expected throw');
+    } catch (err) {
+      const pe = err as PreflightError;
+      expect(pe.details.url).toBe('https://localhost:8401 (from [playwright].app_url)');
+    }
+  });
+
   it('throws PreflightError with structured details when probe fails', async () => {
     vi.spyOn(probeUrlModule, 'probeUrl').mockResolvedValue({
       reachable: false,

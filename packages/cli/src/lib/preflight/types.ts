@@ -1,8 +1,13 @@
 import type { ProjectConfig } from 'crew-shared';
+import type { DockerPorts } from '../playwright/index.js';
 
 export interface PreflightCheckContext {
   config: ProjectConfig;
   worktree: string;
+  /** Resolved docker port map (only present in fresh-mode dispatch). */
+  dockerPorts?: DockerPorts;
+  /** Materialized env vars from env.toml (only present for env.toml projects). */
+  envVars?: Record<string, string>;
 }
 
 export interface PreflightCheck {
