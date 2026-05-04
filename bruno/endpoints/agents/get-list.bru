@@ -1,0 +1,37 @@
+meta {
+  name: GET /api/agents
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/api/agents
+}
+
+assert {
+  res.status: eq 200
+  res.body.agents: isArray
+}
+
+tests {
+  test("each agent has the required summary fields", () => {
+    const allowedStates = ["initializing", "running", "pr_open", "error", "finished"];
+    for (const agent of res.body.agents) {
+      expect(agent.key).to.be.a("string");
+      expect(agent.projectName).to.be.a("string");
+      expect(agent.ticketTitle).to.be.a("string");
+      expect(agent.startedAt).to.be.a("string");
+      expect(agent.tokens).to.be.a("number");
+      expect(allowedStates).to.include(agent.state);
+      if (agent.prUrl !== undefined) {
+        expect(agent.prUrl).to.be.a("string");
+      }
+    }
+  });
+
+  test("agents are sorted by key ascending", () => {
+    const keys = res.body.agents.map((a) => a.key);
+    const sorted = [...keys].sort();
+    expect(keys).to.deep.equal(sorted);
+  });
+}
