@@ -10,15 +10,10 @@ import { ErrorFallback } from './components/ErrorFallback.js';
 import { TopNav } from './components/TopNav.js';
 import { ViewportFrame } from './components/ViewportFrame.js';
 import type { DaemonClient } from './data/DaemonClient.js';
-import { HttpProjectsClient } from './data/HttpProjectsClient.js';
-import { HybridDaemonClient } from './data/HybridDaemonClient.js';
-import { MockDaemonClient } from './data/MockDaemonClient.js';
+import { HttpDaemonClient } from './data/HttpDaemonClient.js';
 import { navigate, useHashRoute } from './routing/useHashRoute.js';
 
-const defaultClient: DaemonClient = new HybridDaemonClient(
-  new HttpProjectsClient(),
-  new MockDaemonClient(),
-);
+const defaultClient: DaemonClient = new HttpDaemonClient();
 
 export function App({ client = defaultClient }: { client?: DaemonClient } = {}) {
   const { reset } = useQueryErrorResetBoundary();
@@ -35,10 +30,12 @@ function AppContent({ client }: { client: DaemonClient }) {
   const projectsQuery = useQuery({
     queryKey: ['projects'],
     queryFn: () => client.listProjects(),
+    refetchInterval: 2000,
   });
   const agentsQuery = useQuery({
     queryKey: ['agents'],
     queryFn: () => client.listAgents(),
+    refetchInterval: 2000,
   });
 
   const projects = projectsQuery.data ?? [];
