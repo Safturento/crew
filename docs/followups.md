@@ -7,6 +7,7 @@ Format: see the user-level `~/.claude/CLAUDE.md` "Followup detection" section.
 ## Contents
 
 - [Active](#active)
+  - [2026-05-03 — `crew run` post-stream "waiting up to 120s for docker bringup" log is misleading after CREW-83](#2026-05-03--crew-run-post-stream-waiting-up-to-120s-for-docker-bringup-log-is-misleading-after-crew-83)
   - [2026-05-03 — `chokidar` dep added to daemon but no code imports it](#2026-05-03--chokidar-dep-added-to-daemon-but-no-code-imports-it)
   - [2026-05-03 — `@playwright/mcp` ignores crew's `--executable-path` override](#2026-05-03--playwrightmcp-ignores-crews---executable-path-override)
   - [2026-05-03 — `crew run` swallows background-task failures into `/tmp` logs](#2026-05-03--crew-run-swallows-background-task-failures-into-tmp-logs)
@@ -42,6 +43,20 @@ Format: see the user-level `~/.claude/CLAUDE.md` "Followup detection" section.
 - [Abandoned](#abandoned)
 
 ## Active
+
+### 2026-05-03 — `crew run` post-stream "waiting up to 120s for docker bringup" log is misleading after CREW-83
+
+**What:** `packages/cli/src/commands/run.ts:451-469` waits up to 120s on `dockerProcess` after the agent finishes streaming, then reads its `exitCode` to set `dockerFailed`. CREW-83 made `prepareAgentEnvironment`'s `fresh` mode block on bringup and throw on non-zero exit, so by the time we reach this post-stream block `dockerProcess` is always already-resolved with `exitCode === 0`. The 120s race becomes a guaranteed-fast no-op, but the user still sees `→ waiting up to 120s for docker bringup…` printed (followed by an immediate finish). Cosmetically noisy and could mislead someone reading the logs.
+
+**Why noticed:** Self-review of CREW-83 PR. The plan acknowledged `result.dockerProcess` would be an already-resolved promise after the change, and chose to leave it for backwards-compat with the post-stream wait. Tightening the post-stream code (drop the wait + the log line, just read `dockerProcess.then(r => r.exitCode)` directly, or drop the field entirely now that `prepareAgentEnvironment` throws on rc!=0) is out of scope for the scaffold ticket but worth tracking.
+
+**Anchors:**
+
+- `packages/cli/src/commands/run.ts:451-469` — the post-stream wait loop.
+- `packages/cli/src/lib/run/agent-environment.ts:51-68` — where the await + throw landed.
+- `docs/superpowers/plans/2026-05-03-agent-dispatch-preflight.md` Task 3 — plan note explicitly preserves `result.dockerProcess` for compat.
+
+**Shape of work:** Small. Either delete the wait/log block (since `dockerFailed` is now always whatever `dockerUnavailable` was set to pre-bringup), or tighten it to a one-liner that reads the resolved exit code without the misleading wait message. ~10 lines either way; no test churn beyond agent-environment's existing coverage.
 
 ### 2026-05-03 — `chokidar` dep added to daemon but no code imports it
 
