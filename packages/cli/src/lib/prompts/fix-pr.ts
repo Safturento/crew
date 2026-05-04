@@ -1,4 +1,5 @@
 import { render } from './render.js';
+import { buildSandboxNetworkBlock } from './sandbox-network-note.js';
 import type { BrunoSmokePromptOptions } from './ticket.js';
 
 export interface PlaywrightFixPrOptions {
@@ -36,6 +37,12 @@ export function buildFixPrPrompt(opts: BuildFixPrPromptOptions): string {
     pushDirective,
     playwrightBlock: buildPlaywrightFixPrBlock(opts.playwright),
     brunoSmokeBlock: buildBrunoSmokeBlock(opts.brunoSmoke),
+    sandboxNetworkBlock: buildSandboxNetworkBlock({
+      key: opts.key,
+      appUrl: opts.playwright?.appUrl ?? opts.brunoSmoke?.baseUrl,
+      hasBrunoSmoke: Boolean(opts.brunoSmoke),
+      authoredTestCommand: opts.playwright?.authored?.testCommand,
+    }),
     discoveredSkillsBlock: opts.discoveredSkillsBlock ?? '',
   });
 }
