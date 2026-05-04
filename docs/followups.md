@@ -7,6 +7,7 @@ Format: see the user-level `~/.claude/CLAUDE.md` "Followup detection" section.
 ## Contents
 
 - [Active](#active)
+  - [2026-05-03 — `chokidar` dep added to daemon but no code imports it](#2026-05-03--chokidar-dep-added-to-daemon-but-no-code-imports-it)
   - [2026-05-03 — `@playwright/mcp` ignores crew's `--executable-path` override](#2026-05-03--playwrightmcp-ignores-crews---executable-path-override)
   - [2026-05-03 — `crew run` swallows background-task failures into `/tmp` logs](#2026-05-03--crew-run-swallows-background-task-failures-into-tmp-logs)
   - [2026-05-03 — Transcript line printer truncates tool-call inputs mid-string](#2026-05-03--transcript-line-printer-truncates-tool-call-inputs-mid-string)
@@ -41,6 +42,23 @@ Format: see the user-level `~/.claude/CLAUDE.md` "Followup detection" section.
 - [Abandoned](#abandoned)
 
 ## Active
+
+### 2026-05-03 — `chokidar` dep added to daemon but no code imports it
+
+**What:** CREW-50 added `chokidar ^4.0.3` to `packages/daemon/package.json` per the slice 1b plan + ticket acceptance criteria. The shipped `IngestService` (and the `tailTranscript` helper it uses) still polls via `fs.open`/`stat` every 200ms — chokidar isn't actually imported anywhere in the daemon. Either the migration to fs-event watching needs to happen in a follow-up slice, or the dep should be dropped to keep the dep graph honest.
+
+**Why noticed:** Code-reviewer flagged it during CREW-50 self-review. The plan called for the dep up front so the slice would be "ticket-correct," but no later task in the slice 1b plan uses it either; if slice 1c also doesn't pick it up, it stays a dead dep.
+
+**Anchors:**
+
+- `packages/daemon/package.json:28` — the `chokidar ^4.0.3` entry.
+- `packages/daemon/src/services/IngestService.ts` — the would-be consumer; only imports `tailTranscript`.
+- `packages/shared/src/transcripts/tail.ts:23-72` — the polling tail loop that chokidar would replace.
+- `docs/superpowers/plans/2026-04-29-agents-data-end-to-end.md:498-510` — the plan step that mandates the dep.
+
+**Shape of work:** Two paths. (a) Migrate `tailTranscript` to chokidar-driven (cheaper to react to writes; more moving parts in tests). (b) Drop the dep + amend the plan note. Whichever way, single small PR.
+
+**Open questions:** Does the polling tail's 200ms latency matter for the dashboard slice? If not, (b) is the right call.
 
 ### 2026-05-03 — `@playwright/mcp` ignores crew's `--executable-path` override
 
