@@ -1,10 +1,5 @@
 import type { Insertable, Kysely } from 'kysely';
-import type {
-  AgentsTable,
-  DaemonDatabase,
-  RunsTable,
-  ToolCallsTable,
-} from '../src/db.js';
+import type { AgentsTable, DaemonDatabase, RunsTable, ToolCallsTable } from '../src/db.js';
 
 const FIXTURE_AGENTS: Omit<Insertable<AgentsTable>, 'created_at'>[] = [
   {
