@@ -8,6 +8,7 @@ Format: see the user-level `~/.claude/CLAUDE.md` "Followup detection" section.
 
 - [Active](#active)
   - [2026-05-05 — Worktree env-injection of `CREW_SEED_FIXTURES=1` not wired](#2026-05-05--worktree-env-injection-of-crew_seed_fixtures1-not-wired)
+  - [2026-05-05 — Dashboard Dockerfile doesn't copy `tsconfig.base.json`, breaks vite at runtime with TSCONFIG_ERROR](#2026-05-05--dashboard-dockerfile-doesnt-copy-tsconfigbasejson-breaks-vite-at-runtime-with-tsconfig_error)
   - [2026-05-05 — Daemon container's `~/.claude/projects` mount is broader than crew's transcript ingest needs](#2026-05-05--daemon-containers-claudeprojects-mount-is-broader-than-crews-transcript-ingest-needs)
   - [2026-05-04 — Generalize the hardcoded `db-clone-from-main.sh` post-bringup hook into a configurable TOML-registered startup script](#2026-05-04--generalize-the-hardcoded-db-clone-from-mainsh-post-bringup-hook-into-a-configurable-toml-registered-startup-script)
   - [2026-05-04 — Crew sandbox/preflight self-opt-in (slot into first dashboard plan that adds e2e coverage)](#2026-05-04--crew-sandboxpreflight-self-opt-in-slot-into-first-dashboard-plan-that-adds-e2e-coverage)
@@ -75,6 +76,18 @@ Format: see the user-level `~/.claude/CLAUDE.md` "Followup detection" section.
 
 - Should canonical worktrees also be able to opt into seeding (e.g. for screenshot/demo runs)? If yes, the gate isn't "non-canonical" but "explicit override" — a knob the user can flip. If no, "non-canonical worktree → seed=1" is sufficient.
 - Does the materializer have a notion of "current worktree is the canonical one" available at materialize time? `[docker].canonical_worktree` in the project config has the answer; the materializer would need to consult it.
+
+### 2026-05-05 — Dashboard Dockerfile doesn't copy `tsconfig.base.json`, breaks vite at runtime with TSCONFIG_ERROR
+
+**What:** `packages/dashboard/Dockerfile` copies only `packages/dashboard/` into the image, but `packages/dashboard/tsconfig.json` extends `../../tsconfig.base.json` from the repo root. Inside the container at `/app/packages/dashboard/`, the parent `tsconfig.base.json` is missing, so vite-oxc fails on every request with `[TSCONFIG_ERROR] Failed to load tsconfig for 'src/main.tsx': Tsconfig not found` and renders only the vite error overlay. End-to-end visible: dashboard at the host port (canonical 5173 or worktree-hashed) shows the overlay, no app HTML, all e2e tests fail with "element not found."
+
+**Why noticed:** Surfaced during CREW-91 verification (Playwright env-aware baseURL). With `CREW_APP_URL=http://localhost:18228 npm run test:e2e` the env routing successfully reached the worktree dashboard, but every test failed because the page was just the vite overlay. Same failure mode hitting the canonical port. The playwright config change itself is correct; the dashboard container is the breaking change.
+
+**Anchors:** `packages/dashboard/Dockerfile`, `packages/dashboard/tsconfig.json` (the `extends: "../../tsconfig.base.json"` line), `tsconfig.base.json` at repo root, CREW-88 (the dashboard-Dockerfile ticket that introduced the image).
+
+**What's been considered:** Add `COPY tsconfig.base.json ./` (or copy the whole repo root tsconfig graph) before `COPY packages/dashboard ./packages/dashboard`. Mirrors how the daemon Dockerfile handles shared root files. Likely a one-line Dockerfile fix.
+
+**Shape of work:** Small — one Dockerfile edit + a rebuild verification (`docker compose --profile dev up -d --build --wait`, then `npm run test:e2e`).
 
 ### 2026-05-05 — Daemon container's `~/.claude/projects` mount is broader than crew's transcript ingest needs
 
