@@ -2,7 +2,7 @@ FROM node:22-slim
 
 WORKDIR /app
 
-COPY package.json package-lock.json ./
+COPY package.json package-lock.json tsconfig.base.json ./
 COPY packages/dashboard/package.json packages/dashboard/
 
 RUN npm ci --workspaces --include-workspace-root
