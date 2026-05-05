@@ -1,0 +1,31 @@
+meta {
+  name: POST /api/agents/runs/:runId/complete
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/api/agents/runs/{{runId}}/complete
+  body: json
+}
+
+body:json {
+  {
+    "exitCode": 0,
+    "completedAt": "2026-04-29T13:00:00Z"
+  }
+}
+
+vars:pre-request {
+  runId: 1
+}
+
+assert {
+  res.status: eq 204
+}
+
+docs {
+  Reference card. The `runId` var must be set to a real registered run before
+  invoking — flows obtain it via `vars:post-response { runId: res.body.run.id }`
+  from the matching register-run request.
+}

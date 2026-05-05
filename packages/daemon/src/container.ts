@@ -5,6 +5,7 @@ import type { DaemonConfig } from './config.js';
 import type { DaemonDatabase } from './db.js';
 import { ProjectsService } from './services/ProjectsService.js';
 import { AgentsService } from './services/AgentsService.js';
+import { IngestService } from './services/IngestService.js';
 
 /**
  * The daemon's Awilix cradle. Routes resolve services by these names via
@@ -23,6 +24,7 @@ export interface DaemonCradle {
   db: Kysely<DaemonDatabase>;
   projectsService: ProjectsService;
   agentsService: AgentsService;
+  ingestService: IngestService;
 }
 
 declare module '@fastify/awilix' {
@@ -58,6 +60,12 @@ export function buildContainer(deps: BuildContainerDeps): AwilixContainer<Daemon
         new ProjectsService({ projectsDir: config.configDir, logger }),
     ).scoped(),
     agentsService: asFunction(({ db }: DaemonCradle) => new AgentsService({ db })).scoped(),
+    // One ingest service per daemon process — owns the lifecycle of all
+    // active per-run transcript tails. Singleton (not scoped) so requests
+    // share state with the start/stop hooks in `buildApp`.
+    ingestService: asFunction(
+      ({ db, logger }: DaemonCradle) => new IngestService({ db, logger }),
+    ).singleton(),
   });
   return container;
 }

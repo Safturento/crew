@@ -1,15 +1,21 @@
 import { describe, it, expect } from 'vitest';
 import { mkdirSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { buildApp } from './app.js';
-import { createDb } from './db.js';
+import { createDb, runMigrations } from './db.js';
 import { createLogger } from './logger.js';
 import { ConfigDirNotFoundError, NotFoundError } from './errors.js';
 import { useTmpDir } from './test/tmpdir.js';
 
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const MIGRATIONS_DIR = resolve(__dirname, 'migrations');
+
 const tmp = useTmpDir();
 
 async function buildTestApp(opts: { dashboardDistDir?: string } = {}) {
+  const db = createDb(':memory:');
+  await runMigrations(db, MIGRATIONS_DIR);
   return buildApp({
     config: {
       port: 0,
@@ -19,7 +25,7 @@ async function buildTestApp(opts: { dashboardDistDir?: string } = {}) {
       logFile: '/tmp/daemon.log',
     },
     logger: createLogger(),
-    db: createDb(':memory:'),
+    db,
     dashboardDistDir: opts.dashboardDistDir,
   });
 }

@@ -19,10 +19,11 @@ import type { Kysely } from 'kysely';
 import type { Logger } from 'pino';
 import type { DaemonConfig } from './config.js';
 import type { DaemonDatabase } from './db.js';
-import { ConfigDirNotFoundError, NotFoundError } from './errors.js';
+import { ConfigDirNotFoundError, ConflictError, NotFoundError } from './errors.js';
 import { buildContainer } from './container.js';
 import { registerProjectsRoutes } from './routes/projects.js';
 import { registerAgentsRoutes } from './routes/agents.js';
+import { registerRunsRoutes } from './routes/runs.js';
 
 const PLACEHOLDER_HTML = `<!DOCTYPE html>
 <html>
@@ -83,8 +84,9 @@ export async function buildApp({
   app.setValidatorCompiler(validatorCompiler);
   app.setSerializerCompiler(serializerCompiler);
 
+  const container = buildContainer({ config, logger, db });
   await app.register(fastifyAwilixPlugin, {
-    container: buildContainer({ config, logger, db }),
+    container,
     disposeOnClose: true,
     disposeOnResponse: false,
     asyncInit: false,
@@ -92,9 +94,24 @@ export async function buildApp({
     strictBooleanEnforced: true,
   });
 
+  // Resolve via the container's cradle (not request-scoped) — the ingest
+  // service is a singleton owned by the daemon process. start() runs the
+  // crash-recovery path that re-attaches tails for runs that didn't get
+  // a `complete` call before the previous boot exited.
+  const ingest = container.cradle.ingestService;
+  app.addHook('onReady', async () => {
+    await ingest.start();
+  });
+  app.addHook('onClose', async () => {
+    await ingest.stop();
+  });
+
   app.setErrorHandler((err: unknown, req, reply) => {
     if (err instanceof NotFoundError) {
       return reply.code(404).send({ error: err.message, resource: err.resource, id: err.id });
+    }
+    if (err instanceof ConflictError) {
+      return reply.code(409).send({ error: err.code, ...err.details });
     }
     if (err instanceof ConfigDirNotFoundError) {
       return reply.code(503).send({ error: err.message, configDir: err.configDir });
@@ -118,6 +135,7 @@ export async function buildApp({
 
   await registerProjectsRoutes(app);
   await registerAgentsRoutes(app);
+  await registerRunsRoutes(app);
 
   if (dashboardDistDir && existsSync(join(dashboardDistDir, 'index.html'))) {
     await app.register(fastifyStatic, { root: dashboardDistDir, prefix: '/' });
