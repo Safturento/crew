@@ -1,9 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { execa } from 'execa';
-import { unlink } from 'node:fs/promises';
+import { readdir, stat, unlink } from 'node:fs/promises';
 import {
   computeWorktreePath,
   isInsideWorktree,
+  pruneSandboxStubs,
   readJiraSecrets,
   runFinish,
   type FinishDeps,
@@ -11,12 +12,18 @@ import {
 import type { ProjectConfig } from '../lib/index.js';
 
 vi.mock('execa', () => ({ execa: vi.fn() }));
-vi.mock('node:fs/promises', () => ({ unlink: vi.fn() }));
+vi.mock('node:fs/promises', () => ({
+  readdir: vi.fn(),
+  stat: vi.fn(),
+  unlink: vi.fn(),
+}));
 
 const fetchMock = vi.fn();
 vi.stubGlobal('fetch', fetchMock);
 
 const mockedExeca = vi.mocked(execa);
+const mockedReaddir = vi.mocked(readdir);
+const mockedStat = vi.mocked(stat);
 const mockedUnlink = vi.mocked(unlink);
 
 const sampleConfig: ProjectConfig = {
@@ -57,8 +64,12 @@ function makeDeps(overrides: Partial<FinishDeps> = {}): FinishDeps & {
 
 beforeEach(() => {
   mockedExeca.mockReset();
+  mockedReaddir.mockReset();
+  mockedStat.mockReset();
   mockedUnlink.mockReset();
   fetchMock.mockReset();
+  // Default: empty worktree (no stubs to prune). Individual tests override.
+  mockedReaddir.mockResolvedValue([] as never);
 });
 
 describe('computeWorktreePath', () => {
@@ -88,6 +99,111 @@ describe('readJiraSecrets', () => {
       CREW_JIRA_API_TOKEN: '  tok\n',
     });
     expect(secrets).toEqual({ email: 'me@x.com', token: 'tok' });
+  });
+});
+
+describe('pruneSandboxStubs', () => {
+  const wt = '/home/u/Repos/Recipes-App-KAN-23';
+
+  function stubStat(overrides: { size?: number; mode?: number } = {}) {
+    return {
+      size: overrides.size ?? 0,
+      mode: overrides.mode ?? 0o100444, // S_IFREG | 0o444
+    } as Awaited<ReturnType<typeof stat>>;
+  }
+
+  it('prunes a worktree whose only entries are sandbox stubs', async () => {
+    mockedReaddir.mockResolvedValueOnce(['.bashrc', '.gitconfig', '.zshrc'] as never);
+    mockedStat.mockResolvedValue(stubStat());
+    mockedUnlink.mockResolvedValue(undefined);
+
+    const warns: string[] = [];
+    await pruneSandboxStubs(wt, (msg) => warns.push(msg));
+
+    expect(mockedUnlink).toHaveBeenCalledWith(`${wt}/.bashrc`);
+    expect(mockedUnlink).toHaveBeenCalledWith(`${wt}/.gitconfig`);
+    expect(mockedUnlink).toHaveBeenCalledWith(`${wt}/.zshrc`);
+    expect(mockedUnlink).toHaveBeenCalledTimes(3);
+    expect(warns).toHaveLength(3);
+    expect(warns[0]).toMatch(/\.bashrc/);
+  });
+
+  it('prunes only stubs in a mixed worktree, leaving real untracked files alone', async () => {
+    mockedReaddir.mockResolvedValueOnce(['.bashrc', 'notes.txt', '.gitconfig'] as never);
+    mockedStat.mockResolvedValue(stubStat());
+    mockedUnlink.mockResolvedValue(undefined);
+
+    const warns: string[] = [];
+    await pruneSandboxStubs(wt, (msg) => warns.push(msg));
+
+    expect(mockedUnlink).toHaveBeenCalledWith(`${wt}/.bashrc`);
+    expect(mockedUnlink).toHaveBeenCalledWith(`${wt}/.gitconfig`);
+    expect(mockedUnlink).not.toHaveBeenCalledWith(`${wt}/notes.txt`);
+    expect(mockedUnlink).toHaveBeenCalledTimes(2);
+  });
+
+  it('does nothing when there are no stubs', async () => {
+    mockedReaddir.mockResolvedValueOnce(['.git', 'package.json', 'src'] as never);
+
+    const warns: string[] = [];
+    await pruneSandboxStubs(wt, (msg) => warns.push(msg));
+
+    expect(mockedUnlink).not.toHaveBeenCalled();
+    expect(warns).toEqual([]);
+  });
+
+  it('leaves an allowlisted name with non-zero size alone', async () => {
+    mockedReaddir.mockResolvedValueOnce(['.gitconfig'] as never);
+    mockedStat.mockResolvedValueOnce(stubStat({ size: 200 }));
+
+    const warns: string[] = [];
+    await pruneSandboxStubs(wt, (msg) => warns.push(msg));
+
+    expect(mockedUnlink).not.toHaveBeenCalled();
+    expect(warns).toEqual([]);
+  });
+
+  it('also prunes mode-666 stubs (umask-default sandbox-launcher path)', async () => {
+    mockedReaddir.mockResolvedValueOnce(['.bashrc', '.gitconfig'] as never);
+    mockedStat.mockResolvedValue(stubStat({ mode: 0o100666 }));
+    mockedUnlink.mockResolvedValue(undefined);
+
+    const warns: string[] = [];
+    await pruneSandboxStubs(wt, (msg) => warns.push(msg));
+
+    expect(mockedUnlink).toHaveBeenCalledWith(`${wt}/.bashrc`);
+    expect(mockedUnlink).toHaveBeenCalledWith(`${wt}/.gitconfig`);
+    expect(mockedUnlink).toHaveBeenCalledTimes(2);
+  });
+
+  it('leaves an allowlisted name with mode outside the stub set alone', async () => {
+    mockedReaddir.mockResolvedValueOnce(['.bashrc'] as never);
+    mockedStat.mockResolvedValueOnce(stubStat({ mode: 0o100644 }));
+
+    const warns: string[] = [];
+    await pruneSandboxStubs(wt, (msg) => warns.push(msg));
+
+    expect(mockedUnlink).not.toHaveBeenCalled();
+    expect(warns).toEqual([]);
+  });
+
+  it('leaves a non-allowlisted dotfile alone even if 0-byte and mode 444', async () => {
+    mockedReaddir.mockResolvedValueOnce(['.envrc'] as never);
+    mockedStat.mockResolvedValueOnce(stubStat());
+
+    const warns: string[] = [];
+    await pruneSandboxStubs(wt, (msg) => warns.push(msg));
+
+    expect(mockedUnlink).not.toHaveBeenCalled();
+    expect(warns).toEqual([]);
+  });
+
+  it('returns silently when the worktree directory cannot be read', async () => {
+    mockedReaddir.mockRejectedValueOnce(Object.assign(new Error('ENOENT'), { code: 'ENOENT' }));
+
+    const warns: string[] = [];
+    await expect(pruneSandboxStubs(wt, (msg) => warns.push(msg))).resolves.toBeUndefined();
+    expect(mockedUnlink).not.toHaveBeenCalled();
   });
 });
 
