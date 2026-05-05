@@ -21,9 +21,8 @@ RUN npm ci --workspaces --include-workspace-root
 COPY packages/shared ./packages/shared
 COPY packages/daemon ./packages/daemon
 
-# Bind the daemon to all container interfaces so the host port mapping reaches it.
-ENV CREW_HOST=0.0.0.0
-
 EXPOSE 7773
 
+# Container-bind concern (CREW_HOST=0.0.0.0) lives in docker-compose.yml so the
+# image default stays loopback-safe for ad-hoc `docker run` use.
 CMD ["npm", "run", "dev", "--workspace=crew-daemon"]

@@ -17,6 +17,7 @@ services:
       - ${HOME}/.claude/projects:/root/.claude/projects:ro
     environment:
       - CREW_DB_FILE=/state/state.db
+      - CREW_HOST=0.0.0.0
       - CREW_PORT=7773
       - CREW_SEED_FIXTURES=${CREW_SEED_FIXTURES:-0}
     ports:
