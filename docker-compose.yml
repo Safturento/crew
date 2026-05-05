@@ -29,5 +29,22 @@ services:
       retries: 5
       start_period: 90s
 
+  dashboard:
+    profiles: [dev]
+    build:
+      context: .
+      dockerfile: packages/dashboard/Dockerfile
+    command: ['npm', 'run', 'dev', '--workspace=crew-dashboard']
+    volumes:
+      - ./packages/dashboard/src:/app/packages/dashboard/src
+      - /app/node_modules
+    environment:
+      - CREW_DAEMON_URL=http://daemon:7773
+    ports:
+      - '${CREW_VITE_PORT:-5173}:5173'
+    depends_on:
+      daemon:
+        condition: service_healthy
+
 volumes:
   crew-state:
