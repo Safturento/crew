@@ -7,8 +7,9 @@ RUN apt-get update \
 
 WORKDIR /app
 
-# Copy package manifests first so npm ci layer caches well
-COPY package.json package-lock.json ./
+# Copy package manifests first so npm ci layer caches well.
+# tsconfig.base.json travels with them because each package's tsconfig extends it.
+COPY package.json package-lock.json tsconfig.base.json ./
 COPY packages/daemon/package.json packages/daemon/
 COPY packages/shared/package.json packages/shared/
 
