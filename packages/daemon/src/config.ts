@@ -7,7 +7,9 @@ function defaultCrewHome(): string {
 }
 
 const daemonConfigSchema = z.object({
-  CREW_PORT: z.coerce.number().int().positive().default(7773),
+  // 0 means "let the OS pick a free port" (Node net.Server convention). Tests
+  // exercise that path; production callers pass an explicit port via env.
+  CREW_PORT: z.coerce.number().int().nonnegative().default(7773),
   CREW_HOST: z.string().default('127.0.0.1'),
   CREW_CONFIG_DIR: z.string().default(() => join(defaultCrewHome(), 'projects')),
   CREW_DB_FILE: z.string().default(() => join(defaultCrewHome(), 'state.db')),

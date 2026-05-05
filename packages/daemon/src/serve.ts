@@ -27,6 +27,15 @@ export async function serve(env: NodeJS.ProcessEnv = process.env) {
   const db = createDb(config.dbFile);
   await runMigrations(db, MIGRATIONS_PATH);
 
+  if (env.CREW_SEED_FIXTURES === '1') {
+    // Worktree compose stacks set this so a fresh anonymous-volume DB
+    // boots with realistic state instead of an empty agents list. The
+    // dynamic import keeps fixture data out of the production hot path.
+    const { seedFixtures } = await import('../seeds/dev.js');
+    logger.info('CREW_SEED_FIXTURES=1 — loading dev fixtures');
+    await seedFixtures(db);
+  }
+
   const app = await buildApp({ config, logger, db, dashboardDistDir: DASHBOARD_DIST });
   await app.listen({ host: config.host, port: config.port });
 
