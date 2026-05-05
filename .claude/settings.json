@@ -1,0 +1,36 @@
+{
+  "sandbox": {
+    "enabled": true,
+    "allowUnsandboxedCommands": false,
+    "excludedCommands": [
+      "npm run bruno:smoke",
+      "npm run test:e2e"
+    ],
+    "filesystem": {
+      "allowWrite": [
+        "~/.npm",
+        "~/.cache/node",
+        "~/.cache/claude-cli",
+        "~/.cache/claude",
+        "/tmp"
+      ]
+    },
+    "network": {
+      "allowedDomains": [
+        "github.com",
+        "api.github.com",
+        "objects.githubusercontent.com",
+        "codeload.github.com",
+        "registry.npmjs.org",
+        "registry.yarnpkg.com",
+        "safturento.atlassian.net",
+        "api.atlassian.com",
+        "mcp.atlassian.com",
+        "auth.atlassian.com",
+        "api.anthropic.com",
+        "statsig.anthropic.com",
+        "claude.ai"
+      ]
+    }
+  }
+}
