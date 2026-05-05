@@ -1,0 +1,29 @@
+# Version control
+.git
+.gitattributes
+
+# Workspace node_modules — the Dockerfile runs npm ci itself
+node_modules
+packages/*/node_modules
+
+# Build outputs
+dist
+packages/*/dist
+
+# Editor / OS
+.DS_Store
+.vscode
+.idea
+
+# Test outputs
+coverage
+playwright-report
+test-results
+
+# Local-only
+.env
+.env.local
+*.log
+
+# Repo docs / specs not needed at runtime
+docs/superpowers
