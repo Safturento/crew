@@ -7,6 +7,7 @@ Format: see the user-level `~/.claude/CLAUDE.md` "Followup detection" section.
 ## Contents
 
 - [Active](#active)
+  - [2026-05-04 — Generalize the hardcoded `db-clone-from-main.sh` post-bringup hook into a configurable TOML-registered startup script](#2026-05-04--generalize-the-hardcoded-db-clone-from-mainsh-post-bringup-hook-into-a-configurable-toml-registered-startup-script)
   - [2026-05-04 — Crew sandbox/preflight self-opt-in (slot into first dashboard plan that adds e2e coverage)](#2026-05-04--crew-sandboxpreflight-self-opt-in-slot-into-first-dashboard-plan-that-adds-e2e-coverage)
   - [2026-05-03 — `crew run` post-stream "waiting up to 120s for docker bringup" log is misleading after CREW-83](#2026-05-03--crew-run-post-stream-waiting-up-to-120s-for-docker-bringup-log-is-misleading-after-crew-83)
   - [2026-05-03 — `chokidar` dep added to daemon but no code imports it](#2026-05-03--chokidar-dep-added-to-daemon-but-no-code-imports-it)
@@ -44,6 +45,33 @@ Format: see the user-level `~/.claude/CLAUDE.md` "Followup detection" section.
 - [Abandoned](#abandoned)
 
 ## Active
+
+### 2026-05-04 — Generalize the hardcoded `db-clone-from-main.sh` post-bringup hook into a configurable TOML-registered startup script
+
+**What:** `packages/cli/src/lib/docker/start-bringup.ts:51-79` hardcodes a single post-bringup hook: it looks for `<repo>/scripts/db-clone-from-main.sh`, runs it if executable, otherwise silently skips. The hardcoded name and path are inflexible: a project that wants a differently-named startup script (or multiple steps, or a non-script invocation like `npm run seed`) has no way to register it. Generalize by adding an optional field to the `[docker]` block in the project TOML — e.g. `post_bringup_command = "scripts/db-clone-from-main.sh"` (or `["scripts/db-clone-from-main.sh"]` for an array of sequential steps), defaulting to the current literal for backward compat so Recipes' existing TOML keeps working unchanged. Treats the hook as an "entrypoint script" registered by the project rather than convention-named by crew.
+
+**Why noticed:** 2026-05-04 conversation while planning the crew dockerization Epic. Surfaced two ways: (1) user realized that Recipes' user-profile data hasn't been propagating to worktrees and likely the `scripts/db-clone-from-main.sh` was accidentally removed during the cleanup that ported scripts into crew (separate tech-debt ticket on the Recipes side will re-add it); (2) when sketching crew's own bringup, it became clear that crew's "post-bringup mock-data seed" lives best inside the daemon container's entrypoint rather than as a host-side script — but if a future project wants different host-side behavior, the hook needs to be configurable.
+
+**Anchors:**
+
+- `packages/cli/src/lib/docker/start-bringup.ts:51-79` — the hardcoded lookup + invocation.
+- `packages/cli/src/lib/docker/start-bringup.test.ts` — covers the existing hook; will need updates.
+- `packages/shared/src/config/schema.ts` — `[docker]` block (currently has `canonical_worktree`, `http_port_base`, `https_port_base`, `postgres_port_base`); the new field lands here.
+- `~/.config/crew/projects/recipes.toml` — reference TOML; will gain `post_bringup_command` if we make it explicit, OR keep relying on the back-compat default.
+
+**What's been considered:**
+
+- **Single string** vs **array of steps**. Single string is simplest; array is more honest about projects that want multiple sequential steps (clone data + warm cache + seed). Lean: array, with a single-string-also-accepted shorthand.
+- **Just renaming the convention path** vs **fully configurable**. Could drop `db-clone-from-main.sh` and rename to `scripts/post-bringup.sh` as a more generic convention without TOML config. Lean: fully configurable. Convention-only naming gets you "use a different name" but not "use multiple commands" or "use an npm script."
+- **Where the script runs.** Today the hardcoded one runs in the host shell, with `cwd = worktree`. Should that semantic stay? Probably yes — host-shell-with-worktree-cwd is what works for "talk to the docker stack from outside" use cases. If a project wants in-container behavior, the container's own entrypoint handles it.
+- **Exit-code handling.** Today: if the hook fails, the script logs `! data clone failed` but doesn't propagate failure to the caller. Should that change? Lean: keep current behavior (data-clone failures shouldn't abort agent dispatch), but consider adding a `fail_dispatch_on_error: bool` flag if a project ever wants stricter semantics.
+
+**Shape of work:** One ticket. Schema field addition + start-bringup.ts read-and-execute generalization + test fixture + recipes.toml update (optional, only if we want to make the entry explicit rather than rely on the back-compat default). ~1–2 hours.
+
+**Open questions:**
+
+- Field name. `post_bringup_command` (action-oriented), `bringup_hook` (entrypoint-style), `startup_script` (path-oriented)? Lean: `post_bringup_command` since the hook fires *after* `compose up --wait` succeeds, before the optional `compose stop`.
+- Should the TOML field accept inline shell, or only a path-to-script? Inline is more flexible (`post_bringup_command = "npm run seed"`), path-only is more auditable. Lean: accept either — if it starts with `./` or contains `/`, treat as a path; otherwise treat as a shell command.
 
 ### 2026-05-04 — Crew sandbox/preflight self-opt-in (slot into first dashboard plan that adds e2e coverage)
 
