@@ -44,4 +44,14 @@ describe('parseDaemonConfig', () => {
     const config = parseDaemonConfig({ PATH: '/usr/bin', NODE_ENV: 'test' });
     expect(config.port).toBe(7773);
   });
+
+  it('defaults host to 127.0.0.1 (loopback-only)', () => {
+    const config = parseDaemonConfig({});
+    expect(config.host).toBe('127.0.0.1');
+  });
+
+  it('honors CREW_HOST override (e.g. 0.0.0.0 inside docker)', () => {
+    const config = parseDaemonConfig({ CREW_HOST: '0.0.0.0' });
+    expect(config.host).toBe('0.0.0.0');
+  });
 });

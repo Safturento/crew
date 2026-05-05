@@ -28,7 +28,7 @@ export async function serve(env: NodeJS.ProcessEnv = process.env) {
   await runMigrations(db, MIGRATIONS_PATH);
 
   const app = await buildApp({ config, logger, db, dashboardDistDir: DASHBOARD_DIST });
-  await app.listen({ host: '127.0.0.1', port: config.port });
+  await app.listen({ host: config.host, port: config.port });
 
   return { app, config };
 }
