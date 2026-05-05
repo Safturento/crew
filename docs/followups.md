@@ -7,6 +7,7 @@ Format: see the user-level `~/.claude/CLAUDE.md` "Followup detection" section.
 ## Contents
 
 - [Active](#active)
+  - [2026-05-05 — Worktree env-injection of `CREW_SEED_FIXTURES=1` not wired](#2026-05-05--worktree-env-injection-of-crew_seed_fixtures1-not-wired)
   - [2026-05-05 — Daemon container's `~/.claude/projects` mount is broader than crew's transcript ingest needs](#2026-05-05--daemon-containers-claudeprojects-mount-is-broader-than-crews-transcript-ingest-needs)
   - [2026-05-04 — Generalize the hardcoded `db-clone-from-main.sh` post-bringup hook into a configurable TOML-registered startup script](#2026-05-04--generalize-the-hardcoded-db-clone-from-mainsh-post-bringup-hook-into-a-configurable-toml-registered-startup-script)
   - [2026-05-04 — Crew sandbox/preflight self-opt-in (slot into first dashboard plan that adds e2e coverage)](#2026-05-04--crew-sandboxpreflight-self-opt-in-slot-into-first-dashboard-plan-that-adds-e2e-coverage)
@@ -46,6 +47,34 @@ Format: see the user-level `~/.claude/CLAUDE.md` "Followup detection" section.
 - [Abandoned](#abandoned)
 
 ## Active
+
+### 2026-05-05 — Worktree env-injection of `CREW_SEED_FIXTURES=1` not wired
+
+**What:** CREW-90 lands the daemon-side seed mechanism — `seedFixtures()` and the `serve.ts` branch that runs it when `CREW_SEED_FIXTURES === '1'`. The other half of the contract (the worktree's auto-generated `.env` actually setting that var) is not in place. Both `env.toml` and the bringup-side env materializer have no entry for `CREW_SEED_FIXTURES`, so worktree compose stacks come up with the docker-compose default of `0` and the seed branch is a no-op. Until this lands, crew run dispatches don't deliver the fixture-seeded UX the dockerization Epic targets.
+
+**Why noticed:** Surfaced while implementing CREW-90. The plan (`docs/superpowers/plans/2026-05-05-crew-dockerization.md`) and spec (`docs/superpowers/specs/2026-05-04-crew-dockerization-design.md`) both describe the worktree `.env` as setting `CREW_SEED_FIXTURES=1`, but neither the CREW-87 env.toml nor any bringup-side code injects it — the gap is silent. The CREW-90 unit tests cover the daemon-side branch end to end, so the daemon is ready; only the producer side is missing.
+
+**Anchors:**
+
+- `env.toml` — currently declares only `COMPOSE_PROJECT_NAME`, `CREW_PORT`, `CREW_VITE_PORT`, `APP_URL`, `DAEMON_URL`, `COMPOSE_PROFILES`. The new entry would land here.
+- `packages/cli/src/lib/env-spec/materialize.ts` — the materializer that turns `env.toml` into a worktree `.env` file. Whether it can express "set this var only in non-canonical worktrees" determines whether env.toml or the materializer needs the extra logic.
+- `packages/cli/src/lib/docker/start-bringup.ts` — bringup orchestration. Could also inject the var directly when invoking compose for a worktree.
+- `packages/daemon/src/serve.ts` — the consumer (CREW-90).
+- `docker-compose.yml` — has `- CREW_SEED_FIXTURES=${CREW_SEED_FIXTURES:-0}` already; the producer side is the gap.
+- CREW-90 (lands daemon side); CREW-86 Epic.
+
+**What's been considered:**
+
+- **Add a new env-spec kind to `env.toml`** that lets a key declare different values for canonical-vs-worktree mode (e.g. `kind = "mode-static"` with `canonical = "0"` and `worktree = "1"` fields). Most general; lets future per-mode env vars reuse the pattern. Bigger surface to design and test.
+- **Hardcode the var in the bringup-side materializer** for non-canonical worktrees. Smaller change; matches the way `COMPOSE_PROFILES = "dev"` is already a template default that crew expects every worktree to have. Less generic.
+- **Set it in `docker-compose.yml` directly under a worktree-specific override file**. Compose supports `docker-compose.override.yml` and worktree-only overrides, but crew currently uses a single compose file driven by env, not multiple files. Adopting overrides would change the architecture.
+
+**Shape of work:** One small ticket. Likely the bringup-side approach (option 2) — least architectural disruption, ships the seed UX to worktrees immediately. Defer the per-mode env-spec generalization until a second var needs it.
+
+**Open questions:**
+
+- Should canonical worktrees also be able to opt into seeding (e.g. for screenshot/demo runs)? If yes, the gate isn't "non-canonical" but "explicit override" — a knob the user can flip. If no, "non-canonical worktree → seed=1" is sufficient.
+- Does the materializer have a notion of "current worktree is the canonical one" available at materialize time? `[docker].canonical_worktree` in the project config has the answer; the materializer would need to consult it.
 
 ### 2026-05-05 — Daemon container's `~/.claude/projects` mount is broader than crew's transcript ingest needs
 
