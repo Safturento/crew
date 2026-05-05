@@ -26,6 +26,75 @@ cd crew
 
 Symlinks `~/.local/bin/crew` to the repo's `packages/cli/bin/crew`, runs `npm install`, and installs the system packages `crew run` needs for sandboxing (`bubblewrap`, `socat`) via `sudo apt-get`. Re-run the script after a fresh clone or if `node_modules` is wiped.
 
+## Local development
+
+Crew runs locally as a docker compose stack: a daemon (the orchestration backend) and a dashboard (the React UI). The CLI stays on your host so it can dispatch agents in worktrees outside docker.
+
+### Quick start
+
+```bash
+docker compose --profile dev up -d --build
+```
+
+This brings up:
+
+- **Daemon** at `http://localhost:7773` — Fastify API + serves the SPA in stable mode.
+- **Vite dev server** at `http://localhost:5173` — hot-reload for both daemon and dashboard while you're hacking on crew.
+
+Visit `http://localhost:5173` for hot-reload, or `http://localhost:7773` for the daemon-served production-built SPA.
+
+### Modes
+
+| Command | Mode | When to use |
+|---|---|---|
+| `docker compose --profile dev up -d --build` | Dev (vite + tsx watch) | Active development on crew. Hot-reload across daemon + dashboard. |
+| `docker compose up -d --build` | Stable (daemon only) | Once crew has matured. Daemon serves the pre-built SPA at `:7773`. |
+
+### Configuration via env.toml
+
+Crew uses [`env.toml`](./env.toml) to declare environment variables that get materialized per-worktree by the `crew run` machinery. The file uses `${VAR}` syntax exclusively — legacy `{httpPort}` placeholders are NOT used.
+
+The current env.toml exposes:
+
+- `CREW_PORT` / `CREW_VITE_PORT` — host ports for the daemon and vite. Canonical worktree uses the `default` (7773 / 5173); per-worktree dispatches get hash-allocated ports.
+- `APP_URL` — derived URL for the dashboard. Used by `[playwright].app_url` in `~/.config/crew/projects/crew.toml`.
+- `DAEMON_URL` — derived URL for the daemon. Used by `[bruno_smoke].base_url`.
+- `COMPOSE_PROJECT_NAME` — disambiguates docker resources per-worktree.
+- `COMPOSE_PROFILES=dev` — auto-activates the dev profile in worktree stacks.
+
+If you add new project-wide env values that should vary per-worktree (e.g., a new service port), declare them in env.toml first — the materialization layer picks them up automatically.
+
+### Common operations
+
+```bash
+docker compose restart                  # restart everything
+docker compose restart daemon           # restart just the daemon
+docker compose logs -f daemon           # tail daemon logs
+docker compose logs -f dashboard        # tail vite logs
+docker compose down                     # stop, keep state.db
+docker compose down -v                  # stop, wipe state.db
+```
+
+### Migrating from a host-side daemon
+
+If you've been running the daemon directly on your host via `tsx watch`, stop that process before bringing up the docker stack — they'd both try to bind `:7773`.
+
+The named volume `crew-state` starts empty by default. To preserve your existing `~/.config/crew/state.db`:
+
+```bash
+docker volume create crew_crew-state
+docker run --rm \
+  -v crew_crew-state:/state \
+  -v ~/.config/crew:/host \
+  alpine cp /host/state.db /state/state.db
+```
+
+This is opt-in. If you don't run it, the docker stack starts with a fresh empty state.db.
+
+### Per-worktree stacks
+
+`crew run CREW-X` provisions an isolated stack per worktree via `crew`'s existing docker bringup machinery. You don't need to manage these — they come up automatically before the agent spawns and tear down at agent finish (or `crew restart --hard`). Stacks use hash-allocated ports so multiple worktrees can run concurrently without collision.
+
 ## Setup
 
 A few one-time setup items before `crew` can do everything it's meant to.

@@ -8,15 +8,30 @@ npm workspaces monorepo. Each package lives under `packages/`:
 
 ```
 crew/
+├── docker-compose.yml      # daemon + dashboard services (canonical + per-worktree)
+├── env.toml                # per-worktree env materialization (APP_URL, DAEMON_URL, ports)
+├── .claude/settings.json   # sandbox baseline + excludedCommands for crew dispatches
 ├── packages/
-│   ├── cli/         # the `crew` command users invoke
-│   ├── daemon/      # long-running state-tracking process
-│   ├── dashboard/   # React + Vite web UI
-│   └── shared/      # types, transcript parsing, project config, jira/github clients
+│   ├── cli/                # the `crew` command users invoke
+│   ├── daemon/             # long-running state-tracking process
+│   │   ├── Dockerfile      # crew-daemon image
+│   │   └── seeds/dev.ts    # fixture seed for worktree DBs
+│   ├── dashboard/          # React + Vite web UI
+│   │   └── Dockerfile      # crew-dashboard image (vite dev server)
+│   └── shared/             # types, transcript parsing, project config, jira/github clients
 └── docs/
 ```
 
 The `--workspace` flag takes the package's `name` (e.g. `crew-cli`, `crew-daemon`), not the directory name.
+
+## Local development
+
+Crew runs as a docker compose stack locally. See [`README.md`](./README.md) for the user-facing setup. For agents working on crew code:
+
+- **Hot-reload is the default in worktree stacks.** Both daemon (`tsx watch`) and dashboard (vite) source-mount from the worktree, so edits are picked up without rebuild.
+- **Worktree DBs are ephemeral and seeded.** `CREW_SEED_FIXTURES=1` runs `packages/daemon/seeds/dev.ts` on container start. Tests run against deterministic fixtures, not against your canonical state.
+- **`<repo>/env.toml` is the source of truth for env vars** that vary per-worktree (`APP_URL`, `DAEMON_URL`, port allocator entries, `COMPOSE_PROJECT_NAME`). Always use `${VAR}` syntax, never legacy `{httpPort}`.
+- **`<repo>/.claude/settings.json` declares the sandbox baseline.** `excludedCommands` lists `npm run bruno:smoke` and `npm run test:e2e` so they run un-sandboxed against the host loopback (where the worktree stack is reachable). Sandboxed `curl`/`fetch` calls to the app URL will always return ECONNREFUSED — see the agent's run-prompt sandbox-network-note section.
 
 ## Architecture rules
 
@@ -31,6 +46,8 @@ These flow from `docs/plans/architecture.md`:
 ## Per-worktree docker isolation
 
 When generating a docker `.env` for a worktree, hash the worktree basename to derive non-default ports so multiple worktrees coexist without collision. The canonical worktree (`canonical_worktree` in project config) keeps the standard ports.
+
+This rule now applies to crew itself. Crew's `docker-compose.yml` + `env.toml` use the same port-hashing convention as Recipes, so concurrent CREW-* worktree dispatches don't collide.
 
 ## Bruno collection (`bruno/`)
 

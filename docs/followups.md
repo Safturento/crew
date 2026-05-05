@@ -7,6 +7,7 @@ Format: see the user-level `~/.claude/CLAUDE.md` "Followup detection" section.
 ## Contents
 
 - [Active](#active)
+  - [2026-05-05 — Dashboard e2e tests expect mock-client project names that don't match the daemon fixtures](#2026-05-05--dashboard-e2e-tests-expect-mock-client-project-names-that-dont-match-the-daemon-fixtures)
   - [2026-05-05 — Worktree env-injection of `CREW_SEED_FIXTURES=1` not wired](#2026-05-05--worktree-env-injection-of-crew_seed_fixtures1-not-wired)
   - [2026-05-05 — Dashboard Dockerfile doesn't copy `tsconfig.base.json`, breaks vite at runtime with TSCONFIG_ERROR](#2026-05-05--dashboard-dockerfile-doesnt-copy-tsconfigbasejson-breaks-vite-at-runtime-with-tsconfig_error)
   - [2026-05-05 — Daemon container's `~/.claude/projects` mount is broader than crew's transcript ingest needs](#2026-05-05--daemon-containers-claudeprojects-mount-is-broader-than-crews-transcript-ingest-needs)
@@ -48,6 +49,22 @@ Format: see the user-level `~/.claude/CLAUDE.md` "Followup detection" section.
 - [Abandoned](#abandoned)
 
 ## Active
+
+### 2026-05-05 — Dashboard e2e tests expect mock-client project names that don't match the daemon fixtures
+
+**What:** The 4 tests in `packages/dashboard/tests/e2e/dashboard.spec.ts` time out against the worktree stack — they look for `Toggle kanban-api` / `Toggle recipes-app` buttons (legacy mock-client project names) but the seeded fixtures in `packages/daemon/seeds/dev.ts` populate projects named `crew` and `recipes`. The dashboard now talks to the real daemon via `HttpDaemonClient`, so these tests have been silently broken since the mock client was retired.
+
+**Why noticed:** Surfaced during CREW-92 verification (Documentation + memory cleanup, Epic closer). `npm run test:e2e` against the worktree stack at `http://localhost:23323` returned 4 failures, all timeouts waiting on selectors that don't exist in the rendered DOM. Confirmed the failure is environmental — `git diff origin/main -- packages/dashboard/tests/e2e/dashboard.spec.ts` is empty, so the divergence pre-dates this branch.
+
+**Anchors:**
+
+- `packages/dashboard/tests/e2e/dashboard.spec.ts` — selectors `Toggle kanban-api`, `Toggle recipes-app`.
+- `packages/daemon/seeds/dev.ts` — actual fixture project names `crew` and `recipes`.
+- `packages/dashboard/src/data/HttpDaemonClient.ts` — the real client the dashboard wires up via `defaultClient`. Replaces the mock client the tests were authored against.
+
+**What's been considered:** Two paths — (a) update the e2e test selectors to the seeded names, or (b) update the seed fixtures to add `kanban-api` / `recipes-app` projects. Path (a) is closer to the test's intent (they assert the dashboard groups agents by project, not specific project names), so a name-agnostic rewrite (e.g., assert at least two `Toggle <name>` buttons appear) is probably cleanest.
+
+**Shape of work:** Small — one ticket, single-file change in the test, plus a verification run. No production code change needed.
 
 ### 2026-05-05 — Worktree env-injection of `CREW_SEED_FIXTURES=1` not wired
 
