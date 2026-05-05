@@ -14,8 +14,8 @@
     "crew-daemon": "./bin/crew-daemon"
   },
   "scripts": {
-    "dev": "tsx watch src/index.ts",
-    "start": "tsx src/index.ts",
+    "dev": "tsx watch src/bin.ts",
+    "start": "tsx src/bin.ts",
     "typecheck": "tsc -p tsconfig.json",
     "test": "vitest",
     "test:run": "vitest run"

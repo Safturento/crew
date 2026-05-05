@@ -7,6 +7,7 @@ Format: see the user-level `~/.claude/CLAUDE.md` "Followup detection" section.
 ## Contents
 
 - [Active](#active)
+  - [2026-05-05 — Daemon container's `~/.claude/projects` mount is broader than crew's transcript ingest needs](#2026-05-05--daemon-containers-claudeprojects-mount-is-broader-than-crews-transcript-ingest-needs)
   - [2026-05-04 — Generalize the hardcoded `db-clone-from-main.sh` post-bringup hook into a configurable TOML-registered startup script](#2026-05-04--generalize-the-hardcoded-db-clone-from-mainsh-post-bringup-hook-into-a-configurable-toml-registered-startup-script)
   - [2026-05-04 — Crew sandbox/preflight self-opt-in (slot into first dashboard plan that adds e2e coverage)](#2026-05-04--crew-sandboxpreflight-self-opt-in-slot-into-first-dashboard-plan-that-adds-e2e-coverage)
   - [2026-05-03 — `crew run` post-stream "waiting up to 120s for docker bringup" log is misleading after CREW-83](#2026-05-03--crew-run-post-stream-waiting-up-to-120s-for-docker-bringup-log-is-misleading-after-crew-83)
@@ -45,6 +46,20 @@ Format: see the user-level `~/.claude/CLAUDE.md` "Followup detection" section.
 - [Abandoned](#abandoned)
 
 ## Active
+
+### 2026-05-05 — Daemon container's `~/.claude/projects` mount is broader than crew's transcript ingest needs
+
+**What:** `docker-compose.yml` mounts `${HOME}/.claude/projects:/root/.claude/projects:ro` so the daemon's IngestService can tail real-agent JSONL transcripts. The mount is read-only, but it covers _every_ project's transcripts plus MCP server settings/oauth tokens and memory files for all of the user's projects — not just crew. A daemon vulnerability (or a future feature that surfaces transcript content) could read material that has nothing to do with crew.
+
+**Why noticed:** Surfaced during code review of CREW-87 (foundation ticket A of the dockerization Epic CREW-86). The plan called the breadth out as canonical scope, but the reviewer flagged it as worth narrowing or filtering before the dockerized daemon ships beyond the local-only canonical use case.
+
+**Anchors:** `docker-compose.yml` (the `${HOME}/.claude/projects:/root/.claude/projects:ro` line), `packages/daemon/src/services/IngestService.ts` (the consumer), CREW-87, CREW-86 Epic.
+
+**What's been considered:** Two narrowing approaches were sketched — (a) mount only the specific per-project subdirs the IngestService is configured to ingest; (b) keep the broad mount but filter at the IngestService layer so only configured projects' transcripts are ever opened. (a) is tighter at the docker layer; (b) is more flexible if the set of ingested projects changes at runtime. Both warrant exploration.
+
+**Shape of work:** Small. One ticket — modify the compose mount to a project-aware list (likely materialized through env.toml so worktree mode and canonical mode share the resolution path), or add the IngestService-side filter. Likely overlaps with the transcript-watcher dep work in `chokidar` followup (2026-05-03).
+
+**Open questions:** Should the canonical compose continue mounting broadly while worktree compose narrows? (Worktree daemons only need the dispatched agent's transcript stream, which is ~1 project.) Would consolidating around a single per-project pattern simplify both modes?
 
 ### 2026-05-04 — Generalize the hardcoded `db-clone-from-main.sh` post-bringup hook into a configurable TOML-registered startup script
 

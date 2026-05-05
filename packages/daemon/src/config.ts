@@ -8,6 +8,7 @@ function defaultCrewHome(): string {
 
 const daemonConfigSchema = z.object({
   CREW_PORT: z.coerce.number().int().positive().default(7773),
+  CREW_HOST: z.string().default('127.0.0.1'),
   CREW_CONFIG_DIR: z.string().default(() => join(defaultCrewHome(), 'projects')),
   CREW_DB_FILE: z.string().default(() => join(defaultCrewHome(), 'state.db')),
   CREW_PID_FILE: z.string().default(() => join(defaultCrewHome(), 'daemon.pid')),
@@ -16,6 +17,7 @@ const daemonConfigSchema = z.object({
 
 export interface DaemonConfig {
   port: number;
+  host: string;
   configDir: string;
   dbFile: string;
   pidFile: string;
@@ -33,6 +35,7 @@ export function parseDaemonConfig(
   const parsed = daemonConfigSchema.parse(env);
   return {
     port: parsed.CREW_PORT,
+    host: parsed.CREW_HOST,
     configDir: parsed.CREW_CONFIG_DIR,
     dbFile: parsed.CREW_DB_FILE,
     pidFile: parsed.CREW_PID_FILE,

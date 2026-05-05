@@ -1,0 +1,33 @@
+services:
+  daemon:
+    build:
+      context: .
+      dockerfile: packages/daemon/Dockerfile
+    command: ['npm', 'run', 'dev', '--workspace=crew-daemon']
+    volumes:
+      # Source bind-mounts for hot-reload via tsx watch
+      - ./packages/daemon/src:/app/packages/daemon/src
+      - ./packages/shared/src:/app/packages/shared/src
+      # Anonymous volume preserves npm ci output from being clobbered
+      - /app/node_modules
+      # Canonical persistent state
+      - crew-state:/state
+      # Read-only: real-agent transcript JSONLs for IngestService.
+      # Worktree compose overrides this; canonical reads host transcripts.
+      - ${HOME}/.claude/projects:/root/.claude/projects:ro
+    environment:
+      - CREW_DB_FILE=/state/state.db
+      - CREW_HOST=0.0.0.0
+      - CREW_PORT=7773
+      - CREW_SEED_FIXTURES=${CREW_SEED_FIXTURES:-0}
+    ports:
+      - '${CREW_PORT:-7773}:7773'
+    healthcheck:
+      test: ['CMD', 'curl', '-fsS', 'http://localhost:7773/health']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 90s
+
+volumes:
+  crew-state:

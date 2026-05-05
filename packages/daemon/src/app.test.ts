@@ -19,6 +19,7 @@ async function buildTestApp(opts: { dashboardDistDir?: string } = {}) {
   return buildApp({
     config: {
       port: 0,
+      host: '127.0.0.1',
       configDir: '/tmp/does-not-matter',
       dbFile: ':memory:',
       pidFile: '/tmp/daemon.pid',
