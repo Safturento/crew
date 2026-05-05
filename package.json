@@ -11,6 +11,7 @@
     "build": "npm run build --workspaces --if-present",
     "test": "npm run test --workspaces --if-present",
     "test:run": "npm run test:run --workspaces --if-present",
+    "test:e2e": "npm run test:e2e --workspace=crew-dashboard",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "lint": "eslint packages",
     "lint:fix": "eslint packages --fix",
