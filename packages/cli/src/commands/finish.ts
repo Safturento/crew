@@ -1,6 +1,6 @@
 import { Command } from 'commander';
 import { execa } from 'execa';
-import { unlink } from 'node:fs/promises';
+import { readdir, stat, unlink } from 'node:fs/promises';
 import { resolve, basename, dirname, join, sep } from 'node:path';
 import pc from 'picocolors';
 import { discoverProjectConfig, JiraClient, type ProjectConfig } from '../lib/index.js';
@@ -59,6 +59,56 @@ async function isWorktreeRegistered(repoPath: string, worktreePath: string): Pro
 async function hasUncommittedChanges(worktreePath: string): Promise<boolean> {
   const { stdout } = await execa('git', ['-C', worktreePath, 'status', '--porcelain']);
   return stdout.trim().length > 0;
+}
+
+// Names of dotfiles known to be created as zero-byte placeholders by
+// Claude Code's sandbox launcher when it bind-mounts over the worktree
+// instead of a sandbox-internal tmpdir. Conservative allowlist — extend
+// only when a new stub name is observed in the wild.
+const SANDBOX_STUB_NAMES = new Set([
+  '.bash_profile',
+  '.bashrc',
+  '.gitconfig',
+  '.gitmodules',
+  '.profile',
+  '.ripgreprc',
+  '.vscode',
+  '.zprofile',
+  '.zshrc',
+]);
+
+// Both modes have been observed for these placeholders depending on the
+// launcher path: 0o444 (read-only mask) and 0o666 (umask-default touch).
+const SANDBOX_STUB_MODES = new Set([0o444, 0o666]);
+
+export async function pruneSandboxStubs(
+  worktreePath: string,
+  warn: (msg: string) => void,
+): Promise<void> {
+  let entries: string[];
+  try {
+    entries = await readdir(worktreePath);
+  } catch {
+    return;
+  }
+  for (const name of entries) {
+    if (!SANDBOX_STUB_NAMES.has(name)) continue;
+    const full = join(worktreePath, name);
+    let info;
+    try {
+      info = await stat(full);
+    } catch {
+      continue;
+    }
+    if (info.size !== 0) continue;
+    if (!SANDBOX_STUB_MODES.has(info.mode & 0o777)) continue;
+    try {
+      await unlink(full);
+      warn(`pruned sandbox stub ${name}`);
+    } catch (err) {
+      warn(`prune sandbox stub ${name}: ${(err as Error).message}`);
+    }
+  }
 }
 
 async function step(
@@ -152,6 +202,7 @@ export async function runFinish(key: string, deps: FinishDeps): Promise<FinishRe
   const worktreeRegistered = await isWorktreeRegistered(config.repo_path, worktreePath);
 
   if (worktreeRegistered) {
+    await pruneSandboxStubs(worktreePath, warn);
     if (await hasUncommittedChanges(worktreePath)) {
       return {
         ok: false,
