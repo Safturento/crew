@@ -36,10 +36,10 @@ Two thin Kysely queries on `AgentsService` exposed as two daemon routes:
 ## Decisions
 
 - **`tokens` shape.** The detail endpoint exposes a `{ total, input,
-  output, cache_read, cache_creation }` breakdown (the spec §5.1
+output, cache_read, cache_creation }` breakdown (the spec §5.1
   shape). The list endpoint's flat `tokens: number` stays as is —
   changing it is out of scope here.
-- **`tool_call_count` is a single COUNT(*) aggregate** across all of
+- **`tool_call_count` is a single COUNT(\*) aggregate** across all of
   the agent's `tool_calls`, joined via `runs.agent_key`. Cheap on
   SQLite and matches what the dashboard displays.
 - **404 on detail uses the typed `NotFoundError`** so the central
