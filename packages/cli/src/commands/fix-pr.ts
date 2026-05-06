@@ -14,6 +14,7 @@ import {
   resolveWorktreePath,
   spawnClaudeResume,
 } from '../lib/index.js';
+import { crewDaemonClientFromEnv } from '../lib/daemon-client/index.js';
 import { discoverSkills, renderDiscoveredSkillsBlock } from '../lib/prompts/skills.js';
 import {
   brunoSmokeOptionsFor,
@@ -244,6 +245,25 @@ async function runFixPr(key: string, flags: FixPrFlags): Promise<void> {
     env: resolvedAppUrl ? { CREW_APP_URL: resolvedAppUrl } : undefined,
   });
 
+  // Register the run with the daemon. Skipped when no project config is in
+  // scope (legacy / non-crew-managed paths still use fix-pr without a TOML);
+  // the daemon-client swallows connection errors so a downed daemon is fine.
+  const daemonClient = crewDaemonClientFromEnv(process.env);
+  let runId: number | null = null;
+  if (projectConfig) {
+    const registration = await daemonClient.registerRun({
+      key,
+      projectName: projectConfig.name,
+      ticketTitle: '',
+      worktreePath: worktree,
+      branch: key,
+      sessionId: session.sessionId,
+      command: 'fix-pr',
+      startedAt: new Date().toISOString(),
+    });
+    if (registration.ok) runId = registration.run.id;
+  }
+
   // Set the flag and kill the subprocess on SIGINT — but DO NOT call
   // process.exit(130) inline. The inline exit short-circuits the tail
   // loop's final drain, dropping events written between the kill and the
@@ -277,6 +297,12 @@ async function runFixPr(key: string, flags: FixPrFlags): Promise<void> {
       await sub;
     } catch (err) {
       claudeExitCode = (err as { exitCode?: number }).exitCode ?? 1;
+    }
+    if (runId !== null) {
+      await daemonClient.completeRun(runId, {
+        exitCode: claudeExitCode,
+        completedAt: new Date().toISOString(),
+      });
     }
   } finally {
     process.off('SIGINT', onSignal);
