@@ -5,8 +5,10 @@ import { fileURLToPath } from 'node:url';
 import { setTimeout as delay } from 'node:timers/promises';
 import { pino, type Logger } from 'pino';
 import type { Kysely } from 'kysely';
+import type { TranscriptEvent } from 'crew-shared';
 import { createDb, runMigrations, type DaemonDatabase } from '../db.js';
 import { useTmpDir } from '../test/tmpdir.js';
+import { EventBus, type SseEvent } from './EventBus.js';
 import { IngestService } from './IngestService.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -66,7 +68,7 @@ describe('IngestService.ingestEvent', () => {
   it('inserts a tool_calls row for an assistant message with a tool_use block', async () => {
     const { db, runId } = await setup();
     try {
-      const svc = new IngestService({ db, logger: silentLogger });
+      const svc = new IngestService({ db, logger: silentLogger, eventBus: new EventBus() });
       await svc.ingestEvent(runId, {
         type: 'assistant',
         timestamp: '2026-04-29T12:00:00Z',
@@ -103,7 +105,7 @@ describe('IngestService.ingestEvent', () => {
   it('skips assistant messages without a tool_use block', async () => {
     const { db, runId } = await setup();
     try {
-      const svc = new IngestService({ db, logger: silentLogger });
+      const svc = new IngestService({ db, logger: silentLogger, eventBus: new EventBus() });
       await svc.ingestEvent(runId, {
         type: 'assistant',
         timestamp: '2026-04-29T12:00:00Z',
@@ -129,7 +131,7 @@ describe('IngestService.ingestEvent', () => {
   it('skips non-assistant event types', async () => {
     const { db, runId } = await setup();
     try {
-      const svc = new IngestService({ db, logger: silentLogger });
+      const svc = new IngestService({ db, logger: silentLogger, eventBus: new EventBus() });
       await svc.ingestEvent(runId, {
         type: 'user',
         timestamp: '2026-04-29T12:00:00Z',
@@ -144,7 +146,7 @@ describe('IngestService.ingestEvent', () => {
   it('idempotently swallows duplicate events (same run_id + occurred_at + tool_name)', async () => {
     const { db, runId } = await setup();
     try {
-      const svc = new IngestService({ db, logger: silentLogger });
+      const svc = new IngestService({ db, logger: silentLogger, eventBus: new EventBus() });
       const event = {
         type: 'assistant' as const,
         timestamp: '2026-04-29T12:00:00Z',
@@ -177,7 +179,7 @@ describe('IngestService.attach + detach', () => {
   it('tails a JSONL file and ingests events written after attach', async () => {
     const { db, runId, sessionId } = await setup();
     try {
-      const svc = new IngestService({ db, logger: silentLogger });
+      const svc = new IngestService({ db, logger: silentLogger, eventBus: new EventBus() });
       const customDir = tmp();
       const jsonlPath = join(customDir, `${sessionId}.jsonl`);
       writeFileSync(jsonlPath, ''); // touch the file so the tail sees it
@@ -232,7 +234,7 @@ describe('IngestService.start (recovery)', () => {
       const jsonlPath = join(customDir, `${sessionId}.jsonl`);
       writeFileSync(jsonlPath, '');
 
-      const svc = new IngestService({ db, logger: silentLogger });
+      const svc = new IngestService({ db, logger: silentLogger, eventBus: new EventBus() });
       // Spy on attach to verify it's called for the open run
       const attachSpy = vi.spyOn(svc, 'attach');
       // start() reads runs WHERE completed_at IS NULL; we override the path
@@ -253,7 +255,7 @@ describe('IngestService.start (recovery)', () => {
         .set({ completed_at: new Date().toISOString(), exit_code: 0 })
         .where('id', '=', runId)
         .execute();
-      const svc = new IngestService({ db, logger: silentLogger });
+      const svc = new IngestService({ db, logger: silentLogger, eventBus: new EventBus() });
       const attachSpy = vi.spyOn(svc, 'attach');
       await svc.start({ resolveJsonlPath: () => '/dev/null' });
       expect(attachSpy).not.toHaveBeenCalled();
@@ -268,8 +270,282 @@ describe('IngestService.detach', () => {
   it('is a no-op for an unknown runId', async () => {
     const { db } = await setup();
     try {
-      const svc = new IngestService({ db, logger: silentLogger });
+      const svc = new IngestService({ db, logger: silentLogger, eventBus: new EventBus() });
       expect(() => svc.detach(99999)).not.toThrow();
+    } finally {
+      await db.destroy();
+    }
+  });
+});
+
+// ─── Slice 1c fixtures + helpers ───
+//
+// Plan tasks 11/12/13 (CREW-100) introduce three things that hang off an
+// `assistant` tool_use / `user` tool_result pair: a derived state flip, a
+// tool_calls.changed ping, and PR URL extraction. These helpers build the
+// minimal events those paths need without having to spell out the full
+// schema each time.
+
+interface BashToolUseInput {
+  id: string;
+  command: string;
+  ts?: string;
+}
+
+function makeBashToolUse(input: BashToolUseInput): TranscriptEvent {
+  return {
+    type: 'assistant',
+    timestamp: input.ts ?? '2026-04-29T12:00:00Z',
+    message: {
+      id: `m-${input.id}`,
+      role: 'assistant',
+      model: 'claude-opus-4-7',
+      content: [
+        { type: 'tool_use', id: input.id, name: 'Bash', input: { command: input.command } },
+      ],
+      usage: {
+        input_tokens: 0,
+        cache_creation_input_tokens: 0,
+        cache_read_input_tokens: 0,
+        output_tokens: 0,
+      },
+    },
+  };
+}
+
+interface ToolResultInput {
+  tool_use_id: string;
+  content: string;
+  ts?: string;
+}
+
+function makeToolResult(input: ToolResultInput): TranscriptEvent {
+  return {
+    type: 'user',
+    timestamp: input.ts ?? '2026-04-29T12:00:01Z',
+    message: {
+      role: 'user',
+      content: [
+        {
+          type: 'tool_result',
+          tool_use_id: input.tool_use_id,
+          content: input.content,
+        },
+      ],
+    },
+  };
+}
+
+describe('IngestService.processEventForTest — state_transitions + agent.state_changed', () => {
+  it('writes state_transitions row + publishes agent.state_changed on each derived flip', async () => {
+    const { db, runId, agentKey } = await setup();
+    try {
+      const bus = new EventBus({ bufferSize: 10 });
+      const seen: SseEvent[] = [];
+      bus.subscribe({ onEvent: (e) => seen.push(e) });
+      const svc = new IngestService({ db, logger: silentLogger, eventBus: bus });
+
+      await svc.processEventForTest({
+        runId,
+        agentKey,
+        event: makeBashToolUse({
+          id: 'tu_read',
+          command: 'ls -la',
+          ts: '2026-04-29T12:00:00Z',
+        }),
+      });
+      await svc.processEventForTest({
+        runId,
+        agentKey,
+        event: makeBashToolUse({
+          id: 'tu_pr',
+          command: 'gh pr create --title hi',
+          ts: '2026-04-29T12:00:01Z',
+        }),
+      });
+
+      const rows = await db
+        .selectFrom('state_transitions')
+        .selectAll()
+        .orderBy('id', 'asc')
+        .execute();
+      expect(rows.map((r) => r.to_state)).toEqual(['running', 'pr_open']);
+      expect(rows.map((r) => r.from_state)).toEqual(['init', 'running']);
+      expect(seen.filter((e) => e.type === 'agent.state_changed')).toHaveLength(2);
+    } finally {
+      await db.destroy();
+    }
+  });
+
+  it('does not publish or insert when derived state is unchanged', async () => {
+    const { db, runId, agentKey } = await setup();
+    try {
+      const bus = new EventBus({ bufferSize: 10 });
+      const seen: SseEvent[] = [];
+      bus.subscribe({ onEvent: (e) => seen.push(e) });
+      const svc = new IngestService({ db, logger: silentLogger, eventBus: bus });
+
+      await svc.processEventForTest({
+        runId,
+        agentKey,
+        event: makeBashToolUse({ id: 'tu_1', command: 'ls', ts: '2026-04-29T12:00:00Z' }),
+      });
+      await svc.processEventForTest({
+        runId,
+        agentKey,
+        event: makeBashToolUse({ id: 'tu_2', command: 'pwd', ts: '2026-04-29T12:00:02Z' }),
+      });
+
+      const rows = await db.selectFrom('state_transitions').selectAll().execute();
+      expect(rows.map((r) => r.to_state)).toEqual(['running']);
+      expect(seen.filter((e) => e.type === 'agent.state_changed')).toHaveLength(1);
+    } finally {
+      await db.destroy();
+    }
+  });
+});
+
+describe('IngestService.processEventForTest — tool_calls.changed pings', () => {
+  it('publishes tool_calls.changed after each tool_calls insert', async () => {
+    const { db, runId, agentKey } = await setup();
+    try {
+      const bus = new EventBus({ bufferSize: 10 });
+      const seen: SseEvent[] = [];
+      bus.subscribe({ onEvent: (e) => seen.push(e) });
+      const svc = new IngestService({ db, logger: silentLogger, eventBus: bus });
+
+      await svc.processEventForTest({
+        runId,
+        agentKey,
+        event: makeBashToolUse({ id: 'tu_1', command: 'ls', ts: '2026-04-29T12:00:00Z' }),
+      });
+
+      const pings = seen.filter(
+        (e): e is SseEvent & { type: 'tool_calls.changed' } => e.type === 'tool_calls.changed',
+      );
+      expect(pings).toHaveLength(1);
+      expect(pings[0]?.data.key).toBe(agentKey);
+    } finally {
+      await db.destroy();
+    }
+  });
+
+  it('does not publish tool_calls.changed when the insert is a duplicate', async () => {
+    const { db, runId, agentKey } = await setup();
+    try {
+      const bus = new EventBus({ bufferSize: 10 });
+      const seen: SseEvent[] = [];
+      bus.subscribe({ onEvent: (e) => seen.push(e) });
+      const svc = new IngestService({ db, logger: silentLogger, eventBus: bus });
+
+      const event = makeBashToolUse({ id: 'tu_1', command: 'ls', ts: '2026-04-29T12:00:00Z' });
+      await svc.processEventForTest({ runId, agentKey, event });
+      await svc.processEventForTest({ runId, agentKey, event });
+
+      expect(seen.filter((e) => e.type === 'tool_calls.changed')).toHaveLength(1);
+    } finally {
+      await db.destroy();
+    }
+  });
+});
+
+describe('IngestService.processEventForTest — PR URL extraction', () => {
+  it('writes agents.pr_url when the matching tool_result contains a github PR URL', async () => {
+    const { db, runId, agentKey } = await setup();
+    try {
+      const bus = new EventBus({ bufferSize: 10 });
+      const svc = new IngestService({ db, logger: silentLogger, eventBus: bus });
+
+      await svc.processEventForTest({
+        runId,
+        agentKey,
+        event: makeBashToolUse({
+          id: 'tu_pr',
+          command: 'gh pr create --title hi',
+          ts: '2026-04-29T12:00:00Z',
+        }),
+      });
+      await svc.processEventForTest({
+        runId,
+        agentKey,
+        event: makeToolResult({
+          tool_use_id: 'tu_pr',
+          content: 'Creating pull request for KAN-1...\nhttps://github.com/x/y/pull/42\n',
+          ts: '2026-04-29T12:00:01Z',
+        }),
+      });
+
+      const row = await db
+        .selectFrom('agents')
+        .where('key', '=', agentKey)
+        .selectAll()
+        .executeTakeFirst();
+      expect(row?.pr_url).toBe('https://github.com/x/y/pull/42');
+    } finally {
+      await db.destroy();
+    }
+  });
+
+  it('leaves agents.pr_url NULL when the matching tool_result has no URL', async () => {
+    const { db, runId, agentKey } = await setup();
+    try {
+      const bus = new EventBus({ bufferSize: 10 });
+      const svc = new IngestService({ db, logger: silentLogger, eventBus: bus });
+
+      await svc.processEventForTest({
+        runId,
+        agentKey,
+        event: makeBashToolUse({
+          id: 'tu_pr',
+          command: 'gh pr create',
+          ts: '2026-04-29T12:00:00Z',
+        }),
+      });
+      await svc.processEventForTest({
+        runId,
+        agentKey,
+        event: makeToolResult({
+          tool_use_id: 'tu_pr',
+          content: 'error: not authenticated',
+          ts: '2026-04-29T12:00:01Z',
+        }),
+      });
+
+      const row = await db
+        .selectFrom('agents')
+        .where('key', '=', agentKey)
+        .selectAll()
+        .executeTakeFirst();
+      expect(row?.pr_url).toBeNull();
+    } finally {
+      await db.destroy();
+    }
+  });
+
+  it('ignores tool_results that are not paired with a tracked gh-pr-create tool_use', async () => {
+    const { db, runId, agentKey } = await setup();
+    try {
+      const bus = new EventBus({ bufferSize: 10 });
+      const svc = new IngestService({ db, logger: silentLogger, eventBus: bus });
+
+      // No matching tool_use was tracked for `tu_unrelated` — even though the
+      // content has a PR URL, we must not write to agents.pr_url.
+      await svc.processEventForTest({
+        runId,
+        agentKey,
+        event: makeToolResult({
+          tool_use_id: 'tu_unrelated',
+          content: 'see https://github.com/x/y/pull/99',
+          ts: '2026-04-29T12:00:01Z',
+        }),
+      });
+
+      const row = await db
+        .selectFrom('agents')
+        .where('key', '=', agentKey)
+        .selectAll()
+        .executeTakeFirst();
+      expect(row?.pr_url).toBeNull();
     } finally {
       await db.destroy();
     }
