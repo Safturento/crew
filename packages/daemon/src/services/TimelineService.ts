@@ -49,7 +49,10 @@ export class TimelineService {
     }
 
     if (malformed > 0) {
-      this.deps.logger?.warn({ agentKey, path, malformed }, 'timeline: malformed jsonl lines skipped');
+      this.deps.logger?.warn(
+        { agentKey, path, malformed },
+        'timeline: malformed jsonl lines skipped',
+      );
     }
     return { events, warnings: [] };
   }
