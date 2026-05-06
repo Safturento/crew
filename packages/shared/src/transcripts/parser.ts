@@ -1,35 +1,99 @@
-import type {
-  TranscriptEvent,
-  ToolCall,
-  AggregateUsage,
-  ToolUseContent,
-  TextContent,
-  AssistantText,
-} from './types.js';
+import {
+  KNOWN_ATTACHMENT_TYPES,
+  KNOWN_SYSTEM_SUBTYPES,
+  KNOWN_TOP_LEVEL_TYPES,
+  baseEnvelopeSchema,
+  transcriptEventSchema,
+  type AssistantEvent,
+  type ToolUseContent,
+  type TranscriptEvent,
+  type TextContent,
+} from './schemas.js';
+import type { AggregateUsage, AssistantText, ToolCall } from './types.js';
 
+/**
+ * Parse a single JSONL line into a typed transcript event.
+ *
+ * - Returns `null` only when `JSON.parse` itself fails (truncated or invalid
+ *   JSON). Callers that want a per-file count of malformed lines can detect
+ *   that here.
+ * - Returns the `unknown` variant when the JSON parses but doesn't match any
+ *   known schema. The `reason` records why we fell through so the daemon's
+ *   ingest layer can log meaningfully.
+ * - Never throws.
+ */
+export function parseTranscriptLine(line: string): TranscriptEvent | null {
+  let json: unknown;
+  try {
+    json = JSON.parse(line);
+  } catch {
+    return null;
+  }
+
+  const result = transcriptEventSchema.safeParse(json);
+  if (result.success) return result.data;
+
+  return constructUnknownEvent(json);
+}
+
+function constructUnknownEvent(json: unknown): TranscriptEvent {
+  const raw = isRecord(json) ? json : {};
+  const topType = typeof raw.type === 'string' ? raw.type : null;
+
+  let reason: 'unknown_top_level' | 'unknown_subtype' | 'zod_failure' = 'unknown_top_level';
+  if (topType && KNOWN_TOP_LEVEL_TYPES.has(topType)) {
+    if (topType === 'system') {
+      const subtype = raw.subtype;
+      reason =
+        typeof subtype === 'string' && KNOWN_SYSTEM_SUBTYPES.has(subtype)
+          ? 'zod_failure'
+          : 'unknown_subtype';
+    } else if (topType === 'attachment') {
+      const innerType = isRecord(raw.attachment) ? raw.attachment.type : undefined;
+      reason =
+        typeof innerType === 'string' && KNOWN_ATTACHMENT_TYPES.has(innerType)
+          ? 'zod_failure'
+          : 'unknown_subtype';
+    } else {
+      reason = 'zod_failure';
+    }
+  }
+
+  const envelopeParse = baseEnvelopeSchema.safeParse(raw);
+  const envelope = envelopeParse.success ? envelopeParse.data : {};
+
+  return { ...envelope, type: 'unknown', raw, reason } as TranscriptEvent;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+/**
+ * Parse a multi-line JSONL transcript. Lines that fail JSON parsing are
+ * skipped silently; lines whose shape doesn't match a known schema land as
+ * `unknown` events so callers can still see them.
+ */
 export function parseTranscript(raw: string): TranscriptEvent[] {
   const events: TranscriptEvent[] = [];
   for (const line of raw.split('\n')) {
-    const trimmed = line.trim();
-    if (!trimmed) continue;
-    try {
-      events.push(JSON.parse(trimmed) as TranscriptEvent);
-    } catch {
-      // skip malformed lines
-    }
+    if (!line.trim()) continue;
+    const event = parseTranscriptLine(line);
+    if (event !== null) events.push(event);
   }
   return events;
 }
 
 export function parseToolCall(event: TranscriptEvent): ToolCall | null {
   if (event.type !== 'assistant') return null;
-  const toolUse = event.message.content.find((c): c is ToolUseContent => c.type === 'tool_use');
+  const assistant = event as AssistantEvent;
+  const toolUse = assistant.message.content.find((c): c is ToolUseContent => c.type === 'tool_use');
   if (!toolUse) return null;
   return {
     name: toolUse.name,
     input: toolUse.input,
-    timestamp: event.timestamp,
-    outputTokens: event.message.usage.output_tokens,
+    timestamp: assistant.timestamp,
+    outputTokens: assistant.message.usage.output_tokens ?? 0,
   };
 }
 
@@ -42,11 +106,11 @@ export function aggregateUsage(events: TranscriptEvent[]): AggregateUsage {
   };
   for (const event of events) {
     if (event.type !== 'assistant') continue;
-    const u = event.message.usage;
-    total.outputTokens += u.output_tokens;
-    total.cacheReadTokens += u.cache_read_input_tokens;
-    total.cacheCreationTokens += u.cache_creation_input_tokens;
-    total.inputTokens += u.input_tokens;
+    const u = (event as AssistantEvent).message.usage;
+    total.outputTokens += u.output_tokens ?? 0;
+    total.cacheReadTokens += u.cache_read_input_tokens ?? 0;
+    total.cacheCreationTokens += u.cache_creation_input_tokens ?? 0;
+    total.inputTokens += u.input_tokens ?? 0;
   }
   return total;
 }
@@ -73,10 +137,11 @@ const ASSISTANT_TEXT_MAX_LEN = 120;
 
 export function parseAssistantText(event: TranscriptEvent): AssistantText | null {
   if (event.type !== 'assistant') return null;
-  const textBlock = event.message.content.find((c): c is TextContent => c.type === 'text');
+  const assistant = event as AssistantEvent;
+  const textBlock = assistant.message.content.find((c): c is TextContent => c.type === 'text');
   if (!textBlock) return null;
   if (!textBlock.text.trim()) return null;
-  return { text: textBlock.text, timestamp: event.timestamp };
+  return { text: textBlock.text, timestamp: assistant.timestamp };
 }
 
 export function formatAssistantText(text: AssistantText): string {

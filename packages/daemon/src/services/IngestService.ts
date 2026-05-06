@@ -115,10 +115,10 @@ export class IngestService {
         run_id: runId,
         tool_name: call.name,
         input_summary: summarizeInput(call.name, call.input),
-        output_tokens: usage.output_tokens,
-        input_tokens: usage.input_tokens,
-        cache_read_tokens: usage.cache_read_input_tokens,
-        cache_creation_tokens: usage.cache_creation_input_tokens,
+        output_tokens: usage.output_tokens ?? 0,
+        input_tokens: usage.input_tokens ?? 0,
+        cache_read_tokens: usage.cache_read_input_tokens ?? 0,
+        cache_creation_tokens: usage.cache_creation_input_tokens ?? 0,
         occurred_at: call.timestamp,
       })
       .onConflict((oc) => oc.columns(['run_id', 'occurred_at', 'tool_name']).doNothing())

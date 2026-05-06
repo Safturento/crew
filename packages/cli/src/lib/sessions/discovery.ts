@@ -101,7 +101,7 @@ function summarize(args: SummarizeArgs): SessionSummary {
       if (!branch && event.gitBranch) branch = event.gitBranch;
     }
     if (event.type !== 'assistant') continue;
-    outputTokens += event.message.usage.output_tokens;
+    outputTokens += event.message.usage.output_tokens ?? 0;
     const toolUse = event.message.content.find((c): c is ToolUseContent => c.type === 'tool_use');
     if (!toolUse) continue;
     toolCalls += 1;

@@ -1,7 +1,8 @@
 import { existsSync, statSync } from 'node:fs';
 import { open } from 'node:fs/promises';
 import { setTimeout as delay } from 'node:timers/promises';
-import type { TranscriptEvent } from './types.js';
+import { parseTranscriptLine } from './parser.js';
+import type { TranscriptEvent } from './schemas.js';
 
 export interface TailOptions {
   signal?: AbortSignal;
@@ -52,11 +53,8 @@ export async function* tailTranscript(
             const line = buffer.slice(0, nl).trim();
             buffer = buffer.slice(nl + 1);
             if (line) {
-              try {
-                yield JSON.parse(line) as TranscriptEvent;
-              } catch {
-                // skip malformed lines
-              }
+              const event = parseTranscriptLine(line);
+              if (event !== null) yield event;
             }
             nl = buffer.indexOf('\n');
           }
