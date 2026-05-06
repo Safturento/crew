@@ -1,0 +1,36 @@
+meta {
+  name: GET /api/agents/:key/timeline
+  type: http
+  seq: 4
+}
+
+get {
+  url: {{baseUrl}}/api/agents/BRUNO-1/timeline
+}
+
+assert {
+  res.status: eq 200
+  res.body.events: isArray
+}
+
+tests {
+  test("body has an events array", () => {
+    expect(res.body.events).to.be.an("array");
+  });
+
+  test("each event carries a string type discriminator", () => {
+    for (const event of res.body.events) {
+      expect(event.type).to.be.a("string");
+    }
+  });
+
+  test("missing transcript surfaces an X-Crew-Warning header", () => {
+    // When the run record exists but the JSONL has been deleted (or was
+    // never written), the daemon returns 200 + empty events + this
+    // header instead of 404. If a future fixture seeds a real transcript,
+    // split into a -with-transcript case rather than loosening this.
+    if (res.body.events.length === 0) {
+      expect(res.headers["x-crew-warning"]).to.equal("transcript-missing");
+    }
+  });
+}

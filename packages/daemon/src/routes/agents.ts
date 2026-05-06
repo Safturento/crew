@@ -85,6 +85,11 @@ export type StateHistoryResponse = z.infer<typeof StateHistoryResponseSchema>;
  * - `GET /api/agents/:key/state-history` — ordered transitions from the
  *                               state_transitions table (slice 1c).
  *                               Always 200; unknown keys yield `[]`.
+ * - `GET /api/agents/:key/timeline` — re-parsed JSONL events (slice 1c,
+ *                               CREW-99). Always 200; missing JSONL
+ *                               yields `events: []` plus an
+ *                               `X-Crew-Warning: transcript-missing`
+ *                               header instead of 404.
  */
 export async function registerAgentsRoutes(app: DaemonApp): Promise<void> {
   app.get(
@@ -128,6 +133,26 @@ export async function registerAgentsRoutes(app: DaemonApp): Promise<void> {
     async (req) => {
       const svc = req.diScope.resolve('agentsService');
       return svc.getStateHistory(req.params.key);
+    },
+  );
+
+  // Per spec §5.3: missing JSONL is graceful — return 200 + empty events +
+  // an `X-Crew-Warning: transcript-missing` header so the dashboard can
+  // surface the gap without breaking the drawer. No pagination — long
+  // timelines are virtualized client-side.
+  app.get(
+    '/api/agents/:key/timeline',
+    {
+      schema: { params: KeyParamsSchema },
+    },
+    async (req, reply) => {
+      const { key } = req.params;
+      const svc = req.diScope.resolve('timelineService');
+      const out = await svc.getTimeline(key);
+      if (out.warnings.includes('transcript-missing')) {
+        reply.header('X-Crew-Warning', 'transcript-missing');
+      }
+      return { events: out.events };
     },
   );
 }
