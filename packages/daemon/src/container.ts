@@ -6,6 +6,7 @@ import type { DaemonDatabase } from './db.js';
 import { ProjectsService } from './services/ProjectsService.js';
 import { AgentsService } from './services/AgentsService.js';
 import { IngestService } from './services/IngestService.js';
+import { EventBus } from './services/EventBus.js';
 
 /**
  * The daemon's Awilix cradle. Routes resolve services by these names via
@@ -25,6 +26,7 @@ export interface DaemonCradle {
   projectsService: ProjectsService;
   agentsService: AgentsService;
   ingestService: IngestService;
+  eventBus: EventBus;
 }
 
 declare module '@fastify/awilix' {
@@ -66,6 +68,10 @@ export function buildContainer(deps: BuildContainerDeps): AwilixContainer<Daemon
     ingestService: asFunction(
       ({ db, logger }: DaemonCradle) => new IngestService({ db, logger }),
     ).singleton(),
+    // One event bus per daemon process — its ring buffer + subscriber set
+    // must be shared across every request that opens an SSE connection,
+    // and across every service that publishes. Singleton, not scoped.
+    eventBus: asFunction(() => new EventBus()).singleton(),
   });
   return container;
 }
