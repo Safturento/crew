@@ -33,16 +33,12 @@ describe('deriveStateFromToolCalls', () => {
   });
 
   it('does not match non-Bash tools that happen to start with gh pr create', () => {
-    expect(
-      deriveStateFromToolCalls([
-        { tool_name: 'Read', input_summary: 'gh pr create' },
-      ]),
-    ).toBe('running');
+    expect(deriveStateFromToolCalls([{ tool_name: 'Read', input_summary: 'gh pr create' }])).toBe(
+      'running',
+    );
   });
 
   it('treats a null input_summary as no PR-create signal', () => {
-    expect(
-      deriveStateFromToolCalls([{ tool_name: 'Bash', input_summary: null }]),
-    ).toBe('running');
+    expect(deriveStateFromToolCalls([{ tool_name: 'Bash', input_summary: null }])).toBe('running');
   });
 });

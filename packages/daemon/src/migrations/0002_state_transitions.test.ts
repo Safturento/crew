@@ -84,9 +84,7 @@ describe('migration 0002 — state_transitions', () => {
   it('is idempotent: running up() a second time on a clean DB does not throw', async () => {
     const db = await freshDb();
     try {
-      await expect(
-        up0002(db as unknown as Kysely<unknown>, silentLogger()),
-      ).resolves.not.toThrow();
+      await expect(up0002(db as unknown as Kysely<unknown>, silentLogger())).resolves.not.toThrow();
     } finally {
       await db.destroy();
     }
@@ -259,9 +257,7 @@ describe('migration 0002 — state_transitions', () => {
       const logger = silentLogger();
       const warnSpy = vi.spyOn(logger, 'warn');
 
-      await expect(
-        up0002(db as unknown as Kysely<unknown>, logger),
-      ).resolves.not.toThrow();
+      await expect(up0002(db as unknown as Kysely<unknown>, logger)).resolves.not.toThrow();
 
       const rowsA = await db
         .selectFrom('state_transitions')
