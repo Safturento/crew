@@ -119,3 +119,9 @@ function deriveState(input: DeriveStateInput): AgentState {
   if (input.hasPrCreate) return 'pr_open';
   return 'finished';
 }
+
+export {
+  deriveStateFromToolCalls,
+  type TransitionState,
+  type ToolCallSlice,
+} from './state-derivation.js';

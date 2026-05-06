@@ -42,10 +42,22 @@ export interface ToolCallsTable {
   occurred_at: string;
 }
 
+/** Slice 1c: one row per derived agent-state flip. CHECK on `to_state` is
+ *  forward-compatible — `idle` and `waiting` are allowed even though slice 1c
+ *  never emits them. `from_state` is null on the very first row for an agent. */
+export interface StateTransitionsTable {
+  id: Generated<number>;
+  agent_key: string;
+  from_state: 'init' | 'running' | 'pr_open' | 'error' | 'finished' | 'idle' | 'waiting' | null;
+  to_state: 'init' | 'running' | 'pr_open' | 'error' | 'finished' | 'idle' | 'waiting';
+  ts: number;
+}
+
 export interface DaemonDatabase {
   agents: AgentsTable;
   runs: RunsTable;
   tool_calls: ToolCallsTable;
+  state_transitions: StateTransitionsTable;
 }
 
 /**
