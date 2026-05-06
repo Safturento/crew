@@ -3,16 +3,22 @@ import type { Kysely } from 'kysely';
 import type { Logger } from 'pino';
 import {
   claudeProjectDirFor,
-  parseToolCall,
   summarizeInput,
   tailTranscript,
+  type AssistantEvent,
+  type ToolResultContent,
+  type ToolUseContent,
   type TranscriptEvent,
+  type UserEvent,
 } from 'crew-shared';
 import type { DaemonDatabase } from '../db.js';
+import type { EventBus } from './EventBus.js';
+import type { TransitionState } from './state-derivation.js';
 
 export interface IngestServiceDeps {
   db: Kysely<DaemonDatabase>;
   logger: Logger;
+  eventBus: EventBus;
 }
 
 export interface AttachInput {
@@ -33,6 +39,14 @@ export interface StartOptions {
   resolveJsonlPath?: (input: ResolveJsonlPathInput) => string;
 }
 
+export interface ProcessEventInput {
+  runId: number;
+  agentKey: string;
+  event: TranscriptEvent;
+}
+
+const PR_URL_REGEX = /https?:\/\/github\.com\/[^/\s]+\/[^/\s]+\/pull\/\d+/;
+
 /**
  * Ingests transcript events for active runs. One tail per run, keyed on
  * `runId`. `attach` starts a fire-and-forget background tail; `detach`
@@ -44,16 +58,42 @@ export interface StartOptions {
  * - Only assistant-with-tool-use events become `tool_calls` rows.
  * - Idempotent on (run_id, occurred_at, tool_name) via the migration's
  *   UNIQUE index plus `ON CONFLICT DO NOTHING` here.
- * - PR URL extraction is deferred to slice 1c — `pr_url` stays NULL.
+ *
+ * Slice 1c (CREW-100) extensions, layered on top of the slice 1b path:
+ * - After each successful tool_calls insert, publish a `tool_calls.changed`
+ *   ping (agent key only — payload bloat would defeat the SSE invalidation
+ *   pattern) and re-derive the agent's state from a per-agent in-memory
+ *   cache. On flip, insert a `state_transitions` row + publish
+ *   `agent.state_changed`.
+ * - When a Bash tool_use's input.command starts with `gh pr create`, hold
+ *   the tool_use.id in an in-flight map; when the matching `tool_result`
+ *   lands, regex-scan its content for the GitHub PR URL and write it to
+ *   `agents.pr_url`. NULL on no match (logged at debug). The schema's
+ *   PR URL lives on `agents`, not `runs`, so that's where we write — the
+ *   slice 1c spec wording "runs.pr_url" predates the slice 1a schema
+ *   choice.
  */
 export class IngestService {
   private readonly db: Kysely<DaemonDatabase>;
   private readonly logger: Logger;
+  private readonly eventBus: EventBus;
   private readonly tails = new Map<number, AbortController>();
+  /** Per-agent derived-state cache. Lazily seeded from the latest
+   *  `state_transitions` row so a daemon restart mid-session does not
+   *  re-emit a duplicate flip. */
+  private readonly agentStateCache = new Map<string, TransitionState>();
+  /** In-flight `gh pr create` tool_use ids → run/agent context for matching
+   *  the follow-up `tool_result`. Bounded by the number of concurrent PR
+   *  creates per agent in practice (≈1), so we don't TTL-evict. */
+  private readonly pendingPrCreates = new Map<string, { runId: number; agentKey: string }>();
+  /** runId → agent_key resolution cache so the per-event hot path doesn't
+   *  re-SELECT from `runs`. Populated lazily (or by `attach`). */
+  private readonly runToAgent = new Map<number, string>();
 
   constructor(deps: IngestServiceDeps) {
     this.db = deps.db;
     this.logger = deps.logger;
+    this.eventBus = deps.eventBus;
   }
 
   /**
@@ -69,12 +109,14 @@ export class IngestService {
       .select([
         'runs.id as runId',
         'runs.session_id as sessionId',
+        'runs.agent_key as agentKey',
         'agents.worktree_path as worktreePath',
       ])
       .where('runs.completed_at', 'is', null)
       .execute();
     const resolve = opts.resolveJsonlPath ?? defaultResolveJsonlPath;
     for (const row of open) {
+      this.runToAgent.set(row.runId, row.agentKey);
       const jsonlPath = resolve({ worktreePath: row.worktreePath, sessionId: row.sessionId });
       this.attach({ runId: row.runId, jsonlPath });
     }
@@ -105,24 +147,175 @@ export class IngestService {
   }
 
   async ingestEvent(runId: number, event: TranscriptEvent): Promise<void> {
-    if (event.type !== 'assistant') return;
-    const call = parseToolCall(event);
-    if (!call) return;
+    const agentKey = await this.resolveAgentKey(runId);
+    if (!agentKey) return;
+    await this.processEvent({ runId, agentKey, event });
+  }
+
+  /**
+   * Test seam — feeds a single event through the same code path the live
+   * tail uses, but lets the caller supply `agentKey` directly instead of
+   * resolving it from a real `runs` row. Used by the slice 1c unit tests
+   * that exercise state-transition + SSE + PR-URL extraction without a
+   * full attach lifecycle.
+   */
+  async processEventForTest(input: ProcessEventInput): Promise<void> {
+    await this.processEvent(input);
+  }
+
+  private async processEvent(input: ProcessEventInput): Promise<void> {
+    const { event } = input;
+    if (event.type === 'assistant') {
+      await this.handleAssistantEvent({ ...input, event });
+    } else if (event.type === 'user') {
+      await this.handleUserEvent({ ...input, event });
+    }
+  }
+
+  private async handleAssistantEvent(input: {
+    runId: number;
+    agentKey: string;
+    event: AssistantEvent;
+  }): Promise<void> {
+    const { runId, agentKey, event } = input;
+    const toolUse = event.message.content.find((c): c is ToolUseContent => c.type === 'tool_use');
+    if (!toolUse) return;
+
+    const summary = summarizeInput(toolUse.name, toolUse.input);
     const usage = event.message.usage;
-    await this.db
+    const result = await this.db
       .insertInto('tool_calls')
       .values({
         run_id: runId,
-        tool_name: call.name,
-        input_summary: summarizeInput(call.name, call.input),
+        tool_name: toolUse.name,
+        input_summary: summary,
         output_tokens: usage.output_tokens ?? 0,
         input_tokens: usage.input_tokens ?? 0,
         cache_read_tokens: usage.cache_read_input_tokens ?? 0,
         cache_creation_tokens: usage.cache_creation_input_tokens ?? 0,
-        occurred_at: call.timestamp,
+        occurred_at: event.timestamp,
       })
       .onConflict((oc) => oc.columns(['run_id', 'occurred_at', 'tool_name']).doNothing())
+      .executeTakeFirst();
+
+    const inserted = (result?.numInsertedOrUpdatedRows ?? 0n) > 0n;
+    if (!inserted) return;
+
+    if (toolUse.name === 'Bash' && summary.startsWith('gh pr create')) {
+      this.pendingPrCreates.set(toolUse.id, { runId, agentKey });
+    }
+
+    this.eventBus.publish({ type: 'tool_calls.changed', data: { key: agentKey } });
+
+    await this.applyStateTransition({
+      agentKey,
+      toolName: toolUse.name,
+      summary,
+      tsIso: event.timestamp,
+    });
+  }
+
+  private async handleUserEvent(input: {
+    runId: number;
+    agentKey: string;
+    event: UserEvent;
+  }): Promise<void> {
+    const content = input.event.message.content;
+    if (!Array.isArray(content)) return;
+    for (const block of content) {
+      if (block.type !== 'tool_result') continue;
+      // The user-content schema falls through to `unknownContentSchema` via
+      // `.or(...)`, which fights TS's discriminated-union narrowing — assert
+      // here once we've already proven `type === 'tool_result'`.
+      const toolResult = block as ToolResultContent;
+      const pending = this.pendingPrCreates.get(toolResult.tool_use_id);
+      if (!pending) continue;
+      this.pendingPrCreates.delete(toolResult.tool_use_id);
+
+      const text = stringifyToolResultContent(toolResult.content);
+      const match = PR_URL_REGEX.exec(text);
+      if (!match) {
+        this.logger.debug(
+          {
+            agentKey: pending.agentKey,
+            runId: pending.runId,
+            toolUseId: toolResult.tool_use_id,
+          },
+          'gh pr create tool_result had no PR URL',
+        );
+        continue;
+      }
+
+      await this.db
+        .updateTable('agents')
+        .set({ pr_url: match[0] })
+        .where('key', '=', pending.agentKey)
+        .execute();
+    }
+  }
+
+  private async applyStateTransition(input: {
+    agentKey: string;
+    toolName: string;
+    summary: string;
+    tsIso: string;
+  }): Promise<void> {
+    const previous = await this.getCachedAgentState(input.agentKey);
+    const next = computeNextState(previous, input.toolName, input.summary);
+    if (next === previous) return;
+
+    const ts = Date.parse(input.tsIso);
+    if (!Number.isFinite(ts)) {
+      this.logger.warn(
+        { agentKey: input.agentKey, tsIso: input.tsIso },
+        'unparseable timestamp; skipping state transition',
+      );
+      return;
+    }
+
+    await this.db
+      .insertInto('state_transitions')
+      .values({
+        agent_key: input.agentKey,
+        from_state: previous,
+        to_state: next,
+        ts,
+      })
       .execute();
+
+    this.agentStateCache.set(input.agentKey, next);
+    this.eventBus.publish({
+      type: 'agent.state_changed',
+      data: { key: input.agentKey, from: previous, to: next, ts },
+    });
+  }
+
+  private async getCachedAgentState(agentKey: string): Promise<TransitionState> {
+    const cached = this.agentStateCache.get(agentKey);
+    if (cached !== undefined) return cached;
+    const latest = await this.db
+      .selectFrom('state_transitions')
+      .select('to_state')
+      .where('agent_key', '=', agentKey)
+      .orderBy('ts', 'desc')
+      .orderBy('id', 'desc')
+      .executeTakeFirst();
+    const initial: TransitionState = isTransitionState(latest?.to_state) ? latest.to_state : 'init';
+    this.agentStateCache.set(agentKey, initial);
+    return initial;
+  }
+
+  private async resolveAgentKey(runId: number): Promise<string | null> {
+    const cached = this.runToAgent.get(runId);
+    if (cached) return cached;
+    const row = await this.db
+      .selectFrom('runs')
+      .select('agent_key')
+      .where('id', '=', runId)
+      .executeTakeFirst();
+    if (!row) return null;
+    this.runToAgent.set(runId, row.agent_key);
+    return row.agent_key;
   }
 
   private async runTail(runId: number, path: string, signal: AbortSignal): Promise<void> {
@@ -151,4 +344,53 @@ function resolveAttachPath(input: AttachInput): string {
   throw new Error(
     'IngestService.attach requires either jsonlPath or both worktreePath and sessionId',
   );
+}
+
+/**
+ * Forward-walk one step in the live state machine. The slice 1b helper
+ * `deriveStateFromToolCalls` re-derives state from a *full* tool-call slice;
+ * here we only have the just-inserted call plus the cached previous state,
+ * so we encode the same monotonic rule directly:
+ *
+ *   - any Bash `gh pr create …` → `pr_open` (and stays)
+ *   - else, any tool_call once we were `init` → `running`
+ *   - else, no flip
+ *
+ * The standalone helper stays the canonical re-derivation for the migration
+ * backfill (CREW-96) and for any future "given a slice of N calls, what's
+ * the state?" caller. A vitest assertion below pins the equivalence.
+ */
+function computeNextState(
+  previous: TransitionState,
+  toolName: string,
+  summary: string,
+): TransitionState {
+  if (previous === 'pr_open') return 'pr_open';
+  if (toolName === 'Bash' && summary.startsWith('gh pr create')) return 'pr_open';
+  return 'running';
+}
+
+function isTransitionState(s: string | null | undefined): s is TransitionState {
+  return s === 'init' || s === 'running' || s === 'pr_open';
+}
+
+function stringifyToolResultContent(content: unknown): string {
+  if (typeof content === 'string') return content;
+  if (Array.isArray(content)) {
+    return content
+      .map((block) => {
+        if (
+          block !== null &&
+          typeof block === 'object' &&
+          'type' in block &&
+          (block as { type?: unknown }).type === 'text'
+        ) {
+          const text = (block as { text?: unknown }).text;
+          return typeof text === 'string' ? text : '';
+        }
+        return '';
+      })
+      .join('\n');
+  }
+  return '';
 }

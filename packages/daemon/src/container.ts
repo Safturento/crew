@@ -62,16 +62,18 @@ export function buildContainer(deps: BuildContainerDeps): AwilixContainer<Daemon
         new ProjectsService({ projectsDir: config.configDir, logger }),
     ).scoped(),
     agentsService: asFunction(({ db }: DaemonCradle) => new AgentsService({ db })).scoped(),
+    // One event bus per daemon process — its ring buffer + subscriber set
+    // must be shared across every request that opens an SSE connection,
+    // and across every service that publishes. Singleton, not scoped.
+    // Registered before `ingestService` so the cradle resolves the bus at
+    // ingest construction time without a forward dependency.
+    eventBus: asFunction(() => new EventBus()).singleton(),
     // One ingest service per daemon process — owns the lifecycle of all
     // active per-run transcript tails. Singleton (not scoped) so requests
     // share state with the start/stop hooks in `buildApp`.
     ingestService: asFunction(
-      ({ db, logger }: DaemonCradle) => new IngestService({ db, logger }),
+      ({ db, logger, eventBus }: DaemonCradle) => new IngestService({ db, logger, eventBus }),
     ).singleton(),
-    // One event bus per daemon process — its ring buffer + subscriber set
-    // must be shared across every request that opens an SSE connection,
-    // and across every service that publishes. Singleton, not scoped.
-    eventBus: asFunction(() => new EventBus()).singleton(),
   });
   return container;
 }
