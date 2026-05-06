@@ -20,6 +20,7 @@ import {
   type WriteDockerEnvResult,
 } from '../lib/docker/index.js';
 import { emit, loadEnvSpec, materialize, parseEnvFile } from '../lib/env-spec/index.js';
+import { crewDaemonClientFromEnv } from '../lib/daemon-client/index.js';
 import { buildTicketPrompt } from '../lib/prompts/index.js';
 import { discoverSkills, renderDiscoveredSkillsBlock } from '../lib/prompts/skills.js';
 import {
@@ -38,6 +39,7 @@ import {
   checkE2eBaseline,
   computeGateSkip,
   dockerLogPathFor,
+  findNewestTranscript,
   hasBinary,
   prepareAgentEnvironment,
   preflightTools,
@@ -422,15 +424,7 @@ export async function runRun(key: string, opts: RunOptions): Promise<never> {
   const projectDir = claudeProjectDirFor(worktree);
   console.log(pc.dim(`→ waiting for transcript at ${projectDir}…`));
 
-  const { transcriptPath } = await streamTranscript({
-    projectDir,
-    signal: abort.signal,
-    onTranscriptResolved: (path) => {
-      console.log(pc.dim(`→ watching ${path}`));
-      console.log(pc.dim('  (Ctrl+C to abort)'));
-      console.log();
-    },
-  });
+  const transcriptPath = await findNewestTranscript(projectDir, { signal: abort.signal });
 
   if (!transcriptPath) {
     logStream.end();
@@ -446,10 +440,38 @@ export async function runRun(key: string, opts: RunOptions): Promise<never> {
     process.exit(resolveExitCode(result, signaled));
   }
 
+  console.log(pc.dim(`→ watching ${transcriptPath}`));
+  console.log(pc.dim('  (Ctrl+C to abort)'));
+  console.log();
+
+  const sessionId = basename(transcriptPath, '.jsonl');
+  const daemonClient = crewDaemonClientFromEnv(process.env);
+  const startedAt = new Date().toISOString();
+  const registration = await daemonClient.registerRun({
+    key,
+    projectName: config.name,
+    ticketTitle: '',
+    worktreePath: worktree,
+    branch: key,
+    sessionId,
+    command: 'run',
+    startedAt,
+  });
+  const runId = registration.ok ? registration.run.id : null;
+
+  await streamTranscript({ transcriptPath, signal: abort.signal });
+
   const result = await claudeProcess;
   logStream.end();
   process.off('SIGINT', sigintHandler);
   process.off('SIGTERM', sigintHandler);
+
+  if (runId !== null) {
+    await daemonClient.completeRun(runId, {
+      exitCode: result.exitCode ?? 1,
+      completedAt: new Date().toISOString(),
+    });
+  }
 
   // Wait up to 120s for the docker bringup to finish so the summary can include
   // its outcome; if it's still going, treat it as failed for gate purposes
