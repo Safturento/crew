@@ -14,9 +14,11 @@ export interface TimelineDeps {
   logger?: Logger;
 }
 
+export type TimelineWarning = 'transcript-missing';
+
 export interface TimelineResult {
   events: TranscriptEvent[];
-  warnings: ('transcript-missing' | 'transcript-malformed-lines')[];
+  warnings: TimelineWarning[];
 }
 
 /**
