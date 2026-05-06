@@ -17,7 +17,7 @@
     "lint:fix": "eslint packages --fix",
     "format": "prettier --write packages docs",
     "format:check": "prettier --check packages docs",
-    "bruno:smoke": "cd bruno && bru run --env \"$CREW_BRUNO_ENV\" endpoints/health/get.bru endpoints/agents/post-register-run.bru endpoints/agents/get-list.bru endpoints/agents/get-by-key.bru endpoints/agents/get-by-key-not-found.bru endpoints/agents/get-state-history.bru flows/main-smoke.bru"
+    "bruno:smoke": "cd bruno && bru run --env \"$CREW_BRUNO_ENV\" endpoints/health/get.bru endpoints/agents/post-register-run.bru endpoints/agents/get-list.bru endpoints/agents/get-by-key.bru endpoints/agents/get-by-key-not-found.bru endpoints/agents/get-state-history.bru endpoints/agents/get-timeline.bru flows/main-smoke.bru"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
