@@ -7,6 +7,7 @@ Format: see the user-level `~/.claude/CLAUDE.md` "Followup detection" section.
 ## Contents
 
 - [Active](#active)
+  - [2026-05-05 — Per-ticket model selection (use Sonnet for trivial work to save tokens)](#2026-05-05--per-ticket-model-selection-use-sonnet-for-trivial-work-to-save-tokens)
   - [2026-05-05 — Dashboard silently drops agents whose project isn't in `/api/projects`](#2026-05-05--dashboard-silently-drops-agents-whose-project-isnt-in-apiprojects)
   - [2026-05-05 — Dashboard e2e tests expect mock-client project names that don't match the daemon fixtures](#2026-05-05--dashboard-e2e-tests-expect-mock-client-project-names-that-dont-match-the-daemon-fixtures)
   - [2026-05-05 — Worktree env-injection of `CREW_SEED_FIXTURES=1` not wired](#2026-05-05--worktree-env-injection-of-crew_seed_fixtures1-not-wired)
@@ -50,6 +51,38 @@ Format: see the user-level `~/.claude/CLAUDE.md` "Followup detection" section.
 - [Abandoned](#abandoned)
 
 ## Active
+
+### 2026-05-05 — Per-ticket model selection (use Sonnet for trivial work to save tokens)
+
+**What:** `crew run` / `fix-pr` / `finish` invoke `claude` without a `--model` flag (`packages/cli/src/lib/claude/spawn.ts:34,67`), so every dispatched agent inherits the user's local Claude Code default — currently Opus 4.7. There's no per-ticket, per-command, or per-project mechanism to downshift to Sonnet for tasks where Opus's reasoning depth is overkill (typo fixes, mechanical refactors, dependency bumps, doc-only edits, follow-up cleanup tickets). At single-agent scale this doesn't matter; at parallel-dispatch scale (multiple agents in flight simultaneously across a Max plan's 5-hour window), Opus-for-everything will be the dominant cost driver.
+
+**Why noticed:** User on the Claude Max 20x plan, watching CREW-95 burn 1.5M tokens on its own. Has not yet hit the plan ceiling (peak observed: ~60% of the 5-hour window) but flagged that as parallelism scales the optimization becomes worthwhile. Surfaced 2026-05-05 during slice 1c brainstorming.
+
+**Anchors:**
+
+- `packages/cli/src/lib/claude/spawn.ts:34,67` — `spawnClaudeResume` and `spawnClaudeFresh`, both pass a fixed args array with no `--model`
+- `packages/cli/src/commands/run.ts`, `fix-pr.ts`, `finish.ts` — the three dispatch sites
+- `packages/shared/src/projects/` (or wherever the project TOML schema lives) — natural home for a `default_model` config knob
+- Anthropic model IDs as of 2026-05: `claude-opus-4-7`, `claude-sonnet-4-6`, `claude-haiku-4-5-20251001`
+
+**What's been considered:**
+
+- **CLI flag:** `crew run --model sonnet KAN-1`. Lowest-friction; single addition to argv parsing + spawn args. Fully manual — user has to know in advance the task is trivial.
+- **Project-config knob:** `default_model = "sonnet"` in the project TOML. Useful when a whole project's tickets skew trivial (e.g., a docs site).
+- **Jira label-driven:** dispatch reads the ticket's labels; if `model:sonnet` (or a `chore`/`trivial` label), downshifts. More automation, more inference.
+- **Auto-classification by Claude:** ask Sonnet to read the ticket and decide. Self-fulfilling token cost — defeats the optimization unless cached.
+
+The CLI flag + project-config knob feel like the right v1 — both manual, both surfaceable. Jira-label-driven is a nice v2 once the v1 dial exists. Auto-classification probably never earns its keep.
+
+**Shape of work:** Two small PRs.
+- (1) `--model <name>` flag on `crew run` / `fix-pr` / `finish`. Threads through to spawn args. Validates against a known list. ~30 lines + tests.
+- (2) `default_model` in project TOML, read by the same threading. Resolution order: CLI flag → project config → built-in default (Opus).
+
+**Open questions:**
+
+- Should the dashboard surface which model an agent ran under? (Likely yes — relevant for cost analysis. Trivial ticket since the daemon already records token totals; just persist the model name on `runs` and render it in the agent header.)
+- Does crew also need to pass `--model` to subagent dispatches the parent agent makes (Task tool)? Probably not — that's Claude's internal call. But worth verifying.
+- When does Haiku 4.5 enter the picture? Possibly for the most trivial work (docs-only PRs, lint-fix tickets) once model-selection plumbing exists.
 
 ### 2026-05-05 — Dashboard silently drops agents whose project isn't in `/api/projects`
 
