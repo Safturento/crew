@@ -8,11 +8,6 @@ get {
   url: {{baseUrl}}/api/events
 }
 
-# The dashboard reconnects with `?last_event_id=...` because browser
-# EventSource cannot set headers; the daemon also accepts a
-# `Last-Event-ID` header. Either source is fine here — we only smoke
-# the connection-up path.
-
 script:pre-request {
   // SSE is an open stream by design — fail fast so this card doesn't
   // hang a manual invocation. The handshake (status + headers) lands
@@ -30,10 +25,12 @@ docs {
   ## GET /api/events — SSE firehose
 
   Stays open as long as the client is connected; each frame carries
-  `id:`, `event:`, and `data:` lines. The dashboard subscribes once
-  per session and reconnects on close with
-  `?last_event_id=<id>` so it can replay events buffered in the
-  daemon's ring while it was offline.
+  `id:`, `event:`, and `data:` lines.
+
+  Reconnect protocol: clients pass `Last-Event-ID` (native EventSource)
+  or `?last_event_id=<id>` (browser EventSource cannot set headers) to
+  replay events buffered in the daemon's ring since the last seen id.
+  Query wins when both are present.
 
   This card is intentionally NOT included in `flows/main-smoke.bru`
   — Bruno's SSE handling is limited, so the script-level timeout above
