@@ -14,6 +14,53 @@ export interface AgentSummary {
   prUrl?: string;
 }
 
+export interface AgentDetailRun {
+  id: string;
+  command: 'run' | 'fix-pr' | 'finish';
+  started_at: string;
+  completed_at: string | null;
+}
+
+export interface AgentDetailTokens {
+  total: number;
+  input: number;
+  output: number;
+  cache_read: number;
+  cache_creation: number;
+}
+
+export interface AgentDetail {
+  key: string;
+  project: string;
+  ticket_key: string;
+  ticket_title: string | null;
+  state: AgentState;
+  worktree_path: string;
+  pr_url: string | null;
+  runs: AgentDetailRun[];
+  tokens: AgentDetailTokens;
+  tool_call_count: number;
+}
+
+export type StateTransitionState =
+  | 'init'
+  | 'running'
+  | 'pr_open'
+  | 'error'
+  | 'finished'
+  | 'idle'
+  | 'waiting';
+
+export interface StateHistoryTransition {
+  from: StateTransitionState | null;
+  to: StateTransitionState;
+  ts: number;
+}
+
+export interface StateHistoryResponse {
+  transitions: StateHistoryTransition[];
+}
+
 export interface AgentsServiceDeps {
   db: Kysely<DaemonDatabase>;
 }
@@ -101,6 +148,122 @@ export class AgentsService {
       if (row.prUrl) summary.prUrl = row.prUrl;
       return summary;
     });
+  }
+
+  /**
+   * Single-agent detail. Returns null when no run exists for the key
+   * (an agents row alone is not enough — a run is the signal that the
+   * agent actually started). State derivation reuses the same machinery
+   * as `list()`: latest run's completion + cross-run `gh pr create`
+   * detection. The caller renders 404 on null.
+   */
+  async getByKey(key: string): Promise<AgentDetail | null> {
+    const runRows = await this.db
+      .selectFrom('runs')
+      .select(['id', 'agent_key', 'command', 'started_at', 'completed_at', 'exit_code'])
+      .where('agent_key', '=', key)
+      .orderBy('id', 'asc')
+      .execute();
+
+    if (runRows.length === 0) return null;
+
+    const agent = await this.db
+      .selectFrom('agents')
+      .select(['key', 'project_name', 'ticket_title', 'worktree_path', 'pr_url'])
+      .where('key', '=', key)
+      .executeTakeFirst();
+
+    // The runs row exists, so there should always be an agents row too —
+    // but defend against an inconsistent DB rather than crashing the
+    // request. An empty record is preferable to a 500.
+    const project = agent?.project_name ?? '';
+    const worktreePath = agent?.worktree_path ?? '';
+    const ticketTitle = agent?.ticket_title ?? null;
+    const prUrl = agent?.pr_url ?? null;
+
+    const totals = await this.db
+      .selectFrom('tool_calls as tc')
+      .innerJoin('runs as r', 'r.id', 'tc.run_id')
+      .select([
+        sql<number>`COALESCE(SUM(tc.output_tokens), 0)`.as('output'),
+        sql<number>`COALESCE(SUM(tc.input_tokens), 0)`.as('input'),
+        sql<number>`COALESCE(SUM(tc.cache_read_tokens), 0)`.as('cache_read'),
+        sql<number>`COALESCE(SUM(tc.cache_creation_tokens), 0)`.as('cache_creation'),
+        sql<number>`COUNT(*)`.as('tool_call_count'),
+        sql<number>`MAX(CASE WHEN tc.tool_name = 'Bash' AND tc.input_summary LIKE 'gh pr create%' THEN 1 ELSE 0 END)`.as(
+          'has_pr_create',
+        ),
+      ])
+      .where('r.agent_key', '=', key)
+      .executeTakeFirst();
+
+    const output = totals?.output ?? 0;
+    const input = totals?.input ?? 0;
+    const cacheRead = totals?.cache_read ?? 0;
+    const cacheCreation = totals?.cache_creation ?? 0;
+    const toolCallCount = totals?.tool_call_count ?? 0;
+    const hasPrCreate = Boolean(totals?.has_pr_create);
+
+    const latest = runRows[runRows.length - 1];
+    const latestHasToolCalls = await this.db
+      .selectFrom('tool_calls')
+      .select(sql<number>`COUNT(*)`.as('n'))
+      .where('run_id', '=', latest.id)
+      .executeTakeFirst();
+
+    const state = deriveState({
+      completedAt: latest.completed_at,
+      exitCode: latest.exit_code,
+      latestHasToolCalls: (latestHasToolCalls?.n ?? 0) > 0,
+      hasPrCreate,
+    });
+
+    return {
+      key,
+      project,
+      ticket_key: key,
+      ticket_title: ticketTitle,
+      state,
+      worktree_path: worktreePath,
+      pr_url: prUrl,
+      runs: runRows.map((r) => ({
+        id: String(r.id),
+        command: r.command,
+        started_at: r.started_at,
+        completed_at: r.completed_at,
+      })),
+      tokens: {
+        total: output + input + cacheRead + cacheCreation,
+        input,
+        output,
+        cache_read: cacheRead,
+        cache_creation: cacheCreation,
+      },
+      tool_call_count: toolCallCount,
+    };
+  }
+
+  /**
+   * Ordered state-transition trail for an agent. Reads directly from the
+   * `state_transitions` table populated by CREW-96's backfill (and, in
+   * future, by IngestService writes). Returns an empty list for agents
+   * with no transitions; never 404s.
+   */
+  async getStateHistory(key: string): Promise<StateHistoryResponse> {
+    const rows = await this.db
+      .selectFrom('state_transitions')
+      .select(['from_state', 'to_state', 'ts'])
+      .where('agent_key', '=', key)
+      .orderBy('ts', 'asc')
+      .execute();
+
+    return {
+      transitions: rows.map((r) => ({
+        from: r.from_state,
+        to: r.to_state,
+        ts: r.ts,
+      })),
+    };
   }
 }
 
