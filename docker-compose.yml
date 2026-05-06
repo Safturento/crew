@@ -15,6 +15,10 @@ services:
       # Read-only: real-agent transcript JSONLs for IngestService.
       # Worktree compose overrides this; canonical reads host transcripts.
       - ${HOME}/.claude/projects:/root/.claude/projects:ro
+      # Read-only: registered-project TOMLs the ProjectsService reads on /api/projects.
+      # Without this mount the daemon sees an empty config dir and the dashboard
+      # silently filters every agent away (AgentsList.tsx joins on projectName).
+      - ${HOME}/.config/crew/projects:/root/.config/crew/projects:ro
     environment:
       - CREW_DB_FILE=/state/state.db
       - CREW_HOST=0.0.0.0

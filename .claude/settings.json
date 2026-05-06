@@ -29,7 +29,9 @@
         "auth.atlassian.com",
         "api.anthropic.com",
         "statsig.anthropic.com",
-        "claude.ai"
+        "claude.ai",
+        "localhost",
+        "127.0.0.1"
       ]
     }
   }

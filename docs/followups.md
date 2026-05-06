@@ -7,6 +7,7 @@ Format: see the user-level `~/.claude/CLAUDE.md` "Followup detection" section.
 ## Contents
 
 - [Active](#active)
+  - [2026-05-05 — Dashboard silently drops agents whose project isn't in `/api/projects`](#2026-05-05--dashboard-silently-drops-agents-whose-project-isnt-in-apiprojects)
   - [2026-05-05 — Dashboard e2e tests expect mock-client project names that don't match the daemon fixtures](#2026-05-05--dashboard-e2e-tests-expect-mock-client-project-names-that-dont-match-the-daemon-fixtures)
   - [2026-05-05 — Worktree env-injection of `CREW_SEED_FIXTURES=1` not wired](#2026-05-05--worktree-env-injection-of-crew_seed_fixtures1-not-wired)
   - [2026-05-05 — Dashboard Dockerfile doesn't copy `tsconfig.base.json`, breaks vite at runtime with TSCONFIG_ERROR](#2026-05-05--dashboard-dockerfile-doesnt-copy-tsconfigbasejson-breaks-vite-at-runtime-with-tsconfig_error)
@@ -49,6 +50,34 @@ Format: see the user-level `~/.claude/CLAUDE.md` "Followup detection" section.
 - [Abandoned](#abandoned)
 
 ## Active
+
+### 2026-05-05 — Dashboard silently drops agents whose project isn't in `/api/projects`
+
+**What:** `packages/dashboard/src/components/AgentsList.tsx:21-22` filters projects by `byProject.has(p.name)` and only renders sections for projects returned by `/api/projects`. An agent whose `projectName` field doesn't match any registered project disappears from the UI entirely — no warning, no fallback bucket, no clue why nothing rendered. The companion compose-mount bug (the daemon container had no bind-mount for `~/.config/crew/projects/`, so `/api/projects` returned `[]` even though TOMLs existed on the host) made this manifest as "every agent is invisible." That mount is fixed in PR (this followup's parent), but the silent-drop UX is still wrong.
+
+**Why noticed:** User dispatched `crew run CREW-95`, agent registered fine (`/api/agents` showed it with 1.5M tokens, state running), but the dashboard at `localhost:5173` was empty. Took a code-trace + curl + container env audit to find that `/api/projects` was returning `[]` because the host's `~/.config/crew/projects/*.toml` wasn't mounted into the daemon container. Even after fixing the mount, the underlying UX gap remains: any project name mismatch (typo in TOML, project deregistered while agents are still active, etc.) re-creates the same silent failure.
+
+**Anchors:**
+
+- `packages/dashboard/src/components/AgentsList.tsx:21-22` — the filter that drops everything
+- `packages/dashboard/src/data/types.ts` — `Agent.projectName` field shape
+- `packages/daemon/src/services/ProjectsService.ts:28` — silently returns `[]` when configDir is missing
+- `docker-compose.yml` — daemon volume list (mount fix landed in fix/daemon-projects-mount)
+
+**What's been considered:**
+
+- Render orphan agents under a synthetic `Unregistered` section with a banner "this agent's project isn't registered — register it via `crew register` to see it grouped properly."
+- Daemon-side: include orphan agents in `/api/agents` with a synthetic project entry so the dashboard doesn't have to special-case.
+- Show a top-level toast when `/api/agents` has rows that no `/api/projects` row matches.
+
+The "synthetic Unregistered section" feels right — it's a single render path, no extra API surface, and the affordance to fix it (register the project) is one click away.
+
+**Shape of work:** Single small dashboard PR. Add an `Unregistered` group key when an agent's projectName has no match in `projects[]`, render a `ProjectSection` for it with a banner. Update `AgentsList.test.tsx` to cover the orphan path. ~30 min, no daemon changes.
+
+**Open questions:**
+
+- Should the `Unregistered` section sort first (most urgent — something's broken) or last (least relevant — fix later)? Lean: first.
+- Does the slice 1c "Hide finished" toggle interact with this? Probably independent.
 
 ### 2026-05-05 — Dashboard e2e tests expect mock-client project names that don't match the daemon fixtures
 
