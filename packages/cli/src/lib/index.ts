@@ -1,5 +1,6 @@
 export * from './claude/index.js';
 export * from 'crew-shared';
+export * from './daemon-client/index.js';
 export * from './discover-project-config.js';
 export * from './db-clone/index.js';
 export * from './docker/index.js';
