@@ -33,10 +33,10 @@ dropping the row. Foundation for CREW-E (timeline endpoint) and CREW-F
 
 ## Out of scope
 
-- Daemon `IngestService` changes that *use* the new variants (state derivation, PR URL extraction, SSE events). That's CREW-F.
+- Daemon `IngestService` changes that _use_ the new variants (state derivation, PR URL extraction, SSE events). That's CREW-F.
 - Migration `0002_state_transitions` and the new HTTP routes. Those are separate tickets in slice 1c.
 - Dashboard-side use of the new variants.
-- Fixtures need to cover *every* variant the spec enumerates, but we don't pre-emptively model variants we haven't seen.
+- Fixtures need to cover _every_ variant the spec enumerates, but we don't pre-emptively model variants we haven't seen.
 
 ## Notes
 

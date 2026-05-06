@@ -1,0 +1,1 @@
+{"type":"queue-operation","operation":"enqueue","timestamp":"2026-04-21T18:35:36.688Z","sessionId":"76527bb4-1a45-4958-8fee-420393c90b6d","content":"Okay its running fine now, is there a reason why you chose to store the token on a cookie vs using a session id?"}

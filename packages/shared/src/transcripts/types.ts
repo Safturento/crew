@@ -1,89 +1,44 @@
-export interface ToolUseContent {
-  type: 'tool_use';
-  id: string;
-  name: string;
-  input: Record<string, unknown>;
-}
+// `TranscriptEvent` and the per-variant types are inferred from the Zod
+// schemas in `./schemas.ts`. This file re-exports the names slice 1b
+// consumers depend on, plus the legacy `ToolCall` / `AssistantText` /
+// `AggregateUsage` shapes the parser still emits.
 
-export interface ToolResultContent {
-  type: 'tool_result';
-  tool_use_id: string;
-  content: unknown;
-}
-
-export interface ThinkingContent {
-  type: 'thinking';
-  thinking: string;
-  signature: string;
-}
-
-export interface TextContent {
-  type: 'text';
-  text: string;
-}
-
-export type MessageContent =
-  | ToolUseContent
-  | ToolResultContent
-  | ThinkingContent
-  | TextContent
-  | { type: string };
-
-export interface UsageBlock {
-  input_tokens: number;
-  cache_creation_input_tokens: number;
-  cache_read_input_tokens: number;
-  output_tokens: number;
-}
+export type {
+  TranscriptEvent,
+  UnknownEvent,
+  AssistantEvent,
+  UserEvent,
+  QueueOperationEvent,
+  LastPromptEvent,
+  PermissionModeEvent,
+  FileHistorySnapshotEvent,
+  PrLinkEvent,
+  AiTitleEvent,
+  CustomTitleEvent,
+  AgentNameEvent,
+  SystemEvent,
+  AttachmentEvent,
+  ToolUseContent,
+  ThinkingContent,
+  TextContent,
+  ToolResultContent,
+  UnknownContent,
+  AssistantContent,
+  UserContent,
+  MessageContent,
+  UsageBlock,
+  BaseEnvelope,
+} from './schemas.js';
 
 /**
- * Fields Claude Code stamps onto every transcript event for the session it
- * was emitted from. They're optional in the type because the older fixtures
- * (and `last-prompt` sentinels) don't carry them.
+ * Subset of envelope fields the slice 1b consumers reach for to identify a
+ * session. Kept for backwards-compat — prefer importing the full event type.
  */
 export interface SessionContext {
   sessionId?: string;
   cwd?: string;
   gitBranch?: string;
 }
-
-export interface AssistantEvent extends SessionContext {
-  type: 'assistant';
-  timestamp: string;
-  message: {
-    id: string;
-    model: string;
-    role: 'assistant';
-    content: MessageContent[];
-    usage: UsageBlock;
-  };
-}
-
-export interface UserEvent extends SessionContext {
-  type: 'user';
-  timestamp: string;
-  message: {
-    role: 'user';
-    content: MessageContent[];
-  };
-}
-
-export interface LastPromptEvent {
-  type: 'last-prompt';
-  lastPrompt: string;
-  sessionId: string;
-}
-
-export interface PrLinkEvent {
-  type: 'pr-link';
-  sessionId: string;
-  prNumber: number;
-  prUrl: string;
-  prRepository?: string;
-  timestamp: string;
-}
-
-export type TranscriptEvent = AssistantEvent | UserEvent | LastPromptEvent | PrLinkEvent;
 
 export interface ToolCall {
   name: string;
