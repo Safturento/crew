@@ -84,3 +84,139 @@ describe('GET /api/agents', () => {
     }
   });
 });
+
+describe('GET /api/agents/:key', () => {
+  it('returns 404 when no run exists for the key', async () => {
+    const { app, db } = await setupApp();
+    try {
+      const res = await app.inject({ method: 'GET', url: '/api/agents/NOPE-99' });
+      expect(res.statusCode).toBe(404);
+      expect(res.json()).toMatchObject({ error: 'agent_not_found' });
+    } finally {
+      await app.close();
+      await db.destroy();
+    }
+  });
+
+  it('returns the AgentDetail shape for a seeded agent end-to-end', async () => {
+    const { app, db } = await setupApp();
+    try {
+      await db
+        .insertInto('agents')
+        .values({
+          key: 'KAN-1',
+          project_name: 'demo',
+          ticket_title: 'Demo title',
+          worktree_path: '/work/KAN-1',
+          branch: 'KAN-1',
+          pr_url: 'https://github.com/x/y/pull/42',
+          created_at: '2026-04-29T12:00:00Z',
+        })
+        .execute();
+      const r1 = await db
+        .insertInto('runs')
+        .values({
+          agent_key: 'KAN-1',
+          command: 'run',
+          session_id: 's1',
+          started_at: '2026-04-29T12:00:00Z',
+          completed_at: '2026-04-29T13:00:00Z',
+          exit_code: 0,
+        })
+        .returning('id')
+        .executeTakeFirstOrThrow();
+      await db
+        .insertInto('tool_calls')
+        .values({
+          run_id: r1.id,
+          tool_name: 'Bash',
+          input_summary: 'gh pr create --title hello',
+          output_tokens: 100,
+          input_tokens: 25,
+          cache_read_tokens: 5,
+          cache_creation_tokens: 7,
+          occurred_at: '2026-04-29T13:00:01Z',
+        })
+        .execute();
+
+      const res = await app.inject({ method: 'GET', url: '/api/agents/KAN-1' });
+      expect(res.statusCode).toBe(200);
+      const body = res.json();
+      expect(body).toMatchObject({
+        key: 'KAN-1',
+        project: 'demo',
+        ticket_key: 'KAN-1',
+        ticket_title: 'Demo title',
+        state: 'pr_open',
+        worktree_path: '/work/KAN-1',
+        pr_url: 'https://github.com/x/y/pull/42',
+        tool_call_count: 1,
+        tokens: { total: 137, input: 25, output: 100, cache_read: 5, cache_creation: 7 },
+      });
+      expect(body.runs).toHaveLength(1);
+      expect(body.runs[0]).toMatchObject({
+        command: 'run',
+        started_at: '2026-04-29T12:00:00Z',
+        completed_at: '2026-04-29T13:00:00Z',
+      });
+      expect(typeof body.runs[0].id).toBe('string');
+    } finally {
+      await app.close();
+      await db.destroy();
+    }
+  });
+});
+
+describe('GET /api/agents/:key/state-history', () => {
+  it('returns transitions ordered by ts ascending for a seeded trail', async () => {
+    const { app, db } = await setupApp();
+    try {
+      await db
+        .insertInto('agents')
+        .values({
+          key: 'KAN-7',
+          project_name: 'demo',
+          ticket_title: 'Demo',
+          worktree_path: '/x',
+          branch: 'KAN-7',
+          pr_url: null,
+          created_at: '2026-04-29T12:00:00Z',
+        })
+        .execute();
+      // Insert deliberately out of order to confirm the route sorts by ts.
+      await db
+        .insertInto('state_transitions')
+        .values([
+          { agent_key: 'KAN-7', from_state: 'running', to_state: 'pr_open', ts: 3000 },
+          { agent_key: 'KAN-7', from_state: null, to_state: 'init', ts: 1000 },
+          { agent_key: 'KAN-7', from_state: 'init', to_state: 'running', ts: 2000 },
+        ])
+        .execute();
+
+      const res = await app.inject({ method: 'GET', url: '/api/agents/KAN-7/state-history' });
+      expect(res.statusCode).toBe(200);
+      expect(res.json()).toEqual({
+        transitions: [
+          { from: null, to: 'init', ts: 1000 },
+          { from: 'init', to: 'running', ts: 2000 },
+          { from: 'running', to: 'pr_open', ts: 3000 },
+        ],
+      });
+    } finally {
+      await app.close();
+      await db.destroy();
+    }
+  });
+
+  it('returns an empty transitions list for an unknown key (never 404s)', async () => {
+    const { app, db } = await setupApp();
+    try {
+      const res = await app.inject({ method: 'GET', url: '/api/agents/NOPE-99/state-history' });
+      expect(res.statusCode).toBe(200);
+      expect(res.json()).toEqual({ transitions: [] });
+    } finally {
+      await app.close();
+      await db.destroy();
+    }
+  });
+});

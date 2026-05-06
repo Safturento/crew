@@ -1,0 +1,49 @@
+meta {
+  name: GET /api/agents/:key/state-history
+  type: http
+  seq: 6
+}
+
+get {
+  url: {{baseUrl}}/api/agents/{{agentKey}}/state-history
+}
+
+vars:pre-request {
+  agentKey: BRUNO-1
+}
+
+assert {
+  res.status: eq 200
+  res.body.transitions: isArray
+}
+
+tests {
+  test("transitions are ordered by ts ascending", () => {
+    const ts = res.body.transitions.map((t) => t.ts);
+    const sorted = [...ts].sort((a, b) => a - b);
+    expect(ts).to.deep.equal(sorted);
+  });
+
+  test("each transition has from (string|null), to (string), ts (number)", () => {
+    const allowedStates = [
+      "init",
+      "running",
+      "pr_open",
+      "error",
+      "finished",
+      "idle",
+      "waiting",
+    ];
+    for (const t of res.body.transitions) {
+      expect(t.from === null || allowedStates.includes(t.from)).to.equal(true);
+      expect(allowedStates).to.include(t.to);
+      expect(t.ts).to.be.a("number");
+    }
+  });
+}
+
+docs {
+  Always returns 200 — unknown keys yield `{ "transitions": [] }`. State
+  trail is populated by CREW-96's backfill (and, in future, by
+  IngestService writes).
+}

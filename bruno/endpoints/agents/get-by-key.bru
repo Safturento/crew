@@ -1,0 +1,59 @@
+meta {
+  name: GET /api/agents/:key
+  type: http
+  seq: 4
+}
+
+get {
+  url: {{baseUrl}}/api/agents/{{agentKey}}
+}
+
+vars:pre-request {
+  agentKey: BRUNO-1
+}
+
+assert {
+  res.status: eq 200
+  res.body.key: eq BRUNO-1
+  res.body.project: isString
+  res.body.ticket_key: eq BRUNO-1
+  res.body.worktree_path: isString
+  res.body.runs: isArray
+  res.body.tool_call_count: isNumber
+}
+
+tests {
+  test("AgentDetail shape — top-level fields", () => {
+    const allowedStates = ["initializing", "running", "pr_open", "error", "finished"];
+    expect(allowedStates).to.include(res.body.state);
+    expect(res.body.ticket_title === null || typeof res.body.ticket_title === "string").to.equal(true);
+    expect(res.body.pr_url === null || typeof res.body.pr_url === "string").to.equal(true);
+  });
+
+  test("tokens breakdown has all five buckets as numbers", () => {
+    const t = res.body.tokens;
+    expect(t.total).to.be.a("number");
+    expect(t.input).to.be.a("number");
+    expect(t.output).to.be.a("number");
+    expect(t.cache_read).to.be.a("number");
+    expect(t.cache_creation).to.be.a("number");
+  });
+
+  test("at least one run is reported, with id (string), command, started_at, completed_at", () => {
+    const allowedCommands = ["run", "fix-pr", "finish"];
+    expect(res.body.runs.length).to.be.greaterThan(0);
+    for (const r of res.body.runs) {
+      expect(r.id).to.be.a("string");
+      expect(allowedCommands).to.include(r.command);
+      expect(r.started_at).to.be.a("string");
+      expect(r.completed_at === null || typeof r.completed_at === "string").to.equal(true);
+    }
+  });
+}
+
+docs {
+  Reference card. `agentKey` defaults to BRUNO-1 (registered earlier in
+  the smoke chain by post-register-run.bru). Flows can override via
+  `vars:pre-request` or `bru.setEnvVar` to probe other keys.
+  404 when no run exists for the key — see get-by-key-not-found.bru.
+}

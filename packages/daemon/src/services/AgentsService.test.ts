@@ -76,7 +76,15 @@ async function makeRun(
 async function makeToolCall(
   db: Kysely<DaemonDatabase>,
   runId: number,
-  opts: { tool?: string; summary?: string; tokens?: number; occurredAt?: string } = {},
+  opts: {
+    tool?: string;
+    summary?: string;
+    tokens?: number;
+    inputTokens?: number;
+    cacheReadTokens?: number;
+    cacheCreationTokens?: number;
+    occurredAt?: string;
+  } = {},
 ): Promise<void> {
   await db
     .insertInto('tool_calls')
@@ -85,11 +93,24 @@ async function makeToolCall(
       tool_name: opts.tool ?? 'Read',
       input_summary: opts.summary ?? '/x',
       output_tokens: opts.tokens ?? 10,
-      input_tokens: 0,
-      cache_read_tokens: 0,
-      cache_creation_tokens: 0,
+      input_tokens: opts.inputTokens ?? 0,
+      cache_read_tokens: opts.cacheReadTokens ?? 0,
+      cache_creation_tokens: opts.cacheCreationTokens ?? 0,
       occurred_at: opts.occurredAt ?? '2026-04-29T12:00:01Z',
     })
+    .execute();
+}
+
+async function makeStateTransition(
+  db: Kysely<DaemonDatabase>,
+  agentKey: string,
+  to: 'init' | 'running' | 'pr_open' | 'error' | 'finished' | 'idle' | 'waiting',
+  ts: number,
+  from: 'init' | 'running' | 'pr_open' | 'error' | 'finished' | 'idle' | 'waiting' | null = null,
+): Promise<void> {
+  await db
+    .insertInto('state_transitions')
+    .values({ agent_key: agentKey, from_state: from, to_state: to, ts })
     .execute();
 }
 
@@ -204,6 +225,179 @@ describe('AgentsService.list', () => {
     const db = await freshDb();
     try {
       expect(await new AgentsService({ db }).list()).toEqual([]);
+    } finally {
+      await db.destroy();
+    }
+  });
+});
+
+describe('AgentsService.getByKey', () => {
+  it('returns null when no run exists for that key', async () => {
+    const db = await freshDb();
+    try {
+      const svc = new AgentsService({ db });
+      expect(await svc.getByKey('NOPE-99')).toBeNull();
+    } finally {
+      await db.destroy();
+    }
+  });
+
+  it('returns null when an agent row exists but has no runs', async () => {
+    const db = await freshDb();
+    try {
+      await makeAgent(db, 'KAN-X');
+      const svc = new AgentsService({ db });
+      expect(await svc.getByKey('KAN-X')).toBeNull();
+    } finally {
+      await db.destroy();
+    }
+  });
+
+  it('returns detail with runs, tokens breakdown, and tool_call_count', async () => {
+    const db = await freshDb();
+    try {
+      await makeAgent(db, 'KAN-1', {
+        projectName: 'demo',
+        ticketTitle: 'Demo title',
+        worktreePath: '/work/KAN-1',
+        prUrl: 'https://github.com/x/y/pull/1',
+      });
+      const r1 = await makeRun(db, 'KAN-1', 's1', {
+        completedAt: '2026-04-29T13:00:00Z',
+        exitCode: 0,
+      });
+      const r2 = await makeRun(db, 'KAN-1', 's2', {
+        command: 'fix-pr',
+        completedAt: '2026-04-29T15:00:00Z',
+        exitCode: 0,
+      });
+      await makeToolCall(db, r1, {
+        tool: 'Bash',
+        summary: 'gh pr create --title hello',
+        tokens: 100,
+        inputTokens: 25,
+        cacheReadTokens: 5,
+        cacheCreationTokens: 7,
+        occurredAt: '2026-04-29T13:00:01Z',
+      });
+      await makeToolCall(db, r2, {
+        tool: 'Read',
+        tokens: 200,
+        inputTokens: 50,
+        cacheReadTokens: 10,
+        cacheCreationTokens: 0,
+        occurredAt: '2026-04-29T14:00:01Z',
+      });
+
+      const svc = new AgentsService({ db });
+      const detail = await svc.getByKey('KAN-1');
+      expect(detail).not.toBeNull();
+      expect(detail).toMatchObject({
+        key: 'KAN-1',
+        project: 'demo',
+        ticket_key: 'KAN-1',
+        ticket_title: 'Demo title',
+        state: 'pr_open',
+        worktree_path: '/work/KAN-1',
+        pr_url: 'https://github.com/x/y/pull/1',
+        tool_call_count: 2,
+        tokens: {
+          total: 100 + 25 + 5 + 7 + 200 + 50 + 10 + 0,
+          input: 25 + 50,
+          output: 100 + 200,
+          cache_read: 5 + 10,
+          cache_creation: 7,
+        },
+      });
+      expect(detail?.runs).toHaveLength(2);
+      expect(detail?.runs[0]).toMatchObject({
+        command: 'run',
+        started_at: '2026-04-29T12:00:00Z',
+        completed_at: '2026-04-29T13:00:00Z',
+      });
+      expect(detail?.runs[1]).toMatchObject({
+        command: 'fix-pr',
+        completed_at: '2026-04-29T15:00:00Z',
+      });
+      expect(typeof detail?.runs[0].id).toBe('string');
+    } finally {
+      await db.destroy();
+    }
+  });
+
+  it('returns pr_url as null when not set', async () => {
+    const db = await freshDb();
+    try {
+      await makeAgent(db, 'KAN-2');
+      await makeRun(db, 'KAN-2', 's1');
+      const detail = await new AgentsService({ db }).getByKey('KAN-2');
+      expect(detail).not.toBeNull();
+      expect(detail?.pr_url).toBeNull();
+      expect(detail?.state).toBe('initializing');
+    } finally {
+      await db.destroy();
+    }
+  });
+
+  it('zero tool_calls produces all-zero token breakdown and tool_call_count of 0', async () => {
+    const db = await freshDb();
+    try {
+      await makeAgent(db, 'KAN-3');
+      await makeRun(db, 'KAN-3', 's1');
+      const detail = await new AgentsService({ db }).getByKey('KAN-3');
+      expect(detail?.tool_call_count).toBe(0);
+      expect(detail?.tokens).toEqual({
+        total: 0,
+        input: 0,
+        output: 0,
+        cache_read: 0,
+        cache_creation: 0,
+      });
+    } finally {
+      await db.destroy();
+    }
+  });
+});
+
+describe('AgentsService.getStateHistory', () => {
+  it('returns transitions ordered by ts ascending', async () => {
+    const db = await freshDb();
+    try {
+      await makeAgent(db, 'KAN-1');
+      // Insert out of order to prove the query orders by ts.
+      await makeStateTransition(db, 'KAN-1', 'pr_open', 3000, 'running');
+      await makeStateTransition(db, 'KAN-1', 'init', 1000, null);
+      await makeStateTransition(db, 'KAN-1', 'running', 2000, 'init');
+      const out = await new AgentsService({ db }).getStateHistory('KAN-1');
+      expect(out.transitions.map((t) => t.to)).toEqual(['init', 'running', 'pr_open']);
+      expect(out.transitions.map((t) => t.from)).toEqual([null, 'init', 'running']);
+      expect(out.transitions.map((t) => t.ts)).toEqual([1000, 2000, 3000]);
+    } finally {
+      await db.destroy();
+    }
+  });
+
+  it('returns an empty transitions list when none exist for the key', async () => {
+    const db = await freshDb();
+    try {
+      const out = await new AgentsService({ db }).getStateHistory('NOPE-99');
+      expect(out).toEqual({ transitions: [] });
+    } finally {
+      await db.destroy();
+    }
+  });
+
+  it('only returns transitions for the requested agent', async () => {
+    const db = await freshDb();
+    try {
+      await makeAgent(db, 'KAN-1');
+      await makeAgent(db, 'KAN-2');
+      await makeStateTransition(db, 'KAN-1', 'init', 100, null);
+      await makeStateTransition(db, 'KAN-2', 'init', 200, null);
+      await makeStateTransition(db, 'KAN-2', 'running', 300, 'init');
+      const out = await new AgentsService({ db }).getStateHistory('KAN-2');
+      expect(out.transitions).toHaveLength(2);
+      expect(out.transitions.map((t) => t.to)).toEqual(['init', 'running']);
     } finally {
       await db.destroy();
     }

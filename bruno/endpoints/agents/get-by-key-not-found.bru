@@ -1,0 +1,21 @@
+meta {
+  name: GET /api/agents/:key (404)
+  type: http
+  seq: 5
+}
+
+get {
+  url: {{baseUrl}}/api/agents/NOPE-99999
+}
+
+assert {
+  res.status: eq 404
+}
+
+tests {
+  test("error payload identifies the missing resource", () => {
+    expect(res.body.error).to.equal("agent_not_found");
+    expect(res.body.resource).to.equal("agent");
+    expect(res.body.id).to.equal("NOPE-99999");
+  });
+}
