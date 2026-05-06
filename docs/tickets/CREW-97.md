@@ -47,7 +47,7 @@ through `reply.raw`).
   subscriber's callback runs synchronously inside `subscribe()` for
   the replay/miss path, then is added to the live set. That ordering
   guarantees clients never see a buffered (or `cache.miss`) event
-  *after* a live one.
+  _after_ a live one.
 
 ## Out of scope (will land in later slice-1c tickets)
 

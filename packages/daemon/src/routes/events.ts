@@ -38,9 +38,7 @@ export async function registerEventsRoutes(app: DaemonApp): Promise<void> {
       const eventBus = req.diScope.resolve('eventBus');
 
       const headerId =
-        typeof req.headers['last-event-id'] === 'string'
-          ? req.headers['last-event-id']
-          : undefined;
+        typeof req.headers['last-event-id'] === 'string' ? req.headers['last-event-id'] : undefined;
       const queryId = req.query.last_event_id;
       const lastEventId = queryId ?? headerId;
 

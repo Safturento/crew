@@ -175,9 +175,7 @@ describe('GET /api/events', () => {
       const e1 = h.eventBus.publish({ type: 'tool_calls.changed', data: { key: 'A' } });
       h.eventBus.publish({ type: 'tool_calls.changed', data: { key: 'B' } });
 
-      const res = await fetch(
-        `${h.baseUrl}/api/events?last_event_id=${encodeURIComponent(e1.id)}`,
-      );
+      const res = await fetch(`${h.baseUrl}/api/events?last_event_id=${encodeURIComponent(e1.id)}`);
 
       const [event] = await readFrames(res, 1);
       expect(event.type).toBe('tool_calls.changed');

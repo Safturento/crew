@@ -36,7 +36,9 @@ describe('EventBus', () => {
     bus.subscribe({ lastEventId: e1.id, onEvent: (e) => seen.push(e) });
 
     const keys = seen
-      .filter((e): e is SseEvent & { type: 'tool_calls.changed' } => e.type === 'tool_calls.changed')
+      .filter(
+        (e): e is SseEvent & { type: 'tool_calls.changed' } => e.type === 'tool_calls.changed',
+      )
       .map((e) => e.data.key);
     expect(keys).toEqual(['B', 'C']);
   });
