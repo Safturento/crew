@@ -28,7 +28,6 @@ export interface CrewEventStreamOpts {
 }
 
 export class CrewEventStream {
-  private es: EventSource | null = null;
   private readonly handlers = new Map<string, Set<Handler>>();
   private lastEventId: string | undefined;
   private retryMs = INITIAL_RETRY_MS;
@@ -58,7 +57,6 @@ export class CrewEventStream {
       : this.url;
 
     const es = new EventSource(url);
-    this.es = es;
 
     for (const name of EVENT_NAMES) {
       es.addEventListener(name, (e: MessageEvent) => {
