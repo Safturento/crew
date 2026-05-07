@@ -6,6 +6,17 @@ import { createLogger } from './logger.js';
 import { createDb, runMigrations } from './db.js';
 import { buildApp } from './app.js';
 
+/**
+ * In container deployments the host's projects dir is bind-mounted at the
+ * default `CREW_CONFIG_DIR` read-only, so we can't write fixture TOMLs there.
+ * Redirect to a sibling of the DB file (the `/state` named volume in compose,
+ * the test tmp dir under vitest) and seed into that — the host mount is
+ * deliberately ignored in fixture mode anyway.
+ */
+function fixtureProjectsDir(dbFile: string): string {
+  return join(dirname(dbFile), 'seeded-projects');
+}
+
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const MIGRATIONS_PATH = join(__dirname, 'migrations');
 // `__dirname` is `packages/daemon/src/`; the dashboard's build lives at
@@ -31,9 +42,13 @@ export async function serve(env: NodeJS.ProcessEnv = process.env) {
     // Worktree compose stacks set this so a fresh anonymous-volume DB
     // boots with realistic state instead of an empty agents list. The
     // dynamic import keeps fixture data out of the production hot path.
-    const { seedFixtures } = await import('../seeds/dev.js');
+    const { seedFixtures, seedProjectFixtures } = await import('../seeds/dev.js');
     logger.info('CREW_SEED_FIXTURES=1 — loading dev fixtures');
     await seedFixtures(db);
+
+    config.configDir = fixtureProjectsDir(config.dbFile);
+    mkdirSync(config.configDir, { recursive: true });
+    seedProjectFixtures(config.configDir);
   }
 
   const app = await buildApp({ config, logger, db, dashboardDistDir: DASHBOARD_DIST });
