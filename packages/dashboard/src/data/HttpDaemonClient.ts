@@ -70,6 +70,9 @@ const StateHistoryResponseSchema = z.object({
   ),
 });
 
+// Daemon already validates JSONL via crew-shared transcript schemas before
+// emitting; client-side passthrough avoids re-running the full discriminated
+// union here. Tighten only if the daemon stops being the validator.
 const TimelineResponseSchema = z.object({
   events: z.array(z.object({ type: z.string() }).passthrough()),
 });

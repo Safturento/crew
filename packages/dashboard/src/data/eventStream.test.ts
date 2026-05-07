@@ -73,9 +73,10 @@ describe('CrewEventStream', () => {
     expect(seen).toHaveLength(1);
   });
 
-  it('invokes the onCacheMiss callback when a cache.miss event arrives', () => {
+  it('dispatches cache.miss events to subscribers (the entry point bootstrap.ts uses)', () => {
+    const stream = new CrewEventStream('http://localhost/api/events');
     const onCacheMiss = vi.fn();
-    new CrewEventStream('http://localhost/api/events', { onCacheMiss });
+    stream.on('cache.miss', onCacheMiss);
 
     MockEventSource.instances[0]!.emit('cache.miss', {}, 'evt-x');
 

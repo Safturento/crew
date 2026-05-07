@@ -7,8 +7,12 @@
  * `routes/events.ts`).
  *
  * `cache.miss` is a synthetic event the daemon emits when the client's
- * last-seen id has fallen out of the bus's ring buffer; the configured
- * `onCacheMiss` handler should drop local cache and refetch.
+ * last-seen id has fallen out of the bus's ring buffer. Subscribers
+ * register via `on('cache.miss', …)` — `main.tsx` wires the QueryClient
+ * here at app entry to dodge a circular import with the singleton.
+ *
+ * Browser-only: the singleton constructs an `EventSource` at module
+ * load. Vitest installs a no-op polyfill in `src/test/setup.ts`.
  */
 
 type Handler = (data: unknown) => void;
@@ -23,19 +27,12 @@ const EVENT_NAMES = [
 const INITIAL_RETRY_MS = 500;
 const MAX_RETRY_MS = 30_000;
 
-export interface CrewEventStreamOpts {
-  onCacheMiss?: () => void;
-}
-
 export class CrewEventStream {
   private readonly handlers = new Map<string, Set<Handler>>();
   private lastEventId: string | undefined;
   private retryMs = INITIAL_RETRY_MS;
 
-  constructor(
-    private readonly url: string,
-    private readonly opts: CrewEventStreamOpts = {},
-  ) {
+  constructor(private readonly url: string) {
     this.connect();
   }
 
@@ -63,7 +60,6 @@ export class CrewEventStream {
       es.addEventListener(name, (e: MessageEvent) => {
         if (e.lastEventId) this.lastEventId = e.lastEventId;
         const data = JSON.parse(e.data) as unknown;
-        if (name === 'cache.miss') this.opts.onCacheMiss?.();
         this.handlers.get(name)?.forEach((fn) => fn(data));
       });
     }
@@ -83,9 +79,6 @@ export class CrewEventStream {
 
 /**
  * Module-level singleton wired to the same-origin `/api/events` route
- * (the dashboard's vite/proxy + daemon both serve under the same prefix).
- *
- * `onCacheMiss` is registered lazily by `bootstrap.ts` at app entry to
- * avoid a circular import with the TanStack `QueryClient`.
+ * (vite proxies `/api/*` to the daemon in dev; same-origin in prod).
  */
 export const eventStream = new CrewEventStream('/api/events');
