@@ -18,7 +18,6 @@ Format: see the user-level `~/.claude/CLAUDE.md` "Followup detection" section.
   - [2026-05-04 — Crew sandbox/preflight self-opt-in (slot into first dashboard plan that adds e2e coverage)](#2026-05-04--crew-sandboxpreflight-self-opt-in-slot-into-first-dashboard-plan-that-adds-e2e-coverage)
   - [2026-05-03 — `crew run` post-stream "waiting up to 120s for docker bringup" log is misleading after CREW-83](#2026-05-03--crew-run-post-stream-waiting-up-to-120s-for-docker-bringup-log-is-misleading-after-crew-83)
   - [2026-05-03 — `chokidar` dep added to daemon but no code imports it](#2026-05-03--chokidar-dep-added-to-daemon-but-no-code-imports-it)
-  - [2026-05-03 — `@playwright/mcp` ignores crew's `--executable-path` override](#2026-05-03--playwrightmcp-ignores-crews---executable-path-override)
   - [2026-05-03 — `crew run` swallows background-task failures into `/tmp` logs](#2026-05-03--crew-run-swallows-background-task-failures-into-tmp-logs)
   - [2026-05-03 — Transcript line printer truncates tool-call inputs mid-string](#2026-05-03--transcript-line-printer-truncates-tool-call-inputs-mid-string)
   - [2026-05-02 — `crew restart --hard` should not silently bail when a PR exists](#2026-05-02--crew-restart---hard-should-not-silently-bail-when-a-pr-exists)
@@ -48,6 +47,7 @@ Format: see the user-level `~/.claude/CLAUDE.md` "Followup detection" section.
   - [2026-04-27 — Dashboard mobile responsive layout polish](#2026-04-27--dashboard-mobile-responsive-layout-polish)
   - [2026-04-26 — Architecture doc open questions still unresolved](#2026-04-26--architecture-doc-open-questions-still-unresolved)
 - [Resolved](#resolved)
+  - [2026-05-03 — `@playwright/mcp` ignores crew's `--executable-path` override](#2026-05-03--playwrightmcp-ignores-crews---executable-path-override)
   - [2026-05-03 — `crew resume` / `crew fix-pr` env-spec parity for `${VAR}` syntax](#2026-05-03--crew-resume--crew-fix-pr-env-spec-parity-for-var-syntax)
 - [Abandoned](#abandoned)
 
@@ -95,6 +95,7 @@ Format: see the user-level `~/.claude/CLAUDE.md` "Followup detection" section.
 The CLI flag + project-config knob feel like the right v1 — both manual, both surfaceable. Jira-label-driven is a nice v2 once the v1 dial exists. Auto-classification probably never earns its keep.
 
 **Shape of work:** Two small PRs.
+
 - (1) `--model <name>` flag on `crew run` / `fix-pr` / `finish`. Threads through to spawn args. Validates against a known list. ~30 lines + tests.
 - (2) `default_model` in project TOML, read by the same threading. Resolution order: CLI flag → project config → built-in default (Opus).
 
@@ -226,12 +227,12 @@ The "synthetic Unregistered section" feels right — it's a single render path, 
 
 **Open questions:**
 
-- Field name. `post_bringup_command` (action-oriented), `bringup_hook` (entrypoint-style), `startup_script` (path-oriented)? Lean: `post_bringup_command` since the hook fires *after* `compose up --wait` succeeds, before the optional `compose stop`.
+- Field name. `post_bringup_command` (action-oriented), `bringup_hook` (entrypoint-style), `startup_script` (path-oriented)? Lean: `post_bringup_command` since the hook fires _after_ `compose up --wait` succeeds, before the optional `compose stop`.
 - Should the TOML field accept inline shell, or only a path-to-script? Inline is more flexible (`post_bringup_command = "npm run seed"`), path-only is more auditable. Lean: accept either — if it starts with `./` or contains `/`, treat as a path; otherwise treat as a shell command.
 
 ### 2026-05-04 — Crew sandbox/preflight self-opt-in (slot into first dashboard plan that adds e2e coverage)
 
-**What:** Opt the crew project into the preflight machinery CREW-82 introduced (`<repo>/.claude/settings.json` with sandbox baseline + `excludedCommands`, `[playwright]` / `[bruno_smoke]` enabled in `~/.config/crew/projects/crew.toml`, and a root-level `test:e2e` npm script that delegates to the dashboard workspace). Today crew dispatches itself via `crew run CREW-*` against a TOML that has neither `[playwright]` nor `[bruno_smoke]` enabled, so the preflight no-ops and crew agents run with no committed sandbox baseline (allowed-domains, allowWrite paths, etc.). Once the dashboard e2e suite has enough coverage that gating on it carries weight, flipping the opt-in turns crew into its own dogfood for the preflight + sandbox machinery and starts exercising dashboard tests on every CREW-* dispatch.
+**What:** Opt the crew project into the preflight machinery CREW-82 introduced (`<repo>/.claude/settings.json` with sandbox baseline + `excludedCommands`, `[playwright]` / `[bruno_smoke]` enabled in `~/.config/crew/projects/crew.toml`, and a root-level `test:e2e` npm script that delegates to the dashboard workspace). Today crew dispatches itself via `crew run CREW-*` against a TOML that has neither `[playwright]` nor `[bruno_smoke]` enabled, so the preflight no-ops and crew agents run with no committed sandbox baseline (allowed-domains, allowWrite paths, etc.). Once the dashboard e2e suite has enough coverage that gating on it carries weight, flipping the opt-in turns crew into its own dogfood for the preflight + sandbox machinery and starts exercising dashboard tests on every CREW-\* dispatch.
 
 **Why noticed:** 2026-05-04 conversation about CREW-82 (agent dispatch preflight) — surfaced that crew has every prerequisite in place (`packages/dashboard/playwright.config.ts` + a `tests/e2e/dashboard.spec.ts` exists per CREW-22, the bruno collection exists with a smoke flow) but `[playwright].authored` isn't enabled in the project TOML, so none of it is wired in. Decision was to defer the opt-in rather than land it ahead of value: dashboard e2e is one spec today, and turning on the gate now would just add ceremony without catching real regressions. The deliberate plan is to pair the opt-in with the first dashboard plan that adds enough e2e coverage to make the gate meaningful — explicit ask was that this lands at the **beginning** of that plan, so all subsequent dashboard tests get exercised by the preflight from day one rather than retrofitted later.
 
@@ -260,18 +261,9 @@ The "synthetic Unregistered section" feels right — it's a single render path, 
   "sandbox": {
     "enabled": true,
     "allowUnsandboxedCommands": false,
-    "excludedCommands": [
-      "npm run bruno:smoke",
-      "npm run test:e2e"
-    ],
+    "excludedCommands": ["npm run bruno:smoke", "npm run test:e2e"],
     "filesystem": {
-      "allowWrite": [
-        "~/.npm",
-        "~/.cache/node",
-        "~/.cache/claude-cli",
-        "~/.cache/claude",
-        "/tmp"
-      ]
+      "allowWrite": ["~/.npm", "~/.cache/node", "~/.cache/claude-cli", "~/.cache/claude", "/tmp"]
     },
     "network": {
       "allowedDomains": [
@@ -360,34 +352,6 @@ Effect once both PRs (CREW-84 + CREW-85) are merged AND this opt-in lands:
 
 **Open questions:** Does the polling tail's 200ms latency matter for the dashboard slice? If not, (b) is the right call.
 
-### 2026-05-03 — `@playwright/mcp` ignores crew's `--executable-path` override
-
-**What:** `crew run` installs Playwright's bundled chromium (`~/.cache/ms-playwright/chromium-1217/...`) and writes a `.mcp.json` that passes `--executable-path <chromium-1217 path>` to `npx -y @playwright/mcp@latest`. The intent (per `build-mcp-config.ts:14-21`) is to override `@playwright/mcp`'s default `chrome` channel and use the playwright-bundled chromium crew already installed. **The MCP doesn't honor it.** Agents on the dispatched session see `mcp__playwright__browser_*` calls fail with `Chromium distribution 'chrome' is not found at /opt/google/chrome/chrome`, and `~/.cache/ms-playwright/mcp-chrome-<hash>/` contains its own (sometimes empty) bundle the MCP tried to set up separately. The repo-side `playwright` runner (driven by `npm run test:e2e`) works fine because it uses `chromium-1217` directly, but the MCP tool is unusable for any agent step that wants live-browser interaction.
-
-**Why noticed:** Recipes KAN-14 ([PR #47](https://github.com/Safturento/Recipes/pull/47), 2026-05-03) shipped with a "Crew-setup notes" section in the PR body flagging this. Agent worked around it by using the repo's own Playwright fixture for `tests/e2e/meal-plan-day.spec.ts` (which is fine for authored tests) but couldn't drive the MCP tool for ad-hoc browser exploration during ticket work. Same shape was implicit in earlier KAN-* runs that listed `chromium: <unresolved>` even when the install log showed success.
-
-**Anchors:**
-
-- `packages/cli/src/lib/playwright/build-mcp-config.ts:23-37` — where `--executable-path` gets appended to the MCP args.
-- `packages/cli/src/lib/playwright/write-mcp-file.ts` — caller, resolves the chromium path before invoking buildMcpConfig.
-- Reference `.mcp.json` shape generated for any KAN-* worktree: `cat ~/Repos/Recipes-KAN-12/.mcp.json` (when the worktree exists).
-- `~/.cache/ms-playwright/` — `chromium-1217/` (crew install), `mcp-chrome-0306d4e/` + `mcp-chrome-8449268/` (MCP's own bundles, separate hashes).
-- KAN-14 PR body "Crew-setup notes" — quoted incident.
-- `@playwright/mcp` repo / npm — for the actual flag semantics. Worth checking `npx -y @playwright/mcp@latest --help` and the upstream changelog to see if `--executable-path` was renamed, deprecated, or made conditional on `--browser chromium`.
-
-**What's been considered:**
-
-- **Pair `--executable-path` with `--browser chromium`.** Hypothesis: `--executable-path` only applies when `--browser` is explicitly set to chromium; otherwise the MCP keeps its default chrome-channel semantics. Cheapest experiment: add `'--browser', 'chromium'` to the args in `build-mcp-config.ts` and re-run.
-- **Use the MCP's own bundle path.** `mcp-chrome-<hash>/` directories are populated when the MCP downloads its own Chrome on first run. We could let it own the bundle (don't pass `--executable-path` at all, just preflight `npx @playwright/mcp@latest install` once) and accept the disk duplication.
-- **Pin `@playwright/mcp` to a version we know respects the flag.** Currently we pull `@latest` on every spawn — vulnerable to upstream behavior drift. Pinning would also let us write a `crew --version`-style preflight that warns when a newer MCP version's flag semantics changed.
-
-**Shape of work:** One ticket. First commit is the empirical: try the four shapes (`--executable-path` alone / `+ --browser chromium` / no `--executable-path` + preflight install / pin version) and pick the one that actually drives the bundled chromium. Once known: code change is small (`build-mcp-config.ts` + maybe one preflight in `prepareAgentEnvironment`). Tests assert the resulting MCP args.
-
-**Open questions:**
-
-- Should crew preflight `npx @playwright/mcp@latest install` once at machine setup so the `mcp-chrome-<hash>/` bundle is always populated, regardless of which override path we end up choosing?
-- Worth pinning the MCP package version in the project config (`[playwright].mcp_version`?) so upstream drift doesn't silently break agent flows?
-
 ### 2026-05-03 — `crew run` swallows background-task failures into `/tmp` logs
 
 **What:** `crew run` kicks off docker bringup and Playwright/Chromium install as background processes, prints `→ docker bringup running in background (log: /tmp/crew-docker-<KEY>.log)` once, and never surfaces failures back to the user once the foreground transcript stream begins. If the background task fails, the user only finds out by tailing the `/tmp` log themselves — and typically only after watching the agent flail for several minutes against missing infrastructure (no DB → integration tests fail; no docker stack → bruno smoke / verify-after-run can't run).
@@ -444,7 +408,7 @@ The right answer is per-tool policy, not a global constant. Default-blind slicin
 
 ### 2026-05-02 — `crew restart --hard` should not silently bail when a PR exists
 
-**What:** `crew restart --hard` is the "blow away local state and redo this ticket from scratch" command. When the ticket already has an open PR, restart bails (presumably steering the user toward `crew fix-pr` instead). That's the wrong default when the user has *materially changed the ticket scope* mid-flight — added a new task to the Jira description, swapped the design, etc. The user's intent is "redo against the new scope," not "patch the existing branch with one more diff." `fix-pr` is for incremental review-comment application, not for a fresh start.
+**What:** `crew restart --hard` is the "blow away local state and redo this ticket from scratch" command. When the ticket already has an open PR, restart bails (presumably steering the user toward `crew fix-pr` instead). That's the wrong default when the user has _materially changed the ticket scope_ mid-flight — added a new task to the Jira description, swapped the design, etc. The user's intent is "redo against the new scope," not "patch the existing branch with one more diff." `fix-pr` is for incremental review-comment application, not for a fresh start.
 
 **Why noticed:** During Recipes [KAN-45](https://safturento.atlassian.net/browse/KAN-45) (env.toml migration), a runtime bug surfaced post-merge — Better Auth's `signUpEmail` rejected `bruno-smoke@local` because `z.email()` requires a TLD. The bug was preexisting from KAN-37 but only surfaced when KAN-45 first ran the seed end-to-end. The Jira description was updated mid-flight with a new Task 10 covering the fix. The user tried `crew restart --hard KAN-45` to re-run the agent against the now-expanded scope; crew bailed because the PR existed. Forced fallback to `crew fix-pr` — which doesn't read the Jira description at all (only PR review comments), so Task 10 was never picked up.
 
@@ -538,7 +502,7 @@ The auto-detect option is the most user-friendly. The flag option is the cheapes
 
 ### 2026-05-01 — Render assistant.text preamble alongside same-event tool calls
 
-**What:** `streamTranscript` parses each assistant event with `parseToolCall` first and short-circuits on a hit, so the common Claude Code shape `[TextContent("Let me read the file."), ToolUseContent(...)]` only renders the tool-call line — the preamble text is dropped. CREW-72 added `assistant.text` rendering for *standalone* text events (the wrap-up prose case), but mixed-content events still drop the text half.
+**What:** `streamTranscript` parses each assistant event with `parseToolCall` first and short-circuits on a hit, so the common Claude Code shape `[TextContent("Let me read the file."), ToolUseContent(...)]` only renders the tool-call line — the preamble text is dropped. CREW-72 added `assistant.text` rendering for _standalone_ text events (the wrap-up prose case), but mixed-content events still drop the text half.
 
 **Why noticed:** Surfaced during CREW-72 self-review by superpowers:code-reviewer. The reviewer's read: ticket framing ("agent's wrap-up phase") implies you'd probably want the preamble too, but it's strictly out-of-scope for the silent-tail bug. Source conversation: CREW-72 implementation, 2026-05-01.
 
@@ -562,7 +526,7 @@ The auto-detect option is the most user-friendly. The flag option is the cheapes
 
 **What:** Crew's per-worktree DB replication today is split awkwardly between crew and the project. The bringup script (`buildDockerBringupScript` in `start-bringup.ts`) calls a project-side shim — `<repo>/scripts/db-clone-from-main.sh` — which in turn calls `crew db-clone <branch>`. Meanwhile the project's own backend container runs migrations + seed via its `entrypoint.sh`, on the same database, with no coordination. The result is a brittle three-way handshake between (a) the project's docker-compose entrypoint, (b) crew's bringup orchestration, and (c) crew's `runDbClone` primitive. Generalize this so crew owns the whole DB lifecycle for a worktree dispatch and the project just declares the contract via config (the existing `[db_clone]` block, possibly extended).
 
-**Why noticed:** filed CREW-68 to fix the immediate race between db_clone and backend seed (concurrent TRUNCATE and INSERT on the same tables corrupts the worktree DB and exits the backend container). The fix lands as a quick-win — wait-for-healthcheck + better log on clone failure — but the underlying brittleness is structural, not local. The user's framing: *"this feels like a symptom of being in this middle state where crew is still relying on some scripts that are a part of recipe's infrastructure."* Source conversation: 2026-05-01 session debugging KAN-40's failed dispatch under CREW-61's playwright manual gate.
+**Why noticed:** filed CREW-68 to fix the immediate race between db_clone and backend seed (concurrent TRUNCATE and INSERT on the same tables corrupts the worktree DB and exits the backend container). The fix lands as a quick-win — wait-for-healthcheck + better log on clone failure — but the underlying brittleness is structural, not local. The user's framing: _"this feels like a symptom of being in this middle state where crew is still relying on some scripts that are a part of recipe's infrastructure."_ Source conversation: 2026-05-01 session debugging KAN-40's failed dispatch under CREW-61's playwright manual gate.
 
 **Anchors:**
 
@@ -711,7 +675,7 @@ Worth verifying whether the daemon's `tool_calls` table already captures sidecha
 
 **`sandbox.excludedCommands` MUST list the project's smoke / e2e commands when the project has a docker stack the agent will exercise** (any project with `[docker]` configured + `[playwright]` or `[bruno_smoke]` enabled). KAN-12 (Recipes, 2026-05-03) burned ~45 min of debugging on this — first ~15 min on the unrelated lowercase compose-name bug, then ~30 min misdiagnosing the agent's `ECONNREFUSED` on `https://localhost:28905`. Initial fix attempt (PR #45 in Recipes, since reverted) added `localhost` + `127.0.0.1` to `sandbox.network.allowedDomains`. That changed nothing — `allowedDomains` is an HTTPS egress filter, while the sandbox actually wraps the agent in `bwrap --unshare-net`, giving it its own loopback distinct from the host's. Empirical test confirmed: `excludedCommands: ["npm run bruno:smoke", "npm run test:e2e"]` runs the listed commands (and their child processes) un-sandboxed, exposing the host netns to the smoke/e2e workflow. The generator should derive the right entries from the project's configured smoke/e2e commands (`[bruno_smoke]` enables npm bruno:smoke; `[playwright].authored.test_command` names the e2e command). Drift detection should flag a project whose committed `settings.json` is missing those commands while configuring a localhost-bound app URL.
 
-**`excludedCommands` is necessary but not sufficient — the dev server has to start in the same netns the runner uses.** KAN-17 (Recipes, [PR #49](https://github.com/Safturento/Recipes/pull/49), 2026-05-03) shipped with both `npm run bruno:smoke` and `npm run test:e2e` already in `excludedCommands`, and `npm run test:e2e` *still* got `ECONNREFUSED` on `https://localhost:17253`. Likely failure mode: the dev server (or docker-app port-forward) is bound to the **host** loopback, but if the agent ever started/restarted the server itself via a sandboxed Bash call (e.g. plain `npm run dev`), it bound to the agent's bwrap loopback — then the un-sandboxed `npm run test:e2e` runs in the host netns and sees nothing on 17253. The agent's PR claim "Bruno succeeds against the same URL" is almost certainly a misread: `npm run bruno:smoke` targets the daemon's port, not the worktree's app port, so it isn't actually hitting 17253. The mitigations the doctor / generator should enforce: (a) Playwright config owns dev-server lifecycle via a `webServer` block so an un-sandboxed `npm run test:e2e` brings up its own server in the same (host) netns; *or* (b) any dev-server-start command (`npm run dev`, project-specific equivalents) is also in `excludedCommands` so it inherits the host netns; *and* (c) the run-time prompt to the agent calls out that ad-hoc `curl` against the app URL from sandboxed Bash will always `ECONNREFUSED` — the agent should treat the un-sandboxed e2e/smoke commands as the only valid path to the docker stack and not interpret a sandboxed-curl failure as evidence the stack is down.
+**`excludedCommands` is necessary but not sufficient — the dev server has to start in the same netns the runner uses.** KAN-17 (Recipes, [PR #49](https://github.com/Safturento/Recipes/pull/49), 2026-05-03) shipped with both `npm run bruno:smoke` and `npm run test:e2e` already in `excludedCommands`, and `npm run test:e2e` _still_ got `ECONNREFUSED` on `https://localhost:17253`. Likely failure mode: the dev server (or docker-app port-forward) is bound to the **host** loopback, but if the agent ever started/restarted the server itself via a sandboxed Bash call (e.g. plain `npm run dev`), it bound to the agent's bwrap loopback — then the un-sandboxed `npm run test:e2e` runs in the host netns and sees nothing on 17253. The agent's PR claim "Bruno succeeds against the same URL" is almost certainly a misread: `npm run bruno:smoke` targets the daemon's port, not the worktree's app port, so it isn't actually hitting 17253. The mitigations the doctor / generator should enforce: (a) Playwright config owns dev-server lifecycle via a `webServer` block so an un-sandboxed `npm run test:e2e` brings up its own server in the same (host) netns; _or_ (b) any dev-server-start command (`npm run dev`, project-specific equivalents) is also in `excludedCommands` so it inherits the host netns; _and_ (c) the run-time prompt to the agent calls out that ad-hoc `curl` against the app URL from sandboxed Bash will always `ECONNREFUSED` — the agent should treat the un-sandboxed e2e/smoke commands as the only valid path to the docker stack and not interpret a sandboxed-curl failure as evidence the stack is down.
 
 **Why noticed:** Surfaced repeatedly: §10.4 of the Playwright integration design spec, CREW-57's open questions ("Should crew's own `.claude/settings.json` enable the sandbox so future autonomous CREW-\* runs can themselves observe sandbox-policy-level behavior?"), and architecture.md's open questions list ("Sandbox config drift").
 
@@ -1020,6 +984,36 @@ The other two open questions (sandbox config drift, Phase 2 + Phase 3 separation
 ## Resolved
 
 (items move here when ticketed and shipped, or fixed inline — keep for historical context, prune when the file gets long)
+
+### 2026-05-03 — `@playwright/mcp` ignores crew's `--executable-path` override
+
+**Resolved 2026-05-07:** Fixed shape A via host-repo resolve. `writeMcpFile` now takes `resolverCwd: config.repo_path`, so `require('@playwright/test').chromium.executablePath()` runs against the host repo's `node_modules` (where the package is always installed) instead of the bare `git worktree add` checkout (which has no `node_modules` and silently returned `null`, dropping `--executable-path` from the MCP args). The chromium binary in `~/.cache/ms-playwright/` is shared between host and worktree, so the resolved path is identical. Shape B (MCP ignoring an already-passed `--executable-path`) wasn't empirically validated in this PR — the existing dispatch's `.mcp.json` was generated by pre-fix crew, so the override never actually flowed through. If a fresh dispatch on post-fix crew still fails with `/opt/google/chrome/chrome`, file a follow-on ticket per the original entry's "Pair `--executable-path` with `--browser chromium`" / "preflight `npx @playwright/mcp@latest install`" / "pin MCP version" mitigations.
+
+**What:** `crew run` installs Playwright's bundled chromium (`~/.cache/ms-playwright/chromium-1217/...`) and writes a `.mcp.json` that passes `--executable-path <chromium-1217 path>` to `npx -y @playwright/mcp@latest`. The intent (per `build-mcp-config.ts:14-21`) is to override `@playwright/mcp`'s default `chrome` channel and use the playwright-bundled chromium crew already installed. **The MCP doesn't honor it.** Agents on the dispatched session see `mcp__playwright__browser_*` calls fail with `Chromium distribution 'chrome' is not found at /opt/google/chrome/chrome`, and `~/.cache/ms-playwright/mcp-chrome-<hash>/` contains its own (sometimes empty) bundle the MCP tried to set up separately. The repo-side `playwright` runner (driven by `npm run test:e2e`) works fine because it uses `chromium-1217` directly, but the MCP tool is unusable for any agent step that wants live-browser interaction.
+
+**Why noticed:** Recipes KAN-14 ([PR #47](https://github.com/Safturento/Recipes/pull/47), 2026-05-03) shipped with a "Crew-setup notes" section in the PR body flagging this. Agent worked around it by using the repo's own Playwright fixture for `tests/e2e/meal-plan-day.spec.ts` (which is fine for authored tests) but couldn't drive the MCP tool for ad-hoc browser exploration during ticket work. Same shape was implicit in earlier KAN-\* runs that listed `chromium: <unresolved>` even when the install log showed success.
+
+**Anchors:**
+
+- `packages/cli/src/lib/playwright/build-mcp-config.ts:23-37` — where `--executable-path` gets appended to the MCP args.
+- `packages/cli/src/lib/playwright/write-mcp-file.ts` — caller, resolves the chromium path before invoking buildMcpConfig.
+- Reference `.mcp.json` shape generated for any KAN-\* worktree: `cat ~/Repos/Recipes-KAN-12/.mcp.json` (when the worktree exists).
+- `~/.cache/ms-playwright/` — `chromium-1217/` (crew install), `mcp-chrome-0306d4e/` + `mcp-chrome-8449268/` (MCP's own bundles, separate hashes).
+- KAN-14 PR body "Crew-setup notes" — quoted incident.
+- `@playwright/mcp` repo / npm — for the actual flag semantics. Worth checking `npx -y @playwright/mcp@latest --help` and the upstream changelog to see if `--executable-path` was renamed, deprecated, or made conditional on `--browser chromium`.
+
+**What's been considered:**
+
+- **Pair `--executable-path` with `--browser chromium`.** Hypothesis: `--executable-path` only applies when `--browser` is explicitly set to chromium; otherwise the MCP keeps its default chrome-channel semantics. Cheapest experiment: add `'--browser', 'chromium'` to the args in `build-mcp-config.ts` and re-run.
+- **Use the MCP's own bundle path.** `mcp-chrome-<hash>/` directories are populated when the MCP downloads its own Chrome on first run. We could let it own the bundle (don't pass `--executable-path` at all, just preflight `npx @playwright/mcp@latest install` once) and accept the disk duplication.
+- **Pin `@playwright/mcp` to a version we know respects the flag.** Currently we pull `@latest` on every spawn — vulnerable to upstream behavior drift. Pinning would also let us write a `crew --version`-style preflight that warns when a newer MCP version's flag semantics changed.
+
+**Shape of work:** One ticket. First commit is the empirical: try the four shapes (`--executable-path` alone / `+ --browser chromium` / no `--executable-path` + preflight install / pin version) and pick the one that actually drives the bundled chromium. Once known: code change is small (`build-mcp-config.ts` + maybe one preflight in `prepareAgentEnvironment`). Tests assert the resulting MCP args.
+
+**Open questions:**
+
+- Should crew preflight `npx @playwright/mcp@latest install` once at machine setup so the `mcp-chrome-<hash>/` bundle is always populated, regardless of which override path we end up choosing?
+- Worth pinning the MCP package version in the project config (`[playwright].mcp_version`?) so upstream drift doesn't silently break agent flows?
 
 ### 2026-05-03 — `crew resume` / `crew fix-pr` env-spec parity for `${VAR}` syntax
 

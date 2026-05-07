@@ -97,7 +97,10 @@ export async function runResume(key: string, opts: ResumeOptions): Promise<void>
   // system chrome channel when crew now wires the bundled chromium directly.
   if (playwrightEnabled(config) && config.playwright && smokeEnabled(config)) {
     const resolved = resolveAppUrl(config.playwright.app_url, dockerPorts, envVars);
-    const writeResult = await writeMcpFile(worktree, { appUrl: resolved.raw });
+    const writeResult = await writeMcpFile(worktree, {
+      appUrl: resolved.raw,
+      resolverCwd: config.repo_path,
+    });
     process.stderr.write(
       pc.dim(`→ refreshed ${join(worktree, '.mcp.json')} (CREW_APP_URL=${resolved.raw})\n`),
     );

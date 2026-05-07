@@ -12,12 +12,12 @@ export interface WriteMcpFileResult {
 
 export async function writeMcpFile(
   worktreePath: string,
-  opts: { appUrl: string },
+  opts: { appUrl: string; resolverCwd: string },
 ): Promise<WriteMcpFileResult> {
   const mcpPath = join(worktreePath, '.mcp.json');
   const existed = existsSync(mcpPath);
 
-  const chromiumPath = await resolveChromiumExecutablePath(worktreePath);
+  const chromiumPath = await resolveChromiumExecutablePath(opts.resolverCwd);
   const config = buildMcpConfig({
     appUrl: opts.appUrl,
     chromiumPath: chromiumPath ?? undefined,
@@ -28,15 +28,22 @@ export async function writeMcpFile(
   return { existed, chromiumPath };
 }
 
-// Ask the worktree's @playwright/test which chromium binary it would launch.
-// Returns null when the project doesn't have @playwright/test installed yet
-// or when the resolved path doesn't exist on disk — caller falls back to the
-// default MCP behavior (system chrome channel).
-async function resolveChromiumExecutablePath(worktreePath: string): Promise<string | null> {
+// Ask `@playwright/test` (resolved against `resolverCwd`) which chromium
+// binary it would launch. Returns null when the package isn't installed
+// from that cwd, or when the resolved path doesn't exist on disk — caller
+// falls back to the default MCP behavior (system chrome channel).
+//
+// Callers pass `config.repo_path` here, not the worktree path: crew creates
+// worktrees as bare `git worktree add` checkouts with no `node_modules`,
+// so resolving from there always fails. The chromium binary lives in the
+// user-shared `~/.cache/ms-playwright/`, identical for both, so resolving
+// from the host repo (which the user has installed) produces the same path
+// the worktree would once it had `node_modules`.
+async function resolveChromiumExecutablePath(resolverCwd: string): Promise<string | null> {
   const result = await execa(
     'node',
     ['-e', 'console.log(require("@playwright/test").chromium.executablePath())'],
-    { cwd: worktreePath, reject: false },
+    { cwd: resolverCwd, reject: false },
   );
   if (result.exitCode !== 0) return null;
   const path = result.stdout.trim();
