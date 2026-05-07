@@ -3,7 +3,7 @@ import { mkdtempSync, rmSync, mkdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { execa } from 'execa';
-import { hasUncommittedChanges, fetchOrigin, rebaseOnto, resolveWorktreePath } from './index.js';
+import { hasUncommittedChanges, isMidRebase, getHeadSha, resolveWorktreePath } from './index.js';
 
 vi.mock('execa', () => ({ execa: vi.fn() }));
 
@@ -41,48 +41,42 @@ describe('hasUncommittedChanges', () => {
   });
 });
 
-describe('fetchOrigin', () => {
-  it('runs git fetch with the given branch and cwd', async () => {
-    ok();
-    await fetchOrigin('/wt', 'main');
-    expect(mockedExeca).toHaveBeenCalledWith('git', ['fetch', 'origin', 'main'], { cwd: '/wt' });
-  });
-});
-
-describe('rebaseOnto', () => {
+describe('isMidRebase', () => {
   let tmp: string;
 
   beforeEach(() => {
-    tmp = mkdtempSync(join(tmpdir(), 'crew-rebase-'));
+    tmp = mkdtempSync(join(tmpdir(), 'crew-isrebase-'));
   });
 
   afterEach(() => {
     rmSync(tmp, { recursive: true, force: true });
   });
 
-  it('returns ok=true on a clean rebase', async () => {
-    ok();
-    expect(await rebaseOnto(tmp, 'origin/main')).toEqual({ ok: true });
-  });
-
-  it('returns conflict files when the rebase reports a merge state', async () => {
+  it('returns true when .git/rebase-merge exists', async () => {
     mkdirSync(join(tmp, '.git', 'rebase-merge'), { recursive: true });
-    fail('CONFLICT');
     ok('.git/rebase-merge\n');
-    ok('src/foo.ts\nsrc/bar.ts\n');
-
-    expect(await rebaseOnto(tmp, 'origin/main')).toEqual({
-      ok: false,
-      conflicts: ['src/foo.ts', 'src/bar.ts'],
-    });
+    expect(await isMidRebase(tmp)).toBe(true);
   });
 
-  it('throws when the rebase fails for a non-conflict reason', async () => {
-    fail('weird');
+  it('returns true when .git/rebase-apply exists', async () => {
+    mkdirSync(join(tmp, '.git', 'rebase-apply'), { recursive: true });
     ok('.git/rebase-merge\n');
     ok('.git/rebase-apply\n');
+    expect(await isMidRebase(tmp)).toBe(true);
+  });
 
-    await expect(rebaseOnto(tmp, 'origin/main')).rejects.toThrow();
+  it('returns false when neither rebase directory exists', async () => {
+    ok('.git/rebase-merge\n');
+    ok('.git/rebase-apply\n');
+    expect(await isMidRebase(tmp)).toBe(false);
+  });
+});
+
+describe('getHeadSha', () => {
+  it('returns the trimmed HEAD sha', async () => {
+    ok('abc123\n');
+    expect(await getHeadSha('/wt')).toBe('abc123');
+    expect(mockedExeca).toHaveBeenCalledWith('git', ['rev-parse', 'HEAD'], { cwd: '/wt' });
   });
 });
 

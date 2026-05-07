@@ -1,7 +1,38 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
 exports[`buildFixPrPrompt > renders the authored clause when playwright.authored is set 1`] = `
-"Code review feedback on the work you have already pushed for KAN-23.
+"## Step 0: rebase onto \`origin/main\` (do this FIRST, before any feedback work)
+
+Bring \`KAN-23\` up to date before applying review feedback:
+
+\`\`\`
+git fetch origin main
+git rebase origin/main
+\`\`\`
+
+If the rebase is clean (no conflicts, or already up-to-date), continue to the feedback section below — Step 0 was a silent no-op.
+
+If the rebase produces conflicts, follow these rules before going any further:
+
+- Read each conflicting file. Use \`git log\` and \`git show\` if needed to understand both sides' intent. Discover the affected files via \`git status\`.
+- Resolve each conflict preserving both sides' intent where they don't directly contradict.
+- After resolving a file: \`git add <file>\`.
+- When all conflicts in the current rebase step are resolved: \`git rebase --continue\`. Loop until the rebase finishes.
+- Run \`npm run lint\`, \`npm run typecheck\`, \`npm run test:run\` — ALL must pass.
+- If you are not confident in a resolution: \`git rebase --abort\`, document the blocker in \`docs/tickets/KAN-23.md\` "Open questions", and exit WITHOUT applying the review feedback.
+- **If you resolved conflicts during this run, DO NOT push at the end** even if everything passes. The human must inspect the rebase resolution commits before they reach origin. After your feedback fixes are committed and verified, print exactly one line and exit: \`Rebase resolution + feedback ready for inspection — run 'git push --force-with-lease origin KAN-23' once you've reviewed.\`
+
+Hot-reload should pick up the resolved source automatically. If the daemon stack is wedged after you finish resolving, recover from inside the worktree with:
+
+\`\`\`
+docker compose up --build --wait
+\`\`\`
+
+That rebuilds against the now-clean source. **Do not reset the worktree or use any "hard" reset command** — those wipe in-progress work.
+
+---
+
+Code review feedback on the work you have already pushed for KAN-23.
 Source: stdin.
 
 ---
@@ -46,7 +77,7 @@ If \`npm run bruno:smoke\` succeeds, that confirms the daemon is up — but it s
 - Update implementation and tests to address each point.
 - After each meaningful unit of work, \`git add\` and commit with a clear message referencing KAN-23.
 - Run \`npm run lint\`, \`npm run format\`, \`npm run typecheck\`, and \`npm run test:run\` — all must pass before pushing.
-- Push with \`git push --force-with-lease origin KAN-23\` to extend the existing PR. Do NOT open a new PR. Plain \`--force\` is never allowed.
+- Push with \`git push --force-with-lease origin KAN-23\` to extend the existing PR (unless Step 0 produced rebase-resolution commits — see the preamble's "do not push" override). Do NOT open a new PR. Plain \`--force\` is never allowed.
 - If a piece of feedback is wrong or you disagree with it, write your reasoning back instead of blindly applying it.
 - Do NOT resolve review threads on GitHub yourself.
 
@@ -67,7 +98,38 @@ echo "→ no-pr: <one-line reason>"
 `;
 
 exports[`buildFixPrPrompt > renders the bruno-smoke section when brunoSmoke is provided 1`] = `
-"Code review feedback on the work you have already pushed for KAN-23.
+"## Step 0: rebase onto \`origin/main\` (do this FIRST, before any feedback work)
+
+Bring \`KAN-23\` up to date before applying review feedback:
+
+\`\`\`
+git fetch origin main
+git rebase origin/main
+\`\`\`
+
+If the rebase is clean (no conflicts, or already up-to-date), continue to the feedback section below — Step 0 was a silent no-op.
+
+If the rebase produces conflicts, follow these rules before going any further:
+
+- Read each conflicting file. Use \`git log\` and \`git show\` if needed to understand both sides' intent. Discover the affected files via \`git status\`.
+- Resolve each conflict preserving both sides' intent where they don't directly contradict.
+- After resolving a file: \`git add <file>\`.
+- When all conflicts in the current rebase step are resolved: \`git rebase --continue\`. Loop until the rebase finishes.
+- Run \`npm run lint\`, \`npm run typecheck\`, \`npm run test:run\` — ALL must pass.
+- If you are not confident in a resolution: \`git rebase --abort\`, document the blocker in \`docs/tickets/KAN-23.md\` "Open questions", and exit WITHOUT applying the review feedback.
+- **If you resolved conflicts during this run, DO NOT push at the end** even if everything passes. The human must inspect the rebase resolution commits before they reach origin. After your feedback fixes are committed and verified, print exactly one line and exit: \`Rebase resolution + feedback ready for inspection — run 'git push --force-with-lease origin KAN-23' once you've reviewed.\`
+
+Hot-reload should pick up the resolved source automatically. If the daemon stack is wedged after you finish resolving, recover from inside the worktree with:
+
+\`\`\`
+docker compose up --build --wait
+\`\`\`
+
+That rebuilds against the now-clean source. **Do not reset the worktree or use any "hard" reset command** — those wipe in-progress work.
+
+---
+
+Code review feedback on the work you have already pushed for KAN-23.
 Source: GitHub PR comments.
 
 ---
@@ -108,7 +170,7 @@ If \`npm run bruno:smoke\` succeeds, that confirms the daemon is up — but it s
 - Update implementation and tests to address each point.
 - After each meaningful unit of work, \`git add\` and commit with a clear message referencing KAN-23.
 - Run \`npm run lint\`, \`npm run format\`, \`npm run typecheck\`, and \`npm run test:run\` — all must pass before pushing.
-- Push with \`git push --force-with-lease origin KAN-23\` to extend the existing PR. Do NOT open a new PR. Plain \`--force\` is never allowed.
+- Push with \`git push --force-with-lease origin KAN-23\` to extend the existing PR (unless Step 0 produced rebase-resolution commits — see the preamble's "do not push" override). Do NOT open a new PR. Plain \`--force\` is never allowed.
 - If a piece of feedback is wrong or you disagree with it, write your reasoning back instead of blindly applying it.
 - Do NOT resolve review threads on GitHub yourself.
 
@@ -129,7 +191,38 @@ echo "→ no-pr: <one-line reason>"
 `;
 
 exports[`buildFixPrPrompt > renders the playwright block (smoke-only / no authored) 1`] = `
-"Code review feedback on the work you have already pushed for KAN-23.
+"## Step 0: rebase onto \`origin/main\` (do this FIRST, before any feedback work)
+
+Bring \`KAN-23\` up to date before applying review feedback:
+
+\`\`\`
+git fetch origin main
+git rebase origin/main
+\`\`\`
+
+If the rebase is clean (no conflicts, or already up-to-date), continue to the feedback section below — Step 0 was a silent no-op.
+
+If the rebase produces conflicts, follow these rules before going any further:
+
+- Read each conflicting file. Use \`git log\` and \`git show\` if needed to understand both sides' intent. Discover the affected files via \`git status\`.
+- Resolve each conflict preserving both sides' intent where they don't directly contradict.
+- After resolving a file: \`git add <file>\`.
+- When all conflicts in the current rebase step are resolved: \`git rebase --continue\`. Loop until the rebase finishes.
+- Run \`npm run lint\`, \`npm run typecheck\`, \`npm run test:run\` — ALL must pass.
+- If you are not confident in a resolution: \`git rebase --abort\`, document the blocker in \`docs/tickets/KAN-23.md\` "Open questions", and exit WITHOUT applying the review feedback.
+- **If you resolved conflicts during this run, DO NOT push at the end** even if everything passes. The human must inspect the rebase resolution commits before they reach origin. After your feedback fixes are committed and verified, print exactly one line and exit: \`Rebase resolution + feedback ready for inspection — run 'git push --force-with-lease origin KAN-23' once you've reviewed.\`
+
+Hot-reload should pick up the resolved source automatically. If the daemon stack is wedged after you finish resolving, recover from inside the worktree with:
+
+\`\`\`
+docker compose up --build --wait
+\`\`\`
+
+That rebuilds against the now-clean source. **Do not reset the worktree or use any "hard" reset command** — those wipe in-progress work.
+
+---
+
+Code review feedback on the work you have already pushed for KAN-23.
 Source: stdin.
 
 ---
@@ -167,7 +260,7 @@ If \`npm run test:e2e\` (or the project's equivalent) reports missing browsers, 
 - Update implementation and tests to address each point.
 - After each meaningful unit of work, \`git add\` and commit with a clear message referencing KAN-23.
 - Run \`npm run lint\`, \`npm run format\`, \`npm run typecheck\`, and \`npm run test:run\` — all must pass before pushing.
-- Push with \`git push --force-with-lease origin KAN-23\` to extend the existing PR. Do NOT open a new PR. Plain \`--force\` is never allowed.
+- Push with \`git push --force-with-lease origin KAN-23\` to extend the existing PR (unless Step 0 produced rebase-resolution commits — see the preamble's "do not push" override). Do NOT open a new PR. Plain \`--force\` is never allowed.
 - If a piece of feedback is wrong or you disagree with it, write your reasoning back instead of blindly applying it.
 - Do NOT resolve review threads on GitHub yourself.
 

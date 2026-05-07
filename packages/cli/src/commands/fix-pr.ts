@@ -5,12 +5,12 @@ import {
   assemblePrFeedback,
   buildFixPrPrompt,
   discoverProjectConfig,
-  fetchOrigin,
   findLatestSession,
+  getHeadSha,
   getPrForBranch,
   hasUncommittedChanges,
+  isMidRebase,
   NO_FEEDBACK_MARKER,
-  rebaseOnto,
   resolveWorktreePath,
   spawnClaudeResume,
 } from '../lib/index.js';
@@ -127,6 +127,14 @@ function repoPathFromWorktree(worktree: string, key: string): string {
   return worktree.endsWith(suffix) ? worktree.slice(0, -suffix.length) : worktree;
 }
 
+export function formatLeftoverRebaseError(opts: { worktree: string; key: string }): string {
+  return (
+    `${opts.worktree} is mid-rebase from a prior run. Recover with:\n` +
+    `  cd ${opts.worktree} && git rebase --abort\n` +
+    `Then re-run crew fix-pr ${opts.key}.`
+  );
+}
+
 async function runFixPr(key: string, flags: FixPrFlags): Promise<void> {
   const mode = selectMode(flags);
 
@@ -147,6 +155,15 @@ async function runFixPr(key: string, flags: FixPrFlags): Promise<void> {
     );
   }
 
+  // Leftover-rebase guard (CREW-110): detect a worktree stranded mid-rebase by
+  // a prior failed run and fail fast with a tailored recovery message before
+  // touching docker or git status. This branches *before* the uncommitted-
+  // changes check so the user gets recovery guidance instead of the generic
+  // "commit, stash, or discard" path.
+  if (await isMidRebase(worktree)) {
+    throw new Error(formatLeftoverRebaseError({ worktree, key }));
+  }
+
   if (await hasUncommittedChanges(worktree)) {
     throw new Error(
       `${worktree} has uncommitted changes — auto-rebase would be unsafe.\nCommit, stash, or discard first.`,
@@ -157,27 +174,6 @@ async function runFixPr(key: string, flags: FixPrFlags): Promise<void> {
   if (feedback.startsWith(NO_FEEDBACK_MARKER)) {
     process.stderr.write(`${feedback}\n→ Nothing to apply. Exiting.\n`);
     return;
-  }
-
-  process.stderr.write('→ Fetching origin/main and rebasing on top…\n');
-  let conflicts: string[] | undefined;
-  try {
-    await fetchOrigin(worktree, 'main');
-    const result = await rebaseOnto(worktree, 'origin/main');
-    if (!result.ok) {
-      conflicts = result.conflicts;
-      process.stderr.write(
-        `\n→ Rebase produced conflicts. Handing off to the agent for resolution.\n` +
-          `  Affected files:\n` +
-          conflicts.map((f) => `      ${f}`).join('\n') +
-          `\n  The agent will resolve, run verification, and stop SHORT of pushing.\n\n`,
-      );
-    }
-  } catch (err) {
-    throw new Error(
-      `rebase failed for an unexpected reason — worktree left as-is for manual inspection:\n  cd ${worktree}\n  git status`,
-      { cause: err },
-    );
   }
 
   const repoPath = repoPathFromWorktree(worktree, key);
@@ -221,7 +217,6 @@ async function runFixPr(key: string, flags: FixPrFlags): Promise<void> {
     key,
     feedback,
     feedbackSource: source,
-    conflictFiles: conflicts,
     playwright: projectConfig ? playwrightFixPrOptsFor(projectConfig, resolvedAppUrl) : undefined,
     brunoSmoke,
     discoveredSkillsBlock: renderDiscoveredSkillsBlock(discoverSkills({ repoPath })),
@@ -236,6 +231,12 @@ async function runFixPr(key: string, flags: FixPrFlags): Promise<void> {
       `  log:       ${logFile}\n\n` +
       `→ Watching ${session.transcriptPath} (new events only). Ctrl+C to abort.\n\n`,
   );
+
+  // Capture HEAD pre-spawn so the footer can detect whether the agent's
+  // in-prompt rebase produced new commits. The wrapper no longer rebases
+  // up-front, so this comparison is the only signal that an inspection
+  // advisory should be printed.
+  const headBefore = await getHeadSha(worktree);
 
   const sub = spawnClaudeResume({
     sessionId: session.sessionId,
@@ -309,11 +310,13 @@ async function runFixPr(key: string, flags: FixPrFlags): Promise<void> {
     process.off('SIGTERM', onSignal);
   }
 
+  const headAfter = await getHeadSha(worktree);
+
   printFooter({
     key,
     worktree,
     logFile,
-    conflicts,
+    headChanged: headBefore !== headAfter,
     claudeExitCode,
   });
   process.exitCode = signaled ? 130 : claudeExitCode;
@@ -323,11 +326,11 @@ interface PrintFooterOptions {
   key: string;
   worktree: string;
   logFile: string;
-  conflicts: string[] | undefined;
+  headChanged: boolean;
   claudeExitCode: number;
 }
 
-function printFooter(opts: PrintFooterOptions): void {
+export function printFooter(opts: PrintFooterOptions): void {
   const log = existsSync(opts.logFile) ? readFileSync(opts.logFile, 'utf8') : '';
   process.stdout.write(
     `\n─────────────────────────────────────────────────────────────\n` +
@@ -338,19 +341,21 @@ function printFooter(opts: PrintFooterOptions): void {
       '\n',
   );
 
-  if (opts.conflicts && opts.conflicts.length > 0 && opts.claudeExitCode === 0) {
+  if (opts.claudeExitCode !== 0) return;
+
+  if (opts.headChanged) {
     process.stdout.write(
       `\n─────────────────────────────────────────────────────────────\n` +
-        `⚠  Conflicts were resolved during this run — nothing has been pushed.\n` +
-        `   Inspect the resolution before shipping:\n` +
+        `⚠  HEAD moved during this run (rebase or new commits).\n` +
+        `   Inspect locally — and check whether the agent already pushed:\n` +
         `     cd ${opts.worktree}\n` +
-        `     git log --oneline origin/${opts.key}..HEAD     # commits to review\n` +
-        `     git diff origin/${opts.key}..HEAD              # full diff of pending push\n` +
-        `   When you're satisfied:\n` +
+        `     git log --oneline origin/${opts.key}..HEAD     # commits ahead of origin\n` +
+        `     git diff origin/${opts.key}..HEAD              # full diff vs origin\n` +
+        `   If anything is unpushed and looks right:\n` +
         `     git push --force-with-lease origin ${opts.key}\n` +
         `─────────────────────────────────────────────────────────────\n`,
     );
-  } else if (opts.claudeExitCode === 0) {
+  } else {
     process.stdout.write(
       `\n→ Push when ready:\n` + `     git push --force-with-lease origin ${opts.key}\n`,
     );
