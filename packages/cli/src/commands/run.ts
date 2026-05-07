@@ -321,7 +321,10 @@ export async function runRun(key: string, opts: RunOptions): Promise<never> {
   // default (the bug CREW-70 fixed).
   if (playwrightEnabled(config) && config.playwright && smokeEnabled(config)) {
     const resolved = resolveAppUrl(config.playwright.app_url, dockerPorts, envVars);
-    const writeResult = await writeMcpFile(worktree, { appUrl: resolved.raw });
+    const writeResult = await writeMcpFile(worktree, {
+      appUrl: resolved.raw,
+      resolverCwd: config.repo_path,
+    });
     console.log(pc.dim(`→ wrote ${join(worktree, '.mcp.json')} (CREW_APP_URL=${resolved.raw})`));
     if (writeResult.chromiumPath) {
       console.log(pc.dim(`    chromium: ${writeResult.chromiumPath}`));
