@@ -12,10 +12,8 @@ Format: see the user-level `~/.claude/CLAUDE.md` "Followup detection" section.
   - [2026-05-05 — Dashboard silently drops agents whose project isn't in `/api/projects`](#2026-05-05--dashboard-silently-drops-agents-whose-project-isnt-in-apiprojects)
   - [2026-05-05 — Dashboard e2e tests expect mock-client project names that don't match the daemon fixtures](#2026-05-05--dashboard-e2e-tests-expect-mock-client-project-names-that-dont-match-the-daemon-fixtures)
   - [2026-05-05 — Worktree env-injection of `CREW_SEED_FIXTURES=1` not wired](#2026-05-05--worktree-env-injection-of-crew_seed_fixtures1-not-wired)
-  - [2026-05-05 — Dashboard Dockerfile doesn't copy `tsconfig.base.json`, breaks vite at runtime with TSCONFIG_ERROR](#2026-05-05--dashboard-dockerfile-doesnt-copy-tsconfigbasejson-breaks-vite-at-runtime-with-tsconfig_error)
   - [2026-05-05 — Daemon container's `~/.claude/projects` mount is broader than crew's transcript ingest needs](#2026-05-05--daemon-containers-claudeprojects-mount-is-broader-than-crews-transcript-ingest-needs)
   - [2026-05-04 — Generalize the hardcoded `db-clone-from-main.sh` post-bringup hook into a configurable TOML-registered startup script](#2026-05-04--generalize-the-hardcoded-db-clone-from-mainsh-post-bringup-hook-into-a-configurable-toml-registered-startup-script)
-  - [2026-05-04 — Crew sandbox/preflight self-opt-in (slot into first dashboard plan that adds e2e coverage)](#2026-05-04--crew-sandboxpreflight-self-opt-in-slot-into-first-dashboard-plan-that-adds-e2e-coverage)
   - [2026-05-03 — `crew run` post-stream "waiting up to 120s for docker bringup" log is misleading after CREW-83](#2026-05-03--crew-run-post-stream-waiting-up-to-120s-for-docker-bringup-log-is-misleading-after-crew-83)
   - [2026-05-03 — `chokidar` dep added to daemon but no code imports it](#2026-05-03--chokidar-dep-added-to-daemon-but-no-code-imports-it)
   - [2026-05-03 — `crew run` swallows background-task failures into `/tmp` logs](#2026-05-03--crew-run-swallows-background-task-failures-into-tmp-logs)
@@ -47,6 +45,8 @@ Format: see the user-level `~/.claude/CLAUDE.md` "Followup detection" section.
   - [2026-04-27 — Dashboard mobile responsive layout polish](#2026-04-27--dashboard-mobile-responsive-layout-polish)
   - [2026-04-26 — Architecture doc open questions still unresolved](#2026-04-26--architecture-doc-open-questions-still-unresolved)
 - [Resolved](#resolved)
+  - [2026-05-05 — Dashboard Dockerfile doesn't copy `tsconfig.base.json`, breaks vite at runtime with TSCONFIG_ERROR](#2026-05-05--dashboard-dockerfile-doesnt-copy-tsconfigbasejson-breaks-vite-at-runtime-with-tsconfig_error)
+  - [2026-05-04 — Crew sandbox/preflight self-opt-in (slot into first dashboard plan that adds e2e coverage)](#2026-05-04--crew-sandboxpreflight-self-opt-in-slot-into-first-dashboard-plan-that-adds-e2e-coverage)
   - [2026-05-03 — `@playwright/mcp` ignores crew's `--executable-path` override](#2026-05-03--playwrightmcp-ignores-crews---executable-path-override)
   - [2026-05-03 — `crew resume` / `crew fix-pr` env-spec parity for `${VAR}` syntax](#2026-05-03--crew-resume--crew-fix-pr-env-spec-parity-for-var-syntax)
 - [Abandoned](#abandoned)
@@ -177,18 +177,6 @@ The "synthetic Unregistered section" feels right — it's a single render path, 
 - Should canonical worktrees also be able to opt into seeding (e.g. for screenshot/demo runs)? If yes, the gate isn't "non-canonical" but "explicit override" — a knob the user can flip. If no, "non-canonical worktree → seed=1" is sufficient.
 - Does the materializer have a notion of "current worktree is the canonical one" available at materialize time? `[docker].canonical_worktree` in the project config has the answer; the materializer would need to consult it.
 
-### 2026-05-05 — Dashboard Dockerfile doesn't copy `tsconfig.base.json`, breaks vite at runtime with TSCONFIG_ERROR
-
-**What:** `packages/dashboard/Dockerfile` copies only `packages/dashboard/` into the image, but `packages/dashboard/tsconfig.json` extends `../../tsconfig.base.json` from the repo root. Inside the container at `/app/packages/dashboard/`, the parent `tsconfig.base.json` is missing, so vite-oxc fails on every request with `[TSCONFIG_ERROR] Failed to load tsconfig for 'src/main.tsx': Tsconfig not found` and renders only the vite error overlay. End-to-end visible: dashboard at the host port (canonical 5173 or worktree-hashed) shows the overlay, no app HTML, all e2e tests fail with "element not found."
-
-**Why noticed:** Surfaced during CREW-91 verification (Playwright env-aware baseURL). With `CREW_APP_URL=http://localhost:18228 npm run test:e2e` the env routing successfully reached the worktree dashboard, but every test failed because the page was just the vite overlay. Same failure mode hitting the canonical port. The playwright config change itself is correct; the dashboard container is the breaking change.
-
-**Anchors:** `packages/dashboard/Dockerfile`, `packages/dashboard/tsconfig.json` (the `extends: "../../tsconfig.base.json"` line), `tsconfig.base.json` at repo root, CREW-88 (the dashboard-Dockerfile ticket that introduced the image).
-
-**What's been considered:** Add `COPY tsconfig.base.json ./` (or copy the whole repo root tsconfig graph) before `COPY packages/dashboard ./packages/dashboard`. Mirrors how the daemon Dockerfile handles shared root files. Likely a one-line Dockerfile fix.
-
-**Shape of work:** Small — one Dockerfile edit + a rebuild verification (`docker compose --profile dev up -d --build --wait`, then `npm run test:e2e`).
-
 ### 2026-05-05 — Daemon container's `~/.claude/projects` mount is broader than crew's transcript ingest needs
 
 **What:** `docker-compose.yml` mounts `${HOME}/.claude/projects:/root/.claude/projects:ro` so the daemon's IngestService can tail real-agent JSONL transcripts. The mount is read-only, but it covers _every_ project's transcripts plus MCP server settings/oauth tokens and memory files for all of the user's projects — not just crew. A daemon vulnerability (or a future feature that surfaces transcript content) could read material that has nothing to do with crew.
@@ -229,97 +217,6 @@ The "synthetic Unregistered section" feels right — it's a single render path, 
 
 - Field name. `post_bringup_command` (action-oriented), `bringup_hook` (entrypoint-style), `startup_script` (path-oriented)? Lean: `post_bringup_command` since the hook fires _after_ `compose up --wait` succeeds, before the optional `compose stop`.
 - Should the TOML field accept inline shell, or only a path-to-script? Inline is more flexible (`post_bringup_command = "npm run seed"`), path-only is more auditable. Lean: accept either — if it starts with `./` or contains `/`, treat as a path; otherwise treat as a shell command.
-
-### 2026-05-04 — Crew sandbox/preflight self-opt-in (slot into first dashboard plan that adds e2e coverage)
-
-**What:** Opt the crew project into the preflight machinery CREW-82 introduced (`<repo>/.claude/settings.json` with sandbox baseline + `excludedCommands`, `[playwright]` / `[bruno_smoke]` enabled in `~/.config/crew/projects/crew.toml`, and a root-level `test:e2e` npm script that delegates to the dashboard workspace). Today crew dispatches itself via `crew run CREW-*` against a TOML that has neither `[playwright]` nor `[bruno_smoke]` enabled, so the preflight no-ops and crew agents run with no committed sandbox baseline (allowed-domains, allowWrite paths, etc.). Once the dashboard e2e suite has enough coverage that gating on it carries weight, flipping the opt-in turns crew into its own dogfood for the preflight + sandbox machinery and starts exercising dashboard tests on every CREW-\* dispatch.
-
-**Why noticed:** 2026-05-04 conversation about CREW-82 (agent dispatch preflight) — surfaced that crew has every prerequisite in place (`packages/dashboard/playwright.config.ts` + a `tests/e2e/dashboard.spec.ts` exists per CREW-22, the bruno collection exists with a smoke flow) but `[playwright].authored` isn't enabled in the project TOML, so none of it is wired in. Decision was to defer the opt-in rather than land it ahead of value: dashboard e2e is one spec today, and turning on the gate now would just add ceremony without catching real regressions. The deliberate plan is to pair the opt-in with the first dashboard plan that adds enough e2e coverage to make the gate meaningful — explicit ask was that this lands at the **beginning** of that plan, so all subsequent dashboard tests get exercised by the preflight from day one rather than retrofitted later.
-
-**Anchors:**
-
-- `packages/dashboard/playwright.config.ts` — already configured with `webServer` block (auto-starts vite at `http://localhost:5173`), one spec at `packages/dashboard/tests/e2e/dashboard.spec.ts`.
-- `packages/dashboard/package.json` — has `test:e2e: playwright test` script. Root `package.json` does **not** delegate yet.
-- `~/.config/crew/projects/crew.toml` — minimal today (only `[jira]` + `[github]`); needs the `[playwright]` / `[playwright.smoke]` / `[playwright.authored]` / `[bruno_smoke]` blocks added.
-- `~/.config/crew/projects/recipes.toml` — reference config showing the full opt-in shape (with `[docker]` — crew's version drops that since there's no compose stack and uses `[playwright].start_command` instead).
-- `bruno/bruno.json` + `bruno/endpoints/health/get.bru` + `bruno/flows/main-smoke.bru` + root `bruno:smoke` script — already in place; daemon defaults to `CREW_PORT=7773`.
-- CREW-22 (Done) — set up `@playwright/test` in dashboard package; the prereq this followup builds on.
-- CREW-82 / CREW-83 / CREW-84 / CREW-85 — the preflight Epic + child tickets that introduced the machinery being opted into.
-
-**What's been considered:** Full config drafted in the 2026-05-04 conversation, ready to paste when triggered.
-
-`<repo>/package.json` — add to `scripts`:
-
-```json
-"test:e2e": "npm run test:e2e --workspace=crew-dashboard"
-```
-
-`<repo>/.claude/settings.json` (new file):
-
-```json
-{
-  "sandbox": {
-    "enabled": true,
-    "allowUnsandboxedCommands": false,
-    "excludedCommands": ["npm run bruno:smoke", "npm run test:e2e"],
-    "filesystem": {
-      "allowWrite": ["~/.npm", "~/.cache/node", "~/.cache/claude-cli", "~/.cache/claude", "/tmp"]
-    },
-    "network": {
-      "allowedDomains": [
-        "github.com",
-        "api.github.com",
-        "objects.githubusercontent.com",
-        "codeload.github.com",
-        "registry.npmjs.org",
-        "registry.yarnpkg.com",
-        "safturento.atlassian.net",
-        "api.atlassian.com",
-        "mcp.atlassian.com",
-        "auth.atlassian.com",
-        "api.anthropic.com",
-        "statsig.anthropic.com",
-        "claude.ai"
-      ]
-    }
-  }
-}
-```
-
-`~/.config/crew/projects/crew.toml` — add (no `[docker]` block; crew has no compose stack):
-
-```toml
-[playwright]
-app_url = "http://localhost:5173"
-start_command = "npm run dev --workspace=crew-dashboard"
-
-[playwright.smoke]
-enabled = true
-
-[playwright.authored]
-enabled = true
-tests_dir = "packages/dashboard/tests/e2e"
-test_command = "npm run test:e2e"
-
-[bruno_smoke]
-enabled = true
-base_url = "http://localhost:7773"
-collection_dir = "bruno"
-```
-
-Effect once both PRs (CREW-84 + CREW-85) are merged AND this opt-in lands:
-
-- Check 1 (URL probe) **skips entirely** — no `[docker]`, and `[playwright].start_command` is set → agent owns app lifecycle.
-- Check 2 (`excludedCommands` verifier) **runs** — asserts both `npm run bruno:smoke` and `npm run test:e2e` are listed.
-- Check 3 (sandbox-network-note) **renders** in the agent prompt with `http://localhost:5173` + the ticket key substituted.
-
-**Shape of work:** ~30 min mechanical, single PR. The plan it slots into is whichever dashboard plan first adds substantive e2e coverage. Suggested ordering inside that plan: a "wire crew into its own preflight" ticket as task 1 (commits the three files above), then the dashboard-feature tickets that grow `tests/e2e/`. That way every test added in the rest of the plan is exercised by `crew run CREW-*` dispatches the moment it lands.
-
-**Open questions:**
-
-- Set `[playwright].authored.verify_after_run = true` for crew? It would make crew re-run the e2e suite externally after agent handoff (host-side, with fix-pr loopback if it fails). Recipes uses `false`. For crew, the dashboard suite is small and fast — `true` would add extra reliability for self-dispatched tickets without much wall-clock cost. Decide at trigger time based on how flaky-prone the suite has become.
-- Daemon must be running for `npm run bruno:smoke` to pass. That's already the case for any `crew run` (the dispatcher hits the daemon), but if a CI integration ever runs crew dispatches headless, the bruno smoke needs the daemon up — worth flagging in the plan that adds this.
-- Bruno smoke against a shared host-port-7773 daemon means concurrent `crew run` agents share state. No worktree-port-hashing analog (no docker). Probably fine since crew dispatches are usually serialized, but if this ever becomes a parallelism issue it's a separate followup.
 
 ### 2026-05-03 — `crew run` post-stream "waiting up to 120s for docker bringup" log is misleading after CREW-83
 
@@ -804,6 +701,8 @@ The two halves can ship as one subcommand (single pane of glass) rather than spl
 
 ### 2026-04-29 — Slice 1c agents continuation work
 
+**Ticket:** [CREW-94](https://safturento.atlassian.net/browse/CREW-94) (Epic) — resolution gated on Epic completion per the user-level CLAUDE.md "Epic exception" convention. This followup and the dashboard agent detail drawer entry below both fold into this Epic.
+
 **What:** Slice 1b (CREW-47) deliberately punted seven concerns into a future "slice 1c" that has not been Epic'd yet:
 
 1. **SSE / `GET /events`** — push-based dashboard updates. Polling via TanStack Query covers slice 1b.
@@ -899,6 +798,8 @@ Don't open this epic until slice 1b (CREW-47) closes.
 
 ### 2026-04-28 — Dashboard agent detail drawer + full-page route
 
+**Ticket:** [CREW-94](https://safturento.atlassian.net/browse/CREW-94) (Epic) — folded into the Slice 1c Epic alongside the agents-continuation followup above. In hindsight these could have been two Epics, but they share enough scope that one Epic covers both. Resolution gated on Epic completion per the user-level CLAUDE.md "Epic exception" convention.
+
 **What:** The `AgentDetailPlaceholder` component currently renders "The agent detail drawer ships in a follow-up plan." That follow-up plan does not exist yet. The drawer is the dashboard's primary drill-down surface (per UI design spec §5) — without it, `/agents/:key` is a dead end. The full-page variant (`/agent/:key/full`) is also unbuilt.
 
 **Why noticed:** [PR #20](https://github.com/Safturento/crew/pull/20) (CREW-17) called the drawer "future epic" in non-goals. The dashboard foundation plan (`docs/superpowers/plans/2026-04-26-dashboard-foundation-and-agents-list.md`) explicitly listed it under "Out of scope (will be subsequent plans)." No subsequent plan filed yet.
@@ -984,6 +885,37 @@ The other two open questions (sandbox config drift, Phase 2 + Phase 3 separation
 ## Resolved
 
 (items move here when ticketed and shipped, or fixed inline — keep for historical context, prune when the file gets long)
+
+### 2026-05-05 — Dashboard Dockerfile doesn't copy `tsconfig.base.json`, breaks vite at runtime with TSCONFIG_ERROR
+
+**Resolved 2026-05-07:** Shipped via [PR #111](https://github.com/Safturento/crew/pull/111) (commit `adf26c9`). Both `packages/daemon/Dockerfile` and `packages/dashboard/Dockerfile` now `COPY package.json package-lock.json tsconfig.base.json ./` before copying their workspace, mirroring the shared-root pattern. No Jira ticket — chore-style fix. Move to Resolved was a catch-up edit on 2026-05-07, not atomic with the implementing PR (predates the "Ticketing a followup" convention).
+
+**What:** `packages/dashboard/Dockerfile` copies only `packages/dashboard/` into the image, but `packages/dashboard/tsconfig.json` extends `../../tsconfig.base.json` from the repo root. Inside the container at `/app/packages/dashboard/`, the parent `tsconfig.base.json` is missing, so vite-oxc fails on every request with `[TSCONFIG_ERROR] Failed to load tsconfig for 'src/main.tsx': Tsconfig not found` and renders only the vite error overlay. End-to-end visible: dashboard at the host port (canonical 5173 or worktree-hashed) shows the overlay, no app HTML, all e2e tests fail with "element not found."
+
+**Why noticed:** Surfaced during CREW-91 verification (Playwright env-aware baseURL). With `CREW_APP_URL=http://localhost:18228 npm run test:e2e` the env routing successfully reached the worktree dashboard, but every test failed because the page was just the vite overlay. Same failure mode hitting the canonical port. The playwright config change itself is correct; the dashboard container is the breaking change.
+
+**Anchors:** `packages/dashboard/Dockerfile`, `packages/dashboard/tsconfig.json` (the `extends: "../../tsconfig.base.json"` line), `tsconfig.base.json` at repo root, CREW-88 (the dashboard-Dockerfile ticket that introduced the image).
+
+**What's been considered:** Add `COPY tsconfig.base.json ./` (or copy the whole repo root tsconfig graph) before `COPY packages/dashboard ./packages/dashboard`. Mirrors how the daemon Dockerfile handles shared root files. Likely a one-line Dockerfile fix.
+
+**Shape of work:** Small — one Dockerfile edit + a rebuild verification (`docker compose --profile dev up -d --build --wait`, then `npm run test:e2e`).
+
+### 2026-05-04 — Crew sandbox/preflight self-opt-in (slot into first dashboard plan that adds e2e coverage)
+
+**Resolved 2026-05-07:** Shipped via [CREW-89](https://safturento.atlassian.net/browse/CREW-89) (commit `a3e6a65`, [PR #106](https://github.com/Safturento/crew/pull/106)). All four asks landed: `<repo>/.claude/settings.json` exists with `excludedCommands` listing `npm run bruno:smoke` + `npm run test:e2e` and the sandbox baseline; `[playwright]` / `[playwright.smoke]` / `[playwright.authored]` / `[bruno_smoke]` blocks are present in `~/.config/crew/projects/crew.toml`; root-level `test:e2e` npm script delegates to the dashboard workspace; bruno collection in place. Slotted into the dockerization Epic rather than a dashboard-coverage plan as the followup originally proposed — needed on the dockerization path anyway. Move to Resolved was a catch-up edit on 2026-05-07, not atomic with the implementing PR (predates the "Ticketing a followup" convention).
+
+**What:** Opt the crew project into the preflight machinery CREW-82 introduced (`<repo>/.claude/settings.json` with sandbox baseline + `excludedCommands`, `[playwright]` / `[bruno_smoke]` enabled in `~/.config/crew/projects/crew.toml`, and a root-level `test:e2e` npm script that delegates to the dashboard workspace). Today crew dispatches itself via `crew run CREW-*` against a TOML that has neither `[playwright]` nor `[bruno_smoke]` enabled, so the preflight no-ops and crew agents run with no committed sandbox baseline (allowed-domains, allowWrite paths, etc.). Once the dashboard e2e suite has enough coverage that gating on it carries weight, flipping the opt-in turns crew into its own dogfood for the preflight + sandbox machinery and starts exercising dashboard tests on every CREW-\* dispatch.
+
+**Why noticed:** 2026-05-04 conversation about CREW-82 (agent dispatch preflight) — surfaced that crew has every prerequisite in place (`packages/dashboard/playwright.config.ts` + a `tests/e2e/dashboard.spec.ts` exists per CREW-22, the bruno collection exists with a smoke flow) but `[playwright].authored` isn't enabled in the project TOML, so none of it is wired in. Decision was to defer the opt-in rather than land it ahead of value: dashboard e2e is one spec today, and turning on the gate now would just add ceremony without catching real regressions. The deliberate plan was to pair the opt-in with the first dashboard plan that adds enough e2e coverage to make the gate meaningful — that path was overtaken by the dockerization Epic, which needed the preflight wiring on its critical path.
+
+**Anchors:**
+
+- `<repo>/.claude/settings.json` — created by CREW-89.
+- `~/.config/crew/projects/crew.toml` — has `[playwright]` / `[playwright.smoke]` / `[playwright.authored]` / `[bruno_smoke]` blocks.
+- `<repo>/package.json` `scripts.test:e2e` — delegates to crew-dashboard workspace.
+- CREW-22 (Done) — set up `@playwright/test` in dashboard package.
+- CREW-82 / CREW-83 / CREW-84 / CREW-85 — the preflight Epic + child tickets that introduced the machinery being opted into.
+- CREW-89 — the ticket that ultimately did the opt-in.
 
 ### 2026-05-03 — `@playwright/mcp` ignores crew's `--executable-path` override
 
