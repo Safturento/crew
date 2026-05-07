@@ -1,9 +1,5 @@
 import { useEffect } from 'react';
-import {
-  useQuery,
-  useQueryClient,
-  type UseQueryResult,
-} from '@tanstack/react-query';
+import { useQuery, useQueryClient, type UseQueryResult } from '@tanstack/react-query';
 
 import { eventStream } from './eventStream.js';
 import { HttpDaemonClient } from './HttpDaemonClient.js';
@@ -60,9 +56,7 @@ export function useAgent(key: string): UseQueryResult<AgentDetail> {
   });
 }
 
-export function useStateHistory(
-  key: string,
-): UseQueryResult<{ transitions: StateTransition[] }> {
+export function useStateHistory(key: string): UseQueryResult<{ transitions: StateTransition[] }> {
   const qc = useQueryClient();
 
   useEffect(() => {

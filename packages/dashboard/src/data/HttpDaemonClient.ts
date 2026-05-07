@@ -1,13 +1,7 @@
 import { z } from 'zod';
 
 import type { DaemonClient } from './DaemonClient.js';
-import type {
-  Agent,
-  AgentDetail,
-  Project,
-  StateTransition,
-  TranscriptEvent,
-} from './types.js';
+import type { Agent, AgentDetail, Project, StateTransition, TranscriptEvent } from './types.js';
 
 const ProjectsResponseSchema = z.object({
   projects: z.array(

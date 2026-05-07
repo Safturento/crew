@@ -196,9 +196,7 @@ describe('HttpDaemonClient.getTimeline', () => {
     const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
       new Response(
         JSON.stringify({
-          events: [
-            { type: 'assistant', uuid: 'u1', sessionId: 's1', ts: '2026-04-29T12:00:00Z' },
-          ],
+          events: [{ type: 'assistant', uuid: 'u1', sessionId: 's1', ts: '2026-04-29T12:00:00Z' }],
         }),
         { status: 200 },
       ),

@@ -46,8 +46,9 @@ export class CrewEventStream {
       this.handlers.set(event, bucket);
     }
     bucket.add(fn);
+    const own = bucket;
     return () => {
-      bucket!.delete(fn);
+      own.delete(fn);
     };
   }
 
