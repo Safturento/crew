@@ -1,7 +1,9 @@
 import { describe, it, expect } from 'vitest';
+import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { pino, type Logger } from 'pino';
+import { claudeProjectDirFor } from 'crew-shared';
 import { buildApp } from '../app.js';
 import { parseDaemonConfig } from '../config.js';
 import { createDb, runMigrations } from '../db.js';
@@ -214,6 +216,102 @@ describe('GET /api/agents/:key/state-history', () => {
       const res = await app.inject({ method: 'GET', url: '/api/agents/NOPE-99/state-history' });
       expect(res.statusCode).toBe(200);
       expect(res.json()).toEqual({ transitions: [] });
+    } finally {
+      await app.close();
+      await db.destroy();
+    }
+  });
+});
+
+describe('GET /api/agents/:key/timeline', () => {
+  async function seedAgentRun(
+    db: Awaited<ReturnType<typeof setupApp>>['db'],
+    opts: { worktreePath: string; sessionId: string },
+  ) {
+    await db
+      .insertInto('agents')
+      .values({
+        key: 'KAN-1',
+        project_name: 'demo',
+        ticket_title: 'Demo',
+        worktree_path: opts.worktreePath,
+        branch: 'KAN-1',
+        pr_url: null,
+        created_at: '2026-04-29T12:00:00Z',
+      })
+      .execute();
+    await db
+      .insertInto('runs')
+      .values({
+        agent_key: 'KAN-1',
+        command: 'run',
+        session_id: opts.sessionId,
+        started_at: '2026-04-29T12:00:00Z',
+        completed_at: null,
+        exit_code: null,
+      })
+      .execute();
+  }
+
+  it('returns parsed events for a seeded transcript', async () => {
+    const { app, db } = await setupApp();
+    const home = tmp();
+    const prevHome = process.env.HOME;
+    process.env.HOME = home;
+    try {
+      const worktree = '/tmp/Demo-KAN-1';
+      const sessionId = 'session-xyz';
+      await seedAgentRun(db, { worktreePath: worktree, sessionId });
+
+      const projDir = claudeProjectDirFor(worktree, home);
+      mkdirSync(projDir, { recursive: true });
+      writeFileSync(
+        join(projDir, `${sessionId}.jsonl`),
+        [
+          JSON.stringify({ type: 'system', subtype: 'turn_duration', durationMs: 5 }),
+          JSON.stringify({ type: 'pr-link', prNumber: 1, prUrl: 'https://github.com/x/y/pull/1' }),
+        ].join('\n'),
+      );
+
+      const res = await app.inject({ method: 'GET', url: '/api/agents/KAN-1/timeline' });
+      expect(res.statusCode).toBe(200);
+      const body = res.json();
+      expect(body.events).toBeInstanceOf(Array);
+      expect(body.events.length).toBe(2);
+      expect(res.headers['x-crew-warning']).toBeUndefined();
+    } finally {
+      process.env.HOME = prevHome;
+      await app.close();
+      await db.destroy();
+    }
+  });
+
+  it('returns 200 + empty events + warning header when transcript missing', async () => {
+    const { app, db } = await setupApp();
+    const home = tmp();
+    const prevHome = process.env.HOME;
+    process.env.HOME = home;
+    try {
+      await seedAgentRun(db, { worktreePath: '/tmp/Demo-KAN-1', sessionId: 'session-missing' });
+
+      const res = await app.inject({ method: 'GET', url: '/api/agents/KAN-1/timeline' });
+      expect(res.statusCode).toBe(200);
+      expect(res.json()).toEqual({ events: [] });
+      expect(res.headers['x-crew-warning']).toBe('transcript-missing');
+    } finally {
+      process.env.HOME = prevHome;
+      await app.close();
+      await db.destroy();
+    }
+  });
+
+  it('returns 200 + empty events + warning header when no run exists for the key', async () => {
+    const { app, db } = await setupApp();
+    try {
+      const res = await app.inject({ method: 'GET', url: '/api/agents/NOPE-99/timeline' });
+      expect(res.statusCode).toBe(200);
+      expect(res.json()).toEqual({ events: [] });
+      expect(res.headers['x-crew-warning']).toBe('transcript-missing');
     } finally {
       await app.close();
       await db.destroy();
