@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { buildTicketPrompt, buildFixPrPrompt, buildResumePrompt } from './index.js';
+import {
+  buildTicketPrompt,
+  buildFixPrPrompt,
+  buildRebasePreamble,
+  buildResumePrompt,
+} from './index.js';
 import { renderDiscoveredSkillsBlock } from './skills.js';
 
 describe('buildTicketPrompt', () => {
@@ -442,29 +447,28 @@ describe('buildFixPrPrompt', () => {
     expect(prompt).toContain('GitHub PR comments');
   });
 
-  it('omits the conflict preamble when no conflicts are passed', () => {
+  it('always includes the rebase preamble (Step 0 instructions)', () => {
     const prompt = buildFixPrPrompt({
       key: 'KAN-23',
       feedback: '...',
       feedbackSource: 'stdin',
     });
 
-    expect(prompt).not.toContain('mid-rebase');
+    expect(prompt).toContain('Step 0');
+    expect(prompt).toContain('git fetch origin main');
+    expect(prompt).toContain('git rebase origin/main');
     expect(prompt).toContain('git push --force-with-lease');
   });
 
-  it('inserts the conflict preamble when conflictFiles are provided', () => {
+  it('honours a custom baseBranch in the rebase preamble', () => {
     const prompt = buildFixPrPrompt({
       key: 'KAN-23',
       feedback: '...',
       feedbackSource: 'stdin',
-      conflictFiles: ['src/foo.ts', 'src/bar.ts'],
+      baseBranch: 'develop',
     });
-
-    expect(prompt).toContain('mid-rebase');
-    expect(prompt).toContain('src/foo.ts');
-    expect(prompt).toContain('src/bar.ts');
-    expect(prompt).toContain('DO NOT PUSH this run');
+    expect(prompt).toContain('git fetch origin develop');
+    expect(prompt).toContain('git rebase origin/develop');
   });
 
   it('renders the discovered skills block under the curated Skills list', () => {
@@ -731,5 +735,35 @@ describe('buildFixPrPrompt — sandbox-network-note', () => {
       },
     });
     expect(out).toContain('`npm run bruno:smoke` and `npm run test:e2e`');
+  });
+});
+
+describe('buildRebasePreamble', () => {
+  it('contains the Step 0 fetch + rebase commands and conflict-resolution rules', () => {
+    const out = buildRebasePreamble({ key: 'CREW-110', baseBranch: 'main' });
+    expect(out).toContain('git fetch origin main');
+    expect(out).toContain('git rebase origin/main');
+    expect(out).toMatch(/conflict/i);
+    expect(out).toContain('git rebase --continue');
+    expect(out).toContain('git rebase --abort');
+  });
+
+  it('mentions the docker compose --build --wait escape hatch and not crew restart --hard', () => {
+    const out = buildRebasePreamble({ key: 'CREW-110', baseBranch: 'main' });
+    expect(out).toContain('docker compose up --build --wait');
+    expect(out).not.toContain('crew restart CREW-110 --hard');
+    expect(out).not.toContain('--hard');
+  });
+
+  it('substitutes the ticket key into the do-not-push override and the docs/tickets path', () => {
+    const out = buildRebasePreamble({ key: 'KAN-42', baseBranch: 'main' });
+    expect(out).toContain('docs/tickets/KAN-42.md');
+    expect(out).toContain('git push --force-with-lease origin KAN-42');
+  });
+
+  it('honours a non-default base branch', () => {
+    const out = buildRebasePreamble({ key: 'CREW-110', baseBranch: 'develop' });
+    expect(out).toContain('git fetch origin develop');
+    expect(out).toContain('git rebase origin/develop');
   });
 });

@@ -21,34 +21,12 @@ export async function hasUncommittedChanges(cwd: string): Promise<boolean> {
 }
 
 /**
- * `git fetch origin <branch>` in the worktree. Throws on non-zero exit.
+ * Returns true if the worktree is mid-rebase — i.e. a prior `git rebase`
+ * stopped on conflicts or was interrupted, leaving `.git/rebase-merge` or
+ * `.git/rebase-apply` behind. Used by callers that want to fail fast with
+ * recovery guidance before doing any other work.
  */
-export async function fetchOrigin(cwd: string, branch: string): Promise<void> {
-  await execa('git', ['fetch', 'origin', branch], { cwd });
-}
-
-export type RebaseResult = { ok: true } | { ok: false; conflicts: string[] };
-
-/**
- * Rebase the current branch onto `ref`. Returns `{ok: true}` on a clean
- * rebase, or `{ok: false, conflicts: [...]}` when git is left in a rebase
- * state with conflicts. Throws on any other failure (so the caller can
- * surface the unexpected error and leave the worktree as-is).
- */
-export async function rebaseOnto(cwd: string, ref: string): Promise<RebaseResult> {
-  try {
-    await execa('git', ['rebase', ref], { cwd });
-    return { ok: true };
-  } catch (rebaseErr) {
-    if (await isMidRebase(cwd)) {
-      const conflicts = await listConflictFiles(cwd);
-      return { ok: false, conflicts };
-    }
-    throw rebaseErr;
-  }
-}
-
-async function isMidRebase(cwd: string): Promise<boolean> {
+export async function isMidRebase(cwd: string): Promise<boolean> {
   for (const variant of ['rebase-merge', 'rebase-apply']) {
     const { stdout: relPath } = await execa('git', ['rev-parse', '--git-path', variant], { cwd });
     const trimmed = relPath.trim();
@@ -58,12 +36,12 @@ async function isMidRebase(cwd: string): Promise<boolean> {
   return false;
 }
 
-async function listConflictFiles(cwd: string): Promise<string[]> {
-  const { stdout } = await execa('git', ['diff', '--name-only', '--diff-filter=U'], { cwd });
-  return stdout
-    .split('\n')
-    .map((s) => s.trim())
-    .filter(Boolean);
+/**
+ * Returns the SHA of HEAD in the worktree.
+ */
+export async function getHeadSha(cwd: string): Promise<string> {
+  const { stdout } = await execa('git', ['rev-parse', 'HEAD'], { cwd });
+  return stdout.trim();
 }
 
 /**
