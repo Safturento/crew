@@ -7,6 +7,7 @@ Format: see the user-level `~/.claude/CLAUDE.md` "Followup detection" section.
 ## Contents
 
 - [Active](#active)
+  - [2026-05-07 — `sandbox-network-note.md` recommends `crew restart --hard` for docker recovery, but `--hard` nukes the worktree](#2026-05-07--sandbox-network-notemd-recommends-crew-restart---hard-for-docker-recovery-but---hard-nukes-the-worktree)
   - [2026-05-05 — Per-ticket model selection (use Sonnet for trivial work to save tokens)](#2026-05-05--per-ticket-model-selection-use-sonnet-for-trivial-work-to-save-tokens)
   - [2026-05-05 — Dashboard silently drops agents whose project isn't in `/api/projects`](#2026-05-05--dashboard-silently-drops-agents-whose-project-isnt-in-apiprojects)
   - [2026-05-05 — Dashboard e2e tests expect mock-client project names that don't match the daemon fixtures](#2026-05-05--dashboard-e2e-tests-expect-mock-client-project-names-that-dont-match-the-daemon-fixtures)
@@ -51,6 +52,25 @@ Format: see the user-level `~/.claude/CLAUDE.md` "Followup detection" section.
 - [Abandoned](#abandoned)
 
 ## Active
+
+### 2026-05-07 — `sandbox-network-note.md` recommends `crew restart --hard` for docker recovery, but `--hard` nukes the worktree
+
+**What:** The Playwright sandbox-network-note in the dispatched agent's prompt tells the agent: "If `npm run test:e2e` fails with `ECONNREFUSED`… consider `crew restart {{key}} --hard`." But `crew restart --hard` calls `runReset({hard: true})` which removes the worktree + branch (full clean slate via `crew run`). That's wildly destructive for the situation the note describes — it'll wipe in-progress agent work to recover from a transient docker bringup hiccup. The right escape hatch is `docker compose up --build --wait` from the worktree.
+
+**Why noticed:** Surfaced during the CREW-110 (move-rebase-into-agent) Mumen design discussion on 2026-05-07. While picking the right docker-recovery instruction for the new rebase-preamble, we cross-checked what `--hard` actually does and realized the existing note has been quietly recommending a destructive operation.
+
+**Anchors:**
+
+- `packages/cli/src/lib/prompts/templates/sandbox-network-note.md` — the misleading line
+- `packages/cli/src/lib/prompts/__snapshots__/builders.test.ts.snap` — same string baked into the snapshots
+- `packages/cli/src/commands/restart.ts` and `packages/cli/src/commands/reset.ts` — confirm `--hard` removes worktree + branch
+- The new `rebase-preamble.md` from CREW-110 will already prefer `docker compose up --build --wait`; this is the same fix in the sibling template
+
+**What's been considered:** Two reasonable wordings for the replacement: (a) `docker compose up --build --wait` from the worktree, or (b) `docker compose down && docker compose up --build --wait`. (a) is sufficient when the stack is just unhealthy (compose handles diff); (b) is needed if there's actual container corruption. Lean (a) — it's what fixes 99% of cases and the agent can escalate to (b) on its own.
+
+**Shape of work:** Trivial template + snapshot update. One commit.
+
+**Open questions:** None.
 
 ### 2026-05-05 — Per-ticket model selection (use Sonnet for trivial work to save tokens)
 
