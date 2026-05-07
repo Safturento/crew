@@ -111,6 +111,14 @@ export function materialize(spec: EnvSpec, opts: MaterializeOptions): Materializ
     if (f.env_var) base[f.env_var] = take(f.env_var);
   }
 
+  // Worktree compose stacks need the daemon's seed branch to fire so the
+  // dashboard renders against deterministic fixtures instead of an empty
+  // anonymous-volume DB. Canonical stacks intentionally skip this — their
+  // state is the user's real registered work, not a seeded sample.
+  if (!opts.isCanonical) {
+    base.CREW_SEED_FIXTURES = '1';
+  }
+
   const contexts: Record<string, Record<string, string>> = {};
   for (const [ctxName, overrides] of Object.entries(spec.contexts)) {
     const resolved: Record<string, string> = {};
