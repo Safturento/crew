@@ -16,11 +16,16 @@ export interface BuildFixPrPromptOptions {
   playwright?: PlaywrightFixPrOptions;
   brunoSmoke?: BrunoSmokePromptOptions;
   discoveredSkillsBlock?: string;
+  playwrightEnabled?: boolean;
 }
 
 export function buildFixPrPrompt(opts: BuildFixPrPromptOptions): string {
   const baseBranch = opts.baseBranch ?? 'main';
-  const rebasePreamble = buildRebasePreamble({ key: opts.key, baseBranch });
+  const rebasePreamble = buildRebasePreamble({
+    key: opts.key,
+    baseBranch,
+    playwrightEnabled: opts.playwrightEnabled ?? false,
+  });
   return render('fix-pr', {
     key: opts.key,
     feedback: opts.feedback,

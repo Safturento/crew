@@ -690,6 +690,32 @@ describe('buildResumePrompt — sandbox-network-note', () => {
     });
     expect(out).toContain('`npm run bruno:smoke` and `npm run test:e2e`');
   });
+
+  it('passes playwrightEnabled through to the rebase preamble', () => {
+    const enabled = buildFixPrPrompt({
+      key: 'KAN-23',
+      feedback: '...',
+      feedbackSource: 'stdin',
+      playwrightEnabled: true,
+    });
+    const disabled = buildFixPrPrompt({
+      key: 'KAN-23',
+      feedback: '...',
+      feedbackSource: 'stdin',
+      playwrightEnabled: false,
+    });
+    expect(enabled).toContain('npx playwright install chromium');
+    expect(disabled).not.toContain('npx playwright install chromium');
+  });
+
+  it('omits the playwright install line when playwrightEnabled is undefined', () => {
+    const out = buildFixPrPrompt({
+      key: 'KAN-23',
+      feedback: '...',
+      feedbackSource: 'stdin',
+    });
+    expect(out).not.toContain('npx playwright install chromium');
+  });
 });
 
 describe('buildFixPrPrompt — sandbox-network-note', () => {
