@@ -19,12 +19,7 @@ export default defineConfig({
       use: { ...devices['Desktop Chrome'] },
     },
   ],
-  webServer: {
-    command: 'npm run dev',
-    url: baseURL,
-    reuseExistingServer: !process.env.CI,
-    stdout: 'pipe',
-    stderr: 'pipe',
-    timeout: 120_000,
-  },
+  // Intentionally no webServer block: tests run against the worktree's docker
+  // dashboard stack only. A fallback Vite spawn here was masking real failures
+  // — see docs/superpowers/specs/2026-05-08-agent-shell-e2e-reliability-design.md.
 });
