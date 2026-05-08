@@ -4,13 +4,14 @@ import { ErrorBoundary } from 'react-error-boundary';
 
 import { useAttention } from './attention/useAttention.js';
 import { useFaviconBadge } from './attention/useFaviconBadge.js';
-import { AgentDetailPlaceholder } from './components/AgentDetailPlaceholder.js';
 import { AgentsList } from './components/AgentsList.js';
 import { ErrorFallback } from './components/ErrorFallback.js';
 import { TopNav } from './components/TopNav.js';
 import { ViewportFrame } from './components/ViewportFrame.js';
 import type { DaemonClient } from './data/DaemonClient.js';
 import { HttpDaemonClient } from './data/HttpDaemonClient.js';
+import { AgentDrawer } from './routes/AgentDrawer.js';
+import { AgentFullPage } from './routes/AgentFullPage.js';
 import { navigate, useHashRoute } from './routing/useHashRoute.js';
 
 const defaultClient: DaemonClient = new HttpDaemonClient();
@@ -47,17 +48,18 @@ function AppContent({ client }: { client: DaemonClient }) {
 
   const body = useMemo(() => {
     switch (route.kind) {
-      case 'agent-detail':
-        return <AgentDetailPlaceholder agentKey={route.key} />;
+      case 'agent-full':
+        return <AgentFullPage agentKey={route.key} />;
       case 'projects':
         return <ProjectsPlaceholder />;
+      case 'agent-drawer':
       case 'agents-list':
       default:
         return (
           <AgentsList
             projects={projects}
             agents={agents}
-            onSelectAgent={(key) => navigate(`/agents/${key}`)}
+            onSelectAgent={(key) => navigate(`/agent/${key}`)}
           />
         );
     }
@@ -74,6 +76,7 @@ function AppContent({ client }: { client: DaemonClient }) {
         }}
       />
       <div className="flex-1 overflow-y-auto">{body}</div>
+      {route.kind === 'agent-drawer' && <AgentDrawer agentKey={route.key} />}
     </>
   );
 }

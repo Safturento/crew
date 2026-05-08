@@ -9,8 +9,12 @@ describe('parseRoute', () => {
     expect(parseRoute('#')).toEqual({ kind: 'agents-list' });
   });
 
-  it('parses /agents/:key', () => {
-    expect(parseRoute('#/agents/KAN-31')).toEqual({ kind: 'agent-detail', key: 'KAN-31' });
+  it('parses /agent/:key as the drawer route', () => {
+    expect(parseRoute('#/agent/KAN-31')).toEqual({ kind: 'agent-drawer', key: 'KAN-31' });
+  });
+
+  it('parses /agent/:key/full as the full-page route', () => {
+    expect(parseRoute('#/agent/KAN-31/full')).toEqual({ kind: 'agent-full', key: 'KAN-31' });
   });
 
   it('parses /projects', () => {

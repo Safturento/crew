@@ -12,7 +12,10 @@ interface TopNavProps {
 }
 
 export function TopNav({ route, attentionCount, onClearAttention, onNewRun }: TopNavProps) {
-  const agentsActive = route.kind === 'agents-list' || route.kind === 'agent-detail';
+  const agentsActive =
+    route.kind === 'agents-list' ||
+    route.kind === 'agent-drawer' ||
+    route.kind === 'agent-full';
   const projectsActive = route.kind === 'projects';
 
   return (
