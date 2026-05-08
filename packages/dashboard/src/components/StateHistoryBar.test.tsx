@@ -28,10 +28,7 @@ describe('StateHistoryBar', () => {
     const user = userEvent.setup();
     const onScrollTo = vi.fn();
     render(
-      <StateHistoryBar
-        transitions={[{ from: null, to: 'init', ts: 7 }]}
-        onScrollTo={onScrollTo}
-      />,
+      <StateHistoryBar transitions={[{ from: null, to: 'init', ts: 7 }]} onScrollTo={onScrollTo} />,
     );
     await user.click(screen.getByRole('button'));
     expect(onScrollTo).toHaveBeenCalledWith(7);
@@ -49,9 +46,7 @@ describe('StateHistoryBar', () => {
   });
 
   it('renders nothing visible when there are no transitions', () => {
-    const { container } = render(
-      <StateHistoryBar transitions={[]} onScrollTo={() => {}} />,
-    );
+    const { container } = render(<StateHistoryBar transitions={[]} onScrollTo={() => {}} />);
     expect(container.querySelectorAll('button')).toHaveLength(0);
   });
 });

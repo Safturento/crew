@@ -73,10 +73,7 @@ export function TokenTable({ rows }: TokenTableProps) {
       <tbody>
         {sorted.length === 0 ? (
           <tr>
-            <td
-              colSpan={3}
-              className="px-3 py-6 text-center text-xs italic text-text-3"
-            >
+            <td colSpan={3} className="px-3 py-6 text-center text-xs italic text-text-3">
               No tool calls yet.
             </td>
           </tr>

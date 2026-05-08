@@ -78,7 +78,7 @@ const evt = (i: number): TranscriptEvent =>
     uuid: `uuid-${i}`,
     timestamp: `2026-04-29T12:00:0${i}Z`,
     message: { role: 'assistant', content: [] },
-  } as unknown as TranscriptEvent);
+  }) as unknown as TranscriptEvent;
 
 describe('Timeline', () => {
   beforeEach(() => {

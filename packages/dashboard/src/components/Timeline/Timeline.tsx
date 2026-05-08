@@ -84,10 +84,7 @@ function VirtualEventList({ events }: VirtualEventListProps) {
 
   return (
     <div ref={parentRef} className="min-h-0 flex-1 overflow-y-auto">
-      <div
-        style={{ height: `${virtualizer.getTotalSize()}px` }}
-        className="relative w-full"
-      >
+      <div style={{ height: `${virtualizer.getTotalSize()}px` }} className="relative w-full">
         {items.map((vi) => {
           const event = events[vi.index];
           return (
