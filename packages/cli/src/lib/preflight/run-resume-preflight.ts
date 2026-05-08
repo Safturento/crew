@@ -22,8 +22,7 @@ export interface RunResumePreflightOptions {
  */
 export async function runResumePreflight(opts: RunResumePreflightOptions): Promise<void> {
   const needsCheck =
-    Boolean(opts.config.bruno_smoke?.enabled) ||
-    Boolean(opts.config.playwright?.authored?.enabled);
+    Boolean(opts.config.bruno_smoke?.enabled) || Boolean(opts.config.playwright?.authored?.enabled);
   if (!needsCheck) return;
 
   const check = verifyExcludedCommandsCheck();

@@ -41,14 +41,18 @@ describe('runResumePreflight', () => {
       sandbox: { excludedCommands: ['npm run bruno:smoke'] },
     });
 
-    await expect(runResumePreflight({ config: baseConfig, worktree: dir })).resolves.toBeUndefined();
+    await expect(
+      runResumePreflight({ config: baseConfig, worktree: dir }),
+    ).resolves.toBeUndefined();
     expect(warnSpy).not.toHaveBeenCalled();
   });
 
   it('warns to stderr but does not throw when an entry is missing', async () => {
     dir = makeWorktree({ sandbox: { excludedCommands: [] } });
 
-    await expect(runResumePreflight({ config: baseConfig, worktree: dir })).resolves.toBeUndefined();
+    await expect(
+      runResumePreflight({ config: baseConfig, worktree: dir }),
+    ).resolves.toBeUndefined();
     expect(warnSpy).toHaveBeenCalled();
     const written = warnSpy.mock.calls.map((c: unknown[]) => String(c[0])).join('');
     expect(written).toMatch(/excluded-commands/);
@@ -59,7 +63,9 @@ describe('runResumePreflight', () => {
   it('warns but does not throw when settings.json is missing entirely', async () => {
     dir = makeWorktree(null);
 
-    await expect(runResumePreflight({ config: baseConfig, worktree: dir })).resolves.toBeUndefined();
+    await expect(
+      runResumePreflight({ config: baseConfig, worktree: dir }),
+    ).resolves.toBeUndefined();
     expect(warnSpy).toHaveBeenCalled();
   });
 
@@ -67,7 +73,9 @@ describe('runResumePreflight', () => {
     dir = makeWorktree(null);
     const minimalConfig = { ...baseConfig, bruno_smoke: undefined } as ProjectConfig;
 
-    await expect(runResumePreflight({ config: minimalConfig, worktree: dir })).resolves.toBeUndefined();
+    await expect(
+      runResumePreflight({ config: minimalConfig, worktree: dir }),
+    ).resolves.toBeUndefined();
     expect(warnSpy).not.toHaveBeenCalled();
   });
 });
