@@ -166,10 +166,7 @@ export function eventOneLiner(event: TranscriptEvent): string {
   }
 }
 
-function summarizeMessageEvent(
-  shape: AssistantOrUserShape,
-  role: 'assistant' | 'user',
-): string {
+function summarizeMessageEvent(shape: AssistantOrUserShape, role: 'assistant' | 'user'): string {
   const content = shape.message?.content;
   if (typeof content === 'string') return content;
   if (!Array.isArray(content)) return `[${role}]`;
@@ -217,7 +214,12 @@ function stringifyResultContent(content: unknown): string {
   if (Array.isArray(content)) {
     return content
       .map((c) => {
-        if (c && typeof c === 'object' && 'text' in c && typeof (c as { text?: unknown }).text === 'string') {
+        if (
+          c &&
+          typeof c === 'object' &&
+          'text' in c &&
+          typeof (c as { text?: unknown }).text === 'string'
+        ) {
           return (c as { text: string }).text;
         }
         return '';

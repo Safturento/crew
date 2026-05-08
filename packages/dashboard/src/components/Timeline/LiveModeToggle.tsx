@@ -20,10 +20,7 @@ export function LiveModeToggle({ active, onChange }: LiveModeToggleProps) {
     >
       <span
         aria-hidden
-        className={[
-          'h-1.5 w-1.5 rounded-full',
-          active ? 'bg-emerald-300' : 'bg-text-3',
-        ].join(' ')}
+        className={['h-1.5 w-1.5 rounded-full', active ? 'bg-emerald-300' : 'bg-text-3'].join(' ')}
       />
       Live
     </button>

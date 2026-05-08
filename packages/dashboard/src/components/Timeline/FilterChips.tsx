@@ -14,7 +14,11 @@ export function FilterChips({ visible, onChange }: FilterChipsProps) {
   };
 
   return (
-    <div role="group" aria-label="Filter timeline events" className="flex flex-wrap items-center gap-1.5">
+    <div
+      role="group"
+      aria-label="Filter timeline events"
+      className="flex flex-wrap items-center gap-1.5"
+    >
       {CHIP_GROUPS.map((g) => {
         const isOn = visible.has(g.id);
         return (

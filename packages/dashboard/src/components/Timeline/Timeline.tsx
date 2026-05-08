@@ -26,8 +26,7 @@ interface TimelineProps {
 
 const ESTIMATED_ROW_HEIGHT = 88;
 
-const isLiveByDefault = (state?: AgentState): boolean =>
-  state !== 'finished' && state !== 'error';
+const isLiveByDefault = (state?: AgentState): boolean => state !== 'finished' && state !== 'error';
 
 export function Timeline({ agentKey, agentState }: TimelineProps) {
   const { data, isLoading } = useTimeline(agentKey);

@@ -57,9 +57,7 @@ describe('eventChipGroups', () => {
   });
 
   it('classifies user.tool_result as tool-calls', () => {
-    const event = userWith([
-      { type: 'tool_result', tool_use_id: 't1', content: 'ok' },
-    ]);
+    const event = userWith([{ type: 'tool_result', tool_use_id: 't1', content: 'ok' }]);
     expect([...eventChipGroups(event)]).toEqual(['tool-calls']);
   });
 

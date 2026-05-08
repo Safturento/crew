@@ -158,10 +158,7 @@ describe('Timeline', () => {
     mockUseTimeline.mockReturnValue(
       timelineResult({
         data: {
-          events: [
-            assistantToolUse(1, 'Bash'),
-            assistantToolUse(2, 'Read'),
-          ],
+          events: [assistantToolUse(1, 'Bash'), assistantToolUse(2, 'Read')],
         },
         isSuccess: true,
         status: 'success',
