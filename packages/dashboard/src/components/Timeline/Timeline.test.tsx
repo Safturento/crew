@@ -154,6 +154,25 @@ describe('Timeline', () => {
     expect(screen.getByTestId('timeline-empty')).toBeInTheDocument();
   });
 
+  it('filters events by case-insensitive substring against the one-liner', async () => {
+    mockUseTimeline.mockReturnValue(
+      timelineResult({
+        data: {
+          events: [
+            assistantToolUse(1, 'Bash'),
+            assistantToolUse(2, 'Read'),
+          ],
+        },
+        isSuccess: true,
+        status: 'success',
+      }),
+    );
+    render(<Timeline agentKey="KAN-1" />);
+    expect(screen.getAllByTestId('event-card')).toHaveLength(2);
+    await userEvent.type(screen.getByRole('searchbox'), 'bash');
+    expect(screen.getAllByTestId('event-card')).toHaveLength(1);
+  });
+
   it('hides events whose chip group is toggled off', async () => {
     mockUseTimeline.mockReturnValue(
       timelineResult({

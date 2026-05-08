@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { defaultVisibleSet, eventChipGroups } from './eventClassification.js';
+import { defaultVisibleSet, eventChipGroups, eventOneLiner } from './eventClassification.js';
 import type { TranscriptEvent } from '../../data/types.js';
 
 const stamp = '2026-04-29T12:00:00.000Z';
@@ -127,5 +127,76 @@ describe('eventChipGroups', () => {
       reason: 'unknown_top_level',
     } as unknown as TranscriptEvent;
     expect([...eventChipGroups(event)]).toEqual(['other']);
+  });
+});
+
+describe('eventOneLiner', () => {
+  it('summarizes a Bash tool_use with the tool name + command', () => {
+    const event = assistantWith([
+      { type: 'tool_use', id: 't1', name: 'Bash', input: { command: 'npm test' } },
+    ]);
+    const line = eventOneLiner(event);
+    expect(line).toContain('Bash');
+    expect(line).toContain('npm test');
+  });
+
+  it('returns the assistant text for an assistant.text content block', () => {
+    const event = assistantWith([{ type: 'text', text: 'Looking into the bug.' }]);
+    expect(eventOneLiner(event)).toContain('Looking into the bug.');
+  });
+
+  it('returns the thinking text for an assistant.thinking block', () => {
+    const event = assistantWith([{ type: 'thinking', thinking: 'first I would' }]);
+    expect(eventOneLiner(event)).toContain('first I would');
+  });
+
+  it('joins multiple content blocks with a separator', () => {
+    const event = assistantWith([
+      { type: 'text', text: 'I will run npm test' },
+      { type: 'tool_use', id: 't1', name: 'Bash', input: { command: 'npm test' } },
+    ]);
+    const line = eventOneLiner(event);
+    expect(line).toContain('I will run npm test');
+    expect(line).toContain('Bash');
+  });
+
+  it('returns the user tool_result content for a user.tool_result event', () => {
+    const event = userWith([{ type: 'tool_result', tool_use_id: 't1', content: 'all tests pass' }]);
+    expect(eventOneLiner(event)).toContain('all tests pass');
+  });
+
+  it('returns a bare-string user prompt verbatim', () => {
+    const event = {
+      type: 'user',
+      timestamp: stamp,
+      message: { role: 'user', content: 'fix the build' },
+    } as unknown as TranscriptEvent;
+    expect(eventOneLiner(event)).toContain('fix the build');
+  });
+
+  it('returns [system/<subtype>] for a system event', () => {
+    const event = {
+      type: 'system',
+      subtype: 'turn_duration',
+      timestamp: stamp,
+      durationMs: 100,
+    } as unknown as TranscriptEvent;
+    expect(eventOneLiner(event)).toContain('[system/turn_duration]');
+  });
+
+  it('returns [<attachment.type>] for an attachment event', () => {
+    const event = {
+      type: 'attachment',
+      timestamp: stamp,
+      attachment: { type: 'hook_success', hookName: 'foo' },
+    } as unknown as TranscriptEvent;
+    expect(eventOneLiner(event)).toContain('[hook_success]');
+  });
+
+  it('matches case-insensitively when used as a search predicate', () => {
+    const event = assistantWith([
+      { type: 'tool_use', id: 't1', name: 'Bash', input: { command: 'NPM test' } },
+    ]);
+    expect(eventOneLiner(event).toLowerCase()).toContain('npm');
   });
 });

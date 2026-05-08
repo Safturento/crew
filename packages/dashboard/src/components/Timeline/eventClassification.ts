@@ -45,6 +45,12 @@ const HOOKS_AND_SKILLS_ATTACHMENTS = new Set([
 
 interface ContentBlock {
   type?: string;
+  text?: string;
+  thinking?: string;
+  name?: string;
+  input?: Record<string, unknown>;
+  tool_use_id?: string;
+  content?: unknown;
 }
 
 interface AssistantOrUserShape {
@@ -111,4 +117,129 @@ export function eventChipGroups(event: TranscriptEvent): Set<ChipGroup> {
       groups.add('other');
       return groups;
   }
+}
+
+/**
+ * Returns a one-line summary of an event suitable for substring search
+ * (and, in CREW-L, for the EventCard line-1 renderer). Concatenates
+ * salient strings from each content block / envelope field; never
+ * truncates here — UI consumers can clip per their layout.
+ */
+export function eventOneLiner(event: TranscriptEvent): string {
+  switch (event.type) {
+    case 'assistant':
+    case 'user':
+      return summarizeMessageEvent(event as AssistantOrUserShape, event.type);
+    case 'system': {
+      const subtype = (event as { subtype?: string }).subtype ?? 'unknown';
+      const tail = collectSystemTail(event as Record<string, unknown>);
+      return tail ? `[system/${subtype}] ${tail}` : `[system/${subtype}]`;
+    }
+    case 'attachment': {
+      const att = (event as AttachmentShape).attachment ?? {};
+      const tail = collectAttachmentTail(att);
+      return tail ? `[${att.type ?? 'attachment'}] ${tail}` : `[${att.type ?? 'attachment'}]`;
+    }
+    case 'queue-operation': {
+      const op = (event as { operation?: string }).operation ?? '';
+      const content = (event as { content?: string }).content ?? '';
+      return `[queue/${op}] ${content}`.trim();
+    }
+    case 'pr-link':
+      return `[pr-link] ${(event as { prUrl?: string }).prUrl ?? ''}`;
+    case 'ai-title':
+      return `[ai-title] ${(event as { aiTitle?: string }).aiTitle ?? ''}`;
+    case 'custom-title':
+      return `[custom-title] ${(event as { customTitle?: string }).customTitle ?? ''}`;
+    case 'agent-name':
+      return `[agent-name] ${(event as { agentName?: string }).agentName ?? ''}`;
+    case 'last-prompt':
+      return `[last-prompt] ${(event as { lastPrompt?: string }).lastPrompt ?? ''}`;
+    case 'permission-mode':
+      return `[permission-mode] ${(event as { permissionMode?: string }).permissionMode ?? ''}`;
+    case 'file-history-snapshot':
+      return '[file-history-snapshot]';
+    case 'unknown':
+      return '[unknown]';
+    default:
+      return `[${(event as { type?: string }).type ?? 'event'}]`;
+  }
+}
+
+function summarizeMessageEvent(
+  shape: AssistantOrUserShape,
+  role: 'assistant' | 'user',
+): string {
+  const content = shape.message?.content;
+  if (typeof content === 'string') return content;
+  if (!Array.isArray(content)) return `[${role}]`;
+  const parts: string[] = [];
+  for (const block of content) {
+    parts.push(summarizeContentBlock(block));
+  }
+  return parts.filter(Boolean).join(' · ');
+}
+
+function summarizeContentBlock(block: ContentBlock): string {
+  switch (block.type) {
+    case 'tool_use':
+      return `[${block.name ?? 'tool_use'}] ${formatToolInput(block.input)}`.trim();
+    case 'text':
+      return block.text ?? '';
+    case 'thinking':
+      return block.thinking ?? '';
+    case 'tool_result': {
+      const body = stringifyResultContent(block.content);
+      return body ? `[result] ${body}` : '[result]';
+    }
+    default:
+      return block.type ? `[${block.type}]` : '';
+  }
+}
+
+function formatToolInput(input: Record<string, unknown> | undefined): string {
+  if (!input) return '';
+  // Prefer the most recognizable keys first; otherwise serialize the
+  // first scalar value.
+  for (const key of ['command', 'file_path', 'path', 'pattern', 'query', 'description']) {
+    const value = input[key];
+    if (typeof value === 'string') return value;
+  }
+  for (const value of Object.values(input)) {
+    if (typeof value === 'string') return value;
+    if (typeof value === 'number' || typeof value === 'boolean') return String(value);
+  }
+  return '';
+}
+
+function stringifyResultContent(content: unknown): string {
+  if (typeof content === 'string') return content;
+  if (Array.isArray(content)) {
+    return content
+      .map((c) => {
+        if (c && typeof c === 'object' && 'text' in c && typeof (c as { text?: unknown }).text === 'string') {
+          return (c as { text: string }).text;
+        }
+        return '';
+      })
+      .filter(Boolean)
+      .join(' ');
+  }
+  return '';
+}
+
+function collectSystemTail(record: Record<string, unknown>): string {
+  for (const key of ['content', 'error', 'url']) {
+    const value = record[key];
+    if (typeof value === 'string') return value;
+  }
+  return '';
+}
+
+function collectAttachmentTail(att: Record<string, unknown>): string {
+  for (const key of ['filename', 'prompt', 'content', 'hookName', 'displayPath', 'newDate']) {
+    const value = att[key];
+    if (typeof value === 'string') return value;
+  }
+  return '';
 }

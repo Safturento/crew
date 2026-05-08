@@ -1,11 +1,17 @@
-import { useMemo, useRef, useState } from 'react';
+import { useDeferredValue, useMemo, useRef, useState } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 
 import { useTimeline } from '../../data/queries.js';
 import type { TranscriptEvent } from '../../data/types.js';
 import { EventCard } from './EventCard.js';
 import { FilterChips } from './FilterChips.js';
-import { defaultVisibleSet, eventChipGroups, type ChipGroup } from './eventClassification.js';
+import { SearchBar } from './SearchBar.js';
+import {
+  defaultVisibleSet,
+  eventChipGroups,
+  eventOneLiner,
+  type ChipGroup,
+} from './eventClassification.js';
 
 interface TimelineProps {
   agentKey: string;
@@ -18,12 +24,18 @@ export function Timeline({ agentKey }: TimelineProps) {
   const [visibleGroups, setVisibleGroups] = useState<ReadonlySet<ChipGroup>>(
     () => new Set(defaultVisibleSet),
   );
+  const [searchInput, setSearchInput] = useState('');
+  const deferredSearch = useDeferredValue(searchInput);
 
   const events = data?.events ?? [];
-  const filteredEvents = useMemo(
-    () => events.filter((evt) => intersects(eventChipGroups(evt), visibleGroups)),
-    [events, visibleGroups],
-  );
+  const filteredEvents = useMemo(() => {
+    const needle = deferredSearch.trim().toLowerCase();
+    return events.filter((evt) => {
+      if (!intersects(eventChipGroups(evt), visibleGroups)) return false;
+      if (needle.length === 0) return true;
+      return eventOneLiner(evt).toLowerCase().includes(needle);
+    });
+  }, [events, visibleGroups, deferredSearch]);
 
   if (isLoading) {
     return (
@@ -38,7 +50,12 @@ export function Timeline({ agentKey }: TimelineProps) {
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <TimelineToolbar visibleGroups={visibleGroups} onChange={setVisibleGroups} />
+      <TimelineToolbar
+        visibleGroups={visibleGroups}
+        onVisibleGroupsChange={setVisibleGroups}
+        searchValue={searchInput}
+        onSearchChange={setSearchInput}
+      />
       {events.length === 0 ? (
         <div
           data-testid="timeline-empty"
@@ -55,22 +72,24 @@ export function Timeline({ agentKey }: TimelineProps) {
 
 interface TimelineToolbarProps {
   visibleGroups: ReadonlySet<ChipGroup>;
-  onChange: (next: Set<ChipGroup>) => void;
+  onVisibleGroupsChange: (next: Set<ChipGroup>) => void;
+  searchValue: string;
+  onSearchChange: (next: string) => void;
 }
 
-function TimelineToolbar({ visibleGroups, onChange }: TimelineToolbarProps) {
+function TimelineToolbar({
+  visibleGroups,
+  onVisibleGroupsChange,
+  searchValue,
+  onSearchChange,
+}: TimelineToolbarProps) {
   return (
     <div className="flex items-center gap-2 border-b border-white/10 px-3 py-2 text-xs text-text-3">
-      <FilterChips visible={visibleGroups} onChange={onChange} />
-      <SearchBarSlot />
-      <span className="flex-1" />
+      <FilterChips visible={visibleGroups} onChange={onVisibleGroupsChange} />
+      <SearchBar value={searchValue} onChange={onSearchChange} />
       <LiveModeToggleSlot />
     </div>
   );
-}
-
-function SearchBarSlot() {
-  return <span data-testid="search-bar-slot" className="italic" />;
 }
 
 function LiveModeToggleSlot() {
