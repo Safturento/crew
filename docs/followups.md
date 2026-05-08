@@ -8,7 +8,6 @@ Format: see the user-level `~/.claude/CLAUDE.md` "Followup detection" section.
 
 - [Active](#active)
   - [2026-05-07 — Port allocator detects collisions only at `docker compose up` time, not at allocation time](#2026-05-07--port-allocator-detects-collisions-only-at-docker-compose-up-time-not-at-allocation-time)
-  - [2026-05-07 — `sandbox-network-note.md` recommends `crew restart --hard` for docker recovery, but `--hard` nukes the worktree](#2026-05-07--sandbox-network-notemd-recommends-crew-restart---hard-for-docker-recovery-but---hard-nukes-the-worktree)
   - [2026-05-05 — Per-ticket model selection (use Sonnet for trivial work to save tokens)](#2026-05-05--per-ticket-model-selection-use-sonnet-for-trivial-work-to-save-tokens)
   - [2026-05-05 — Dashboard silently drops agents whose project isn't in `/api/projects`](#2026-05-05--dashboard-silently-drops-agents-whose-project-isnt-in-apiprojects)
   - [2026-05-05 — Daemon container's `~/.claude/projects` mount is broader than crew's transcript ingest needs](#2026-05-05--daemon-containers-claudeprojects-mount-is-broader-than-crews-transcript-ingest-needs)
@@ -44,6 +43,7 @@ Format: see the user-level `~/.claude/CLAUDE.md` "Followup detection" section.
   - [2026-04-27 — Dashboard mobile responsive layout polish](#2026-04-27--dashboard-mobile-responsive-layout-polish)
   - [2026-04-26 — Architecture doc open questions still unresolved](#2026-04-26--architecture-doc-open-questions-still-unresolved)
 - [Resolved](#resolved)
+  - [2026-05-07 — `sandbox-network-note.md` recommends `crew restart --hard` for docker recovery, but `--hard` nukes the worktree](#2026-05-07--sandbox-network-notemd-recommends-crew-restart---hard-for-docker-recovery-but---hard-nukes-the-worktree)
   - [2026-05-05 — Dashboard Dockerfile doesn't copy `tsconfig.base.json`, breaks vite at runtime with TSCONFIG_ERROR](#2026-05-05--dashboard-dockerfile-doesnt-copy-tsconfigbasejson-breaks-vite-at-runtime-with-tsconfig_error)
   - [2026-05-05 — Worktree env-injection of `CREW_SEED_FIXTURES=1` not wired](#2026-05-05--worktree-env-injection-of-crew_seed_fixtures1-not-wired)
   - [2026-05-05 — Dashboard e2e tests expect mock-client project names that don't match the daemon fixtures](#2026-05-05--dashboard-e2e-tests-expect-mock-client-project-names-that-dont-match-the-daemon-fixtures)
@@ -80,25 +80,6 @@ Lean toward the allocate-time probe + deterministic-rehash. The registry adds op
 **Open questions:**
 
 - Should the rehash salt be persisted (so subsequent `crew docker-env` runs reproduce the same port even if the original is briefly free), or recomputed each time? Persistence keeps `.env` stable across re-materializations; recomputation simplifies the algorithm. Probably persist — `.env` regeneration shouldn't churn ports.
-
-### 2026-05-07 — `sandbox-network-note.md` recommends `crew restart --hard` for docker recovery, but `--hard` nukes the worktree
-
-**What:** The Playwright sandbox-network-note in the dispatched agent's prompt tells the agent: "If `npm run test:e2e` fails with `ECONNREFUSED`… consider `crew restart {{key}} --hard`." But `crew restart --hard` calls `runReset({hard: true})` which removes the worktree + branch (full clean slate via `crew run`). That's wildly destructive for the situation the note describes — it'll wipe in-progress agent work to recover from a transient docker bringup hiccup. The right escape hatch is `docker compose up --build --wait` from the worktree.
-
-**Why noticed:** Surfaced during the CREW-110 (move-rebase-into-agent) Mumen design discussion on 2026-05-07. While picking the right docker-recovery instruction for the new rebase-preamble, we cross-checked what `--hard` actually does and realized the existing note has been quietly recommending a destructive operation.
-
-**Anchors:**
-
-- `packages/cli/src/lib/prompts/templates/sandbox-network-note.md` — the misleading line
-- `packages/cli/src/lib/prompts/__snapshots__/builders.test.ts.snap` — same string baked into the snapshots
-- `packages/cli/src/commands/restart.ts` and `packages/cli/src/commands/reset.ts` — confirm `--hard` removes worktree + branch
-- The new `rebase-preamble.md` from CREW-110 will already prefer `docker compose up --build --wait`; this is the same fix in the sibling template
-
-**What's been considered:** Two reasonable wordings for the replacement: (a) `docker compose up --build --wait` from the worktree, or (b) `docker compose down && docker compose up --build --wait`. (a) is sufficient when the stack is just unhealthy (compose handles diff); (b) is needed if there's actual container corruption. Lean (a) — it's what fixes 99% of cases and the agent can escalate to (b) on its own.
-
-**Shape of work:** Trivial template + snapshot update. One commit.
-
-**Open questions:** None.
 
 ### 2026-05-05 — Per-ticket model selection (use Sonnet for trivial work to save tokens)
 
@@ -869,6 +850,27 @@ The other two open questions (sandbox config drift, Phase 2 + Phase 3 separation
 ## Resolved
 
 (items move here when ticketed and shipped, or fixed inline — keep for historical context, prune when the file gets long)
+
+### 2026-05-07 — `sandbox-network-note.md` recommends `crew restart --hard` for docker recovery, but `--hard` nukes the worktree
+
+**Resolved 2026-05-08:** Replaced the destructive `crew restart --hard` recommendation with `docker compose up --build --wait` as part of [CREW-115](https://safturento.atlassian.net/browse/CREW-115) (which also closed three other linked gaps in agent-shell e2e reliability). Snapshot and explicit-text test assertions updated together.
+
+**What:** The Playwright sandbox-network-note in the dispatched agent's prompt tells the agent: "If `npm run test:e2e` fails with `ECONNREFUSED`… consider `crew restart {{key}} --hard`." But `crew restart --hard` calls `runReset({hard: true})` which removes the worktree + branch (full clean slate via `crew run`). That's wildly destructive for the situation the note describes — it'll wipe in-progress agent work to recover from a transient docker bringup hiccup. The right escape hatch is `docker compose up --build --wait` from the worktree.
+
+**Why noticed:** Surfaced during the CREW-110 (move-rebase-into-agent) Mumen design discussion on 2026-05-07. While picking the right docker-recovery instruction for the new rebase-preamble, we cross-checked what `--hard` actually does and realized the existing note has been quietly recommending a destructive operation.
+
+**Anchors:**
+
+- `packages/cli/src/lib/prompts/templates/sandbox-network-note.md` — the misleading line
+- `packages/cli/src/lib/prompts/__snapshots__/builders.test.ts.snap` — same string baked into the snapshots
+- `packages/cli/src/commands/restart.ts` and `packages/cli/src/commands/reset.ts` — confirm `--hard` removes worktree + branch
+- The new `rebase-preamble.md` from CREW-110 will already prefer `docker compose up --build --wait`; this is the same fix in the sibling template
+
+**What's been considered:** Two reasonable wordings for the replacement: (a) `docker compose up --build --wait` from the worktree, or (b) `docker compose down && docker compose up --build --wait`. (a) is sufficient when the stack is just unhealthy (compose handles diff); (b) is needed if there's actual container corruption. Lean (a) — it's what fixes 99% of cases and the agent can escalate to (b) on its own.
+
+**Shape of work:** Trivial template + snapshot update. One commit.
+
+**Open questions:** None.
 
 ### 2026-05-05 — Dashboard Dockerfile doesn't copy `tsconfig.base.json`, breaks vite at runtime with TSCONFIG_ERROR
 

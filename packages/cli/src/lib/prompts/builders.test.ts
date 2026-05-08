@@ -402,7 +402,8 @@ describe('buildTicketPrompt — sandbox-network-note', () => {
     expect(out).toContain('Sandboxed-curl is misleading');
     expect(out).toContain('https://localhost:17253');
     expect(out).toContain('`npm run test:e2e`');
-    expect(out).toContain('crew restart KAN-17 --hard');
+    expect(out).toContain('docker compose up --build --wait');
+    expect(out).not.toContain('crew restart KAN-17 --hard');
   });
 
   it('omits the block when neither playwright nor bruno_smoke is configured', () => {
@@ -656,7 +657,8 @@ describe('buildResumePrompt — sandbox-network-note', () => {
     expect(out).toContain('Sandboxed-curl is misleading');
     expect(out).toContain('https://localhost:17253');
     expect(out).toContain('`npm run test:e2e`');
-    expect(out).toContain('crew restart KAN-17 --hard');
+    expect(out).toContain('docker compose up --build --wait');
+    expect(out).not.toContain('crew restart KAN-17 --hard');
   });
 
   it('omits the block when neither playwright nor bruno_smoke is configured', () => {
@@ -732,7 +734,8 @@ describe('buildFixPrPrompt — sandbox-network-note', () => {
     expect(out).toContain('Sandboxed-curl is misleading');
     expect(out).toContain('https://localhost:17253');
     expect(out).toContain('`npm run test:e2e`');
-    expect(out).toContain('crew restart KAN-17 --hard');
+    expect(out).toContain('docker compose up --build --wait');
+    expect(out).not.toContain('crew restart KAN-17 --hard');
   });
 
   it('omits the block when neither playwright nor bruno_smoke is configured', () => {
