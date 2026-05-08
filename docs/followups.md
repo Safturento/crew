@@ -11,8 +11,6 @@ Format: see the user-level `~/.claude/CLAUDE.md` "Followup detection" section.
   - [2026-05-07 — `sandbox-network-note.md` recommends `crew restart --hard` for docker recovery, but `--hard` nukes the worktree](#2026-05-07--sandbox-network-notemd-recommends-crew-restart---hard-for-docker-recovery-but---hard-nukes-the-worktree)
   - [2026-05-05 — Per-ticket model selection (use Sonnet for trivial work to save tokens)](#2026-05-05--per-ticket-model-selection-use-sonnet-for-trivial-work-to-save-tokens)
   - [2026-05-05 — Dashboard silently drops agents whose project isn't in `/api/projects`](#2026-05-05--dashboard-silently-drops-agents-whose-project-isnt-in-apiprojects)
-  - [2026-05-05 — Dashboard e2e tests expect mock-client project names that don't match the daemon fixtures](#2026-05-05--dashboard-e2e-tests-expect-mock-client-project-names-that-dont-match-the-daemon-fixtures)
-  - [2026-05-05 — Worktree env-injection of `CREW_SEED_FIXTURES=1` not wired](#2026-05-05--worktree-env-injection-of-crew_seed_fixtures1-not-wired)
   - [2026-05-05 — Daemon container's `~/.claude/projects` mount is broader than crew's transcript ingest needs](#2026-05-05--daemon-containers-claudeprojects-mount-is-broader-than-crews-transcript-ingest-needs)
   - [2026-05-04 — Generalize the hardcoded `db-clone-from-main.sh` post-bringup hook into a configurable TOML-registered startup script](#2026-05-04--generalize-the-hardcoded-db-clone-from-mainsh-post-bringup-hook-into-a-configurable-toml-registered-startup-script)
   - [2026-05-03 — `crew run` post-stream "waiting up to 120s for docker bringup" log is misleading after CREW-83](#2026-05-03--crew-run-post-stream-waiting-up-to-120s-for-docker-bringup-log-is-misleading-after-crew-83)
@@ -47,6 +45,8 @@ Format: see the user-level `~/.claude/CLAUDE.md` "Followup detection" section.
   - [2026-04-26 — Architecture doc open questions still unresolved](#2026-04-26--architecture-doc-open-questions-still-unresolved)
 - [Resolved](#resolved)
   - [2026-05-05 — Dashboard Dockerfile doesn't copy `tsconfig.base.json`, breaks vite at runtime with TSCONFIG_ERROR](#2026-05-05--dashboard-dockerfile-doesnt-copy-tsconfigbasejson-breaks-vite-at-runtime-with-tsconfig_error)
+  - [2026-05-05 — Worktree env-injection of `CREW_SEED_FIXTURES=1` not wired](#2026-05-05--worktree-env-injection-of-crew_seed_fixtures1-not-wired)
+  - [2026-05-05 — Dashboard e2e tests expect mock-client project names that don't match the daemon fixtures](#2026-05-05--dashboard-e2e-tests-expect-mock-client-project-names-that-dont-match-the-daemon-fixtures)
   - [2026-05-04 — Crew sandbox/preflight self-opt-in (slot into first dashboard plan that adds e2e coverage)](#2026-05-04--crew-sandboxpreflight-self-opt-in-slot-into-first-dashboard-plan-that-adds-e2e-coverage)
   - [2026-05-03 — `@playwright/mcp` ignores crew's `--executable-path` override](#2026-05-03--playwrightmcp-ignores-crews---executable-path-override)
   - [2026-05-03 — `crew resume` / `crew fix-pr` env-spec parity for `${VAR}` syntax](#2026-05-03--crew-resume--crew-fix-pr-env-spec-parity-for-var-syntax)
@@ -160,50 +160,6 @@ The "synthetic Unregistered section" feels right — it's a single render path, 
 
 - Should the `Unregistered` section sort first (most urgent — something's broken) or last (least relevant — fix later)? Lean: first.
 - Does the slice 1c "Hide finished" toggle interact with this? Probably independent.
-
-### 2026-05-05 — Dashboard e2e tests expect mock-client project names that don't match the daemon fixtures
-
-**What:** The 4 tests in `packages/dashboard/tests/e2e/dashboard.spec.ts` time out against the worktree stack — they look for `Toggle kanban-api` / `Toggle recipes-app` buttons (legacy mock-client project names) but the seeded fixtures in `packages/daemon/seeds/dev.ts` populate projects named `crew` and `recipes`. The dashboard now talks to the real daemon via `HttpDaemonClient`, so these tests have been silently broken since the mock client was retired.
-
-**Why noticed:** Surfaced during CREW-92 verification (Documentation + memory cleanup, Epic closer). `npm run test:e2e` against the worktree stack at `http://localhost:23323` returned 4 failures, all timeouts waiting on selectors that don't exist in the rendered DOM. Confirmed the failure is environmental — `git diff origin/main -- packages/dashboard/tests/e2e/dashboard.spec.ts` is empty, so the divergence pre-dates this branch.
-
-**Anchors:**
-
-- `packages/dashboard/tests/e2e/dashboard.spec.ts` — selectors `Toggle kanban-api`, `Toggle recipes-app`.
-- `packages/daemon/seeds/dev.ts` — actual fixture project names `crew` and `recipes`.
-- `packages/dashboard/src/data/HttpDaemonClient.ts` — the real client the dashboard wires up via `defaultClient`. Replaces the mock client the tests were authored against.
-
-**What's been considered:** Two paths — (a) update the e2e test selectors to the seeded names, or (b) update the seed fixtures to add `kanban-api` / `recipes-app` projects. Path (a) is closer to the test's intent (they assert the dashboard groups agents by project, not specific project names), so a name-agnostic rewrite (e.g., assert at least two `Toggle <name>` buttons appear) is probably cleanest.
-
-**Shape of work:** Small — one ticket, single-file change in the test, plus a verification run. No production code change needed.
-
-### 2026-05-05 — Worktree env-injection of `CREW_SEED_FIXTURES=1` not wired
-
-**What:** CREW-90 lands the daemon-side seed mechanism — `seedFixtures()` and the `serve.ts` branch that runs it when `CREW_SEED_FIXTURES === '1'`. The other half of the contract (the worktree's auto-generated `.env` actually setting that var) is not in place. Both `env.toml` and the bringup-side env materializer have no entry for `CREW_SEED_FIXTURES`, so worktree compose stacks come up with the docker-compose default of `0` and the seed branch is a no-op. Until this lands, crew run dispatches don't deliver the fixture-seeded UX the dockerization Epic targets.
-
-**Why noticed:** Surfaced while implementing CREW-90. The plan (`docs/superpowers/plans/2026-05-05-crew-dockerization.md`) and spec (`docs/superpowers/specs/2026-05-04-crew-dockerization-design.md`) both describe the worktree `.env` as setting `CREW_SEED_FIXTURES=1`, but neither the CREW-87 env.toml nor any bringup-side code injects it — the gap is silent. The CREW-90 unit tests cover the daemon-side branch end to end, so the daemon is ready; only the producer side is missing.
-
-**Anchors:**
-
-- `env.toml` — currently declares only `COMPOSE_PROJECT_NAME`, `CREW_PORT`, `CREW_VITE_PORT`, `APP_URL`, `DAEMON_URL`, `COMPOSE_PROFILES`. The new entry would land here.
-- `packages/cli/src/lib/env-spec/materialize.ts` — the materializer that turns `env.toml` into a worktree `.env` file. Whether it can express "set this var only in non-canonical worktrees" determines whether env.toml or the materializer needs the extra logic.
-- `packages/cli/src/lib/docker/start-bringup.ts` — bringup orchestration. Could also inject the var directly when invoking compose for a worktree.
-- `packages/daemon/src/serve.ts` — the consumer (CREW-90).
-- `docker-compose.yml` — has `- CREW_SEED_FIXTURES=${CREW_SEED_FIXTURES:-0}` already; the producer side is the gap.
-- CREW-90 (lands daemon side); CREW-86 Epic.
-
-**What's been considered:**
-
-- **Add a new env-spec kind to `env.toml`** that lets a key declare different values for canonical-vs-worktree mode (e.g. `kind = "mode-static"` with `canonical = "0"` and `worktree = "1"` fields). Most general; lets future per-mode env vars reuse the pattern. Bigger surface to design and test.
-- **Hardcode the var in the bringup-side materializer** for non-canonical worktrees. Smaller change; matches the way `COMPOSE_PROFILES = "dev"` is already a template default that crew expects every worktree to have. Less generic.
-- **Set it in `docker-compose.yml` directly under a worktree-specific override file**. Compose supports `docker-compose.override.yml` and worktree-only overrides, but crew currently uses a single compose file driven by env, not multiple files. Adopting overrides would change the architecture.
-
-**Shape of work:** One small ticket. Likely the bringup-side approach (option 2) — least architectural disruption, ships the seed UX to worktrees immediately. Defer the per-mode env-spec generalization until a second var needs it.
-
-**Open questions:**
-
-- Should canonical worktrees also be able to opt into seeding (e.g. for screenshot/demo runs)? If yes, the gate isn't "non-canonical" but "explicit override" — a knob the user can flip. If no, "non-canonical worktree → seed=1" is sufficient.
-- Does the materializer have a notion of "current worktree is the canonical one" available at materialize time? `[docker].canonical_worktree` in the project config has the answer; the materializer would need to consult it.
 
 ### 2026-05-05 — Daemon container's `~/.claude/projects` mount is broader than crew's transcript ingest needs
 
@@ -927,6 +883,54 @@ The other two open questions (sandbox config drift, Phase 2 + Phase 3 separation
 **What's been considered:** Add `COPY tsconfig.base.json ./` (or copy the whole repo root tsconfig graph) before `COPY packages/dashboard ./packages/dashboard`. Mirrors how the daemon Dockerfile handles shared root files. Likely a one-line Dockerfile fix.
 
 **Shape of work:** Small — one Dockerfile edit + a rebuild verification (`docker compose --profile dev up -d --build --wait`, then `npm run test:e2e`).
+
+### 2026-05-05 — Worktree env-injection of `CREW_SEED_FIXTURES=1` not wired
+
+**Resolved 2026-05-07:** Shipped via CREW-111 alongside its two coupled siblings (project TOML seeding + e2e selector rewrite). Took option 2 from the considered list: hardcoded the var in the bringup-side materializer for non-canonical worktrees (`materialize()` injects `CREW_SEED_FIXTURES=1` into `result.base` when `!opts.isCanonical`). The per-mode env-spec generalization (option 1) is deferred until a second var needs the same shape. Canonical worktrees keep the docker-compose default of `0` — option-question 1 ("opt-in for canonical?") was answered "no for v1."
+
+**What:** CREW-90 lands the daemon-side seed mechanism — `seedFixtures()` and the `serve.ts` branch that runs it when `CREW_SEED_FIXTURES === '1'`. The other half of the contract (the worktree's auto-generated `.env` actually setting that var) is not in place. Both `env.toml` and the bringup-side env materializer have no entry for `CREW_SEED_FIXTURES`, so worktree compose stacks come up with the docker-compose default of `0` and the seed branch is a no-op. Until this lands, crew run dispatches don't deliver the fixture-seeded UX the dockerization Epic targets.
+
+**Why noticed:** Surfaced while implementing CREW-90. The plan (`docs/superpowers/plans/2026-05-05-crew-dockerization.md`) and spec (`docs/superpowers/specs/2026-05-04-crew-dockerization-design.md`) both describe the worktree `.env` as setting `CREW_SEED_FIXTURES=1`, but neither the CREW-87 env.toml nor any bringup-side code injects it — the gap is silent. The CREW-90 unit tests cover the daemon-side branch end to end, so the daemon is ready; only the producer side is missing.
+
+**Anchors:**
+
+- `env.toml` — currently declares only `COMPOSE_PROJECT_NAME`, `CREW_PORT`, `CREW_VITE_PORT`, `APP_URL`, `DAEMON_URL`, `COMPOSE_PROFILES`. The new entry would land here.
+- `packages/cli/src/lib/env-spec/materialize.ts` — the materializer that turns `env.toml` into a worktree `.env` file. Whether it can express "set this var only in non-canonical worktrees" determines whether env.toml or the materializer needs the extra logic.
+- `packages/cli/src/lib/docker/start-bringup.ts` — bringup orchestration. Could also inject the var directly when invoking compose for a worktree.
+- `packages/daemon/src/serve.ts` — the consumer (CREW-90).
+- `docker-compose.yml` — has `- CREW_SEED_FIXTURES=${CREW_SEED_FIXTURES:-0}` already; the producer side is the gap.
+- CREW-90 (lands daemon side); CREW-86 Epic.
+
+**What's been considered:**
+
+- **Add a new env-spec kind to `env.toml`** that lets a key declare different values for canonical-vs-worktree mode (e.g. `kind = "mode-static"` with `canonical = "0"` and `worktree = "1"` fields). Most general; lets future per-mode env vars reuse the pattern. Bigger surface to design and test.
+- **Hardcode the var in the bringup-side materializer** for non-canonical worktrees. Smaller change; matches the way `COMPOSE_PROFILES = "dev"` is already a template default that crew expects every worktree to have. Less generic.
+- **Set it in `docker-compose.yml` directly under a worktree-specific override file**. Compose supports `docker-compose.override.yml` and worktree-only overrides, but crew currently uses a single compose file driven by env, not multiple files. Adopting overrides would change the architecture.
+
+**Shape of work:** One small ticket. Likely the bringup-side approach (option 2) — least architectural disruption, ships the seed UX to worktrees immediately. Defer the per-mode env-spec generalization until a second var needs it.
+
+**Open questions:**
+
+- Should canonical worktrees also be able to opt into seeding (e.g. for screenshot/demo runs)? If yes, the gate isn't "non-canonical" but "explicit override" — a knob the user can flip. If no, "non-canonical worktree → seed=1" is sufficient.
+- Does the materializer have a notion of "current worktree is the canonical one" available at materialize time? `[docker].canonical_worktree` in the project config has the answer; the materializer would need to consult it.
+
+### 2026-05-05 — Dashboard e2e tests expect mock-client project names that don't match the daemon fixtures
+
+**Resolved 2026-05-07:** Shipped via CREW-111. Took path (a) from the considered list — name-agnostic shape rewrite. The list-projects test now asserts ≥2 `Toggle <name>` buttons; the collapse/expand test scopes to the first `<section>` so the agent-row visibility check tracks that section's collapse state. Required the two coupled producer-side fixes (CREW_SEED_FIXTURES injection + project TOML seeding) to land in the same PR so seeded fixtures actually populate `/api/projects`.
+
+**What:** The 4 tests in `packages/dashboard/tests/e2e/dashboard.spec.ts` time out against the worktree stack — they look for `Toggle kanban-api` / `Toggle recipes-app` buttons (legacy mock-client project names) but the seeded fixtures in `packages/daemon/seeds/dev.ts` populate projects named `crew` and `recipes`. The dashboard now talks to the real daemon via `HttpDaemonClient`, so these tests have been silently broken since the mock client was retired.
+
+**Why noticed:** Surfaced during CREW-92 verification (Documentation + memory cleanup, Epic closer). `npm run test:e2e` against the worktree stack at `http://localhost:23323` returned 4 failures, all timeouts waiting on selectors that don't exist in the rendered DOM. Confirmed the failure is environmental — `git diff origin/main -- packages/dashboard/tests/e2e/dashboard.spec.ts` is empty, so the divergence pre-dates this branch.
+
+**Anchors:**
+
+- `packages/dashboard/tests/e2e/dashboard.spec.ts` — selectors `Toggle kanban-api`, `Toggle recipes-app`.
+- `packages/daemon/seeds/dev.ts` — actual fixture project names `crew` and `recipes`.
+- `packages/dashboard/src/data/HttpDaemonClient.ts` — the real client the dashboard wires up via `defaultClient`. Replaces the mock client the tests were authored against.
+
+**What's been considered:** Two paths — (a) update the e2e test selectors to the seeded names, or (b) update the seed fixtures to add `kanban-api` / `recipes-app` projects. Path (a) is closer to the test's intent (they assert the dashboard groups agents by project, not specific project names), so a name-agnostic rewrite (e.g., assert at least two `Toggle <name>` buttons appear) is probably cleanest.
+
+**Shape of work:** Small — one ticket, single-file change in the test, plus a verification run. No production code change needed.
 
 ### 2026-05-04 — Crew sandbox/preflight self-opt-in (slot into first dashboard plan that adds e2e coverage)
 

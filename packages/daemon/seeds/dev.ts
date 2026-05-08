@@ -1,5 +1,36 @@
+import { existsSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
 import type { Insertable, Kysely } from 'kysely';
 import type { AgentsTable, DaemonDatabase, RunsTable, ToolCallsTable } from '../src/db.js';
+
+const PROJECT_TOML_FIXTURES: { name: string; toml: string }[] = [
+  {
+    name: 'crew',
+    toml: `name = "crew"
+repo_path = "/home/dev/Repos/crew"
+
+[jira]
+project_key = "CREW"
+site = "https://example.atlassian.net"
+
+[github]
+repo = "Safturento/crew"
+`,
+  },
+  {
+    name: 'recipes',
+    toml: `name = "recipes"
+repo_path = "/home/dev/Repos/Recipes-App"
+
+[jira]
+project_key = "KAN"
+site = "https://example.atlassian.net"
+
+[github]
+repo = "Safturento/Recipes-App"
+`,
+  },
+];
 
 const FIXTURE_AGENTS: Omit<Insertable<AgentsTable>, 'created_at'>[] = [
   {
@@ -179,4 +210,21 @@ export async function seedFixtures(db: Kysely<DaemonDatabase>): Promise<void> {
   });
 
   await db.insertInto('tool_calls').values(toolCallRows).execute();
+}
+
+/**
+ * Write the project TOMLs the seeded agents reference (`crew.toml` and
+ * `recipes.toml`) into `configDir`. ProjectsService reads these on
+ * `/api/projects`; without them the dashboard's `byProject.has(p.name)` filter
+ * drops every fixture agent and renders an empty grid.
+ *
+ * Per-file idempotent: skips any TOML that already exists so a re-boot, or an
+ * operator who hand-edited one of the files, doesn't get clobbered.
+ */
+export function seedProjectFixtures(configDir: string): void {
+  for (const { name, toml } of PROJECT_TOML_FIXTURES) {
+    const path = join(configDir, `${name}.toml`);
+    if (existsSync(path)) continue;
+    writeFileSync(path, toml, 'utf8');
+  }
 }

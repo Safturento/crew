@@ -162,6 +162,24 @@ env_var   = "JWK_PATH"
     expect(result.base.COMPOSE_PROJECT_NAME).toBe('recipes-kan-12');
   });
 
+  it('injects CREW_SEED_FIXTURES=1 into non-canonical worktrees', () => {
+    // Worktree compose stacks need CREW_SEED_FIXTURES=1 so the daemon's
+    // seed branch fires; canonical stacks intentionally don't get it
+    // (canonical = real user data, not fixtures).
+    const spec = parseEnvSpec(baseSpec);
+    const result = materialize(
+      spec,
+      opts({ isCanonical: false, worktreeId: 'kan-23', worktreeBasename: 'recipes-kan-23' }),
+    );
+    expect(result.base.CREW_SEED_FIXTURES).toBe('1');
+  });
+
+  it('does not inject CREW_SEED_FIXTURES into canonical worktrees', () => {
+    const spec = parseEnvSpec(baseSpec);
+    const result = materialize(spec, opts());
+    expect(result.base.CREW_SEED_FIXTURES).toBeUndefined();
+  });
+
   it('throws on a cycle in templates', () => {
     const cycle = `
 schema = 1

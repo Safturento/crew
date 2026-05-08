@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { createDb } from './db.js';
 import { serve } from './serve.js';
@@ -33,6 +34,20 @@ describe('serve — fixture seeding', () => {
       } finally {
         await db.destroy();
       }
+    } finally {
+      await app.close();
+    }
+  });
+
+  it('seeds project TOMLs into a writable configDir when CREW_SEED_FIXTURES=1', async () => {
+    // /api/projects reads disk, not the DB, so seedFixtures alone is insufficient —
+    // this verifies the project-toml seeder runs and that configDir was redirected
+    // to a writable path (the host's mount is RO in container deployments).
+    const env = envWithDb({ CREW_SEED_FIXTURES: '1' });
+    const { app, config } = await serve(env);
+    try {
+      expect(existsSync(join(config.configDir, 'crew.toml'))).toBe(true);
+      expect(existsSync(join(config.configDir, 'recipes.toml'))).toBe(true);
     } finally {
       await app.close();
     }
