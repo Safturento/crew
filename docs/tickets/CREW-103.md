@@ -19,7 +19,7 @@ Two route components sharing an `AgentBody`. `AgentDrawer` slides over the agent
 
 - **Hash routing, not react-router-dom.** Plan example used `MemoryRouter`, but the dashboard's committed pattern is the custom `useHashRoute` hook + `parseRoute`. Following project convention (per `reaching-for-frontend-libraries`).
 - **`AgentBody` owns the header, not the drawer.** Drawer chrome = backdrop + slide-over panel + close button + `↗ Open as page` action. Header (project, ticket, state, runtime, tokens, worktree, PR link) lives in `AgentBody` so the full page reuses it. The "Open as page" link is conditional on a `mode` prop.
-- **Migrate the AgentRow click target.** `AgentDetailPlaceholder` previously handled `/agents/:key` and said "ships in a follow-up plan" — this *is* that follow-up. Remove the placeholder; route AgentRow clicks at `/agent/:key`.
+- **Migrate the AgentRow click target.** `AgentDetailPlaceholder` previously handled `/agents/:key` and said "ships in a follow-up plan" — this _is_ that follow-up. Remove the placeholder; route AgentRow clicks at `/agent/:key`.
 - **Body slot stays a placeholder.** CREW-J ships `TokenTable`, `StateHistoryBar`, and `Timeline` — those are out of scope here. The placeholder div has `data-testid="agent-body-placeholder"` so CREW-J can swap it in.
 
 ## Notes
