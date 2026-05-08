@@ -233,7 +233,9 @@ async function runFixPr(key: string, flags: FixPrFlags): Promise<void> {
     prompt,
     logFile,
     cwd: worktree,
-    env: resolvedAppUrl ? { CREW_APP_URL: resolvedAppUrl } : undefined,
+    env: resolvedAppUrl
+      ? { CREW_APP_URL: resolvedAppUrl, PLAYWRIGHT_BASE_URL: resolvedAppUrl }
+      : undefined,
   });
 
   // Register the run with the daemon. Skipped when no project config is in
