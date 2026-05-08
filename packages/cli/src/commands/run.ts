@@ -398,6 +398,7 @@ export async function runRun(key: string, opts: RunOptions): Promise<never> {
       ...childEnv,
       GH_TOKEN: ghToken,
       ...(resolvedAppUrl ? { CREW_APP_URL: resolvedAppUrl } : {}),
+      ...(resolvedAppUrl ? { PLAYWRIGHT_BASE_URL: resolvedAppUrl } : {}),
       ...(brunoEnvName ? { CREW_BRUNO_ENV: brunoEnvName } : {}),
     },
     reject: false,

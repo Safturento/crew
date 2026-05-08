@@ -38,7 +38,7 @@ describe('runResumePreflight', () => {
 
   it('returns without throwing when excluded commands are correctly listed', async () => {
     dir = makeWorktree({
-      sandbox: { excludedCommands: ['npm run bruno:smoke'] },
+      sandbox: { excludedCommands: ['npm run bruno:smoke*'] },
     });
 
     await expect(

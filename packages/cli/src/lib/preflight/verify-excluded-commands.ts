@@ -3,7 +3,7 @@ import path from 'node:path';
 import type { ProjectConfig } from 'crew-shared';
 import { PreflightError, type PreflightCheck } from './types.js';
 
-const BRUNO_COMMAND = 'npm run bruno:smoke';
+const BRUNO_COMMAND = 'npm run bruno:smoke*';
 
 interface RequiredEntry {
   command: string;
@@ -14,6 +14,12 @@ interface RequiredEntry {
  * Compute the excludedCommands the agent's project needs in its
  * <repo>/.claude/settings.json. Each entry corresponds to a sandbox
  * restriction documented in docs/plans/sandbox-limitations.md.
+ *
+ * Entries use the verified glob form `command*` (prefix + zero-or-more
+ * trailing chars) so that flag/wrapper variants like
+ * `npm run test:e2e --workspace=...` and `... 2>&1 | tail -25` still
+ * bypass the sandbox. Empirical probe results in
+ * docs/superpowers/specs/2026-05-08-agent-shell-e2e-reliability-design.md §3.1.
  */
 function requiredEntries(config: ProjectConfig): RequiredEntry[] {
   const out: RequiredEntry[] = [];
@@ -24,14 +30,14 @@ function requiredEntries(config: ProjectConfig): RequiredEntry[] {
 
   if (config.playwright?.authored?.enabled) {
     out.push({
-      command: config.playwright.authored.test_command,
+      command: `${config.playwright.authored.test_command}*`,
       reason: '[playwright].authored.enabled = true',
     });
   }
 
   if (config.docker) {
     out.push({
-      command: 'docker compose',
+      command: 'docker compose*',
       reason: '[docker] block present (agent does Step 0.5 bringup)',
     });
   }
@@ -72,10 +78,10 @@ export function verifyExcludedCommandsCheck(): PreflightCheck {
       };
       const excluded = parsed.sandbox?.excludedCommands ?? [];
 
-      // Conservative-match: require exact string equality. The Claude Code
-      // sandbox may accept prefix-style entries at runtime, but for the *check*
-      // we only trust an exact match — looser-than-required prefixes still pass
-      // at runtime, we just don't certify them here.
+      // Exact-string equality on the *committed* entry vs the *required*
+      // canonical form. The required form is the verified prefix-glob shape
+      // (`command*`); we only certify a settings.json that commits exactly
+      // that form, even if a different shape would also bypass the sandbox.
       for (const entry of required) {
         if (!excluded.includes(entry.command)) {
           throw new PreflightError(

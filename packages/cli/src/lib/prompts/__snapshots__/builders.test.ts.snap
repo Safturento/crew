@@ -75,7 +75,20 @@ If \`npm run test:e2e\` (or the project's equivalent) reports missing browsers, 
 
 Your Bash tool runs in a sandbox with its own loopback, isolated from the host's. Direct \`curl\` / \`wget\` / Node \`fetch\` calls from your shell to **https://localhost:8443** will always return \`ECONNREFUSED\` — that is **not** evidence the stack is down. Crew has whitelisted \`npm run test:e2e\` to run un-sandboxed, and those are the only valid reachability tests for the docker stack.
 
-If \`npm run bruno:smoke\` succeeds, that confirms the daemon is up — but it says nothing about the worktree app port. If \`npm run test:e2e\` fails with \`ECONNREFUSED\`, that's a real signal: the docker stack is not serving at the expected port. Investigate \`/tmp/crew-docker-KAN-23.log\` and consider \`crew restart KAN-23 --hard\`.
+If \`npm run bruno:smoke\` succeeds, that confirms the daemon is up — but it says nothing about the worktree app port. If \`npm run test:e2e\` fails with \`ECONNREFUSED\`, that's a real signal: the docker stack is not serving at the expected port. Investigate \`/tmp/crew-docker-KAN-23.log\` and consider running \`docker compose up --build --wait\` from the worktree to bring the stack back up.
+
+## Excluded-command matching is form-sensitive
+
+Crew's whitelisted commands (\`npm run test:e2e\`) match \`<repo>/.claude/settings.json\`'s \`excludedCommands\` entries by glob. Entries use the form \`command*\` (e.g. \`npm run test:e2e*\`) — a leading-substring match where \`*\` accepts zero-or-more trailing chars. **Wrappers that prepend other commands break the match,** in which case the command runs sandboxed and won't reach host loopback even though it looks like it should.
+
+To stay matched:
+
+- **Run the bare command:** \`npm run test:e2e\` (not \`cd packages/dashboard && npm run test:e2e\`).
+- **The \`--workspace=crew-dashboard\` flag is covered by the glob** — \`command*\` accepts trailing args. You can add it.
+- **Shell pipes / redirects also ride along** — \`npm run test:e2e --workspace=crew-dashboard 2>&1 | tail -25\` still matches because the entry only constrains the leading bytes. Use them freely if helpful.
+- **Don't wrap the command:** \`cd <dir> && …\`, \`sh -c "…"\`, and \`npm --prefix <dir> run …\` (instead of \`npm run …\`) all defeat the prefix match. If you need to switch directories, use the workspace flag instead.
+
+A failed \`npm run test:e2e\` that produced \`ECONNREFUSED\` while the same flow worked via Playwright MCP is the signature of a wrapper-defeated match.
 
 
 ## Apply the fixes
@@ -174,7 +187,20 @@ Treat smoke failure the same as test failure: do not push.
 
 Your Bash tool runs in a sandbox with its own loopback, isolated from the host's. Direct \`curl\` / \`wget\` / Node \`fetch\` calls from your shell to **https://localhost:18443** will always return \`ECONNREFUSED\` — that is **not** evidence the stack is down. Crew has whitelisted \`npm run bruno:smoke\` to run un-sandboxed, and those are the only valid reachability tests for the docker stack.
 
-If \`npm run bruno:smoke\` succeeds, that confirms the daemon is up — but it says nothing about the worktree app port. If \`npm run test:e2e\` fails with \`ECONNREFUSED\`, that's a real signal: the docker stack is not serving at the expected port. Investigate \`/tmp/crew-docker-KAN-23.log\` and consider \`crew restart KAN-23 --hard\`.
+If \`npm run bruno:smoke\` succeeds, that confirms the daemon is up — but it says nothing about the worktree app port. If \`npm run test:e2e\` fails with \`ECONNREFUSED\`, that's a real signal: the docker stack is not serving at the expected port. Investigate \`/tmp/crew-docker-KAN-23.log\` and consider running \`docker compose up --build --wait\` from the worktree to bring the stack back up.
+
+## Excluded-command matching is form-sensitive
+
+Crew's whitelisted commands (\`npm run bruno:smoke\`) match \`<repo>/.claude/settings.json\`'s \`excludedCommands\` entries by glob. Entries use the form \`command*\` (e.g. \`npm run test:e2e*\`) — a leading-substring match where \`*\` accepts zero-or-more trailing chars. **Wrappers that prepend other commands break the match,** in which case the command runs sandboxed and won't reach host loopback even though it looks like it should.
+
+To stay matched:
+
+- **Run the bare command:** \`npm run test:e2e\` (not \`cd packages/dashboard && npm run test:e2e\`).
+- **The \`--workspace=crew-dashboard\` flag is covered by the glob** — \`command*\` accepts trailing args. You can add it.
+- **Shell pipes / redirects also ride along** — \`npm run test:e2e --workspace=crew-dashboard 2>&1 | tail -25\` still matches because the entry only constrains the leading bytes. Use them freely if helpful.
+- **Don't wrap the command:** \`cd <dir> && …\`, \`sh -c "…"\`, and \`npm --prefix <dir> run …\` (instead of \`npm run …\`) all defeat the prefix match. If you need to switch directories, use the workspace flag instead.
+
+A failed \`npm run test:e2e\` that produced \`ECONNREFUSED\` while the same flow worked via Playwright MCP is the signature of a wrapper-defeated match.
 
 
 ## Apply the fixes
@@ -572,7 +598,20 @@ The \`bruno-collection-maintenance\` skill (auto-discovered) covers naming conve
 
 Your Bash tool runs in a sandbox with its own loopback, isolated from the host's. Direct \`curl\` / \`wget\` / Node \`fetch\` calls from your shell to **https://localhost:18443** will always return \`ECONNREFUSED\` — that is **not** evidence the stack is down. Crew has whitelisted \`npm run bruno:smoke\` to run un-sandboxed, and those are the only valid reachability tests for the docker stack.
 
-If \`npm run bruno:smoke\` succeeds, that confirms the daemon is up — but it says nothing about the worktree app port. If \`npm run test:e2e\` fails with \`ECONNREFUSED\`, that's a real signal: the docker stack is not serving at the expected port. Investigate \`/tmp/crew-docker-KAN-23.log\` and consider \`crew restart KAN-23 --hard\`.
+If \`npm run bruno:smoke\` succeeds, that confirms the daemon is up — but it says nothing about the worktree app port. If \`npm run test:e2e\` fails with \`ECONNREFUSED\`, that's a real signal: the docker stack is not serving at the expected port. Investigate \`/tmp/crew-docker-KAN-23.log\` and consider running \`docker compose up --build --wait\` from the worktree to bring the stack back up.
+
+## Excluded-command matching is form-sensitive
+
+Crew's whitelisted commands (\`npm run bruno:smoke\`) match \`<repo>/.claude/settings.json\`'s \`excludedCommands\` entries by glob. Entries use the form \`command*\` (e.g. \`npm run test:e2e*\`) — a leading-substring match where \`*\` accepts zero-or-more trailing chars. **Wrappers that prepend other commands break the match,** in which case the command runs sandboxed and won't reach host loopback even though it looks like it should.
+
+To stay matched:
+
+- **Run the bare command:** \`npm run test:e2e\` (not \`cd packages/dashboard && npm run test:e2e\`).
+- **The \`--workspace=crew-dashboard\` flag is covered by the glob** — \`command*\` accepts trailing args. You can add it.
+- **Shell pipes / redirects also ride along** — \`npm run test:e2e --workspace=crew-dashboard 2>&1 | tail -25\` still matches because the entry only constrains the leading bytes. Use them freely if helpful.
+- **Don't wrap the command:** \`cd <dir> && …\`, \`sh -c "…"\`, and \`npm --prefix <dir> run …\` (instead of \`npm run …\`) all defeat the prefix match. If you need to switch directories, use the workspace flag instead.
+
+A failed \`npm run test:e2e\` that produced \`ECONNREFUSED\` while the same flow worked via Playwright MCP is the signature of a wrapper-defeated match.
 
 8. **Verify.** Invoke \`superpowers:verification-before-completion\`. Run lint / format / typecheck / test:run.
 
@@ -675,7 +714,20 @@ If \`tests/e2e/\` doesn't exist or \`npm run test:e2e\` fails for any other reas
 
 Your Bash tool runs in a sandbox with its own loopback, isolated from the host's. Direct \`curl\` / \`wget\` / Node \`fetch\` calls from your shell to **https://localhost:18443** will always return \`ECONNREFUSED\` — that is **not** evidence the stack is down. Crew has whitelisted \`npm run test:e2e\` to run un-sandboxed, and those are the only valid reachability tests for the docker stack.
 
-If \`npm run bruno:smoke\` succeeds, that confirms the daemon is up — but it says nothing about the worktree app port. If \`npm run test:e2e\` fails with \`ECONNREFUSED\`, that's a real signal: the docker stack is not serving at the expected port. Investigate \`/tmp/crew-docker-KAN-23.log\` and consider \`crew restart KAN-23 --hard\`.
+If \`npm run bruno:smoke\` succeeds, that confirms the daemon is up — but it says nothing about the worktree app port. If \`npm run test:e2e\` fails with \`ECONNREFUSED\`, that's a real signal: the docker stack is not serving at the expected port. Investigate \`/tmp/crew-docker-KAN-23.log\` and consider running \`docker compose up --build --wait\` from the worktree to bring the stack back up.
+
+## Excluded-command matching is form-sensitive
+
+Crew's whitelisted commands (\`npm run test:e2e\`) match \`<repo>/.claude/settings.json\`'s \`excludedCommands\` entries by glob. Entries use the form \`command*\` (e.g. \`npm run test:e2e*\`) — a leading-substring match where \`*\` accepts zero-or-more trailing chars. **Wrappers that prepend other commands break the match,** in which case the command runs sandboxed and won't reach host loopback even though it looks like it should.
+
+To stay matched:
+
+- **Run the bare command:** \`npm run test:e2e\` (not \`cd packages/dashboard && npm run test:e2e\`).
+- **The \`--workspace=crew-dashboard\` flag is covered by the glob** — \`command*\` accepts trailing args. You can add it.
+- **Shell pipes / redirects also ride along** — \`npm run test:e2e --workspace=crew-dashboard 2>&1 | tail -25\` still matches because the entry only constrains the leading bytes. Use them freely if helpful.
+- **Don't wrap the command:** \`cd <dir> && …\`, \`sh -c "…"\`, and \`npm --prefix <dir> run …\` (instead of \`npm run …\`) all defeat the prefix match. If you need to switch directories, use the workspace flag instead.
+
+A failed \`npm run test:e2e\` that produced \`ECONNREFUSED\` while the same flow worked via Playwright MCP is the signature of a wrapper-defeated match.
 
 8. **Verify.** Invoke \`superpowers:verification-before-completion\`. Run lint / format / typecheck / test:run.
 
@@ -763,7 +815,20 @@ The \`bruno-collection-maintenance\` skill (auto-discovered) covers naming conve
 
 Your Bash tool runs in a sandbox with its own loopback, isolated from the host's. Direct \`curl\` / \`wget\` / Node \`fetch\` calls from your shell to **https://localhost:18443** will always return \`ECONNREFUSED\` — that is **not** evidence the stack is down. Crew has whitelisted \`npm run bruno:smoke\` to run un-sandboxed, and those are the only valid reachability tests for the docker stack.
 
-If \`npm run bruno:smoke\` succeeds, that confirms the daemon is up — but it says nothing about the worktree app port. If \`npm run test:e2e\` fails with \`ECONNREFUSED\`, that's a real signal: the docker stack is not serving at the expected port. Investigate \`/tmp/crew-docker-KAN-23.log\` and consider \`crew restart KAN-23 --hard\`.
+If \`npm run bruno:smoke\` succeeds, that confirms the daemon is up — but it says nothing about the worktree app port. If \`npm run test:e2e\` fails with \`ECONNREFUSED\`, that's a real signal: the docker stack is not serving at the expected port. Investigate \`/tmp/crew-docker-KAN-23.log\` and consider running \`docker compose up --build --wait\` from the worktree to bring the stack back up.
+
+## Excluded-command matching is form-sensitive
+
+Crew's whitelisted commands (\`npm run bruno:smoke\`) match \`<repo>/.claude/settings.json\`'s \`excludedCommands\` entries by glob. Entries use the form \`command*\` (e.g. \`npm run test:e2e*\`) — a leading-substring match where \`*\` accepts zero-or-more trailing chars. **Wrappers that prepend other commands break the match,** in which case the command runs sandboxed and won't reach host loopback even though it looks like it should.
+
+To stay matched:
+
+- **Run the bare command:** \`npm run test:e2e\` (not \`cd packages/dashboard && npm run test:e2e\`).
+- **The \`--workspace=crew-dashboard\` flag is covered by the glob** — \`command*\` accepts trailing args. You can add it.
+- **Shell pipes / redirects also ride along** — \`npm run test:e2e --workspace=crew-dashboard 2>&1 | tail -25\` still matches because the entry only constrains the leading bytes. Use them freely if helpful.
+- **Don't wrap the command:** \`cd <dir> && …\`, \`sh -c "…"\`, and \`npm --prefix <dir> run …\` (instead of \`npm run …\`) all defeat the prefix match. If you need to switch directories, use the workspace flag instead.
+
+A failed \`npm run test:e2e\` that produced \`ECONNREFUSED\` while the same flow worked via Playwright MCP is the signature of a wrapper-defeated match.
 
 8. **Verify.** Invoke \`superpowers:verification-before-completion\`. Run lint / format / typecheck / test:run.
 
@@ -1013,7 +1078,20 @@ The \`bruno-collection-maintenance\` skill (auto-discovered) covers naming conve
 
 Your Bash tool runs in a sandbox with its own loopback, isolated from the host's. Direct \`curl\` / \`wget\` / Node \`fetch\` calls from your shell to **https://localhost:18443** will always return \`ECONNREFUSED\` — that is **not** evidence the stack is down. Crew has whitelisted \`npm run bruno:smoke\` to run un-sandboxed, and those are the only valid reachability tests for the docker stack.
 
-If \`npm run bruno:smoke\` succeeds, that confirms the daemon is up — but it says nothing about the worktree app port. If \`npm run test:e2e\` fails with \`ECONNREFUSED\`, that's a real signal: the docker stack is not serving at the expected port. Investigate \`/tmp/crew-docker-KAN-23.log\` and consider \`crew restart KAN-23 --hard\`.
+If \`npm run bruno:smoke\` succeeds, that confirms the daemon is up — but it says nothing about the worktree app port. If \`npm run test:e2e\` fails with \`ECONNREFUSED\`, that's a real signal: the docker stack is not serving at the expected port. Investigate \`/tmp/crew-docker-KAN-23.log\` and consider running \`docker compose up --build --wait\` from the worktree to bring the stack back up.
+
+## Excluded-command matching is form-sensitive
+
+Crew's whitelisted commands (\`npm run bruno:smoke\`) match \`<repo>/.claude/settings.json\`'s \`excludedCommands\` entries by glob. Entries use the form \`command*\` (e.g. \`npm run test:e2e*\`) — a leading-substring match where \`*\` accepts zero-or-more trailing chars. **Wrappers that prepend other commands break the match,** in which case the command runs sandboxed and won't reach host loopback even though it looks like it should.
+
+To stay matched:
+
+- **Run the bare command:** \`npm run test:e2e\` (not \`cd packages/dashboard && npm run test:e2e\`).
+- **The \`--workspace=crew-dashboard\` flag is covered by the glob** — \`command*\` accepts trailing args. You can add it.
+- **Shell pipes / redirects also ride along** — \`npm run test:e2e --workspace=crew-dashboard 2>&1 | tail -25\` still matches because the entry only constrains the leading bytes. Use them freely if helpful.
+- **Don't wrap the command:** \`cd <dir> && …\`, \`sh -c "…"\`, and \`npm --prefix <dir> run …\` (instead of \`npm run …\`) all defeat the prefix match. If you need to switch directories, use the workspace flag instead.
+
+A failed \`npm run test:e2e\` that produced \`ECONNREFUSED\` while the same flow worked via Playwright MCP is the signature of a wrapper-defeated match.
 
 8. **Verify.** Invoke \`superpowers:verification-before-completion\`. Run lint / format / typecheck / test:run.
 
