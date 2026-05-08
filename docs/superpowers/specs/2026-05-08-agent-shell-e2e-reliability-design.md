@@ -43,7 +43,7 @@ Every dashboard-touching ticket from here forward will need the e2e suite to pas
 1. **Empirical wildcard probe** — first plan task, before changing settings. Test which glob form (`"foo*"`, `"foo *"`, `"foo**"`, etc.) actually bypasses the sandbox on a known-failing sandboxed Bash call. Document the result in this spec file (live edit) before writing the production change.
 2. **Update `<repo>/.claude/settings.json`** `excludedCommands` to use the verified wildcard form for all three entries (`bruno:smoke`, `test:e2e`, `docker compose`). Update `packages/cli/src/lib/preflight/verify-excluded-commands.ts` (and tests) to require the verified form.
 3. **Drop the `webServer` block from `packages/dashboard/playwright.config.ts`.** Tests target the worktree docker stack only. Inline comment documents the rationale so the block doesn't get re-added.
-4. **Make `baseURL` deterministic via `env.toml` direct read.** Replace the `process.env.PLAYWRIGHT_BASE_URL ?? process.env.CREW_APP_URL ?? 'http://localhost:5173'` chain with a function that walks up to repo root, parses `env.toml`, picks the worktree's `APP_URL`, and fails loudly if absent. Keep `PLAYWRIGHT_BASE_URL` env-var override (escape hatch for ad-hoc debugging); drop `CREW_APP_URL` and the literal fallback.
+4. **Make `baseURL` deterministic via the materialized `.env`.** Replace the `process.env.PLAYWRIGHT_BASE_URL ?? process.env.CREW_APP_URL ?? 'http://localhost:5173'` chain with a function that walks up to repo root, reads the worktree's `<repo>/.env` (materialized by `crew env init`/`crew env refresh` from `env.toml`), picks `APP_URL`, and fails loudly if absent. Keep `PLAYWRIGHT_BASE_URL` env-var override (escape hatch for ad-hoc debugging); drop `CREW_APP_URL` and the literal fallback. Note: `env.toml` is the *spec*; `.env` is the resolved values written by the materializer. Reading `.env` avoids re-running the materializer and removes the need for a TOML parser dep in the dashboard package.
 5. **Plumb `PLAYWRIGHT_BASE_URL` in `run.ts:397-402`** alongside the existing `CREW_APP_URL`. Belt-and-suspenders for callers that don't go through `npm run` (e.g. a future agent invoking `npx playwright test` directly).
 6. **Update `packages/cli/src/lib/prompts/templates/sandbox-network-note.md`** with two edits:
    - **Atomic followup resolution:** replace the `crew restart {{key}} --hard` line (which destroys the worktree) with `docker compose up --build --wait` from the worktree. Move the `2026-05-07 — sandbox-network-note.md recommends crew restart --hard…` followup entry from Active to Resolved in the same diff.
@@ -109,7 +109,7 @@ Update existing tests in `packages/cli/src/lib/preflight/verify-excluded-command
 
 If `process.env.CI` was the only consumer of the `reuseExistingServer` gate (it is — grep for it), nothing else needs to change. Existing e2e tests that ran against the docker stack are unaffected; ones that relied on a Vite-spawned dev server will fail loudly, which is the intended behavior (those paths weren't testing what they claimed).
 
-### 3.4 `baseURL` from `env.toml`
+### 3.4 `baseURL` from the materialized `.env`
 
 **File: `packages/dashboard/playwright.config.ts`** — replace lines 3-4:
 
@@ -125,27 +125,40 @@ function resolveBaseURL(): string {
   if (process.env.PLAYWRIGHT_BASE_URL) {
     return process.env.PLAYWRIGHT_BASE_URL;
   }
-  // Walk up to repo root, read env.toml, return APP_URL.
+  // Walk up to repo root, read .env, return APP_URL.
+  // .env is materialized from env.toml by `crew env init`/`crew env refresh`.
   // Fail loud if missing — no localhost:5173 fallback. The docker stack
   // (or an explicit PLAYWRIGHT_BASE_URL override) is the only source of
   // truth for where the worktree dashboard lives.
   const repoRoot = findRepoRoot(__dirname);
-  const envToml = readFileSync(join(repoRoot, 'env.toml'), 'utf8');
-  const parsed = parseToml(envToml);
-  const appUrl = parsed.APP_URL;
-  if (typeof appUrl !== 'string') {
+  const envPath = join(repoRoot, '.env');
+  let envContents: string;
+  try {
+    envContents = readFileSync(envPath, 'utf8');
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === 'ENOENT') {
+      throw new Error(
+        `playwright.config.ts: ${envPath} not found. ` +
+          `Run 'crew env init' (canonical worktree) or 'crew env refresh' (other worktrees), ` +
+          `or set PLAYWRIGHT_BASE_URL explicitly.`,
+      );
+    }
+    throw err;
+  }
+  const match = envContents.match(/^APP_URL=(.+)$/m);
+  if (!match) {
     throw new Error(
-      `playwright.config.ts: env.toml at ${repoRoot} has no APP_URL. ` +
-        `Run 'crew env init' or set PLAYWRIGHT_BASE_URL explicitly.`,
+      `playwright.config.ts: ${envPath} has no APP_URL line. ` +
+        `Re-run 'crew env refresh', or set PLAYWRIGHT_BASE_URL explicitly.`,
     );
   }
-  return appUrl;
+  return match[1].trim();
 }
 
 const baseURL = resolveBaseURL();
 ```
 
-`findRepoRoot` walks up from `__dirname` looking for `package.json` with `"name": "crew"` (or simpler: a `.git` directory). The TOML parser is `@iarna/toml` if it's already a workspace dep, or `smol-toml` (no deps); the implementing agent picks based on existing usage in `packages/dashboard/`.
+`findRepoRoot` walks up from `__dirname` looking for a `.git` directory (handles both regular checkouts and worktrees, where `.git` is a file, not a directory — `existsSync` covers both). No TOML parser needed — `.env` is plain `KEY=value` lines.
 
 ### 3.5 `run.ts` env plumbing
 
@@ -204,8 +217,8 @@ The implementing agent fills in the verified specifics from §3.1 (e.g. exactly 
   - Pick the most permissive form that matches a useful subset (probably `command*`).
   - Document the gap explicitly in `sandbox-network-note.md` and have agents avoid the variations that don't match.
   - File a followup to revisit if Claude Code's documented matching algorithm becomes more permissive in a future release.
-- **`env.toml` missing in the worktree.** Expected for a non-crew checkout (e.g. a contributor running e2e in a fresh clone before any `crew env init`). The fail-loud error in §3.4 names the fix (`crew env init` or `PLAYWRIGHT_BASE_URL=…`). No silent fallback; fail-fast is the design.
-- **`env.toml` has no `APP_URL` key.** Same handling as missing file — the resolver checks for `appUrl` after parsing and throws.
+- **`.env` missing in the worktree.** Expected for a fresh clone before `crew env init` runs. The fail-loud error in §3.4 names the fix (`crew env init` / `crew env refresh` / `PLAYWRIGHT_BASE_URL=…`). No silent fallback; fail-fast is the design.
+- **`.env` has no `APP_URL` line.** Same handling as missing file — the resolver checks for the regex match and throws with a "re-run `crew env refresh`" hint.
 - **CI runs e2e (no docker stack, just static deployment).** Out of scope for this spec — CI sets `PLAYWRIGHT_BASE_URL` explicitly, which the resolver honors first. Verified by §5's CI check.
 - **Agent runs the e2e suite while the docker dashboard is still warming up.** Existing behavior preserved — Playwright navigates to `baseURL`, gets a connection error (since dashboard isn't up yet), retries per its built-in `waitForLoadState` semantics. If the stack genuinely never comes up, the test fails fast with a real error. Better than the current behavior (timing out for 120s on a wrong-port webServer).
 - **Worktree's `APP_URL` differs from canonical's.** Per the per-worktree docker isolation rule (`CLAUDE.md` "Per-worktree docker isolation"), each worktree's `env.toml` has its own port. The resolver picks the right one by reading the worktree's own file. Never reads canonical's.
@@ -217,16 +230,16 @@ The implementing agent fills in the verified specifics from §3.1 (e.g. exactly 
 - **`verify-excluded-commands.test.ts`** — existing tests pass with updated entry shapes. New regression test: a project committing the old exact-match form (e.g. `"npm run test:e2e"`) fails the preflight with a clear "use the canonical glob form" error.
 - **`playwright.config.ts` resolver** — small inline test (or a separate `playwright.config.test.ts`):
   - `PLAYWRIGHT_BASE_URL` set → returns it.
-  - `env.toml` present with `APP_URL` → returns the parsed value.
-  - `env.toml` present, `APP_URL` missing → throws with the diagnostic message.
-  - `env.toml` absent → throws with the diagnostic message naming `crew env init`.
+  - `.env` present with `APP_URL=…` → returns the value.
+  - `.env` present, `APP_URL` missing → throws with the "re-run `crew env refresh`" hint.
+  - `.env` absent → throws with the diagnostic message naming `crew env init` / `crew env refresh`.
 - **`run.ts` env plumbing** — the existing run-command test suite (if it covers env injection) gets a new assertion that `PLAYWRIGHT_BASE_URL` is present and equal to `CREW_APP_URL`. If no such suite exists, no new test scaffolding required — this is a one-line config addition.
 
 ### 5.2 Empirical (manual + automated)
 
 1. **Probe (§3.1).** Run the wildcard probe before any production change. Record results in this spec file.
 2. **Sandbox bypass.** With the new `excludedCommands` form, run a sandboxed Bash test that issues `npm run test:e2e --workspace=crew-dashboard 2>&1 | tail -25`. Confirm it bypasses the sandbox (e.g. `curl http://localhost:<worktree-port>/healthz` succeeds where the same curl from a normal sandboxed Bash returns ECONNREFUSED).
-3. **`env.toml` path.** Run `npm run test:e2e` from a fresh worktree shell (not the agent's). Confirm Playwright targets the worktree's `APP_URL`, not 5173.
+3. **`.env` path.** Run `npm run test:e2e` from a fresh worktree shell (not the agent's). Confirm Playwright targets the worktree's `APP_URL`, not 5173.
 
 ### 5.3 Integration (the gate that actually matters)
 
