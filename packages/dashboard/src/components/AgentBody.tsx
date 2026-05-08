@@ -1,0 +1,140 @@
+import { useEffect, useState } from 'react';
+
+import { formatDuration } from '../format/duration.js';
+import { formatTokens } from '../format/tokens.js';
+import { useAgent } from '../data/queries.js';
+import type { AgentDetail, AgentState } from '../data/types.js';
+import { StateBadge } from './StateBadge.js';
+
+const ACTIVE_STATES = new Set<AgentState>(['running', 'initializing']);
+
+export type AgentBodyMode = 'drawer' | 'full';
+
+interface AgentBodyProps {
+  agentKey: string;
+  mode: AgentBodyMode;
+}
+
+export function AgentBody({ agentKey, mode }: AgentBodyProps) {
+  const { data, isLoading, error } = useAgent(agentKey);
+
+  if (isLoading) {
+    return (
+      <div className="flex h-full items-center justify-center p-6 text-sm text-text-2">
+        Loading agent…
+      </div>
+    );
+  }
+
+  if (error || !data) {
+    return (
+      <div className="flex h-full items-center justify-center p-6 text-sm text-text-2">
+        Failed to load agent.
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex h-full min-h-0 flex-col">
+      <AgentHeader detail={data} mode={mode} />
+      <div className="min-h-0 flex-1 overflow-y-auto p-6">
+        <div
+          data-testid="agent-body-placeholder"
+          className="rounded-[14px] border border-dashed border-white/10 bg-surface px-6 py-10 text-center text-sm text-text-3"
+        >
+          Timeline, state history, and token table land in CREW-J.
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AgentHeader({ detail, mode }: { detail: AgentDetail; mode: AgentBodyMode }) {
+  const startedAt = detail.runs[0]?.started_at;
+  const live = ACTIVE_STATES.has(detail.state);
+  const runtime = useLiveRuntime(startedAt, live);
+
+  return (
+    <div
+      data-testid="drawer-header"
+      className="flex flex-col gap-3 border-b border-white/10 bg-surface px-6 py-4"
+    >
+      <div className="flex flex-wrap items-center gap-3">
+        <span className="font-mono text-xs uppercase tracking-wide text-text-3">
+          {detail.project}
+        </span>
+        <span className="font-mono text-xs text-text-2">{detail.ticket_key}</span>
+        <StateBadge state={detail.state} />
+        {runtime && (
+          <span className="font-mono text-xs tabular-nums text-text-2">{runtime}</span>
+        )}
+        <span className="font-mono text-xs tabular-nums text-text-2">
+          {formatTokens(detail.tokens.total)}
+        </span>
+      </div>
+      <h1 className="text-xl font-semibold tracking-tight text-text">
+        {detail.ticket_title ?? detail.ticket_key}
+      </h1>
+      <div className="flex flex-wrap items-center gap-2 text-xs text-text-2">
+        <WorktreePathLink path={detail.worktree_path} />
+        {detail.pr_url && (
+          <a
+            href={detail.pr_url}
+            target="_blank"
+            rel="noreferrer"
+            className="rounded-md border border-white/10 px-2 py-1 text-text hover:bg-surface-2"
+          >
+            View PR ↗
+          </a>
+        )}
+        {mode === 'drawer' && (
+          <a
+            href={`#/agent/${encodeURIComponent(detail.key)}/full`}
+            className="rounded-md border border-white/10 px-2 py-1 text-text hover:bg-surface-2"
+          >
+            ↗ Open as page
+          </a>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function WorktreePathLink({ path }: { path: string }) {
+  const [copied, setCopied] = useState(false);
+
+  const onCopy = () => {
+    void navigator.clipboard?.writeText(path).then(() => {
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1500);
+    });
+  };
+
+  return (
+    <span className="inline-flex items-center gap-1.5 rounded-md border border-white/10 px-2 py-1">
+      <span className="font-mono text-xs text-text-2">{path}</span>
+      <button
+        type="button"
+        onClick={onCopy}
+        aria-label="Copy worktree path"
+        className="rounded text-[10px] uppercase tracking-wide text-text-3 hover:text-text"
+      >
+        {copied ? 'Copied' : 'Copy'}
+      </button>
+    </span>
+  );
+}
+
+function useLiveRuntime(startedAt: string | undefined, live: boolean): string | null {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (!live) return;
+    const id = window.setInterval(() => setNow(Date.now()), 1_000);
+    return () => window.clearInterval(id);
+  }, [live]);
+
+  if (!startedAt) return null;
+  const start = new Date(startedAt).getTime();
+  if (Number.isNaN(start)) return null;
+  return formatDuration(now - start);
+}
