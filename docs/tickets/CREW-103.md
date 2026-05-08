@@ -22,6 +22,10 @@ Two route components sharing an `AgentBody`. `AgentDrawer` slides over the agent
 - **Migrate the AgentRow click target.** `AgentDetailPlaceholder` previously handled `/agents/:key` and said "ships in a follow-up plan" — this _is_ that follow-up. Remove the placeholder; route AgentRow clicks at `/agent/:key`.
 - **Body slot stays a placeholder.** CREW-J ships `TokenTable`, `StateHistoryBar`, and `Timeline` — those are out of scope here. The placeholder div has `data-testid="agent-body-placeholder"` so CREW-J can swap it in.
 
+## Open questions
+
+- [ ] **Rebase onto `origin/main` blocked by sandbox bind-mount on `.claude/settings.json`.** During the 2026-05-08 review-feedback rerun, `git rebase origin/main` aborted with `error: unable to unlink old '.claude/settings.json': Device or resource busy`. The sandbox bind-mounts that file read-only (verified via `findmnt`), and CREW-115 (now on main) modifies it, so the checkout step of any rebase / merge can't replace the file. Tried: retry, `git update-index --skip-worktree`, `--assume-unchanged`, sparse-checkout exclusion — all defeated at the same checkout boundary because git unlinks before writing. The PR branch therefore still sits on the pre-CREW-115 base; the human will need to either (a) rebase from outside the agent session, or (b) let GitHub merge-commit the divergence. The actual feedback ("re-run e2e under the new setup") was applied without a rebase: `npm run test:e2e` (bare, no `--workspace=...` flag) matches the pre-CREW-115 exact-match form and reaches the host docker stack, so e2e was verified end-to-end on the existing branch.
+
 ## Notes
 
 Spec § 5 (header anatomy) and § 7.1 (open behaviour) are the source of truth. Plan tasks 18–19 in `docs/superpowers/plans/2026-05-05-slice-1c-agent-drawer-and-push-updates.md`.

@@ -23,7 +23,9 @@ test.describe('Agent drawer', () => {
     await page.goto(`/#/agent/${SEEDED_AGENT_KEY}`);
     await expect(page.getByTestId('drawer-header')).toBeVisible();
 
-    await page.getByTestId('drawer-backdrop').click();
+    // Click the upper-left of the backdrop — the drawer panel is right-aligned
+    // and the backdrop's center sits underneath it on default viewports.
+    await page.getByTestId('drawer-backdrop').click({ position: { x: 50, y: 50 } });
 
     await expect(page.getByTestId('drawer-header')).toHaveCount(0);
   });
