@@ -252,6 +252,58 @@ describe('Timeline', () => {
     expect(screen.queryByRole('button', { name: /new events/i })).toBeNull();
   });
 
+  it('renders the all-off empty state when every chip is toggled off', async () => {
+    mockUseTimeline.mockReturnValue(
+      timelineResult({
+        data: { events: [evt(1), assistantToolUse(2, 'Bash')] },
+        isSuccess: true,
+        status: 'success',
+      }),
+    );
+    render(<Timeline agentKey="KAN-1" />);
+    for (const label of [
+      'Tool calls',
+      'Assistant prose',
+      'Thinking',
+      'System',
+      'Hooks & skills',
+      'Other',
+    ]) {
+      const btn = screen.getByRole('button', { name: label });
+      if (btn.getAttribute('aria-pressed') === 'true') {
+        await userEvent.click(btn);
+      }
+    }
+    expect(screen.getByText(/No events match your filters/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Show all/i })).toBeInTheDocument();
+    expect(screen.queryAllByTestId('event-card')).toHaveLength(0);
+  });
+
+  it('clicking "Show all" resets chips to the curated defaults', async () => {
+    mockUseTimeline.mockReturnValue(
+      timelineResult({
+        data: { events: [evt(1), assistantToolUse(2, 'Bash')] },
+        isSuccess: true,
+        status: 'success',
+      }),
+    );
+    render(<Timeline agentKey="KAN-1" />);
+    // Toggle the two default-on chips OFF — produces the empty state.
+    await userEvent.click(screen.getByRole('button', { name: 'Tool calls' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Assistant prose' }));
+    expect(screen.getByText(/No events match your filters/i)).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: /Show all/i }));
+    expect(screen.getByRole('button', { name: 'Tool calls' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+    expect(screen.getByRole('button', { name: 'Assistant prose' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+    expect(screen.getAllByTestId('event-card')).toHaveLength(2);
+  });
+
   it('hides events whose chip group is toggled off', async () => {
     mockUseTimeline.mockReturnValue(
       timelineResult({

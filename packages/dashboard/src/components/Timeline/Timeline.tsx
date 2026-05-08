@@ -59,6 +59,11 @@ export function Timeline({ agentKey, agentState }: TimelineProps) {
     );
   }
 
+  const resetFilters = () => {
+    setVisibleGroups(new Set(defaultVisibleSet));
+    setSearchInput('');
+  };
+
   return (
     <div className="relative flex h-full min-h-0 flex-col">
       <TimelineToolbar
@@ -76,9 +81,33 @@ export function Timeline({ agentKey, agentState }: TimelineProps) {
         >
           No timeline events yet.
         </div>
+      ) : filteredEvents.length === 0 ? (
+        <FilterEmptyState onShowAll={resetFilters} />
       ) : (
         <VirtualEventList events={filteredEvents} liveMode={liveMode} />
       )}
+    </div>
+  );
+}
+
+interface FilterEmptyStateProps {
+  onShowAll: () => void;
+}
+
+function FilterEmptyState({ onShowAll }: FilterEmptyStateProps) {
+  return (
+    <div
+      data-testid="timeline-filter-empty"
+      className="flex flex-1 flex-col items-center justify-center gap-2 p-6 text-sm text-text-3"
+    >
+      <p>No events match your filters.</p>
+      <button
+        type="button"
+        onClick={onShowAll}
+        className="font-mono text-[11px] text-text-2 underline-offset-2 hover:underline"
+      >
+        Show all
+      </button>
     </div>
   );
 }
