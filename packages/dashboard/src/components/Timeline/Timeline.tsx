@@ -1,10 +1,11 @@
-import { useDeferredValue, useMemo, useRef, useState } from 'react';
+import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 
 import { useTimeline } from '../../data/queries.js';
-import type { TranscriptEvent } from '../../data/types.js';
+import type { AgentState, TranscriptEvent } from '../../data/types.js';
 import { EventCard } from './EventCard.js';
 import { FilterChips } from './FilterChips.js';
+import { LiveModeToggle, NewEventsPill } from './LiveModeToggle.js';
 import { SearchBar } from './SearchBar.js';
 import {
   defaultVisibleSet,
@@ -15,17 +16,27 @@ import {
 
 interface TimelineProps {
   agentKey: string;
+  /**
+   * Used to derive the live-mode default. ON for active agents,
+   * OFF for `finished` / `error`. Optional so the component can be
+   * rendered standalone (e.g. in tests).
+   */
+  agentState?: AgentState;
 }
 
 const ESTIMATED_ROW_HEIGHT = 88;
 
-export function Timeline({ agentKey }: TimelineProps) {
+const isLiveByDefault = (state?: AgentState): boolean =>
+  state !== 'finished' && state !== 'error';
+
+export function Timeline({ agentKey, agentState }: TimelineProps) {
   const { data, isLoading } = useTimeline(agentKey);
   const [visibleGroups, setVisibleGroups] = useState<ReadonlySet<ChipGroup>>(
     () => new Set(defaultVisibleSet),
   );
   const [searchInput, setSearchInput] = useState('');
   const deferredSearch = useDeferredValue(searchInput);
+  const [liveMode, setLiveMode] = useState<boolean>(() => isLiveByDefault(agentState));
 
   const events = data?.events ?? [];
   const filteredEvents = useMemo(() => {
@@ -49,12 +60,14 @@ export function Timeline({ agentKey }: TimelineProps) {
   }
 
   return (
-    <div className="flex h-full min-h-0 flex-col">
+    <div className="relative flex h-full min-h-0 flex-col">
       <TimelineToolbar
         visibleGroups={visibleGroups}
         onVisibleGroupsChange={setVisibleGroups}
         searchValue={searchInput}
         onSearchChange={setSearchInput}
+        liveMode={liveMode}
+        onLiveModeChange={setLiveMode}
       />
       {events.length === 0 ? (
         <div
@@ -64,7 +77,7 @@ export function Timeline({ agentKey }: TimelineProps) {
           No timeline events yet.
         </div>
       ) : (
-        <VirtualEventList events={filteredEvents} />
+        <VirtualEventList events={filteredEvents} liveMode={liveMode} />
       )}
     </div>
   );
@@ -75,6 +88,8 @@ interface TimelineToolbarProps {
   onVisibleGroupsChange: (next: Set<ChipGroup>) => void;
   searchValue: string;
   onSearchChange: (next: string) => void;
+  liveMode: boolean;
+  onLiveModeChange: (next: boolean) => void;
 }
 
 function TimelineToolbar({
@@ -82,26 +97,27 @@ function TimelineToolbar({
   onVisibleGroupsChange,
   searchValue,
   onSearchChange,
+  liveMode,
+  onLiveModeChange,
 }: TimelineToolbarProps) {
   return (
     <div className="flex items-center gap-2 border-b border-white/10 px-3 py-2 text-xs text-text-3">
       <FilterChips visible={visibleGroups} onChange={onVisibleGroupsChange} />
       <SearchBar value={searchValue} onChange={onSearchChange} />
-      <LiveModeToggleSlot />
+      <LiveModeToggle active={liveMode} onChange={onLiveModeChange} />
     </div>
   );
 }
 
-function LiveModeToggleSlot() {
-  return <span data-testid="live-mode-toggle-slot" className="italic" />;
-}
-
 interface VirtualEventListProps {
   events: TranscriptEvent[];
+  liveMode: boolean;
 }
 
-function VirtualEventList({ events }: VirtualEventListProps) {
+function VirtualEventList({ events, liveMode }: VirtualEventListProps) {
   const parentRef = useRef<HTMLDivElement | null>(null);
+  const lastSeenLengthRef = useRef<number>(events.length);
+  const [pendingNewCount, setPendingNewCount] = useState(0);
 
   const virtualizer = useVirtualizer({
     count: events.length,
@@ -110,31 +126,68 @@ function VirtualEventList({ events }: VirtualEventListProps) {
     overscan: 6,
   });
 
+  // Track length changes to either auto-scroll (live ON) or accrue a
+  // pending count (live OFF). Reset the pending count whenever live
+  // mode flips back on, since the user is implicitly catching up.
+  useEffect(() => {
+    const prev = lastSeenLengthRef.current;
+    const next = events.length;
+    if (next > prev) {
+      if (liveMode) {
+        if (next > 0) virtualizer.scrollToIndex(next - 1, { align: 'end' });
+      } else {
+        setPendingNewCount((c) => c + (next - prev));
+      }
+    }
+    lastSeenLengthRef.current = next;
+  }, [events.length, liveMode, virtualizer]);
+
+  useEffect(() => {
+    if (liveMode) setPendingNewCount(0);
+  }, [liveMode]);
+
   const items = virtualizer.getVirtualItems();
 
   return (
-    <div ref={parentRef} className="min-h-0 flex-1 overflow-y-auto">
-      <div style={{ height: `${virtualizer.getTotalSize()}px` }} className="relative w-full">
-        {items.map((vi) => {
-          const event = events[vi.index];
-          return (
-            <div
-              key={vi.key}
-              data-index={vi.index}
-              ref={virtualizer.measureElement}
-              style={{
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                width: '100%',
-                transform: `translateY(${vi.start}px)`,
-              }}
-            >
-              <EventCard event={event} />
-            </div>
-          );
-        })}
+    <div className="relative min-h-0 flex-1">
+      <div ref={parentRef} className="h-full overflow-y-auto">
+        <div style={{ height: `${virtualizer.getTotalSize()}px` }} className="relative w-full">
+          {items.map((vi) => {
+            const event = events[vi.index];
+            return (
+              <div
+                key={vi.key}
+                data-index={vi.index}
+                ref={virtualizer.measureElement}
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  width: '100%',
+                  transform: `translateY(${vi.start}px)`,
+                }}
+              >
+                <EventCard event={event} />
+              </div>
+            );
+          })}
+        </div>
       </div>
+      {!liveMode && pendingNewCount > 0 && (
+        <div className="pointer-events-none absolute right-3 bottom-3">
+          <span className="pointer-events-auto">
+            <NewEventsPill
+              count={pendingNewCount}
+              onClick={() => {
+                if (events.length > 0) {
+                  virtualizer.scrollToIndex(events.length - 1, { align: 'end' });
+                }
+                setPendingNewCount(0);
+              }}
+            />
+          </span>
+        </div>
+      )}
     </div>
   );
 }
