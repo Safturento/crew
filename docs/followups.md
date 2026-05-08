@@ -7,6 +7,7 @@ Format: see the user-level `~/.claude/CLAUDE.md` "Followup detection" section.
 ## Contents
 
 - [Active](#active)
+  - [2026-05-07 — Port allocator detects collisions only at `docker compose up` time, not at allocation time](#2026-05-07--port-allocator-detects-collisions-only-at-docker-compose-up-time-not-at-allocation-time)
   - [2026-05-07 — `sandbox-network-note.md` recommends `crew restart --hard` for docker recovery, but `--hard` nukes the worktree](#2026-05-07--sandbox-network-notemd-recommends-crew-restart---hard-for-docker-recovery-but---hard-nukes-the-worktree)
   - [2026-05-05 — Per-ticket model selection (use Sonnet for trivial work to save tokens)](#2026-05-05--per-ticket-model-selection-use-sonnet-for-trivial-work-to-save-tokens)
   - [2026-05-05 — Dashboard silently drops agents whose project isn't in `/api/projects`](#2026-05-05--dashboard-silently-drops-agents-whose-project-isnt-in-apiprojects)
@@ -52,6 +53,33 @@ Format: see the user-level `~/.claude/CLAUDE.md` "Followup detection" section.
 - [Abandoned](#abandoned)
 
 ## Active
+
+### 2026-05-07 — Port allocator detects collisions only at `docker compose up` time, not at allocation time
+
+**What:** `allocatePort(basename, varName)` (`packages/cli/src/lib/env-spec/allocate-port.ts:19`) is a deterministic `md5(basename::varName) % 16383` mapping into `[16384, 32767]`. There's no collision detection — the function returns a port whether or not it's free on the host or already claimed by another worktree's `.env`. Failures surface only when `docker compose up --wait` tries to bind the port and gets `EADDRINUSE`. Hash collisions are rare per project (~1/32k per varName pair) but real; cross-worktree collisions on the same host are the more common case (two worktrees of the same project will trivially share ports because basename + varName matches). Host-service collisions (e.g., a local Postgres on 5432-mapped port) are also caught only at compose-up time.
+
+**Why noticed:** Surfaced 2026-05-07 during the failure-mode walkthrough for the "defer fix-pr env prep to the agent" spec ([`docs/superpowers/specs/2026-05-07-fix-pr-defer-env-prep-to-agent-design.md`](superpowers/specs/2026-05-07-fix-pr-defer-env-prep-to-agent-design.md), §4). After that change ships, port-collision failures move from the wrapper's pre-spawn `ensureStackRunning` into the agent's Step 0.5 `docker compose up --build --wait`. The agent will abort + document per the new preamble, but that's a wasted session round-trip when the collision is detectable at port-allocation time (i.e., before the agent even spawns).
+
+**Anchors:**
+
+- `packages/cli/src/lib/env-spec/allocate-port.ts:19-23` — the no-detection allocator
+- `packages/cli/src/lib/env-spec/materialize.ts` — the writer that calls `allocatePort` and lays the result into `.env`
+- `packages/cli/src/lib/docker/ensure-stack-running.ts` — where `EADDRINUSE` actually surfaces today
+- `packages/cli/src/commands/docker-env.ts` — the `crew docker-env` command that materializes `.env`
+
+**What's been considered:**
+
+- **Allocate-time host-port probe.** After computing the candidate port, attempt a `net.createServer().listen(port)` on `127.0.0.1`; if it binds, the port is free; close and persist. If it fails with `EADDRINUSE`, fall through to a deterministic-rehash strategy (`md5(basename::varName::saltN)` for increasing N). Pro: catches all real-world cases, including unrelated host services. Con: introduces non-determinism in the port number when the original collides — `.env` is no longer a pure function of (basename, varName). Acceptable because the `.env` is per-worktree and committed only locally.
+- **Cross-worktree allocation registry.** A user-level file (e.g., `~/.crew/port-registry.toml`) that records `(basename, varName) → port` and detects allocations against it. Pro: catches cross-worktree collisions even when neither stack is running. Con: more state to manage; needs cleanup on worktree removal.
+- **Drop-in solution: a small `find-free-port` library** (`get-port`, `portfinder`). Loses determinism entirely — port is whatever's free at allocation time. Probably overkill given the deterministic-rehash variant exists.
+
+Lean toward the allocate-time probe + deterministic-rehash. The registry adds operational complexity without much marginal value once the probe catches the immediate collision.
+
+**Shape of work:** One ticket. ~50 lines + tests in `allocate-port.ts`. Materialize call site stays the same shape. Worth verifying behavior on macOS / WSL where loopback semantics differ slightly (test the probe against `127.0.0.1` not `0.0.0.0` to match docker's per-port binding pattern).
+
+**Open questions:**
+
+- Should the rehash salt be persisted (so subsequent `crew docker-env` runs reproduce the same port even if the original is briefly free), or recomputed each time? Persistence keeps `.env` stable across re-materializations; recomputation simplifies the algorithm. Probably persist — `.env` regeneration shouldn't churn ports.
 
 ### 2026-05-07 — `sandbox-network-note.md` recommends `crew restart --hard` for docker recovery, but `--hard` nukes the worktree
 
