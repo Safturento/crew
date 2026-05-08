@@ -62,7 +62,7 @@ describe('verifyExcludedCommandsCheck', () => {
   it('passes when all required entries are present', async () => {
     await writeSettings({
       sandbox: {
-        excludedCommands: ['npm run bruno:smoke', 'npm run test:e2e'],
+        excludedCommands: ['npm run bruno:smoke*', 'npm run test:e2e*'],
       },
     });
 
@@ -95,12 +95,12 @@ describe('verifyExcludedCommandsCheck', () => {
       expect.fail('expected throw');
     } catch (err) {
       const pe = err as PreflightError;
-      expect(pe.details.missing).toBe('"npm run bruno:smoke"');
+      expect(pe.details.missing).toBe('"npm run bruno:smoke*"');
     }
   });
 
   it('throws when authored playwright test_command is missing', async () => {
-    await writeSettings({ sandbox: { excludedCommands: ['npm run bruno:smoke'] } });
+    await writeSettings({ sandbox: { excludedCommands: ['npm run bruno:smoke*'] } });
     const check = verifyExcludedCommandsCheck();
     const cfg = { ...cfgWithBruno, ...cfgWithAuthoredPlaywright } as ProjectConfig;
     try {
@@ -108,13 +108,13 @@ describe('verifyExcludedCommandsCheck', () => {
       expect.fail('expected throw');
     } catch (err) {
       const pe = err as PreflightError;
-      expect(pe.details.missing).toBe('"npm run test:e2e"');
+      expect(pe.details.missing).toBe('"npm run test:e2e*"');
     }
   });
 
   it('respects custom test_command from config', async () => {
     await writeSettings({
-      sandbox: { excludedCommands: ['npm run bruno:smoke', 'npm run e2e:custom'] },
+      sandbox: { excludedCommands: ['npm run bruno:smoke*', 'npm run e2e:custom*'] },
     });
     const cfg = {
       ...cfgWithAuthoredPlaywright,
@@ -164,7 +164,7 @@ describe('verifyExcludedCommandsCheck', () => {
 
   it('throws when [docker] is present but "docker compose" is missing', async () => {
     await writeSettings({
-      sandbox: { excludedCommands: ['npm run bruno:smoke', 'npm run test:e2e'] },
+      sandbox: { excludedCommands: ['npm run bruno:smoke*', 'npm run test:e2e*'] },
     });
     const check = verifyExcludedCommandsCheck();
     try {
@@ -173,17 +173,33 @@ describe('verifyExcludedCommandsCheck', () => {
     } catch (err) {
       expect(err).toBeInstanceOf(PreflightError);
       const pe = err as PreflightError;
-      expect(pe.details.missing).toBe('"docker compose"');
+      expect(pe.details.missing).toBe('"docker compose*"');
       expect(String(pe.details.reason)).toContain('[docker] block present');
     }
   });
 
   it('passes when [docker] is present and "docker compose" is in excludedCommands', async () => {
     await writeSettings({
-      sandbox: { excludedCommands: ['docker compose'] },
+      sandbox: { excludedCommands: ['docker compose*'] },
     });
     const check = verifyExcludedCommandsCheck();
     await expect(check.run({ config: cfgWithDocker, worktree })).resolves.toBeUndefined();
+  });
+
+  it('rejects the legacy exact-match form for bruno:smoke', async () => {
+    await writeSettings({
+      sandbox: { excludedCommands: ['npm run bruno:smoke'] }, // legacy exact-match
+    });
+    const check = verifyExcludedCommandsCheck();
+    try {
+      await check.run({ config: cfgWithBruno, worktree });
+      expect.fail('expected throw — legacy form should not satisfy the new requirement');
+    } catch (err) {
+      expect(err).toBeInstanceOf(PreflightError);
+      const pe = err as PreflightError;
+      expect(pe.details.missing).toBe('"npm run bruno:smoke*"');
+      expect(String(pe.details.reason)).toContain('[bruno_smoke].enabled = true');
+    }
   });
 
   it('does not require "docker compose" when no [docker] block is present', async () => {
