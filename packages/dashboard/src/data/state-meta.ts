@@ -1,4 +1,4 @@
-import type { Agent, AgentState } from './types.js';
+import type { Agent, AgentState, TransitionState } from './types.js';
 
 export interface StateMetaEntry {
   label: string;
@@ -89,6 +89,25 @@ export const STATE_CLASSES: Record<AgentState, StateClassTokens> = {
     bg10: 'bg-state-finished/10',
   },
 };
+
+/**
+ * The state-history endpoint reports `init` where the agents-list reports
+ * `initializing`. Map the transition vocabulary onto the AgentState keys
+ * STATE_META and STATE_CLASSES use.
+ */
+const TRANSITION_TO_AGENT_STATE: Record<TransitionState, AgentState> = {
+  init: 'initializing',
+  running: 'running',
+  pr_open: 'pr_open',
+  error: 'error',
+  finished: 'finished',
+  idle: 'idle',
+  waiting: 'waiting',
+};
+
+export function transitionToAgentState(t: TransitionState): AgentState {
+  return TRANSITION_TO_AGENT_STATE[t];
+}
 
 export function sortAgentsByPriority(agents: Agent[]): Agent[] {
   return [...agents].sort((a, b) => {
