@@ -20,13 +20,12 @@ import {
   brunoSmokeOptionsFor,
   needsDockerPorts,
   playwrightFixPrOptsFor,
-  prepareAgentEnvironment,
   readDockerPortsFromEnvFile,
   readEnvBaseMap,
   streamTranscript,
 } from '../lib/run/index.js';
-import { PreflightError, renderPreflightError } from '../lib/preflight/index.js';
-import type { DockerPorts } from '../lib/playwright/index.js';
+import { runResumePreflight } from '../lib/preflight/index.js';
+import { playwrightEnabled, resolveAppUrl, type DockerPorts } from '../lib/playwright/index.js';
 
 export type FeedbackMode =
   | { kind: 'pr' }
@@ -194,23 +193,13 @@ async function runFixPr(key: string, flags: FixPrFlags): Promise<void> {
     : undefined;
 
   let resolvedAppUrl: string | undefined;
+  let pwEnabled = false;
   if (projectConfig) {
-    const env = await prepareAgentEnvironment({
-      config: projectConfig,
-      worktree,
-      key,
-      env: process.env,
-      dockerPorts,
-      envVars,
-      mode: 'resume',
-    }).catch((err: unknown): never => {
-      if (err instanceof PreflightError) {
-        process.stderr.write(renderPreflightError(err) + '\n');
-        process.exit(1);
-      }
-      throw err;
-    });
-    resolvedAppUrl = env.resolvedAppUrl;
+    pwEnabled = playwrightEnabled(projectConfig);
+    if (pwEnabled && projectConfig.playwright) {
+      resolvedAppUrl = resolveAppUrl(projectConfig.playwright.app_url, dockerPorts, envVars).raw;
+    }
+    await runResumePreflight({ config: projectConfig, worktree });
   }
 
   const prompt = buildFixPrPrompt({
@@ -220,6 +209,7 @@ async function runFixPr(key: string, flags: FixPrFlags): Promise<void> {
     playwright: projectConfig ? playwrightFixPrOptsFor(projectConfig, resolvedAppUrl) : undefined,
     brunoSmoke,
     discoveredSkillsBlock: renderDiscoveredSkillsBlock(discoverSkills({ repoPath })),
+    playwrightEnabled: pwEnabled,
   });
 
   const logFile = `/tmp/crew-fix-pr-${key}.log`;

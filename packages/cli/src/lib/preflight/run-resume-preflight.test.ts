@@ -50,7 +50,7 @@ describe('runResumePreflight', () => {
 
     await expect(runResumePreflight({ config: baseConfig, worktree: dir })).resolves.toBeUndefined();
     expect(warnSpy).toHaveBeenCalled();
-    const written = warnSpy.mock.calls.map((c) => String(c[0])).join('');
+    const written = warnSpy.mock.calls.map((c: unknown[]) => String(c[0])).join('');
     expect(written).toMatch(/excluded-commands/);
     expect(written).toMatch(/warning/i);
     expect(written).toMatch(/agent's rebase will pick this up/i);
