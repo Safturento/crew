@@ -4,7 +4,8 @@
     "allowUnsandboxedCommands": false,
     "excludedCommands": [
       "npm run bruno:smoke",
-      "npm run test:e2e"
+      "npm run test:e2e",
+      "docker compose"
     ],
     "filesystem": {
       "allowWrite": [
