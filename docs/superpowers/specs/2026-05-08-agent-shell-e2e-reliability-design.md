@@ -66,18 +66,27 @@ Before changing any production setting, the implementing agent runs a one-shot p
 
 **Method.** Pick a known-failing sandboxed command (e.g. `curl -s http://localhost:21559/healthz`, which fails ECONNREFUSED inside `bwrap --unshare-net`). Wrap it as `npm run test:probe` in `packages/dashboard/package.json` temporarily (or use an existing whitelisted command form). Add a candidate entry to `<repo>/.claude/settings.json` `excludedCommands`. Run a sandboxed Bash invocation that *would* match the entry under each glob hypothesis. Record outcome: "matched (un-sandboxed)" vs "not matched (sandboxed)".
 
-**Candidates to test, in order of decreasing permissiveness:**
+**Probe results (run 2026-05-08, against worktree at `localhost:21114`):**
 
-| Pattern | Hypothesis | Expected match |
-| --- | --- | --- |
-| `npm run test:e2e *` | space-separated, single-segment glob | `npm run test:e2e --workspace=…` ✓; piped form depends on shell handling |
-| `npm run test:e2e*` | concatenated, fnmatch-style | depends on whether implementation tokenizes |
-| `npm run test:e2e **` | recursive glob | covers everything but may not be supported |
-| `npm run test:e2e` | exact (control — the current state) | matches only literal |
+| Candidate entry | Invocation form | Result | Notes |
+| --- | --- | --- | --- |
+| (none — baseline) | `npm run probe:loopback --workspace=crew-dashboard` | NO MATCH | confirms sandbox isolates loopback (`PROBE_FAIL`) |
+| `"npm run probe:loopback*"` | `npm run probe:loopback --workspace=crew-dashboard` | MATCH | concatenated glob accepts trailing args |
+| `"npm run probe:loopback*"` | `npm run probe:loopback` (bare, in workspace dir) | MATCH | trailing `*` is zero-or-more |
+| `"npm run probe:loopback*"` | `npm run probe:loopback --workspace=crew-dashboard 2>&1 \| tail -5` | MATCH | shell pipe / redirect does **not** defeat matching |
+| `"npm run probe:loopback*"` | `cd /tmp && npm --prefix <dir> run probe:loopback 2>&1 \| tail -5` | NO MATCH | `cd && …` and `npm --prefix …` wrappers defeat the prefix match |
+| `"npm run probe:loopback*"` | `sh -c "npm run probe:loopback"` | NO MATCH | `sh -c …` wrapper is the entry that gets matched, not the inner |
+| `"npm run probe:loopback **"` | `npm run probe:loopback --workspace=crew-dashboard` | MATCH | space + double-star equivalent to `*` for our purposes |
+| `"npm run probe:loopback *"` | `npm run probe:loopback` (bare) | MATCH | space + single-star also matches the empty trailing |
+| `"npm run probe:loopback"` (exact, control) | `npm run probe:loopback --workspace=crew-dashboard` | NO MATCH | reproduces the CREW-103 failure mode |
 
-The implementing agent fills in the actual match results in a table that lands in §3.1 of this spec via a follow-up edit. The table determines which form §3.2 commits.
+**Conclusion:** matching is **leading-substring (prefix) with `*` glob semantics**. `command*` and `command *` are equivalent — both match `command` alone, `command --flag=…`, and `command --flag=… 2>&1 | tail -N` (pipes/redirects ride along because the entry only constrains the leading bytes). Wrappers that prepend something **before** the matched prefix (`cd … &&`, `sh -c "…"`, `npm --prefix … run …` instead of `npm run …`) defeat the match.
 
-**Note on shell pipes.** A command like `npm run test:e2e 2>&1 | tail -25` is a shell pipeline; the runtime may see the entire pipeline as a single string, or it may evaluate the `excludedCommands` rule against the first command alone. The probe should test both forms explicitly. If pipes defeat matching regardless of pattern, §3.6's prompt warning surfaces this to agents.
+**Canonical form selected:** `command*` (concatenated, no whitespace). Equivalent to `command *` but minimal. `**` adds nothing.
+
+**Implications for §3.2:** the three production entries become `"npm run bruno:smoke*"`, `"npm run test:e2e*"`, `"docker compose*"`.
+
+**Implications for §3.6:** pipes/redirects do **not** need a warning — they ride along. The prompt warning calls out `cd <dir> && …` and other wrappers (`sh -c "…"`, `npm --prefix … run …`) as the actual hazards.
 
 ### 3.2 Sandbox settings update
 
