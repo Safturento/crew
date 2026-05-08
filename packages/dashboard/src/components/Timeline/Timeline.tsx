@@ -3,6 +3,7 @@ import { useVirtualizer } from '@tanstack/react-virtual';
 
 import { useTimeline } from '../../data/queries.js';
 import type { TranscriptEvent } from '../../data/types.js';
+import { EventCard } from './EventCard.js';
 
 interface TimelineProps {
   agentKey: string;
@@ -105,17 +106,6 @@ function VirtualEventList({ events }: VirtualEventListProps) {
           );
         })}
       </div>
-    </div>
-  );
-}
-
-function EventCard({ event }: { event: TranscriptEvent }) {
-  return (
-    <div
-      data-testid="event-card"
-      className="border-b border-white/5 px-3 py-3 font-mono text-xs text-text-2"
-    >
-      {event.type}
     </div>
   );
 }
