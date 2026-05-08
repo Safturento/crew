@@ -22,13 +22,17 @@ If the rebase produces conflicts, follow these rules before going any further:
 - If you are not confident in a resolution: \`git rebase --abort\`, document the blocker in \`docs/tickets/KAN-23.md\` "Open questions", and exit WITHOUT applying the review feedback.
 - **If you resolved conflicts during this run, DO NOT push at the end** even if everything passes. The human must inspect the rebase resolution commits before they reach origin. After your feedback fixes are committed and verified, print exactly one line and exit: \`Rebase resolution + feedback ready for inspection — run 'git push --force-with-lease origin KAN-23' once you've reviewed.\`
 
-Hot-reload should pick up the resolved source automatically. If the daemon stack is wedged after you finish resolving, recover from inside the worktree with:
+## Step 0.5: bring up the environment (do this AFTER Step 0 succeeds)
+
+Now that the source is current with \`origin/main\`, bring up the docker stack and any browser dependencies:
 
 \`\`\`
 docker compose up --build --wait
 \`\`\`
 
-That rebuilds against the now-clean source. **Do not reset the worktree or use any "hard" reset command** — those wipe in-progress work.
+If \`docker compose up\` fails for environmental reasons (host docker daemon down, port collision with another stack, missing CLI tools) — i.e., a failure that rebasing would not have fixed — abort with a clear message: document the blocker in \`docs/tickets/KAN-23.md\` "Open questions" and exit WITHOUT applying the review feedback. Do not push.
+
+**Do not reset the worktree or use any "hard" reset command** — those wipe in-progress work.
 
 ---
 
@@ -119,13 +123,17 @@ If the rebase produces conflicts, follow these rules before going any further:
 - If you are not confident in a resolution: \`git rebase --abort\`, document the blocker in \`docs/tickets/KAN-23.md\` "Open questions", and exit WITHOUT applying the review feedback.
 - **If you resolved conflicts during this run, DO NOT push at the end** even if everything passes. The human must inspect the rebase resolution commits before they reach origin. After your feedback fixes are committed and verified, print exactly one line and exit: \`Rebase resolution + feedback ready for inspection — run 'git push --force-with-lease origin KAN-23' once you've reviewed.\`
 
-Hot-reload should pick up the resolved source automatically. If the daemon stack is wedged after you finish resolving, recover from inside the worktree with:
+## Step 0.5: bring up the environment (do this AFTER Step 0 succeeds)
+
+Now that the source is current with \`origin/main\`, bring up the docker stack and any browser dependencies:
 
 \`\`\`
 docker compose up --build --wait
 \`\`\`
 
-That rebuilds against the now-clean source. **Do not reset the worktree or use any "hard" reset command** — those wipe in-progress work.
+If \`docker compose up\` fails for environmental reasons (host docker daemon down, port collision with another stack, missing CLI tools) — i.e., a failure that rebasing would not have fixed — abort with a clear message: document the blocker in \`docs/tickets/KAN-23.md\` "Open questions" and exit WITHOUT applying the review feedback. Do not push.
+
+**Do not reset the worktree or use any "hard" reset command** — those wipe in-progress work.
 
 ---
 
@@ -212,13 +220,17 @@ If the rebase produces conflicts, follow these rules before going any further:
 - If you are not confident in a resolution: \`git rebase --abort\`, document the blocker in \`docs/tickets/KAN-23.md\` "Open questions", and exit WITHOUT applying the review feedback.
 - **If you resolved conflicts during this run, DO NOT push at the end** even if everything passes. The human must inspect the rebase resolution commits before they reach origin. After your feedback fixes are committed and verified, print exactly one line and exit: \`Rebase resolution + feedback ready for inspection — run 'git push --force-with-lease origin KAN-23' once you've reviewed.\`
 
-Hot-reload should pick up the resolved source automatically. If the daemon stack is wedged after you finish resolving, recover from inside the worktree with:
+## Step 0.5: bring up the environment (do this AFTER Step 0 succeeds)
+
+Now that the source is current with \`origin/main\`, bring up the docker stack and any browser dependencies:
 
 \`\`\`
 docker compose up --build --wait
 \`\`\`
 
-That rebuilds against the now-clean source. **Do not reset the worktree or use any "hard" reset command** — those wipe in-progress work.
+If \`docker compose up\` fails for environmental reasons (host docker daemon down, port collision with another stack, missing CLI tools) — i.e., a failure that rebasing would not have fixed — abort with a clear message: document the blocker in \`docs/tickets/KAN-23.md\` "Open questions" and exit WITHOUT applying the review feedback. Do not push.
+
+**Do not reset the worktree or use any "hard" reset command** — those wipe in-progress work.
 
 ---
 
