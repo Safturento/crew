@@ -22,6 +22,8 @@ coverage
 test-results
 playwright-report
 .playwright
+.playwright-mcp/
+/*.png
 
 # Local env / overrides / secrets
 *.local
