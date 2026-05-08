@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { HttpDaemonClient } from './HttpDaemonClient.js';
+import { AgentNotFoundError, HttpDaemonClient } from './HttpDaemonClient.js';
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -75,5 +75,156 @@ describe('HttpDaemonClient.listAgents', () => {
       }),
     );
     await expect(new HttpDaemonClient().listAgents()).rejects.toThrow();
+  });
+});
+
+const SAMPLE_AGENT_DETAIL = {
+  key: 'KAN-1',
+  project: 'kanban-api',
+  ticket_key: 'KAN-1',
+  ticket_title: 'Build the agents list',
+  state: 'running',
+  worktree_path: '/repos/kanban-api-KAN-1',
+  pr_url: null,
+  runs: [
+    {
+      id: '1',
+      command: 'run',
+      started_at: '2026-04-29T12:00:00Z',
+      completed_at: null,
+    },
+  ],
+  tokens: {
+    total: 1234,
+    input: 1000,
+    output: 200,
+    cache_read: 30,
+    cache_creation: 4,
+  },
+  tool_call_count: 7,
+};
+
+describe('HttpDaemonClient.getAgent', () => {
+  it('GETs /api/agents/:key and returns the parsed AgentDetail', async () => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify(SAMPLE_AGENT_DETAIL), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      }),
+    );
+
+    const detail = await new HttpDaemonClient().getAgent('KAN-1');
+
+    expect(detail).toMatchObject({
+      key: 'KAN-1',
+      project: 'kanban-api',
+      state: 'running',
+      tool_call_count: 7,
+    });
+    expect(detail.tokens.total).toBe(1234);
+    expect(detail.runs[0]?.command).toBe('run');
+    expect(fetchSpy).toHaveBeenCalledWith('/api/agents/KAN-1');
+  });
+
+  it('encodes the key when constructing the URL', async () => {
+    const fetchSpy = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValue(
+        new Response(JSON.stringify({ ...SAMPLE_AGENT_DETAIL, key: 'KAN/1' }), { status: 200 }),
+      );
+
+    await new HttpDaemonClient().getAgent('KAN/1');
+
+    expect(fetchSpy).toHaveBeenCalledWith('/api/agents/KAN%2F1');
+  });
+
+  it('throws AgentNotFoundError on 404', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('{}', { status: 404 }));
+    const client = new HttpDaemonClient();
+    await expect(client.getAgent('GONE-1')).rejects.toBeInstanceOf(AgentNotFoundError);
+  });
+
+  it('throws on other non-2xx', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('boom', { status: 500 }));
+    await expect(new HttpDaemonClient().getAgent('KAN-1')).rejects.toThrow(/500/);
+  });
+
+  it('throws on schema mismatch', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify({ key: 'KAN-1' /* missing fields */ }), { status: 200 }),
+    );
+    await expect(new HttpDaemonClient().getAgent('KAN-1')).rejects.toThrow();
+  });
+});
+
+describe('HttpDaemonClient.getStateHistory', () => {
+  it('GETs /api/agents/:key/state-history and returns the transitions', async () => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          transitions: [
+            { from: null, to: 'init', ts: 1000 },
+            { from: 'init', to: 'running', ts: 1500 },
+          ],
+        }),
+        { status: 200 },
+      ),
+    );
+
+    const out = await new HttpDaemonClient().getStateHistory('KAN-1');
+
+    expect(out.transitions).toHaveLength(2);
+    expect(out.transitions[0]).toEqual({ from: null, to: 'init', ts: 1000 });
+    expect(fetchSpy).toHaveBeenCalledWith('/api/agents/KAN-1/state-history');
+  });
+
+  it('throws on non-2xx', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('boom', { status: 500 }));
+    await expect(new HttpDaemonClient().getStateHistory('KAN-1')).rejects.toThrow(/500/);
+  });
+
+  it('throws on schema mismatch', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify({ transitions: [{ from: null }] }), { status: 200 }),
+    );
+    await expect(new HttpDaemonClient().getStateHistory('KAN-1')).rejects.toThrow();
+  });
+});
+
+describe('HttpDaemonClient.getTimeline', () => {
+  it('GETs /api/agents/:key/timeline and returns events without warnings by default', async () => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          events: [{ type: 'assistant', uuid: 'u1', sessionId: 's1', ts: '2026-04-29T12:00:00Z' }],
+        }),
+        { status: 200 },
+      ),
+    );
+
+    const out = await new HttpDaemonClient().getTimeline('KAN-1');
+
+    expect(out.events).toHaveLength(1);
+    expect(out.warnings).toBeUndefined();
+    expect(fetchSpy).toHaveBeenCalledWith('/api/agents/KAN-1/timeline');
+  });
+
+  it('surfaces the X-Crew-Warning header as a warnings array', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify({ events: [] }), {
+        status: 200,
+        headers: { 'X-Crew-Warning': 'transcript-missing' },
+      }),
+    );
+
+    const out = await new HttpDaemonClient().getTimeline('KAN-1');
+
+    expect(out.events).toEqual([]);
+    expect(out.warnings).toEqual(['transcript-missing']);
+  });
+
+  it('throws on non-2xx', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('boom', { status: 500 }));
+    await expect(new HttpDaemonClient().getTimeline('KAN-1')).rejects.toThrow(/500/);
   });
 });
