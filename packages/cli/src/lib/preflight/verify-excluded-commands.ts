@@ -10,6 +10,11 @@ interface RequiredEntry {
   reason: string;
 }
 
+/**
+ * Compute the excludedCommands the agent's project needs in its
+ * <repo>/.claude/settings.json. Each entry corresponds to a sandbox
+ * restriction documented in docs/plans/sandbox-limitations.md.
+ */
 function requiredEntries(config: ProjectConfig): RequiredEntry[] {
   const out: RequiredEntry[] = [];
 
@@ -21,6 +26,13 @@ function requiredEntries(config: ProjectConfig): RequiredEntry[] {
     out.push({
       command: config.playwright.authored.test_command,
       reason: '[playwright].authored.enabled = true',
+    });
+  }
+
+  if (config.docker) {
+    out.push({
+      command: 'docker compose',
+      reason: '[docker] block present (agent does Step 0.5 bringup)',
     });
   }
 

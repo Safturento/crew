@@ -147,4 +147,58 @@ describe('verifyExcludedCommandsCheck', () => {
     const check = verifyExcludedCommandsCheck();
     await expect(check.run({ config: cfg, worktree })).resolves.toBeUndefined();
   });
+
+  const cfgWithDocker = {
+    canonical_worktree: 'main',
+    db_clone: {
+      postgres_service: 'postgres',
+      postgres_user: 'postgres',
+      postgres_database: 'postgres',
+      required_tables: [],
+      exclude_tables: [],
+    },
+    docker: {
+      canonical_worktree: 'main',
+    },
+  } as unknown as ProjectConfig;
+
+  it('throws when [docker] is present but "docker compose" is missing', async () => {
+    await writeSettings({
+      sandbox: { excludedCommands: ['npm run bruno:smoke', 'npm run test:e2e'] },
+    });
+    const check = verifyExcludedCommandsCheck();
+    try {
+      await check.run({ config: cfgWithDocker, worktree });
+      expect.fail('expected throw');
+    } catch (err) {
+      expect(err).toBeInstanceOf(PreflightError);
+      const pe = err as PreflightError;
+      expect(pe.details.missing).toBe('"docker compose"');
+      expect(String(pe.details.reason)).toContain('[docker] block present');
+    }
+  });
+
+  it('passes when [docker] is present and "docker compose" is in excludedCommands', async () => {
+    await writeSettings({
+      sandbox: { excludedCommands: ['docker compose'] },
+    });
+    const check = verifyExcludedCommandsCheck();
+    await expect(check.run({ config: cfgWithDocker, worktree })).resolves.toBeUndefined();
+  });
+
+  it('does not require "docker compose" when no [docker] block is present', async () => {
+    await writeSettings({ sandbox: { excludedCommands: [] } });
+    const cfgNoDocker = {
+      canonical_worktree: 'main',
+      db_clone: {
+        postgres_service: 'postgres',
+        postgres_user: 'postgres',
+        postgres_database: 'postgres',
+        required_tables: [],
+        exclude_tables: [],
+      },
+    } as unknown as ProjectConfig;
+    const check = verifyExcludedCommandsCheck();
+    await expect(check.run({ config: cfgNoDocker, worktree })).resolves.toBeUndefined();
+  });
 });
