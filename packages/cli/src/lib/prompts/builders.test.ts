@@ -690,6 +690,32 @@ describe('buildResumePrompt — sandbox-network-note', () => {
     });
     expect(out).toContain('`npm run bruno:smoke` and `npm run test:e2e`');
   });
+
+  it('passes playwrightEnabled through to the rebase preamble', () => {
+    const enabled = buildFixPrPrompt({
+      key: 'KAN-23',
+      feedback: '...',
+      feedbackSource: 'stdin',
+      playwrightEnabled: true,
+    });
+    const disabled = buildFixPrPrompt({
+      key: 'KAN-23',
+      feedback: '...',
+      feedbackSource: 'stdin',
+      playwrightEnabled: false,
+    });
+    expect(enabled).toContain('npx playwright install chromium');
+    expect(disabled).not.toContain('npx playwright install chromium');
+  });
+
+  it('omits the playwright install line when playwrightEnabled is undefined', () => {
+    const out = buildFixPrPrompt({
+      key: 'KAN-23',
+      feedback: '...',
+      feedbackSource: 'stdin',
+    });
+    expect(out).not.toContain('npx playwright install chromium');
+  });
 });
 
 describe('buildFixPrPrompt — sandbox-network-note', () => {
@@ -765,5 +791,38 @@ describe('buildRebasePreamble', () => {
     const out = buildRebasePreamble({ key: 'CREW-110', baseBranch: 'develop' });
     expect(out).toContain('git fetch origin develop');
     expect(out).toContain('git rebase origin/develop');
+  });
+
+  it('always includes Step 0.5 with `docker compose up --build --wait`', () => {
+    const out = buildRebasePreamble({ key: 'CREW-130', baseBranch: 'main' });
+    expect(out).toContain('## Step 0.5');
+    expect(out).toContain('docker compose up --build --wait');
+  });
+
+  it('includes `npx playwright install chromium` in Step 0.5 when playwrightEnabled is true', () => {
+    const out = buildRebasePreamble({
+      key: 'CREW-130',
+      baseBranch: 'main',
+      playwrightEnabled: true,
+    });
+    expect(out).toContain('npx playwright install chromium');
+  });
+
+  it('omits `npx playwright install chromium` when playwrightEnabled is false (or omitted)', () => {
+    const omitted = buildRebasePreamble({ key: 'CREW-130', baseBranch: 'main' });
+    const explicit = buildRebasePreamble({
+      key: 'CREW-130',
+      baseBranch: 'main',
+      playwrightEnabled: false,
+    });
+    expect(omitted).not.toContain('npx playwright install chromium');
+    expect(explicit).not.toContain('npx playwright install chromium');
+    expect(omitted).toBe(explicit);
+  });
+
+  it('drops the old "Hot-reload should pick up" recovery paragraph in favour of Step 0.5', () => {
+    const out = buildRebasePreamble({ key: 'CREW-130', baseBranch: 'main' });
+    expect(out).not.toContain('Hot-reload should pick up');
+    expect(out).not.toContain('If the daemon stack is wedged after you finish resolving');
   });
 });
