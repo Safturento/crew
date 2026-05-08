@@ -6,6 +6,8 @@ export function truncate(text: string, max = LINE_ONE_MAX): string {
   return `${collapsed.slice(0, max - 1).trimEnd()}…`;
 }
 
+// UTC, not local zone — keeps test snapshots stable across machines / CI and
+// matches the timestamps recorded in the JSONL transcripts.
 export function formatHHMMSS(timestamp: string | undefined): string {
   if (!timestamp) return '';
   const d = new Date(timestamp);

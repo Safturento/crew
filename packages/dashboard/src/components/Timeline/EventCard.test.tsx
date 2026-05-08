@@ -144,6 +144,35 @@ describe('EventCard', () => {
     expect(screen.getAllByTestId('card-line-1')).toHaveLength(3);
   });
 
+  it('renders an unknown content block as a scoped RawCard, not the whole event', async () => {
+    const user = (await import('@testing-library/user-event')).default;
+    const session = user.setup();
+    const event: AssistantEvent = {
+      type: 'assistant',
+      timestamp: ts,
+      message: {
+        role: 'assistant',
+        content: [
+          { type: 'text', text: 'visible-text' },
+          { type: 'mystery_block', payload: 99 } as unknown as never,
+        ],
+        usage: { output_tokens: 0 },
+      },
+    } as AssistantEvent;
+    render(<EventCard event={event} />);
+    const labels = screen.getAllByTestId('card-line-1');
+    expect(labels).toHaveLength(2);
+    expect(labels[1]).toHaveTextContent('[mystery_block]');
+    await session.click(labels[1]);
+    const expanded = screen.getByTestId('card-expanded').textContent ?? '';
+    expect(expanded).toContain('"type": "mystery_block"');
+    expect(expanded).toContain('"payload": 99');
+    // Critically: the raw dump must NOT include the sibling text content
+    // or the wrapping envelope's usage block.
+    expect(expanded).not.toContain('visible-text');
+    expect(expanded).not.toContain('output_tokens');
+  });
+
   it('treats user.message.content as text when it is a plain string', () => {
     const event = {
       type: 'user',

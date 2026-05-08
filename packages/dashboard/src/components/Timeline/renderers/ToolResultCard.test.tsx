@@ -47,4 +47,17 @@ describe('ToolResultCard', () => {
     expect(screen.getByTestId('card-expanded')).toHaveTextContent(/PASS/);
     expect(screen.getByTestId('card-expanded')).toHaveTextContent(/Tests: 7 passed/);
   });
+
+  it('joins array content (Anthropic-style content blocks)', async () => {
+    const user = userEvent.setup();
+    const arr: ToolResultContent = {
+      type: 'tool_result',
+      tool_use_id: 'tu-11',
+      content: [{ type: 'text', text: 'first chunk' }, 'second chunk'] as unknown[],
+    };
+    render(<ToolResultCard event={event} content={arr} />);
+    await user.click(screen.getByTestId('card-line-1'));
+    expect(screen.getByTestId('card-expanded')).toHaveTextContent('first chunk');
+    expect(screen.getByTestId('card-expanded')).toHaveTextContent('second chunk');
+  });
 });
