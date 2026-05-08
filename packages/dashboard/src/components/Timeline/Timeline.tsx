@@ -47,6 +47,22 @@ export function Timeline({ agentKey, agentState }: TimelineProps) {
     });
   }, [events, visibleGroups, deferredSearch]);
 
+  // New-events pill is driven by the *unfiltered* length so toggling a
+  // chip never registers as "new events arrived from the server."
+  const lastSeenServerLengthRef = useRef<number>(events.length);
+  const [pendingNewCount, setPendingNewCount] = useState(0);
+  useEffect(() => {
+    const prev = lastSeenServerLengthRef.current;
+    const next = events.length;
+    if (next > prev && !liveMode) {
+      setPendingNewCount((c) => c + (next - prev));
+    }
+    lastSeenServerLengthRef.current = next;
+  }, [events.length, liveMode]);
+  useEffect(() => {
+    if (liveMode) setPendingNewCount(0);
+  }, [liveMode]);
+
   if (isLoading) {
     return (
       <div
@@ -83,7 +99,12 @@ export function Timeline({ agentKey, agentState }: TimelineProps) {
       ) : filteredEvents.length === 0 ? (
         <FilterEmptyState onShowAll={resetFilters} />
       ) : (
-        <VirtualEventList events={filteredEvents} liveMode={liveMode} />
+        <VirtualEventList
+          events={filteredEvents}
+          liveMode={liveMode}
+          pendingNewCount={pendingNewCount}
+          onClearPendingNew={() => setPendingNewCount(0)}
+        />
       )}
     </div>
   );
@@ -140,12 +161,18 @@ function TimelineToolbar({
 interface VirtualEventListProps {
   events: TranscriptEvent[];
   liveMode: boolean;
+  pendingNewCount: number;
+  onClearPendingNew: () => void;
 }
 
-function VirtualEventList({ events, liveMode }: VirtualEventListProps) {
+function VirtualEventList({
+  events,
+  liveMode,
+  pendingNewCount,
+  onClearPendingNew,
+}: VirtualEventListProps) {
   const parentRef = useRef<HTMLDivElement | null>(null);
-  const lastSeenLengthRef = useRef<number>(events.length);
-  const [pendingNewCount, setPendingNewCount] = useState(0);
+  const lastSeenVisibleLengthRef = useRef<number>(events.length);
 
   const virtualizer = useVirtualizer({
     count: events.length,
@@ -154,25 +181,17 @@ function VirtualEventList({ events, liveMode }: VirtualEventListProps) {
     overscan: 6,
   });
 
-  // Track length changes to either auto-scroll (live ON) or accrue a
-  // pending count (live OFF). Reset the pending count whenever live
-  // mode flips back on, since the user is implicitly catching up.
+  // Auto-scroll to the latest visible row when live mode is ON and
+  // the visible count grew. Tracks the visible length (not server
+  // length) so the scroll target is always a real row.
   useEffect(() => {
-    const prev = lastSeenLengthRef.current;
+    const prev = lastSeenVisibleLengthRef.current;
     const next = events.length;
-    if (next > prev) {
-      if (liveMode) {
-        if (next > 0) virtualizer.scrollToIndex(next - 1, { align: 'end' });
-      } else {
-        setPendingNewCount((c) => c + (next - prev));
-      }
+    if (liveMode && next > prev && next > 0) {
+      virtualizer.scrollToIndex(next - 1, { align: 'end' });
     }
-    lastSeenLengthRef.current = next;
+    lastSeenVisibleLengthRef.current = next;
   }, [events.length, liveMode, virtualizer]);
-
-  useEffect(() => {
-    if (liveMode) setPendingNewCount(0);
-  }, [liveMode]);
 
   const items = virtualizer.getVirtualItems();
 
@@ -210,7 +229,7 @@ function VirtualEventList({ events, liveMode }: VirtualEventListProps) {
                 if (events.length > 0) {
                   virtualizer.scrollToIndex(events.length - 1, { align: 'end' });
                 }
-                setPendingNewCount(0);
+                onClearPendingNew();
               }}
             />
           </span>

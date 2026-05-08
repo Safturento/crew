@@ -229,6 +229,22 @@ describe('Timeline', () => {
     expect(screen.queryByRole('button', { name: /new events/i })).toBeNull();
   });
 
+  it('does not treat chip toggling as new events (no pill on filter change)', async () => {
+    mockUseTimeline.mockReturnValue(
+      timelineResult({
+        data: { events: [evt(1), assistantThinking(2, 'pondering')] },
+        isSuccess: true,
+        status: 'success',
+      }),
+    );
+    render(<Timeline agentKey="KAN-1" agentState="finished" />);
+    expect(screen.queryByRole('button', { name: /new events/i })).toBeNull();
+    // Toggle thinking ON — visible event count grows from 1 to 2,
+    // but no events arrived from the server, so no pill.
+    await userEvent.click(screen.getByRole('button', { name: 'Thinking' }));
+    expect(screen.queryByRole('button', { name: /new events/i })).toBeNull();
+  });
+
   it('does not show the new-events pill when live mode is ON', () => {
     mockUseTimeline.mockReturnValue(
       timelineResult({
