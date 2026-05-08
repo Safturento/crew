@@ -599,10 +599,9 @@ If existing fix-pr tests reference the removed wrapper-side env prep, update the
 ```
 git add packages/cli/src/commands/fix-pr.ts \
         packages/cli/src/commands/fix-pr.test.ts
-git commit -m "fix(cli): defer fix-pr resume-mode env prep to the dispatched agent (CREW-XXX)"
+git commit -m "fix(cli): defer fix-pr resume-mode env prep to the dispatched agent (CREW-113)"
 ```
 
-(Replace `CREW-XXX` with the assigned ticket key once issued.)
 
 ---
 
@@ -617,17 +616,17 @@ The failure mode is "worktree's daemon source is too stale to boot." From a clea
 ```
 git checkout -B test-stale main      # in canonical
 # ... add some daemon-breaking commit on main, push, return ...
-crew run CREW-XXX                    # fresh worktree on the broken main
+crew run CREW-113                    # fresh worktree on the broken main
 ```
 
-Then advance canonical/main further with a daemon fix, leaving the CREW-XXX branch behind. Confirm `cd crew-CREW-XXX && docker compose up --wait` fails today with `unhealthy daemon`.
+Then advance canonical/main further with a daemon fix, leaving the CREW-113 branch behind. Confirm `cd crew-CREW-113 && docker compose up --wait` fails today with `unhealthy daemon`.
 
 (Or just point at the existing CREW-111 worktree if it's still in the failing state — see the spec §1.1.)
 
 - [ ] **Step 5.2: Run `crew fix-pr` against the broken worktree**
 
 ```
-crew fix-pr CREW-XXX -m "rebase and bring the env back up"
+crew fix-pr CREW-113 -m "rebase and bring the env back up"
 ```
 
 Expected:
