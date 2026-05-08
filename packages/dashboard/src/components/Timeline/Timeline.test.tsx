@@ -1,4 +1,5 @@
 import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { UseQueryResult } from '@tanstack/react-query';
 
@@ -84,6 +85,30 @@ const evt = (i: number): TranscriptEvent =>
     },
   }) as unknown as TranscriptEvent;
 
+const assistantToolUse = (i: number, name: string): TranscriptEvent =>
+  ({
+    type: 'assistant',
+    uuid: `uuid-${i}`,
+    timestamp: `2026-04-29T12:00:0${i}Z`,
+    message: {
+      role: 'assistant',
+      content: [{ type: 'tool_use', id: `t${i}`, name, input: {} }],
+      usage: { output_tokens: 0 },
+    },
+  }) as unknown as TranscriptEvent;
+
+const assistantThinking = (i: number, text: string): TranscriptEvent =>
+  ({
+    type: 'assistant',
+    uuid: `uuid-${i}`,
+    timestamp: `2026-04-29T12:00:0${i}Z`,
+    message: {
+      role: 'assistant',
+      content: [{ type: 'thinking', thinking: text }],
+      usage: { output_tokens: 0 },
+    },
+  }) as unknown as TranscriptEvent;
+
 describe('Timeline', () => {
   beforeEach(() => {
     mockUseTimeline.mockReset();
@@ -127,5 +152,26 @@ describe('Timeline', () => {
     );
     render(<Timeline agentKey="KAN-1" />);
     expect(screen.getByTestId('timeline-empty')).toBeInTheDocument();
+  });
+
+  it('hides events whose chip group is toggled off', async () => {
+    mockUseTimeline.mockReturnValue(
+      timelineResult({
+        data: {
+          events: [assistantToolUse(1, 'Bash'), evt(2), assistantThinking(3, 'pondering')],
+        },
+        isSuccess: true,
+        status: 'success',
+      }),
+    );
+    render(<Timeline agentKey="KAN-1" />);
+    // Default: tool-calls + assistant-prose ON, thinking OFF — 2 cards.
+    expect(screen.getAllByTestId('event-card')).toHaveLength(2);
+    // Toggle thinking ON — third card shows.
+    await userEvent.click(screen.getByRole('button', { name: 'Thinking' }));
+    expect(screen.getAllByTestId('event-card')).toHaveLength(3);
+    // Toggle assistant prose OFF — only tool-call + thinking remain.
+    await userEvent.click(screen.getByRole('button', { name: 'Assistant prose' }));
+    expect(screen.getAllByTestId('event-card')).toHaveLength(2);
   });
 });

@@ -1,9 +1,11 @@
-import { useRef } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 
 import { useTimeline } from '../../data/queries.js';
 import type { TranscriptEvent } from '../../data/types.js';
 import { EventCard } from './EventCard.js';
+import { FilterChips } from './FilterChips.js';
+import { defaultVisibleSet, eventChipGroups, type ChipGroup } from './eventClassification.js';
 
 interface TimelineProps {
   agentKey: string;
@@ -13,6 +15,15 @@ const ESTIMATED_ROW_HEIGHT = 88;
 
 export function Timeline({ agentKey }: TimelineProps) {
   const { data, isLoading } = useTimeline(agentKey);
+  const [visibleGroups, setVisibleGroups] = useState<ReadonlySet<ChipGroup>>(
+    () => new Set(defaultVisibleSet),
+  );
+
+  const events = data?.events ?? [];
+  const filteredEvents = useMemo(
+    () => events.filter((evt) => intersects(eventChipGroups(evt), visibleGroups)),
+    [events, visibleGroups],
+  );
 
   if (isLoading) {
     return (
@@ -25,11 +36,9 @@ export function Timeline({ agentKey }: TimelineProps) {
     );
   }
 
-  const events = data?.events ?? [];
-
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <TimelineToolbar />
+      <TimelineToolbar visibleGroups={visibleGroups} onChange={setVisibleGroups} />
       {events.length === 0 ? (
         <div
           data-testid="timeline-empty"
@@ -38,25 +47,26 @@ export function Timeline({ agentKey }: TimelineProps) {
           No timeline events yet.
         </div>
       ) : (
-        <VirtualEventList events={events} />
+        <VirtualEventList events={filteredEvents} />
       )}
     </div>
   );
 }
 
-function TimelineToolbar() {
+interface TimelineToolbarProps {
+  visibleGroups: ReadonlySet<ChipGroup>;
+  onChange: (next: Set<ChipGroup>) => void;
+}
+
+function TimelineToolbar({ visibleGroups, onChange }: TimelineToolbarProps) {
   return (
     <div className="flex items-center gap-2 border-b border-white/10 px-3 py-2 text-xs text-text-3">
-      <FilterChipsSlot />
+      <FilterChips visible={visibleGroups} onChange={onChange} />
       <SearchBarSlot />
       <span className="flex-1" />
       <LiveModeToggleSlot />
     </div>
   );
-}
-
-function FilterChipsSlot() {
-  return <span data-testid="filter-chips-slot" className="italic" />;
 }
 
 function SearchBarSlot() {
@@ -108,4 +118,9 @@ function VirtualEventList({ events }: VirtualEventListProps) {
       </div>
     </div>
   );
+}
+
+function intersects<T>(a: ReadonlySet<T>, b: ReadonlySet<T>): boolean {
+  for (const x of a) if (b.has(x)) return true;
+  return false;
 }
