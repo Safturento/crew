@@ -1,0 +1,815 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Filters dropdown · spec sheet</title>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #13141a;
+  --surface: #1a1c24;
+  --surface-2: #21232d;
+  --surface-3: #292c38;
+  --border: rgba(255, 255, 255, 0.07);
+  --border-strong: rgba(255, 255, 255, 0.12);
+  --text: #e7e8ec;
+  --text-2: #b8bbc4;
+  --text-3: #7e8290;
+  --dim: #6b6f7c;
+  --chr: 0.16;
+  --c-blue:    oklch(0.70 var(--chr) 250);
+  --c-yellow:  oklch(0.82 var(--chr) 90);
+  --c-green:   oklch(0.72 calc(var(--chr) * 0.6) 150);
+  --c-purple:  oklch(0.72 var(--chr) 295);
+  --c-red:     oklch(0.70 var(--chr) 25);
+  --font-sans: "Hanken Grotesk", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "Fira Code", ui-monospace, monospace;
+  --radius: 10px;
+  --radius-lg: 14px;
+  --radius-sm: 6px;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; background: #05060a; color: var(--text); }
+body {
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+.mono { font-family: var(--font-mono); font-feature-settings: 'calt' on, 'liga' on; }
+
+.page {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 56px 32px 96px;
+}
+.doc-hd {
+  display: flex; align-items: baseline; gap: 16px;
+  margin-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 24px;
+}
+.doc-hd h1 {
+  font-size: 22px; font-weight: 600; letter-spacing: -0.02em; margin: 0;
+}
+.doc-hd .crumb {
+  font-family: var(--font-mono);
+  color: var(--text-3); font-size: 12px;
+}
+.doc-lede {
+  color: var(--text-2);
+  font-size: 14px;
+  max-width: 720px;
+  margin: 14px 0 48px;
+}
+.doc-lede code { background: var(--surface); padding: 1px 5px; border-radius: 3px; font-size: 12.5px; color: var(--text); }
+
+section.spec {
+  margin-bottom: 56px;
+}
+.spec__hd {
+  display: flex; justify-content: space-between; align-items: baseline;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 8px;
+  margin-bottom: 22px;
+}
+.spec__hd h2 {
+  font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em;
+  color: var(--text-3); margin: 0;
+}
+.spec__hd .num {
+  font-family: var(--font-mono);
+  font-size: 11px; color: var(--dim);
+}
+
+.grid { display: grid; gap: 18px; }
+.grid--3 { grid-template-columns: repeat(3, 1fr); }
+.grid--2 { grid-template-columns: repeat(2, 1fr); }
+
+.specimen {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  display: flex; flex-direction: column;
+  min-height: 200px;
+}
+.specimen__hd {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  background: linear-gradient(to bottom, rgba(255,255,255,0.015), transparent);
+  font-size: 11px;
+  font-family: var(--font-mono);
+  color: var(--text-3);
+  letter-spacing: 0.02em;
+}
+.specimen__hd .pin { color: var(--text); }
+.specimen__hd .w { color: var(--c-blue); }
+.specimen__body {
+  padding: 28px 22px 36px;
+  flex: 1;
+  display: flex; flex-direction: column; gap: 10px;
+  position: relative;
+}
+.specimen__body--popover { padding-bottom: 220px; }
+.specimen__caption {
+  padding: 12px 14px;
+  border-top: 1px solid var(--border);
+  font-size: 11.5px;
+  color: var(--text-3);
+  background: rgba(255,255,255,0.015);
+}
+.specimen__caption strong { color: var(--text-2); font-weight: 500; }
+.specimen__caption code { font-family: var(--font-mono); color: var(--text); background: rgba(255,255,255,0.04); padding: 1px 4px; border-radius: 3px; font-size: 11px; }
+
+/* ── Live filter button + popover styles (mirrored from styles.css) ── */
+.controls {
+  display: flex; gap: 10px; align-items: center;
+}
+.filter-btn {
+  appearance: none;
+  display: inline-flex; align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 10px 0 9px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-2);
+  font-family: inherit; font-size: 12.5px; font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background .12s, border-color .12s, color .12s;
+}
+.filter-btn:hover { background: var(--surface-2); border-color: var(--border-strong); color: var(--text); }
+.filter-btn[aria-expanded="true"], .filter-btn--open {
+  background: var(--surface-2); border-color: var(--border-strong); color: var(--text);
+}
+.filter-btn--focus {
+  outline: 2px solid color-mix(in oklch, var(--c-blue) 60%, transparent);
+  outline-offset: 1px;
+}
+.filter-btn__dot { display: none; width: 6px; height: 6px; border-radius: 50%; background: var(--c-blue); box-shadow: 0 0 8px -1px color-mix(in oklch, var(--c-blue) 70%, transparent); }
+.filter-btn__sep { color: var(--text-3); margin-right: 4px; }
+.filter-btn__count {
+  font-family: var(--font-mono);
+  font-size: 11.5px; color: var(--text-2);
+  display: inline-flex; align-items: baseline; gap: 4px;
+  font-variant-numeric: tabular-nums;
+}
+.filter-btn--active {
+  border-color: color-mix(in oklch, var(--c-blue) 38%, var(--border-strong));
+  background: color-mix(in oklch, var(--c-blue) 10%, var(--surface));
+  color: var(--text);
+}
+.filter-btn--active .filter-btn__dot { display: inline-block; }
+.filter-btn--active svg.funnel { color: var(--c-blue); }
+
+.search {
+  flex: 1;
+  display: flex; align-items: center; gap: 8px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  height: 32px;
+  padding: 0 10px;
+  color: var(--text-3);
+  font-size: 12.5px;
+}
+.live {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 12px; color: var(--text-2);
+}
+.live__pill {
+  width: 26px; height: 14px;
+  background: color-mix(in oklch, var(--c-blue) 35%, var(--surface-2));
+  border-radius: 999px;
+  position: relative;
+}
+.live__pill::after {
+  content: "";
+  position: absolute;
+  top: 1px; left: 13px;
+  width: 12px; height: 12px;
+  border-radius: 999px;
+  background: var(--c-blue);
+  box-shadow: 0 0 8px var(--c-blue);
+}
+
+/* Popover — anchored absolutely inside specimen__body */
+.popover-wrap {
+  position: relative;
+  display: inline-flex;
+  align-self: flex-start;
+}
+.filter-popover {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 40;
+  width: 296px;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  box-shadow:
+    0 24px 60px -12px rgba(0,0,0,0.7),
+    0 0 0 1px rgba(255,255,255,0.02);
+  padding: 6px;
+}
+.filter-popover__hd {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 4px 8px 8px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 4px;
+}
+.filter-popover__hd-label {
+  font-size: 10.5px; font-weight: 600;
+  color: var(--text-3); text-transform: uppercase; letter-spacing: 0.08em;
+}
+.filter-popover__hd-actions {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-size: 11.5px;
+}
+.filter-popover__link {
+  appearance: none; background: transparent; border: 0;
+  padding: 2px 2px;
+  color: var(--text-2);
+  cursor: pointer; font: inherit;
+  border-radius: 3px;
+}
+.filter-popover__link:disabled { color: var(--dim); }
+.filter-popover__hd-sep { color: var(--text-3); }
+.filter-popover__list {
+  list-style: none; margin: 0; padding: 0;
+  display: flex; flex-direction: column; gap: 1px;
+}
+.filter-row {
+  display: grid;
+  grid-template-columns: 16px 1fr auto;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 8px;
+  border-radius: 6px;
+}
+.filter-row--hover { background: var(--surface-2); }
+.filter-row__check {
+  width: 16px; height: 16px;
+  border: 1px solid var(--border-strong);
+  border-radius: 4px;
+  display: grid; place-items: center;
+  background: rgba(255,255,255,0.03);
+}
+.filter-row--on .filter-row__check {
+  background: var(--c-blue);
+  border-color: var(--c-blue);
+  color: #0a0c12;
+}
+.filter-row__label { font-size: 13px; color: var(--text); }
+.filter-row__count {
+  font-size: 11.5px; color: var(--text-3);
+  font-variant-numeric: tabular-nums;
+}
+.filter-row--on .filter-row__count { color: var(--text-2); }
+
+/* Drawer-shaped breakpoint frames */
+.bp-frame {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  position: relative;
+  box-shadow: -16px 0 40px -16px rgba(0,0,0,0.5);
+}
+.bp-frame__chrome {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border);
+  background: linear-gradient(to bottom, rgba(255,255,255,0.015), transparent);
+}
+.bp-frame__chrome-l { display: flex; align-items: center; gap: 10px; font-family: var(--font-mono); font-size: 11px; color: var(--text-3); }
+.bp-frame__chrome-l .key { color: var(--text); }
+.bp-frame__chrome-r { display: flex; align-items: center; gap: 6px; }
+.bp-icon-btn {
+  width: 24px; height: 24px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  display: grid; place-items: center;
+  color: var(--text-3);
+}
+.bp-frame__hd {
+  padding: 16px 20px 14px;
+  border-bottom: 1px solid var(--border);
+}
+.bp-frame__hd h3 {
+  font-size: 16px; font-weight: 600; letter-spacing: -0.015em;
+  margin: 0 0 8px; line-height: 1.3;
+}
+.bp-frame__meta {
+  display: flex; align-items: center; gap: 10px;
+  font-size: 11.5px; color: var(--text-3);
+}
+.bp-frame__meta .pill {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  background: color-mix(in oklch, var(--c-blue) 18%, transparent);
+  color: var(--c-blue);
+  border: 1px solid color-mix(in oklch, var(--c-blue) 22%, transparent);
+}
+.bp-frame__meta .pill::before {
+  content: ""; width: 6px; height: 6px; border-radius: 50%;
+  background: currentColor;
+}
+
+.bp-frame__body { padding: 16px 20px 24px; }
+.bp-frame__sec-title {
+  font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em;
+  color: var(--text-3);
+  margin: 0 0 12px;
+}
+
+/* Faded transcript skeletons inside the breakpoint frames */
+.bp-skel {
+  display: flex; flex-direction: column; gap: 12px;
+  margin-top: 18px;
+  border-left: 2px solid color-mix(in oklch, var(--c-blue) 50%, transparent);
+  padding-left: 14px;
+}
+.bp-skel__row {
+  display: flex; flex-direction: column; gap: 5px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+.bp-skel__line {
+  display: flex; align-items: center; gap: 8px;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+}
+.bp-skel__tag {
+  color: var(--c-yellow);
+  background: color-mix(in oklch, var(--c-yellow) 14%, transparent);
+  padding: 1px 6px;
+  border-radius: 3px;
+}
+.bp-skel__tag--read   { color: var(--c-blue);   background: color-mix(in oklch, var(--c-blue) 14%, transparent); }
+.bp-skel__tag--edit   { color: var(--c-green);  background: color-mix(in oklch, var(--c-green) 14%, transparent); }
+.bp-skel__tag--grep   { color: var(--c-purple); background: color-mix(in oklch, var(--c-purple) 14%, transparent); }
+.bp-skel__sum { color: var(--text-2); }
+.bp-skel__line--meta { color: var(--text-3); justify-content: flex-end; gap: 6px; font-size: 10.5px; }
+
+/* Empty state in timeline */
+.timeline__empty--all-filtered {
+  display: flex; flex-direction: column; align-items: center;
+  gap: 12px; padding: 36px 16px;
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius);
+  margin-top: 18px;
+}
+.timeline__empty-msg { color: var(--text-2); font-size: 13px; }
+.timeline__empty-link {
+  appearance: none; background: var(--surface-2);
+  border: 1px solid var(--border-strong);
+  color: var(--text);
+  font: inherit; font-size: 12px;
+  padding: 6px 12px;
+  border-radius: var(--radius-sm);
+}
+
+/* Ruler labels for breakpoints */
+.bp-ruler {
+  display: flex; align-items: center; gap: 10px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-3);
+  margin-bottom: 8px;
+}
+.bp-ruler .key { color: var(--text); }
+.bp-ruler .px { color: var(--c-blue); }
+
+/* The mobile breakpoint specimen, scaled down to fit. */
+.scale-mobile {
+  width: 390px;
+  margin: 0 auto;
+}
+
+/* Annotations */
+.anno {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-3);
+  display: inline-flex; align-items: center; gap: 6px;
+}
+.anno-pill {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  padding: 1px 6px;
+  border-radius: 4px;
+  color: var(--text-2);
+}
+
+.legend {
+  display: grid;
+  grid-template-columns: 130px 1fr;
+  gap: 6px 14px;
+  padding: 14px 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 12.5px;
+  color: var(--text-2);
+}
+.legend dt {
+  font-family: var(--font-mono);
+  color: var(--text);
+  font-size: 11.5px;
+}
+.legend dd { margin: 0; }
+
+.note {
+  font-size: 12px;
+  color: var(--text-3);
+  border-left: 2px solid var(--border-strong);
+  padding: 4px 0 4px 12px;
+  margin-top: 22px;
+}
+.note strong { color: var(--text-2); font-weight: 500; }
+</style>
+</head>
+<body>
+  <div class="page">
+
+    <header class="doc-hd">
+      <span class="crumb">crew · drawer · timeline</span>
+      <h1>Filters dropdown</h1>
+    </header>
+    <p class="doc-lede">
+      Replaces the chip-row filter introduced in slice 1c. Single dropdown anchors the controls bar at <code>[Filters ▾] [Search…] [Live ⚪]</code>;
+      preference persists globally at <code>localStorage['crew.dashboard.timelineFilters']</code>; six event-type checkboxes with per-agent counts.
+      Tool-name filtering (Bash / Read / Grep / …) is intentionally out of scope for v1.
+    </p>
+
+    <!-- ───────────────────────────── 01 — Filter button states ───────────────────────────── -->
+    <section class="spec">
+      <header class="spec__hd">
+        <h2>01 · Filter button — closed states</h2>
+        <span class="num">FilterButton state="default" | "active"</span>
+      </header>
+      <div class="grid grid--3">
+
+        <div class="specimen">
+          <div class="specimen__hd"><span class="pin">default</span> <span>state="default"</span></div>
+          <div class="specimen__body">
+            <button class="filter-btn" aria-expanded="false">
+              <svg class="funnel" width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 2.5h8l-3 4v3l-2 1v-4l-3-4z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg>
+              <span>Filters</span>
+              <svg width="10" height="10" viewBox="0 0 12 12"><path d="M2.5 4.5L6 8l3.5-3.5" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+          </div>
+          <div class="specimen__caption"><strong>All six types selected.</strong> No badge, plain ghost button on <code>--surface</code>.</div>
+        </div>
+
+        <div class="specimen">
+          <div class="specimen__hd"><span class="pin">active</span> <span>state="active" hidden=2</span></div>
+          <div class="specimen__body">
+            <button class="filter-btn filter-btn--active" aria-expanded="false">
+              <span class="filter-btn__dot"></span>
+              <svg class="funnel" width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 2.5h8l-3 4v3l-2 1v-4l-3-4z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg>
+              <span>Filters</span>
+              <span class="filter-btn__count"><span class="filter-btn__sep">·</span>2 hidden</span>
+              <svg width="10" height="10" viewBox="0 0 12 12"><path d="M2.5 4.5L6 8l3.5-3.5" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+          </div>
+          <div class="specimen__caption"><strong>One or more types unchecked.</strong> Accent dot prefixes the funnel; mono count suffix; border/bg shift to a blue mix.</div>
+        </div>
+
+        <div class="specimen">
+          <div class="specimen__hd"><span class="pin">open</span> <span>aria-expanded="true"</span></div>
+          <div class="specimen__body">
+            <button class="filter-btn filter-btn--open" aria-expanded="true">
+              <svg class="funnel" width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 2.5h8l-3 4v3l-2 1v-4l-3-4z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg>
+              <span>Filters</span>
+              <svg width="10" height="10" viewBox="0 0 12 12" style="transform:rotate(180deg)"><path d="M2.5 4.5L6 8l3.5-3.5" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+          </div>
+          <div class="specimen__caption"><strong>Trigger while popover open.</strong> Bg lifts to <code>--surface-2</code>, chevron rotates 180°.</div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ───────────────────────────── 02 — Popover states ───────────────────────────── -->
+    <section class="spec">
+      <header class="spec__hd">
+        <h2>02 · Popover — open states</h2>
+        <span class="num">FiltersPopover · 296×auto · z-40</span>
+      </header>
+      <div class="grid grid--2">
+
+        <div class="specimen">
+          <div class="specimen__hd"><span class="pin">open · all selected</span> <span>default</span></div>
+          <div class="specimen__body specimen__body--popover">
+            <div class="popover-wrap">
+              <button class="filter-btn filter-btn--open" aria-expanded="true">
+                <svg class="funnel" width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 2.5h8l-3 4v3l-2 1v-4l-3-4z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg>
+                <span>Filters</span>
+                <svg width="10" height="10" viewBox="0 0 12 12" style="transform:rotate(180deg)"><path d="M2.5 4.5L6 8l3.5-3.5" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </button>
+              <div class="filter-popover" role="dialog" aria-label="Timeline filters">
+                <div class="filter-popover__hd">
+                  <span class="filter-popover__hd-label">Show events</span>
+                  <div class="filter-popover__hd-actions">
+                    <button class="filter-popover__link" disabled>Select all</button>
+                    <span class="filter-popover__hd-sep">·</span>
+                    <button class="filter-popover__link">Clear all</button>
+                  </div>
+                </div>
+                <ul class="filter-popover__list">
+                  <li><div class="filter-row filter-row--on"><span class="filter-row__check"><svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M2.5 6.5L5 9l4.5-5.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span class="filter-row__label">Tool calls</span><span class="filter-row__count mono">847</span></div></li>
+                  <li><div class="filter-row filter-row--on"><span class="filter-row__check"><svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M2.5 6.5L5 9l4.5-5.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span class="filter-row__label">Assistant prose</span><span class="filter-row__count mono">142</span></div></li>
+                  <li><div class="filter-row filter-row--on filter-row--hover"><span class="filter-row__check"><svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M2.5 6.5L5 9l4.5-5.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span class="filter-row__label">Thinking</span><span class="filter-row__count mono">89</span></div></li>
+                  <li><div class="filter-row filter-row--on"><span class="filter-row__check"><svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M2.5 6.5L5 9l4.5-5.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span class="filter-row__label">System</span><span class="filter-row__count mono">23</span></div></li>
+                  <li><div class="filter-row filter-row--on"><span class="filter-row__check"><svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M2.5 6.5L5 9l4.5-5.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span class="filter-row__label">Hooks &amp; skills</span><span class="filter-row__count mono">14</span></div></li>
+                  <li><div class="filter-row filter-row--on"><span class="filter-row__check"><svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M2.5 6.5L5 9l4.5-5.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span class="filter-row__label">Other</span><span class="filter-row__count mono">2</span></div></li>
+                </ul>
+              </div>
+            </div>
+          </div>
+          <div class="specimen__caption"><strong>Default open state.</strong> All six checked → <code>Select all</code> disabled. Hover row 3 (Thinking) shown.</div>
+        </div>
+
+        <div class="specimen">
+          <div class="specimen__hd"><span class="pin">open · subset</span> <span>persisted state</span></div>
+          <div class="specimen__body specimen__body--popover">
+            <div class="popover-wrap">
+              <button class="filter-btn filter-btn--active filter-btn--open" aria-expanded="true">
+                <span class="filter-btn__dot"></span>
+                <svg class="funnel" width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 2.5h8l-3 4v3l-2 1v-4l-3-4z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg>
+                <span>Filters</span>
+                <span class="filter-btn__count"><span class="filter-btn__sep">·</span>2 hidden</span>
+                <svg width="10" height="10" viewBox="0 0 12 12" style="transform:rotate(180deg)"><path d="M2.5 4.5L6 8l3.5-3.5" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </button>
+              <div class="filter-popover" role="dialog" aria-label="Timeline filters">
+                <div class="filter-popover__hd">
+                  <span class="filter-popover__hd-label">Show events</span>
+                  <div class="filter-popover__hd-actions">
+                    <button class="filter-popover__link">Select all</button>
+                    <span class="filter-popover__hd-sep">·</span>
+                    <button class="filter-popover__link">Clear all</button>
+                  </div>
+                </div>
+                <ul class="filter-popover__list">
+                  <li><div class="filter-row filter-row--on"><span class="filter-row__check"><svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M2.5 6.5L5 9l4.5-5.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span class="filter-row__label">Tool calls</span><span class="filter-row__count mono">847</span></div></li>
+                  <li><div class="filter-row filter-row--on"><span class="filter-row__check"><svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M2.5 6.5L5 9l4.5-5.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span class="filter-row__label">Assistant prose</span><span class="filter-row__count mono">142</span></div></li>
+                  <li><div class="filter-row"><span class="filter-row__check"></span><span class="filter-row__label">Thinking</span><span class="filter-row__count mono">89</span></div></li>
+                  <li><div class="filter-row filter-row--on"><span class="filter-row__check"><svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M2.5 6.5L5 9l4.5-5.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span class="filter-row__label">System</span><span class="filter-row__count mono">23</span></div></li>
+                  <li><div class="filter-row filter-row--on"><span class="filter-row__check"><svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M2.5 6.5L5 9l4.5-5.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span class="filter-row__label">Hooks &amp; skills</span><span class="filter-row__count mono">14</span></div></li>
+                  <li><div class="filter-row"><span class="filter-row__check"></span><span class="filter-row__label">Other</span><span class="filter-row__count mono">2</span></div></li>
+                </ul>
+              </div>
+            </div>
+          </div>
+          <div class="specimen__caption"><strong>Subset selected.</strong> Trigger reflects <code>2 hidden</code>; both header links live; Thinking + Other unchecked.</div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ───────────────────────────── 03 — Empty state ───────────────────────────── -->
+    <section class="spec">
+      <header class="spec__hd">
+        <h2>03 · Timeline empty state — zero types selected</h2>
+        <span class="num">timeline__empty--all-filtered</span>
+      </header>
+      <div class="grid grid--2">
+
+        <div class="specimen">
+          <div class="specimen__hd"><span class="pin">timeline body</span> <span>filters.size === 0</span></div>
+          <div class="specimen__body" style="padding-top: 18px">
+            <div class="controls">
+              <button class="filter-btn filter-btn--active" aria-expanded="false">
+                <span class="filter-btn__dot"></span>
+                <svg class="funnel" width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 2.5h8l-3 4v3l-2 1v-4l-3-4z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg>
+                <span>Filters</span>
+                <span class="filter-btn__count"><span class="filter-btn__sep">·</span>6 hidden</span>
+                <svg width="10" height="10" viewBox="0 0 12 12"><path d="M2.5 4.5L6 8l3.5-3.5" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </button>
+              <div class="search">
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><circle cx="7" cy="7" r="4.5" stroke="currentColor" stroke-width="1.5"/><path d="M10.5 10.5l3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+                <span>Search tool, input, or error:…</span>
+              </div>
+              <label class="live"><span class="live__pill"></span><span>Live</span></label>
+            </div>
+            <div class="timeline__empty--all-filtered">
+              <div class="timeline__empty-msg">No event types selected.</div>
+              <button class="timeline__empty-link">Show all</button>
+            </div>
+          </div>
+          <div class="specimen__caption"><strong>All checkboxes off.</strong> Timeline body collapses to a dashed-border card; <code>Show all</code> re-checks every type and persists.</div>
+        </div>
+
+        <div class="specimen">
+          <div class="specimen__hd"><span class="pin">behaviour</span> <span>contract</span></div>
+          <div class="specimen__body" style="gap: 14px">
+            <dl class="legend">
+              <dt>storage</dt>
+              <dd><code>localStorage['crew.dashboard.timelineFilters']</code> — array of selected type IDs.</dd>
+              <dt>scope</dt>
+              <dd>Single global key. NOT per-agent. Survives drawer close + page reload.</dd>
+              <dt>read</dt>
+              <dd>On <code>Timeline</code> mount → <code>useState</code> initialiser → falls back to all six on parse failure.</dd>
+              <dt>write</dt>
+              <dd>Every change: toggle / Select all / Clear all / Show all.</dd>
+              <dt>open ↔ close</dt>
+              <dd>Click trigger toggles. Outside click + <code>Esc</code> close. <code>aria-expanded</code> drives chevron rotation.</dd>
+              <dt>focus</dt>
+              <dd>Open focuses first checkbox. Tab cycles header links + checkboxes. Esc returns focus to trigger.</dd>
+            </dl>
+          </div>
+          <div class="specimen__caption">Implementer wraps Radix <code>Popover.*</code> primitives — focus-trap, click-outside, escape come for free.</div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ───────────────────────────── 04 — Breakpoints ───────────────────────────── -->
+    <section class="spec">
+      <header class="spec__hd">
+        <h2>04 · Drawer breakpoints — controls bar layout</h2>
+        <span class="num">UI spec §9 · ≥1280 / 768–1279 / &lt;768</span>
+      </header>
+
+      <!-- Desktop -->
+      <div class="bp-ruler">
+        <span class="key">desktop</span>
+        <span class="px">≥ 1280px</span>
+        <span>· drawer ≈ 640px wide, list visible alongside · single-row controls</span>
+      </div>
+      <div class="bp-frame" style="max-width: 720px; margin-bottom: 32px;">
+        <div class="bp-frame__chrome">
+          <div class="bp-frame__chrome-l"><span>kanban-api</span><span>/</span><span class="key">KAN-31</span></div>
+          <div class="bp-frame__chrome-r">
+            <span class="bp-icon-btn"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M4 2h6v6M10 2L5 7M9 7v3H2V3h3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+            <span class="bp-icon-btn"><svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span>
+          </div>
+        </div>
+        <div class="bp-frame__hd">
+          <h3>Wire `/issues/:id/comments` SSE to live transcript</h3>
+          <div class="bp-frame__meta"><span class="pill">running</span> <span>started 14:02:11 · 33m 04s · 48.2k tokens</span></div>
+        </div>
+        <div class="bp-frame__body">
+          <h4 class="bp-frame__sec-title">Timeline</h4>
+          <div class="controls">
+            <button class="filter-btn filter-btn--active" aria-expanded="false">
+              <span class="filter-btn__dot"></span>
+              <svg class="funnel" width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 2.5h8l-3 4v3l-2 1v-4l-3-4z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg>
+              <span>Filters</span>
+              <span class="filter-btn__count"><span class="filter-btn__sep">·</span>2 hidden</span>
+              <svg width="10" height="10" viewBox="0 0 12 12"><path d="M2.5 4.5L6 8l3.5-3.5" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+            <div class="search">
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><circle cx="7" cy="7" r="4.5" stroke="currentColor" stroke-width="1.5"/><path d="M10.5 10.5l3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+              <span>Search tool, input, or error:…</span>
+            </div>
+            <label class="live"><span class="live__pill"></span><span>Live</span></label>
+          </div>
+          <div class="bp-skel">
+            <div class="bp-skel__row">
+              <div class="bp-skel__line"><span class="bp-skel__tag bp-skel__tag--read">[Read]</span><span class="bp-skel__sum">src/issues/sse.ts</span></div>
+              <div class="bp-skel__line bp-skel__line--meta"><span>14:35:08</span><span>·</span><span>420 tok</span></div>
+            </div>
+            <div class="bp-skel__row">
+              <div class="bp-skel__line"><span class="bp-skel__tag bp-skel__tag--edit">[Edit]</span><span class="bp-skel__sum">src/issues/sse.ts (+12 −3)</span></div>
+              <div class="bp-skel__line bp-skel__line--meta"><span>14:35:42</span><span>·</span><span>380 tok</span></div>
+            </div>
+            <div class="bp-skel__row">
+              <div class="bp-skel__line"><span class="bp-skel__tag">[Bash]</span><span class="bp-skel__sum">pnpm typecheck</span></div>
+              <div class="bp-skel__line bp-skel__line--meta"><span>14:36:01</span><span>·</span><span>240 tok</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tablet + Mobile, side by side -->
+      <div class="grid grid--2" style="gap: 24px">
+        <div>
+          <div class="bp-ruler">
+            <span class="key">tablet</span>
+            <span class="px">768 – 1279px</span>
+            <span>· drawer ≈ 75% width, min 520 · single-row controls (Search shrinks)</span>
+          </div>
+          <div class="bp-frame">
+            <div class="bp-frame__chrome">
+              <div class="bp-frame__chrome-l"><span>kanban-api</span><span>/</span><span class="key">KAN-31</span></div>
+              <div class="bp-frame__chrome-r">
+                <span class="bp-icon-btn"><svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span>
+              </div>
+            </div>
+            <div class="bp-frame__hd">
+              <h3>Wire SSE to live transcript</h3>
+              <div class="bp-frame__meta"><span class="pill">running</span> <span>33m 04s · 48.2k</span></div>
+            </div>
+            <div class="bp-frame__body">
+              <h4 class="bp-frame__sec-title">Timeline</h4>
+              <div class="controls">
+                <button class="filter-btn filter-btn--active" aria-expanded="false">
+                  <span class="filter-btn__dot"></span>
+                  <svg class="funnel" width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 2.5h8l-3 4v3l-2 1v-4l-3-4z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg>
+                  <span>Filters</span>
+                  <span class="filter-btn__count"><span class="filter-btn__sep">·</span>2 hidden</span>
+                  <svg width="10" height="10" viewBox="0 0 12 12"><path d="M2.5 4.5L6 8l3.5-3.5" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </button>
+                <div class="search" style="min-width: 0;">
+                  <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><circle cx="7" cy="7" r="4.5" stroke="currentColor" stroke-width="1.5"/><path d="M10.5 10.5l3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+                  <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">Search…</span>
+                </div>
+                <label class="live"><span class="live__pill"></span><span>Live</span></label>
+              </div>
+              <div class="bp-skel">
+                <div class="bp-skel__row">
+                  <div class="bp-skel__line"><span class="bp-skel__tag bp-skel__tag--grep">[Grep]</span><span class="bp-skel__sum">'comments' in src/</span></div>
+                  <div class="bp-skel__line bp-skel__line--meta"><span>14:36:18</span><span>·</span><span>180 tok</span></div>
+                </div>
+                <div class="bp-skel__row">
+                  <div class="bp-skel__line"><span class="bp-skel__tag bp-skel__tag--read">[Read]</span><span class="bp-skel__sum">src/api/issues.ts</span></div>
+                  <div class="bp-skel__line bp-skel__line--meta"><span>14:36:31</span><span>·</span><span>320 tok</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <div class="bp-ruler">
+            <span class="key">mobile</span>
+            <span class="px">&lt; 768px</span>
+            <span>· full-screen sheet · controls wrap; Search drops to row 2</span>
+          </div>
+          <div class="bp-frame scale-mobile">
+            <div class="bp-frame__chrome">
+              <div class="bp-frame__chrome-l"><span class="key">KAN-31</span></div>
+              <div class="bp-frame__chrome-r">
+                <span class="bp-icon-btn"><svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span>
+              </div>
+            </div>
+            <div class="bp-frame__hd">
+              <h3>Wire SSE to live transcript</h3>
+              <div class="bp-frame__meta"><span class="pill">running</span> <span>33m</span></div>
+            </div>
+            <div class="bp-frame__body">
+              <h4 class="bp-frame__sec-title">Timeline</h4>
+              <div class="controls" style="flex-wrap: wrap; gap: 8px">
+                <button class="filter-btn filter-btn--active" aria-expanded="false" style="order: 1;">
+                  <span class="filter-btn__dot"></span>
+                  <svg class="funnel" width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 2.5h8l-3 4v3l-2 1v-4l-3-4z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg>
+                  <span>Filters</span>
+                  <span class="filter-btn__count"><span class="filter-btn__sep">·</span>2 hidden</span>
+                  <svg width="10" height="10" viewBox="0 0 12 12"><path d="M2.5 4.5L6 8l3.5-3.5" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </button>
+                <label class="live" style="order: 2; margin-left: auto;"><span class="live__pill"></span><span>Live</span></label>
+                <div class="search" style="order: 3; flex-basis: 100%; min-width: 0;">
+                  <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><circle cx="7" cy="7" r="4.5" stroke="currentColor" stroke-width="1.5"/><path d="M10.5 10.5l3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+                  <span>Search tool, input, or error:…</span>
+                </div>
+              </div>
+              <div class="bp-skel">
+                <div class="bp-skel__row">
+                  <div class="bp-skel__line"><span class="bp-skel__tag bp-skel__tag--read">[Read]</span><span class="bp-skel__sum">src/api/issues.ts</span></div>
+                  <div class="bp-skel__line bp-skel__line--meta"><span>14:36:31</span><span>·</span><span>320 tok</span></div>
+                </div>
+                <div class="bp-skel__row">
+                  <div class="bp-skel__line"><span class="bp-skel__tag bp-skel__tag--edit">[Edit]</span><span class="bp-skel__sum">src/api/issues.ts (+8)</span></div>
+                  <div class="bp-skel__line bp-skel__line--meta"><span>14:37:02</span><span>·</span><span>290 tok</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <p class="note">
+        <strong>Implementation notes.</strong>
+        Reference CSS uses the existing <code>.app--vw-mobile</code> / <code>.app--vw-vertical</code> modifiers (set by the prototype's viewport tweak) to drive the wrap.
+        Production should use a container query on the drawer (<code>@container (max-width: 768px)</code>) so the controls bar reflows whether the drawer is opened over a wide list or as a full-screen sheet.
+        On mobile the popover anchors to the trigger but caps at <code>calc(100vw - 48px)</code> so it never clips the sheet edge.
+      </p>
+    </section>
+
+    <p class="note" style="margin-top: 56px">
+      <strong>See also.</strong>
+      Live prototype: <code>design_handoff_crew_dashboard/source/index.html</code> → open any agent → drawer → Timeline.
+      Source: <code>source/agent-drawer.jsx</code> (<code>FilterButton</code>, <code>FiltersPopover</code>, <code>EVENT_TYPES</code>).
+      Spec: <code>README.md</code> § Screen 2 → Timeline → Filters dropdown.
+    </p>
+
+  </div>
+</body>
+</html>

@@ -1,0 +1,3895 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>crew · dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=Manrope:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Public+Sans:wght@400;500;600;700&family=Hanken+Grotesk:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&family=Outfit:wght@400;500;600;700&family=Sora:wght@400;500;600;700&family=Nunito+Sans:wght@400;500;600;700&family=Fira+Code:wght@400;500&family=JetBrains+Mono:wght@400;500&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    @font-face { font-family: "Geist Sans"; src: local("Geist"); }
+    @font-face { font-family: "Geist Mono"; src: local("Geist Mono"); }
+    @font-face { font-family: "Satoshi"; src: local("Satoshi"), local("Geist"); }
+    @font-face { font-family: "General Sans"; src: local("General Sans"), local("Geist"); }
+    @font-face { font-family: "Switzer"; src: local("Switzer"), local("Geist"); }
+  </style>
+  <style>/* ── Crew dashboard styles ──────────────────────────────────────────────────
+   System:
+   - Dark, warm slate base (configurable: pitch / slate / warm)
+   - State palette is the only chromatic system
+   - Geist Sans / Fira Code (configurable)
+   - Carded rows, breathing room, mid state intensity by default
+*/
+
+:root {
+  --bg: #13141a;
+  --surface: #1a1c24;
+  --surface-2: #21232d;
+  --surface-3: #292c38;
+  --border: rgba(255, 255, 255, 0.07);
+  --border-strong: rgba(255, 255, 255, 0.12);
+  --text: #e7e8ec;
+  --text-2: #b8bbc4;
+  --text-3: #7e8290;
+  --dim: #6b6f7c;
+
+  /* state-palette chroma — driven by tweak */
+  --chr: 0.14;
+
+  --c-blue:    oklch(0.70 var(--chr) 250);
+  --c-neutral: oklch(0.78 0.005 260);
+  --c-gray:    oklch(0.65 0.01 260);
+  --c-yellow:  oklch(0.82 var(--chr) 90);
+  --c-purple:  oklch(0.72 var(--chr) 295);
+  --c-red:     oklch(0.70 var(--chr) 25);
+  --c-green:   oklch(0.72 calc(var(--chr) * 0.6) 150);
+
+  --font-sans: "Geist Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "Fira Code", ui-monospace, monospace;
+
+  --radius: 10px;
+  --radius-lg: 14px;
+  --radius-sm: 6px;
+
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; height: 100%; background: #050608; }
+body {
+  font-family: var(--font-sans);
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-feature-settings: 'cv11', 'ss01';
+}
+.mono { font-family: var(--font-mono); font-feature-settings: 'calt' on, 'liga' on; }
+.dim { color: var(--text-3); }
+
+button { font-family: inherit; }
+
+/* ── App / viewport frame ─────────────────────────────────────────────────── */
+.app {
+  min-height: 100vh;
+  background: #05060a;
+  display: flex;
+  justify-content: center;
+  align-items: stretch;
+  padding: 16px;
+}
+.viewport-frame {
+  width: var(--app-vw, 100%);
+  max-width: 100%;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  position: relative;
+  box-shadow: 0 0 0 1px rgba(255,255,255,0.02), 0 30px 80px -20px rgba(0,0,0,0.6);
+  transition: width 0.3s cubic-bezier(.3,.7,.4,1);
+  display: flex;
+  flex-direction: column;
+}
+.viewport-frame__inner {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  position: relative;
+}
+
+.app--vw-mobile .topnav__brand-name { display: none; }
+.app--vw-mobile .topnav__tabs .topnav__tab { padding: 6px 8px; }
+.app--vw-mobile .clear-attention span:not(.clear-attention__count) { display: none; }
+
+/* ── Top nav ──────────────────────────────────────────────────────────────── */
+.topnav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 20px;
+  border-bottom: 1px solid var(--border);
+  background: linear-gradient(to bottom, rgba(255,255,255,0.015), transparent);
+  flex-shrink: 0;
+}
+.topnav__left { display: flex; align-items: center; gap: 24px; }
+.topnav__brand { display: flex; align-items: center; gap: 8px; font-weight: 600; }
+.topnav__brand-mark {
+  width: 22px; height: 22px;
+  background: linear-gradient(135deg, color-mix(in oklch, var(--text) 92%, transparent), color-mix(in oklch, var(--text) 70%, transparent));
+  color: var(--bg);
+  border-radius: 6px;
+  display: grid; place-items: center;
+}
+.topnav__brand-mark svg { display: block; }
+.topnav__brand-name { font-size: 14px; letter-spacing: -0.01em; }
+.topnav__tabs { display: flex; gap: 2px; }
+.topnav__tab {
+  padding: 6px 10px;
+  color: var(--text-3);
+  text-decoration: none;
+  font-size: 13px;
+  border-radius: 6px;
+  transition: color .15s, background .15s;
+}
+.topnav__tab:hover { color: var(--text-2); background: rgba(255,255,255,0.03); }
+.topnav__tab.on { color: var(--text); background: rgba(255,255,255,0.04); }
+
+.topnav__right { display: flex; align-items: center; gap: 8px; }
+.clear-attention { display: flex; align-items: center; gap: 6px; }
+.clear-attention__count {
+  display: inline-grid; place-items: center;
+  min-width: 18px; height: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--c-yellow);
+  color: #1a1500;
+  font-size: 10px; font-weight: 700;
+  font-family: var(--font-mono);
+}
+
+/* ── Buttons ──────────────────────────────────────────────────────────────── */
+.btn {
+  appearance: none;
+  border: 1px solid var(--border-strong);
+  background: var(--surface-2);
+  color: var(--text);
+  padding: 7px 12px;
+  border-radius: var(--radius-sm);
+  font-size: 12.5px;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background .12s, border-color .12s, transform .06s;
+  white-space: nowrap;
+}
+.btn:hover { background: var(--surface-3); border-color: rgba(255,255,255,0.18); }
+.btn:active { transform: translateY(0.5px); }
+.btn--sm { padding: 5px 9px; font-size: 11.5px; }
+.btn--ghost {
+  background: transparent;
+  border-color: transparent;
+  color: var(--text-2);
+}
+.btn--ghost:hover { background: rgba(255,255,255,0.04); border-color: var(--border); color: var(--text); }
+.btn--accent {
+  background: var(--text);
+  border-color: var(--text);
+  color: #0c0d12;
+}
+.btn--accent:hover { background: #fff; border-color: #fff; }
+.btn--danger {
+  background: color-mix(in oklch, var(--c-red), transparent 80%);
+  border-color: color-mix(in oklch, var(--c-red), transparent 50%);
+  color: var(--c-red);
+}
+.btn--danger:hover { background: color-mix(in oklch, var(--c-red), transparent 65%); color: #fff; }
+
+.icon-btn {
+  appearance: none;
+  background: transparent;
+  border: 0;
+  width: 28px; height: 28px;
+  border-radius: 6px;
+  display: grid; place-items: center;
+  color: var(--text-3);
+  cursor: pointer;
+}
+.icon-btn:hover { background: rgba(255,255,255,0.06); color: var(--text); }
+
+.qa-group { display: inline-flex; gap: 6px; }
+
+kbd {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  padding: 1px 5px;
+  border: 1px solid var(--border-strong);
+  border-radius: 4px;
+  background: var(--surface-2);
+}
+
+/* ── State pill ──────────────────────────────────────────────────────────── */
+.state-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px var(--pill-px, 8px) 3px calc(var(--pill-px, 8px) - 2px);
+  border-radius: 999px;
+  background: var(--state-bg, rgba(255,255,255,0.05));
+  color: var(--state-fg, var(--text-2));
+  font-family: var(--font-pill, var(--font-mono));
+  font-size: var(--pill-fs, 11px);
+  font-weight: 500;
+  letter-spacing: var(--pill-tracking, -0.005em);
+  border: 1px solid var(--state-border, transparent);
+  white-space: nowrap;
+  text-transform: var(--pill-transform, lowercase);
+  font-variant-caps: var(--pill-variant, normal);
+  font-feature-settings: 'calt' on, 'liga' on;
+}
+.state-pill__dot { color: var(--state-fg, var(--text-2)); display: inline-flex; }
+.state-pill__label { letter-spacing: -0.005em; }
+.state-pill--sm { font-size: calc(var(--pill-fs, 11px) - 1px); padding: 2px calc(var(--pill-px, 8px) - 1px) 2px calc(var(--pill-px, 8px) - 3px); }
+
+/* ── State pill — intensity variants ─────────────────────────────────────
+   .state-pill--mid (default): translucent bg + colored border + colored text
+   .state-pill--muted: text + border only, no fill
+   .state-pill--loud: solid saturated fill, dark text, slight shadow
+*/
+.state-pill--blue    { --state-fg: var(--c-blue);    --state-bg: color-mix(in oklch, var(--c-blue) 18%, transparent);    --state-border: color-mix(in oklch, var(--c-blue) 22%, transparent); }
+.state-pill--neutral { --state-fg: var(--text);      --state-bg: rgba(255,255,255,0.06);                                  --state-border: rgba(255,255,255,0.08); }
+.state-pill--gray    { --state-fg: var(--c-gray);    --state-bg: rgba(255,255,255,0.04);                                  --state-border: rgba(255,255,255,0.06); }
+.state-pill--yellow  { --state-fg: var(--c-yellow);  --state-bg: color-mix(in oklch, var(--c-yellow) 18%, transparent);  --state-border: color-mix(in oklch, var(--c-yellow) 25%, transparent); }
+.state-pill--purple  { --state-fg: var(--c-purple);  --state-bg: color-mix(in oklch, var(--c-purple) 20%, transparent);  --state-border: color-mix(in oklch, var(--c-purple) 28%, transparent); }
+.state-pill--red     { --state-fg: var(--c-red);     --state-bg: color-mix(in oklch, var(--c-red) 20%, transparent);     --state-border: color-mix(in oklch, var(--c-red) 30%, transparent); }
+.state-pill--green   { --state-fg: var(--c-green);   --state-bg: color-mix(in oklch, var(--c-green) 16%, transparent);   --state-border: color-mix(in oklch, var(--c-green) 22%, transparent); }
+
+/* Muted: kill background, lighter border, color stays only on dot + text */
+.state-pill--muted.state-pill {
+  background: transparent;
+  border-color: rgba(255,255,255,0.08);
+}
+
+/* Loud: solid fill, dark foreground, halo */
+.state-pill--loud.state-pill {
+  background: var(--state-fg);
+  border-color: transparent;
+  color: #0a0c12;
+  box-shadow: 0 0 0 1px color-mix(in oklch, var(--state-fg) 30%, transparent), 0 0 14px -2px color-mix(in oklch, var(--state-fg) 55%, transparent);
+  font-weight: 600;
+}
+.state-pill--loud .state-pill__dot { color: #0a0c12; opacity: 0.85; }
+.state-pill--loud.state-pill--neutral { background: var(--text); }
+.state-pill--loud.state-pill--gray    { background: var(--c-gray); }
+.state-pill--loud.state-pill--neutral .state-pill__dot,
+.state-pill--loud.state-pill--gray    .state-pill__dot { color: #0a0c12; }
+
+/* ── Main area / agents list ─────────────────────────────────────────────── */
+.main-area {
+  flex: 1;
+  overflow-y: auto;
+  position: relative;
+  min-height: 0;
+}
+.agents-list { padding: 24px; }
+.agents-list__inner { max-width: var(--list-maxw, 1240px); margin: 0 auto; display: flex; flex-direction: column; gap: 28px; }
+
+.page-title {
+  font-size: 22px; font-weight: 600; letter-spacing: -0.02em;
+  margin: 0;
+}
+
+/* ── Project section ─────────────────────────────────────────────────────── */
+.project-section { display: flex; flex-direction: column; gap: 8px; }
+.project-section__hd {
+  display: flex; justify-content: space-between; align-items: baseline;
+  gap: 16px;
+  padding: 0 4px 6px;
+  cursor: pointer;
+  user-select: none;
+  border-bottom: 1px solid var(--border);
+}
+.project-section__title { display: flex; align-items: center; gap: 8px; }
+.project-section__title svg { color: var(--text-3); transition: transform .15s; }
+.project-section__open {
+  width: 22px; height: 22px;
+  display: inline-flex; align-items: center; justify-content: center;
+  color: var(--text-3);
+  border-radius: 6px;
+  opacity: 0;
+  transition: opacity .12s, color .12s, background .12s;
+}
+.project-section__hd:hover .project-section__open { opacity: 1; }
+.project-section__open:hover { color: var(--text); background: var(--surface-2); }
+.project-section__open svg { width: 13px; height: 13px; }
+.project-section__name {
+  font-family: var(--font-sans);
+  font-size: 14px; font-weight: 600;
+  letter-spacing: -0.015em;
+  color: var(--text);
+}
+.project-section__count { font-size: 12px; color: var(--text-2); }
+.project-section__path { font-size: 11.5px; }
+
+.project-section__rows {
+  display: flex; flex-direction: column;
+  gap: 6px;
+  padding-top: 4px;
+}
+
+.empty-row {
+  padding: 18px; text-align: center;
+  color: var(--text-3); font-size: 12.5px;
+  border: 1px dashed var(--border); border-radius: var(--radius);
+}
+
+/* ── Agent column header ─────────────────────────────────────────────────
+   Mirrors .agent-row's grid so labels sit exactly above their columns.
+   Five variants — pick via tweak `columnHeaders`:
+     none, global, per-section, floating, tab
+*/
+.agent-col-hd {
+  display: grid;
+  grid-template-columns: var(--col-state, 100px) var(--col-id, 90px) var(--col-runtime, 90px) var(--col-tokens, 70px) 1fr 168px;
+  gap: 16px;
+  align-items: center;
+  padding: 0 16px;
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-3);
+  user-select: none;
+}
+.agent-col-hd__cell { white-space: nowrap; }
+.agent-col-hd__cell--right { text-align: right; }
+
+/* density parity with rows */
+.agent-col-hd--density-tight { padding: 0 14px; }
+.agent-col-hd--density-comfy { padding: 0 18px; gap: 20px; }
+
+/* Global: sticky bar pinned at the top of the scroll area, with a hairline.
+   Sits at the very top of the agents list. */
+.agents-list__sticky-hd {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  margin: -24px -24px 0;
+  padding: 14px 24px 10px;
+  background: linear-gradient(to bottom,
+    color-mix(in oklch, var(--bg) 96%, transparent) 0%,
+    color-mix(in oklch, var(--bg) 96%, transparent) 70%,
+    transparent 100%);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--border);
+}
+.agent-col-hd--global {
+  padding: 8px 16px;
+  color: var(--text-2);
+}
+
+/* Per-section: tucked beneath each project header, with a soft baseline. */
+.agent-col-hd--per-section {
+  padding: 6px 16px 8px;
+  border-bottom: 1px dashed var(--border);
+  margin-bottom: 2px;
+}
+
+/* Floating: ghosted, no rule — pure typographic guide. */
+.agent-col-hd--floating {
+  padding: 4px 16px 6px;
+  color: var(--text-3);
+  opacity: 0.6;
+  font-size: 10px;
+  letter-spacing: 0.1em;
+}
+
+/* Tab: header sits on a recessed strip, like a table caption tab.
+   When variant is 'tab', the project's row stack is wrapped in a single
+   bordered frame so the header tab+rows read as one grouped table. */
+.agent-col-hd--tab {
+  padding: 9px 16px;
+  background: color-mix(in oklch, var(--surface) 70%, transparent);
+  color: var(--text-2);
+  border-bottom: 1px solid var(--border);
+}
+
+.project-section__rows--tab {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  padding-top: 0;
+  gap: 0;
+}
+.project-section__rows--tab .agent-row {
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  border-top: 1px solid var(--border);
+}
+.project-section__rows--tab .agent-row:first-of-type { border-top: 0; }
+.project-section__rows--tab .agent-row:hover {
+  background: var(--surface-2);
+}
+
+/* hide column header on mobile — row layout collapses to a card */
+.app--vw-mobile .agents-list__sticky-hd,
+.app--vw-mobile .agent-col-hd { display: none; }
+
+/* match vertical viewport's adjusted grid */
+.app--vw-vertical .agent-col-hd {
+  grid-template-columns: 88px 80px 70px 56px 1fr 150px;
+  gap: 12px;
+}
+
+/* ── Agent row ───────────────────────────────────────────────────────────── */
+.agent-row {
+  display: grid;
+  grid-template-columns: var(--col-state, 100px) var(--col-id, 90px) var(--col-runtime, 90px) var(--col-tokens, 70px) 1fr 168px;
+  gap: 16px;
+  align-items: center;
+  padding: 12px 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: background .12s, border-color .12s, transform .12s;
+  position: relative;
+  overflow: hidden;
+}
+
+/* ── Row textures (decorative backgrounds) ────────────────────────────── */
+.agent-row--tex-grid {
+  background-image:
+    linear-gradient(var(--surface), var(--surface)),
+    linear-gradient(to right, rgba(255,255,255,0.04) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255,255,255,0.04) 1px, transparent 1px);
+  background-size: 100% 100%, 18px 18px, 18px 18px;
+  background-blend-mode: normal, normal, normal;
+  background-color: var(--surface);
+}
+.agent-row--tex-grid::after {
+  content: '';
+  position: absolute; inset: 0;
+  background-image:
+    linear-gradient(to right, rgba(255,255,255,0.035) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255,255,255,0.035) 1px, transparent 1px);
+  background-size: 18px 18px;
+  pointer-events: none;
+}
+.agent-row--tex-dots::after {
+  content: '';
+  position: absolute; inset: 0;
+  background-image: radial-gradient(rgba(255,255,255,0.07) 1px, transparent 1px);
+  background-size: 14px 14px;
+  pointer-events: none;
+}
+.agent-row--tex-stripes::after {
+  content: '';
+  position: absolute; inset: 0;
+  background-image: repeating-linear-gradient(135deg, rgba(255,255,255,0.025) 0 1px, transparent 1px 9px);
+  pointer-events: none;
+}
+.agent-row--tex-stripes-thick::after {
+  content: '';
+  position: absolute; inset: 0;
+  background-image: repeating-linear-gradient(135deg, rgba(255,255,255,0.05) 0 6px, transparent 6px 18px);
+  pointer-events: none;
+}
+.agent-row--tex-triangles::after {
+  content: '';
+  position: absolute; inset: 0;
+  background-image:
+    linear-gradient(60deg,  rgba(255,255,255,0.045) 25%, transparent 25.5%, transparent 75%, rgba(255,255,255,0.045) 75%),
+    linear-gradient(120deg, rgba(255,255,255,0.045) 25%, transparent 25.5%, transparent 75%, rgba(255,255,255,0.045) 75%);
+  background-size: 22px 38px;
+  background-position: 0 0, 11px 19px;
+  pointer-events: none;
+}
+.agent-row--tex-noise::after {
+  content: '';
+  position: absolute; inset: 0;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 0.06 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+  background-size: 180px 180px;
+  pointer-events: none;
+  mix-blend-mode: overlay;
+}
+.agent-row--tex-scanlines::after {
+  content: '';
+  position: absolute; inset: 0;
+  background-image: repeating-linear-gradient(0deg, rgba(255,255,255,0.025) 0 1px, transparent 1px 3px);
+  pointer-events: none;
+}
+.agent-row--tex-gradient::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: linear-gradient(120deg, color-mix(in oklch, var(--state-fg, var(--c-blue)) 8%, transparent), transparent 60%);
+  pointer-events: none;
+}
+
+/* state-fg piping for textured rows */
+.agent-row--state-blue    { --state-fg: var(--c-blue); }
+.agent-row--state-neutral { --state-fg: var(--text); }
+.agent-row--state-gray    { --state-fg: var(--c-gray); }
+.agent-row--state-yellow  { --state-fg: var(--c-yellow); }
+.agent-row--state-purple  { --state-fg: var(--c-purple); }
+.agent-row--state-red     { --state-fg: var(--c-red); }
+.agent-row--state-green   { --state-fg: var(--c-green); }
+
+/* keep text + actions above textures */
+.agent-row > * { position: relative; z-index: 1; }
+.agent-row:hover {
+  background: var(--surface-2);
+  border-color: var(--border-strong);
+}
+.agent-row--density-tight { padding: 8px 14px; }
+.agent-row--density-comfy { padding: 16px 18px; gap: 20px; }
+
+.agent-row__key {
+  font-size: 12px; color: var(--text-2);
+  font-weight: 500;
+  letter-spacing: -0.01em;
+}
+.agent-row__title {
+  font-size: 13.5px;
+  color: var(--text);
+  letter-spacing: -0.005em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.agent-row__runtime, .agent-row__tokens {
+  font-size: 12px;
+  color: var(--text-2);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+.runtime-live { position: relative; }
+.runtime-live::after {
+  content: '';
+  position: absolute;
+  left: 100%;
+  margin-left: 5px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  background: var(--c-blue);
+  animation: pulse 1.6s infinite;
+}
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+
+.agent-row__action { display: flex; justify-content: flex-end; min-height: 24px; }
+
+/* ── Stacked row layout ──────────────────────────────────────────────────
+   Two lines: title on top; id / runtime / tokens on the bottom row with
+   either icons or text labels (controlled by tweak `metaLabel`). */
+.agent-row--layout-stacked {
+  grid-template-columns: var(--col-state, 100px) 1fr 168px;
+  grid-template-areas:
+    "state title  action"
+    "state meta   action";
+  row-gap: 4px;
+  align-items: center;
+  padding: 12px 16px;
+}
+.agent-row--layout-stacked.agent-row--density-tight  { padding: 10px 14px; row-gap: 3px; }
+.agent-row--layout-stacked.agent-row--density-comfy  { padding: 16px 18px; row-gap: 6px; }
+.agent-row--layout-stacked .agent-row__state  { grid-area: state; align-self: center; }
+.agent-row--layout-stacked .agent-row__title  { grid-area: title; font-size: 14px; line-height: 1.3; }
+.agent-row--layout-stacked .agent-row__meta   {
+  grid-area: meta;
+  display: flex; align-items: center; flex-wrap: wrap;
+  gap: 6px 8px;
+  font-size: 11.5px;
+  color: var(--text-3);
+}
+.agent-row--layout-stacked .agent-row__action { grid-area: action; align-self: center; }
+.agent-row__meta-item {
+  display: inline-flex; align-items: center; gap: 5px;
+  color: var(--text-2);
+  font-variant-numeric: tabular-nums;
+}
+.agent-row__meta-item svg { color: var(--text-3); flex-shrink: 0; }
+.agent-row__meta-lbl {
+  font-family: var(--font-sans);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+.agent-row__meta-sep { color: var(--text-3); opacity: 0.5; }
+
+/* The state meta item only appears on mobile (replaces the pill) */
+.agent-row__meta-state { display: none; }
+.agent-row__meta-state + .agent-row__meta-sep { display: none; }
+.agent-row__meta-state .agent-row__meta-dot { display: inline-flex; align-items: center; }
+.agent-row__meta-state.state-color-yellow { color: var(--c-yellow); }
+.agent-row__meta-state.state-color-blue   { color: var(--c-blue); }
+.agent-row__meta-state.state-color-purple { color: var(--c-purple); }
+.agent-row__meta-state.state-color-red    { color: var(--c-red); }
+.agent-row__meta-state.state-color-green  { color: var(--c-green); }
+.agent-row__meta-state.state-color-grey   { color: var(--text-2); }
+.agent-row__meta-state.state-color-gray   { color: var(--c-gray); }
+.agent-row__meta-state.state-color-neutral{ color: var(--text); }
+
+/* ── Attention treatment ──────────────────────────────────────────────────
+   subtle: state pill only (no row tint)
+   medium: tinted row background
+   strong: tinted bg + glow + animated pulse on left edge */
+.agent-row--tint-yellow { background: color-mix(in oklch, var(--c-yellow) 5%, var(--surface)); border-color: color-mix(in oklch, var(--c-yellow) 14%, var(--border)); }
+.agent-row--tint-yellow:hover { background: color-mix(in oklch, var(--c-yellow) 8%, var(--surface-2)); }
+.agent-row--tint-red    { background: color-mix(in oklch, var(--c-red) 6%, var(--surface));    border-color: color-mix(in oklch, var(--c-red) 18%, var(--border)); }
+.agent-row--tint-red:hover { background: color-mix(in oklch, var(--c-red) 10%, var(--surface-2)); }
+.agent-row--tint-purple { background: color-mix(in oklch, var(--c-purple) 5%, var(--surface)); border-color: color-mix(in oklch, var(--c-purple) 14%, var(--border)); }
+.agent-row--tint-purple:hover { background: color-mix(in oklch, var(--c-purple) 8%, var(--surface-2)); }
+
+/* Strong: thicker tint, glow, left-edge marker, pulse */
+.agent-row--strong.agent-row--tint-yellow { background: color-mix(in oklch, var(--c-yellow) 10%, var(--surface)); border-color: color-mix(in oklch, var(--c-yellow) 30%, var(--border)); }
+.agent-row--strong.agent-row--tint-red    { background: color-mix(in oklch, var(--c-red) 12%, var(--surface));    border-color: color-mix(in oklch, var(--c-red) 35%, var(--border)); }
+.agent-row--strong.agent-row--tint-purple { background: color-mix(in oklch, var(--c-purple) 10%, var(--surface)); border-color: color-mix(in oklch, var(--c-purple) 30%, var(--border)); }
+
+.agent-row--strong { position: relative; }
+.agent-row--strong::before {
+  content: '';
+  position: absolute; left: 0; top: 8px; bottom: 8px;
+  width: 3px; border-radius: 0 3px 3px 0;
+  background: var(--att-color, var(--c-yellow));
+  box-shadow: 0 0 14px var(--att-color, var(--c-yellow));
+  animation: att-pulse 1.8s ease-in-out infinite;
+}
+.agent-row--strong.agent-row--tint-yellow { --att-color: var(--c-yellow); }
+.agent-row--strong.agent-row--tint-red    { --att-color: var(--c-red); }
+.agent-row--strong.agent-row--tint-purple { --att-color: var(--c-purple); }
+.agent-row--strong { box-shadow: 0 0 0 1px color-mix(in oklch, var(--att-color) 22%, transparent), 0 0 32px -8px color-mix(in oklch, var(--att-color) 40%, transparent); }
+@keyframes att-pulse { 0%,100% { opacity: 1 } 50% { opacity: 0.4 } }
+
+/* Mobile / narrow: collapse row to two-line card */
+.app--vw-mobile .agent-row:not(.agent-row--layout-stacked) {
+  grid-template-columns: auto 1fr auto;
+  grid-template-areas:
+    "state key  action"
+    "title title title"
+    "rt    rt   tk";
+  gap: 6px 10px;
+  padding: 12px;
+}
+.app--vw-mobile .agent-row__state    { grid-area: state; }
+.app--vw-mobile .agent-row__key      { grid-area: key; text-align: left; }
+.app--vw-mobile .agent-row__title    { grid-area: title; white-space: normal; font-size: 13px; }
+.app--vw-mobile .agent-row__runtime  { grid-area: rt; text-align: left; font-size: 11.5px; }
+.app--vw-mobile .agent-row__tokens   { grid-area: tk; }
+.app--vw-mobile .agent-row__action   { grid-area: action; }
+
+/* Stacked layout adapts at narrow widths: action drops to its own row,
+   meta wraps. Override the all-viewports stacked grid above. */
+.app--vw-mobile .agent-row--layout-stacked,
+.app--vw-vertical .agent-row--layout-stacked {
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-areas:
+    "state title"
+    "state meta"
+    "action action";
+  row-gap: 6px;
+  column-gap: 12px;
+  padding: 12px;
+}
+.app--vw-mobile .agent-row--layout-stacked .agent-row__action,
+.app--vw-vertical .agent-row--layout-stacked .agent-row__action {
+  grid-area: action;
+  justify-content: flex-start;
+  padding-top: 4px;
+  border-top: 1px dashed var(--border);
+  margin-top: 4px;
+}
+.app--vw-mobile .agent-row--layout-stacked .agent-row__title,
+.app--vw-vertical .agent-row--layout-stacked .agent-row__title {
+  white-space: normal;
+  font-size: 13px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.app--vw-mobile .agent-row--layout-stacked .agent-row__meta,
+.app--vw-vertical .agent-row--layout-stacked .agent-row__meta {
+  flex-wrap: wrap;
+  gap: 6px 10px;
+  min-width: 0;
+}
+.app--vw-mobile .agent-row--layout-stacked .agent-row__meta-item,
+.app--vw-vertical .agent-row--layout-stacked .agent-row__meta-item {
+  white-space: nowrap;
+}
+.app--vw-mobile .agent-row--layout-stacked .agent-row__meta-sep,
+.app--vw-vertical .agent-row--layout-stacked .agent-row__meta-sep {
+  display: none;
+}
+/* Mobile-only stacked: hide pill, show meta-state, title spans full width */
+.app--vw-mobile .agent-row--layout-stacked {
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas:
+    "title"
+    "meta"
+    "action";
+  row-gap: 6px;
+  column-gap: 0;
+  padding: 12px;
+}
+.app--vw-mobile .agent-row--layout-stacked .agent-row__state { display: none; }
+.app--vw-mobile .agent-row--layout-stacked .agent-row__meta-state { display: inline-flex; }
+.app--vw-mobile .agent-row--layout-stacked .agent-row__meta-state + .agent-row__meta-sep { display: inline; }
+
+/* Vertical / narrow desktop adjust */
+.app--vw-vertical .agent-row:not(.agent-row--layout-stacked) {
+  grid-template-columns: 88px 80px 70px 56px 1fr 150px;
+  gap: 12px;
+}
+.app--vw-vertical .agent-row__title { font-size: 13px; }
+
+/* ── Drawer ──────────────────────────────────────────────────────────────── */
+.drawer-scrim {
+  position: absolute; inset: 0;
+  background: rgba(0,0,0,0.5);
+  z-index: 40;
+  animation: fade-in .15s;
+}
+@keyframes fade-in { from { opacity: 0 } to { opacity: 1 } }
+
+.drawer {
+  position: absolute;
+  top: 0; right: 0; bottom: 0;
+  width: 60%;
+  min-width: 520px;
+  max-width: 720px;
+  background: var(--bg);
+  border-left: 1px solid var(--border);
+  box-shadow: -30px 0 80px -20px rgba(0,0,0,0.5);
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  animation: slide-in .22s cubic-bezier(.3,.7,.4,1);
+}
+.drawer--page {
+  position: relative;
+  width: 100%;
+  max-width: 1100px;
+  margin: 0 auto;
+  border-left: 0;
+  box-shadow: none;
+  animation: none;
+}
+@keyframes slide-in { from { transform: translateX(20px); opacity: 0 } to { transform: translateX(0); opacity: 1 } }
+
+.app--vw-mobile .drawer {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  border-left: 0;
+}
+
+.drawer__hd {
+  padding: 18px 24px 16px;
+  border-bottom: 1px solid var(--border);
+  background: linear-gradient(to bottom, rgba(255,255,255,0.02), transparent);
+  flex-shrink: 0;
+}
+.drawer__hd-top {
+  display: flex; justify-content: space-between; align-items: flex-start; gap: 12px;
+  margin-bottom: 10px;
+}
+.drawer__crumb { display: flex; gap: 6px; align-items: baseline; font-size: 12px; }
+.drawer__crumb .mono { color: var(--text); }
+.drawer__hd-actions { display: flex; gap: 6px; align-items: center; }
+.drawer__title {
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  margin: 0 0 14px;
+  text-wrap: pretty;
+  line-height: 1.3;
+}
+.drawer__meta {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 8px;
+  font-size: 12px;
+}
+.meta-sep { width: 1px; height: 12px; background: var(--border-strong); margin: 0 4px; }
+.drawer__links {
+  display: flex; flex-wrap: wrap; gap: 6px 16px;
+  margin-top: 14px;
+  font-size: 11.5px;
+}
+.link-row {
+  display: inline-flex; align-items: center; gap: 6px;
+  color: var(--text-2);
+  text-decoration: none;
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+.link-row:hover { background: var(--surface-2); color: var(--text); }
+.copy-btn {
+  appearance: none;
+  background: transparent; border: 0;
+  color: var(--text-3);
+  width: 18px; height: 18px;
+  border-radius: 4px;
+  display: grid; place-items: center;
+  cursor: pointer;
+}
+.copy-btn:hover { background: rgba(255,255,255,0.08); color: var(--text); }
+
+.drawer__body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px 24px 32px;
+  min-height: 0;
+}
+.drawer__section { margin-bottom: 28px; }
+.drawer__section--timeline { margin-bottom: 0; }
+.drawer__section-title {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-3);
+  margin: 0 0 10px;
+}
+
+/* ── Token table ─────────────────────────────────────────────────────────── */
+.ttbl {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+.ttbl__hd, .ttbl__row, .ttbl__total {
+  display: grid;
+  grid-template-columns: 100px 90px 1fr;
+  gap: 16px;
+  align-items: center;
+  padding: 8px 14px;
+  font-size: 12px;
+}
+.ttbl__hd {
+  color: var(--text-3);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-2);
+}
+.ttbl__hd .clickable { cursor: pointer; user-select: none; }
+.ttbl__hd .clickable:hover { color: var(--text); }
+.ttbl__row { border-bottom: 1px solid var(--border); }
+.ttbl__row:last-of-type { border-bottom: 0; }
+.ttbl__num { text-align: right; font-variant-numeric: tabular-nums; }
+.ttbl__share { display: flex; align-items: center; gap: 10px; }
+.ttbl__bar { flex: 1; height: 4px; background: rgba(255,255,255,0.05); border-radius: 999px; overflow: hidden; }
+.ttbl__bar-fill { height: 100%; background: var(--text-2); border-radius: 999px; }
+.ttbl__total {
+  border-top: 1px solid var(--border-strong);
+  background: var(--surface-2);
+  font-weight: 600;
+}
+
+/* ── State history ───────────────────────────────────────────────────────── */
+.state-history {
+  display: flex; flex-wrap: wrap; align-items: center;
+  gap: 6px;
+  padding: 10px 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+.state-history__chip {
+  appearance: none;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 3px 9px 3px 5px;
+  cursor: pointer;
+  color: var(--text-2);
+  font-size: 11px;
+}
+.state-history__chip:hover { background: var(--surface-2); }
+.state-history__arrow { color: var(--text-3); display: inline-flex; }
+
+/* ── Timeline ────────────────────────────────────────────────────────────── */
+.timeline {
+  position: relative;
+}
+.timeline__controls {
+  display: flex; gap: 10px; align-items: center;
+  margin-bottom: 12px;
+}
+.timeline__search {
+  flex: 1;
+  display: flex; align-items: center; gap: 8px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0 10px;
+}
+.timeline__search input {
+  flex: 1;
+  appearance: none; border: 0; background: transparent;
+  color: inherit; padding: 8px 0;
+  font: inherit;
+  font-size: 12.5px;
+  outline: none;
+}
+.timeline__search svg { color: var(--text-3); }
+.timeline__search input::placeholder { color: var(--text-3); }
+
+.live-toggle {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 12px;
+  cursor: pointer;
+  color: var(--text-2);
+  user-select: none;
+}
+.live-toggle input { display: none; }
+.live-toggle__pill {
+  width: 26px; height: 14px;
+  background: rgba(255,255,255,0.08);
+  border-radius: 999px;
+  display: inline-flex; align-items: center; padding: 1px;
+  transition: background .15s;
+}
+.live-toggle input:checked + .live-toggle__pill { background: color-mix(in oklch, var(--c-blue) 35%, var(--surface-2)); }
+.live-toggle__dot {
+  width: 12px; height: 12px;
+  background: var(--text-2);
+  border-radius: 999px;
+  transition: transform .15s, background .15s;
+}
+.live-toggle__dot.live {
+  transform: translateX(12px);
+  background: var(--c-blue);
+  box-shadow: 0 0 8px var(--c-blue);
+}
+
+.timeline__scroll {
+  max-height: none;
+  display: flex; flex-direction: column; gap: 14px;
+}
+.timeline__empty { padding: 24px; text-align: center; color: var(--text-3); font-size: 12.5px; }
+.timeline__empty--all-filtered {
+  display: flex; flex-direction: column; align-items: center;
+  gap: 12px; padding: 36px 16px;
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius);
+}
+.timeline__empty-msg { color: var(--text-2); font-size: 13px; }
+.timeline__empty-link {
+  appearance: none; background: var(--surface-2);
+  border: 1px solid var(--border-strong);
+  color: var(--text);
+  font: inherit; font-size: 12px;
+  padding: 6px 12px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+.timeline__empty-link:hover { background: var(--surface-3); border-color: rgba(255,255,255,0.18); }
+
+/* ── Filter button (closed-state) ───────────────────────────────────────── */
+/* Two visual states surfaced as a `state` prop: `default` (all six event
+   types selected, no badge) and `active` (a subset is selected; chevron
+   gets an accent dot + count). The implementer maps these onto cva
+   variants. */
+.timeline__filter-wrap { position: relative; display: inline-flex; }
+
+.filter-btn {
+  appearance: none;
+  display: inline-flex; align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 10px 0 9px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-2);
+  font-family: inherit; font-size: 12.5px; font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background .12s, border-color .12s, color .12s;
+}
+.filter-btn:hover { background: var(--surface-2); border-color: var(--border-strong); color: var(--text); }
+.filter-btn[aria-expanded="true"] { background: var(--surface-2); border-color: var(--border-strong); color: var(--text); }
+.filter-btn:focus-visible {
+  outline: 2px solid color-mix(in oklch, var(--c-blue) 60%, transparent);
+  outline-offset: 1px;
+}
+.filter-btn__dot { display: none; width: 6px; height: 6px; border-radius: 50%; background: var(--c-blue); box-shadow: 0 0 8px -1px color-mix(in oklch, var(--c-blue) 70%, transparent); }
+.filter-btn__label { letter-spacing: -0.005em; }
+.filter-btn__sep { color: var(--text-3); margin-right: 4px; }
+.filter-btn__count {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--text-2);
+  font-variant-numeric: tabular-nums;
+  display: inline-flex; align-items: baseline; gap: 4px;
+}
+
+.filter-btn--active {
+  border-color: color-mix(in oklch, var(--c-blue) 38%, var(--border-strong));
+  background: color-mix(in oklch, var(--c-blue) 10%, var(--surface));
+  color: var(--text);
+}
+.filter-btn--active:hover {
+  background: color-mix(in oklch, var(--c-blue) 16%, var(--surface));
+  border-color: color-mix(in oklch, var(--c-blue) 50%, var(--border-strong));
+}
+.filter-btn--active .filter-btn__dot { display: inline-block; }
+.filter-btn--active svg:first-of-type { color: var(--c-blue); }
+
+/* ── Filter popover ───────────────────────────────────────────────────────── */
+.filter-popover {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 40;
+  width: 296px;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  box-shadow:
+    0 24px 60px -12px rgba(0,0,0,0.7),
+    0 0 0 1px rgba(255,255,255,0.02);
+  padding: 6px;
+  animation: filter-pop-in 0.14s cubic-bezier(.3,.7,.4,1);
+}
+@keyframes filter-pop-in {
+  from { opacity: 0; transform: translateY(-4px) scale(0.985); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+.filter-popover__hd {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 4px 8px 8px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 4px;
+}
+.filter-popover__hd-label {
+  font-size: 10.5px; font-weight: 600;
+  color: var(--text-3); text-transform: uppercase; letter-spacing: 0.08em;
+}
+.filter-popover__hd-actions {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-size: 11.5px;
+}
+.filter-popover__link {
+  appearance: none; background: transparent; border: 0;
+  padding: 2px 2px;
+  color: var(--text-2);
+  cursor: pointer;
+  font: inherit;
+  border-radius: 3px;
+}
+.filter-popover__link:hover:not(:disabled) { color: var(--text); }
+.filter-popover__link:disabled { color: var(--dim); cursor: default; }
+.filter-popover__link:focus-visible {
+  outline: 2px solid color-mix(in oklch, var(--c-blue) 60%, transparent);
+  outline-offset: 2px;
+}
+.filter-popover__hd-sep { color: var(--text-3); }
+.filter-popover__list {
+  list-style: none; margin: 0; padding: 0;
+  display: flex; flex-direction: column; gap: 1px;
+}
+.filter-popover__list > li { margin: 0; }
+
+.filter-row {
+  display: grid;
+  grid-template-columns: 16px 1fr auto;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  user-select: none;
+  position: relative;
+}
+.filter-row:hover { background: var(--surface-2); }
+.filter-row > input[type="checkbox"] {
+  position: absolute;
+  width: 16px; height: 16px;
+  top: 9px; left: 8px;
+  opacity: 0;
+  margin: 0;
+  cursor: pointer;
+}
+.filter-row__check {
+  width: 16px; height: 16px;
+  border: 1px solid var(--border-strong);
+  border-radius: 4px;
+  display: grid; place-items: center;
+  background: rgba(255,255,255,0.03);
+  color: #0a0c12;
+  transition: background .12s, border-color .12s;
+}
+.filter-row--on .filter-row__check {
+  background: var(--c-blue);
+  border-color: var(--c-blue);
+}
+.filter-row__label {
+  font-size: 13px; color: var(--text);
+  letter-spacing: -0.005em;
+}
+.filter-row__count {
+  font-size: 11.5px;
+  color: var(--text-3);
+  font-variant-numeric: tabular-nums;
+}
+.filter-row--on .filter-row__count { color: var(--text-2); }
+.filter-row > input[type="checkbox"]:focus-visible + .filter-row__check {
+  outline: 2px solid color-mix(in oklch, var(--c-blue) 60%, transparent);
+  outline-offset: 2px;
+}
+
+/* ── Narrow drawer (≤1279px-style; mobile full-bleed) ────────────────────
+   Drops Search to its own row so Filters + Live still read at a glance. */
+.app--vw-mobile .timeline__controls,
+.app--vw-vertical .timeline__controls {
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.app--vw-mobile .timeline__filter-wrap,
+.app--vw-vertical .timeline__filter-wrap { order: 1; }
+.app--vw-mobile .live-toggle,
+.app--vw-vertical .live-toggle { order: 2; margin-left: auto; }
+.app--vw-mobile .timeline__search,
+.app--vw-vertical .timeline__search {
+  order: 3;
+  flex-basis: 100%;
+  min-width: 0;
+}
+.app--vw-mobile .filter-popover {
+  width: calc(100vw - 48px);
+  max-width: 320px;
+}
+
+.segment {
+  border-left: 2px solid var(--seg-color, var(--text-3));
+  padding-left: 14px;
+}
+.segment--blue    { --seg-color: color-mix(in oklch, var(--c-blue) 50%, transparent); }
+.segment--neutral { --seg-color: rgba(255,255,255,0.2); }
+.segment--gray    { --seg-color: rgba(255,255,255,0.15); }
+.segment--yellow  { --seg-color: color-mix(in oklch, var(--c-yellow) 60%, transparent); }
+.segment--purple  { --seg-color: color-mix(in oklch, var(--c-purple) 55%, transparent); }
+.segment--red     { --seg-color: color-mix(in oklch, var(--c-red) 60%, transparent); }
+.segment--green   { --seg-color: color-mix(in oklch, var(--c-green) 50%, transparent); }
+
+.segment__hd {
+  display: flex; align-items: center; gap: 8px;
+  padding: 4px 0 8px;
+  cursor: pointer;
+  user-select: none;
+  font-size: 11.5px;
+}
+.segment__hd > svg:first-child { color: var(--text-3); }
+.segment__count { font-size: 11px; }
+.segment__items { display: flex; flex-direction: column; gap: 4px; --seg-row-h: 56px; }
+.segment__items--scroll {
+  overflow-y: auto;
+  padding-right: 4px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,0.12) transparent;
+  border-top: 1px dashed rgba(255,255,255,0.05);
+  border-bottom: 1px dashed rgba(255,255,255,0.05);
+  mask-image: linear-gradient(to bottom, transparent 0, black 8px, black calc(100% - 8px), transparent 100%);
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, black 8px, black calc(100% - 8px), transparent 100%);
+}
+.segment__items--scroll::-webkit-scrollbar { width: 6px; }
+.segment__items--scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.14); border-radius: 3px; }
+.segment__items--scroll::-webkit-scrollbar-track { background: transparent; }
+
+.tcc {
+  border-radius: 6px;
+  border: 1px solid transparent;
+  transition: background .1s, border-color .1s;
+}
+.tcc:hover { background: var(--surface); border-color: var(--border); }
+.tcc--open { background: var(--surface); border-color: var(--border); }
+.tcc__hd {
+  appearance: none; background: transparent; border: 0;
+  width: 100%;
+  text-align: left;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 16px;
+  align-items: center;
+  padding: 6px 10px;
+  cursor: pointer;
+  color: inherit;
+  font: inherit;
+}
+.tcc--padded .tcc__hd { padding: 10px 12px; }
+.tcc__line1 {
+  font-size: 12px;
+  display: flex; align-items: center; gap: 8px;
+  min-width: 0;
+}
+.tcc__tag {
+  display: inline-block;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 500;
+  background: rgba(255,255,255,0.05);
+  color: var(--text-2);
+  flex-shrink: 0;
+}
+.tcc__tag--bash     { color: oklch(0.78 var(--chr) 90); background: color-mix(in oklch, var(--c-yellow) 10%, transparent); }
+.tcc__tag--read     { color: oklch(0.75 var(--chr) 250); background: color-mix(in oklch, var(--c-blue) 12%, transparent); }
+.tcc__tag--edit     { color: oklch(0.78 var(--chr) 150); background: color-mix(in oklch, var(--c-green) 12%, transparent); }
+.tcc__tag--write    { color: oklch(0.78 var(--chr) 150); background: color-mix(in oklch, var(--c-green) 12%, transparent); }
+.tcc__tag--grep     { color: oklch(0.74 var(--chr) 295); background: color-mix(in oklch, var(--c-purple) 12%, transparent); }
+.tcc__tag--glob     { color: oklch(0.74 var(--chr) 295); background: color-mix(in oklch, var(--c-purple) 12%, transparent); }
+.tcc__tag--question { color: oklch(0.82 var(--chr) 90); background: color-mix(in oklch, var(--c-yellow) 16%, transparent); }
+.tcc__summary {
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  color: var(--text);
+}
+.tcc__line2 {
+  font-size: 11px;
+  display: flex; gap: 6px; align-items: center;
+  flex-shrink: 0;
+}
+.tcc__sep { opacity: 0.5; }
+.tcc__output {
+  margin: 0;
+  padding: 10px 12px;
+  font-size: 11.5px;
+  line-height: 1.55;
+  background: var(--surface-2);
+  color: var(--text-2);
+  white-space: pre-wrap;
+  word-break: break-word;
+  border-top: 1px solid var(--border);
+  max-height: 280px;
+  overflow-y: auto;
+}
+
+.new-events-pill {
+  position: sticky; bottom: 12px;
+  align-self: center;
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 12px;
+  background: var(--c-blue);
+  color: #07101e;
+  font-size: 12px; font-weight: 500;
+  border: 0; border-radius: 999px;
+  cursor: pointer;
+  box-shadow: 0 6px 20px -4px color-mix(in oklch, var(--c-blue) 60%, transparent);
+}
+
+/* ── Modal ───────────────────────────────────────────────────────────────── */
+.modal-scrim {
+  position: absolute; inset: 0;
+  background: rgba(0,0,0,0.55);
+  z-index: 80;
+  display: grid; place-items: center;
+  padding: 20px;
+  animation: fade-in .15s;
+}
+.modal {
+  width: 100%;
+  max-width: 560px;
+  max-height: calc(100% - 40px);
+  background: var(--bg);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-lg);
+  display: flex; flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 30px 80px -10px rgba(0,0,0,0.7);
+  animation: modal-in .2s cubic-bezier(.3,.7,.4,1);
+}
+.modal--sm { max-width: 420px; }
+@keyframes modal-in { from { transform: translateY(8px) scale(.98); opacity: 0 } to { transform: none; opacity: 1 } }
+
+.modal__hd {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 12px 14px 12px 18px;
+  border-bottom: 1px solid var(--border);
+}
+.modal__steps { display: flex; gap: 6px; align-items: center; font-size: 11.5px; color: var(--text-3); }
+.modal__step { color: var(--text-3); }
+.modal__step.on { color: var(--text); font-weight: 500; }
+.modal__step-sep { color: var(--text-3); opacity: 0.5; }
+
+.modal__body { padding: 20px 22px 22px; overflow-y: auto; }
+.modal__title {
+  font-size: 16px; font-weight: 600; letter-spacing: -0.015em;
+  margin: 0 0 14px;
+}
+.modal__search {
+  display: flex; align-items: center; gap: 8px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 8px 12px;
+  margin-bottom: 12px;
+}
+.modal__search input {
+  flex: 1; appearance: none; border: 0; background: transparent;
+  color: inherit; outline: none; font: inherit; font-size: 13px;
+}
+.modal__search svg { color: var(--text-3); }
+
+.modal__list {
+  display: flex; flex-direction: column;
+  gap: 4px;
+}
+.modal__list--scroll { max-height: 320px; overflow-y: auto; padding-right: 4px; }
+.modal__list-item {
+  appearance: none;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: inherit;
+  text-align: left;
+  font: inherit;
+  display: flex; justify-content: space-between; align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background .1s, border-color .1s;
+}
+.modal__list-item:hover { background: var(--surface-2); border-color: var(--border-strong); }
+.modal__list-main { display: flex; align-items: center; gap: 10px; min-width: 0; flex: 1; }
+.modal__list-main > span:not(.mono) { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 13px; }
+.modal__list-meta { display: flex; gap: 8px; align-items: center; flex-shrink: 0; }
+.ticket-key { font-size: 11.5px; color: var(--text-2); flex-shrink: 0; }
+
+.badge-sm {
+  font-size: 10.5px;
+  font-family: var(--font-mono);
+  padding: 1px 7px;
+  background: var(--surface-2);
+  border-radius: 999px;
+  color: var(--text-2);
+}
+.badge-sm--accent { background: color-mix(in oklch, var(--c-blue) 18%, transparent); color: var(--c-blue); }
+
+.prio { font-size: 10.5px; padding: 1px 7px; border-radius: 999px; font-weight: 500; }
+.prio--high   { color: var(--c-red); background: color-mix(in oklch, var(--c-red) 14%, transparent); }
+.prio--medium { color: var(--c-yellow); background: color-mix(in oklch, var(--c-yellow) 14%, transparent); }
+.prio--low    { color: var(--text-3); background: rgba(255,255,255,0.04); }
+
+.confirm { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
+.confirm__row {
+  display: grid; grid-template-columns: 100px 1fr;
+  gap: 12px; padding: 8px 12px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm);
+  font-size: 12.5px;
+}
+.confirm__row span:first-child { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; }
+
+.modal__footer { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
+
+/* ── Projects route ──────────────────────────────────────────────────────── */
+.projects-page { padding: 24px; max-width: 1100px; margin: 0 auto; }
+.projects-page__sub-hd {
+  margin: 32px 0 12px;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  color: var(--text-2);
+  text-transform: uppercase;
+}
+.project-detail__agents { margin-top: 8px; }
+.project-detail__agents .agents-list { padding: 0; }
+.projects-page__hd { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 20px; }
+.projects-list { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+.projects-list__hd, .projects-list__row {
+  display: grid;
+  grid-template-columns: 120px 1.5fr 90px 80px 70px 24px;
+  gap: 16px;
+  padding: 11px 18px;
+  align-items: center;
+  font-size: 12.5px;
+}
+.projects-list__hd {
+  background: var(--surface-2);
+  font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em;
+  color: var(--text-3);
+  border-bottom: 1px solid var(--border);
+}
+.projects-list__row { border-bottom: 1px solid var(--border); cursor: pointer; transition: background .1s; }
+.projects-list__row:last-child { border-bottom: 0; }
+.projects-list__row:hover { background: var(--surface-2); }
+
+.toml-view {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 18px 20px;
+  font-size: 12.5px;
+  line-height: 1.7;
+  white-space: pre;
+  overflow-x: auto;
+  color: var(--text);
+}
+.form { display: flex; flex-direction: column; gap: 12px; max-width: 540px; }
+.form__field { display: flex; flex-direction: column; gap: 5px; }
+.form__label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-3); }
+.form__input {
+  appearance: none;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font: inherit; font-size: 13px;
+  padding: 8px 12px;
+  outline: none;
+}
+.form__input:focus { border-color: var(--text-2); background: var(--surface-2); }
+
+/* ── Toast ───────────────────────────────────────────────────────────────── */
+.toast {
+  position: absolute;
+  bottom: 24px; left: 50%;
+  transform: translateX(-50%);
+  background: var(--surface-2);
+  border: 1px solid var(--border-strong);
+  color: var(--text);
+  padding: 10px 16px;
+  border-radius: var(--radius);
+  font-size: 12.5px;
+  z-index: 100;
+  box-shadow: 0 12px 30px -6px rgba(0,0,0,0.6);
+  animation: modal-in .2s;
+}
+
+/* Scrollbars */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.06); border: 2px solid transparent; background-clip: content-box; border-radius: 999px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.12); border: 2px solid transparent; background-clip: content-box; }
+</style>
+</head>
+<body>
+  <div id="root"></div>
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+  <script type="text/babel" data-presets="react">
+// ── tweaks-panel.jsx ──
+
+// tweaks-panel.jsx
+// Reusable Tweaks shell + form-control helpers.
+//
+// Owns the host protocol (listens for __activate_edit_mode / __deactivate_edit_mode,
+// posts __edit_mode_available / __edit_mode_set_keys / __edit_mode_dismissed) so
+// individual prototypes don't re-roll it. Ships a consistent set of controls so you
+// don't hand-draw <input type="range">, segmented radios, steppers, etc.
+//
+// Usage (in an HTML file that loads React + Babel):
+//
+//   const TWEAK_DEFAULTS = /*EDITMODE&#8203;-BEGIN*/{
+//     "primaryColor": "#D97757",
+//     "fontSize": 16,
+//     "density": "regular",
+//     "dark": false
+//   }/*EDITMODE&#8203;-END*/;
+//
+//   function App() {
+//     const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
+//     return (
+//       <div style={{ fontSize: t.fontSize, color: t.primaryColor }}>
+//         Hello
+//         <TweaksPanel>
+//           <TweakSection label="Typography" />
+//           <TweakSlider label="Font size" value={t.fontSize} min={10} max={32} unit="px"
+//                        onChange={(v) => setTweak('fontSize', v)} />
+//           <TweakRadio  label="Density" value={t.density}
+//                        options={['compact', 'regular', 'comfy']}
+//                        onChange={(v) => setTweak('density', v)} />
+//           <TweakSection label="Theme" />
+//           <TweakColor  label="Primary" value={t.primaryColor}
+//                        onChange={(v) => setTweak('primaryColor', v)} />
+//           <TweakToggle label="Dark mode" value={t.dark}
+//                        onChange={(v) => setTweak('dark', v)} />
+//         </TweaksPanel>
+//       </div>
+//     );
+//   }
+//
+// ─────────────────────────────────────────────────────────────────────────────
+
+const __TWEAKS_STYLE = `
+  .twk-panel{position:fixed;right:16px;bottom:16px;z-index:2147483646;width:280px;
+    max-height:calc(100vh - 32px);display:flex;flex-direction:column;
+    background:rgba(250,249,247,.78);color:#29261b;
+    -webkit-backdrop-filter:blur(24px) saturate(160%);backdrop-filter:blur(24px) saturate(160%);
+    border:.5px solid rgba(255,255,255,.6);border-radius:14px;
+    box-shadow:0 1px 0 rgba(255,255,255,.5) inset,0 12px 40px rgba(0,0,0,.18);
+    font:11.5px/1.4 ui-sans-serif,system-ui,-apple-system,sans-serif;overflow:hidden}
+  .twk-hd{display:flex;align-items:center;justify-content:space-between;
+    padding:10px 8px 10px 14px;cursor:move;user-select:none}
+  .twk-hd b{font-size:12px;font-weight:600;letter-spacing:.01em}
+  .twk-x{appearance:none;border:0;background:transparent;color:rgba(41,38,27,.55);
+    width:22px;height:22px;border-radius:6px;cursor:default;font-size:13px;line-height:1}
+  .twk-x:hover{background:rgba(0,0,0,.06);color:#29261b}
+  .twk-body{padding:2px 14px 14px;display:flex;flex-direction:column;gap:10px;
+    overflow-y:auto;overflow-x:hidden;min-height:0;
+    scrollbar-width:thin;scrollbar-color:rgba(0,0,0,.15) transparent}
+  .twk-body::-webkit-scrollbar{width:8px}
+  .twk-body::-webkit-scrollbar-track{background:transparent;margin:2px}
+  .twk-body::-webkit-scrollbar-thumb{background:rgba(0,0,0,.15);border-radius:4px;
+    border:2px solid transparent;background-clip:content-box}
+  .twk-body::-webkit-scrollbar-thumb:hover{background:rgba(0,0,0,.25);
+    border:2px solid transparent;background-clip:content-box}
+  .twk-row{display:flex;flex-direction:column;gap:5px}
+  .twk-row-h{flex-direction:row;align-items:center;justify-content:space-between;gap:10px}
+  .twk-lbl{display:flex;justify-content:space-between;align-items:baseline;
+    color:rgba(41,38,27,.72)}
+  .twk-lbl>span:first-child{font-weight:500}
+  .twk-val{color:rgba(41,38,27,.5);font-variant-numeric:tabular-nums}
+
+  .twk-sect{font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;
+    color:rgba(41,38,27,.45);padding:10px 0 0}
+  .twk-sect:first-child{padding-top:0}
+
+  .twk-field{appearance:none;width:100%;height:26px;padding:0 8px;
+    border:.5px solid rgba(0,0,0,.1);border-radius:7px;
+    background:rgba(255,255,255,.6);color:inherit;font:inherit;outline:none}
+  .twk-field:focus{border-color:rgba(0,0,0,.25);background:rgba(255,255,255,.85)}
+  select.twk-field{padding-right:22px;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'><path fill='rgba(0,0,0,.5)' d='M0 0h10L5 6z'/></svg>");
+    background-repeat:no-repeat;background-position:right 8px center}
+
+  .twk-slider{appearance:none;-webkit-appearance:none;width:100%;height:4px;margin:6px 0;
+    border-radius:999px;background:rgba(0,0,0,.12);outline:none}
+  .twk-slider::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;
+    width:14px;height:14px;border-radius:50%;background:#fff;
+    border:.5px solid rgba(0,0,0,.12);box-shadow:0 1px 3px rgba(0,0,0,.2);cursor:default}
+  .twk-slider::-moz-range-thumb{width:14px;height:14px;border-radius:50%;
+    background:#fff;border:.5px solid rgba(0,0,0,.12);box-shadow:0 1px 3px rgba(0,0,0,.2);cursor:default}
+
+  .twk-seg{position:relative;display:flex;padding:2px;border-radius:8px;
+    background:rgba(0,0,0,.06);user-select:none}
+  .twk-seg-thumb{position:absolute;top:2px;bottom:2px;border-radius:6px;
+    background:rgba(255,255,255,.9);box-shadow:0 1px 2px rgba(0,0,0,.12);
+    transition:left .15s cubic-bezier(.3,.7,.4,1),width .15s}
+  .twk-seg.dragging .twk-seg-thumb{transition:none}
+  .twk-seg button{appearance:none;position:relative;z-index:1;flex:1;border:0;
+    background:transparent;color:inherit;font:inherit;font-weight:500;min-height:22px;
+    border-radius:6px;cursor:default;padding:4px 6px;line-height:1.2;
+    overflow-wrap:anywhere}
+
+  .twk-toggle{position:relative;width:32px;height:18px;border:0;border-radius:999px;
+    background:rgba(0,0,0,.15);transition:background .15s;cursor:default;padding:0}
+  .twk-toggle[data-on="1"]{background:#34c759}
+  .twk-toggle i{position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:50%;
+    background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.25);transition:transform .15s}
+  .twk-toggle[data-on="1"] i{transform:translateX(14px)}
+
+  .twk-num{display:flex;align-items:center;height:26px;padding:0 0 0 8px;
+    border:.5px solid rgba(0,0,0,.1);border-radius:7px;background:rgba(255,255,255,.6)}
+  .twk-num-lbl{font-weight:500;color:rgba(41,38,27,.6);cursor:ew-resize;
+    user-select:none;padding-right:8px}
+  .twk-num input{flex:1;min-width:0;height:100%;border:0;background:transparent;
+    font:inherit;font-variant-numeric:tabular-nums;text-align:right;padding:0 8px 0 0;
+    outline:none;color:inherit;-moz-appearance:textfield}
+  .twk-num input::-webkit-inner-spin-button,.twk-num input::-webkit-outer-spin-button{
+    -webkit-appearance:none;margin:0}
+  .twk-num-unit{padding-right:8px;color:rgba(41,38,27,.45)}
+
+  .twk-btn{appearance:none;height:26px;padding:0 12px;border:0;border-radius:7px;
+    background:rgba(0,0,0,.78);color:#fff;font:inherit;font-weight:500;cursor:default}
+  .twk-btn:hover{background:rgba(0,0,0,.88)}
+  .twk-btn.secondary{background:rgba(0,0,0,.06);color:inherit}
+  .twk-btn.secondary:hover{background:rgba(0,0,0,.1)}
+
+  .twk-swatch{appearance:none;-webkit-appearance:none;width:56px;height:22px;
+    border:.5px solid rgba(0,0,0,.1);border-radius:6px;padding:0;cursor:default;
+    background:transparent;flex-shrink:0}
+  .twk-swatch::-webkit-color-swatch-wrapper{padding:0}
+  .twk-swatch::-webkit-color-swatch{border:0;border-radius:5.5px}
+  .twk-swatch::-moz-color-swatch{border:0;border-radius:5.5px}
+`;
+
+// ── useTweaks ───────────────────────────────────────────────────────────────
+// Single source of truth for tweak values. setTweak persists via the host
+// (__edit_mode_set_keys → host rewrites the EDITMODE block on disk).
+function useTweaks(defaults) {
+  const [values, setValues] = React.useState(defaults);
+  // Accepts either setTweak('key', value) or setTweak({ key: value, ... }) so a
+  // useState-style call doesn't write a "[object Object]" key into the persisted
+  // JSON block.
+  const setTweak = React.useCallback((keyOrEdits, val) => {
+    const edits = typeof keyOrEdits === 'object' && keyOrEdits !== null
+      ? keyOrEdits : { [keyOrEdits]: val };
+    setValues((prev) => ({ ...prev, ...edits }));
+    window.parent.postMessage({ type: '__edit_mode_set_keys', edits }, '*');
+  }, []);
+  return [values, setTweak];
+}
+
+// ── TweaksPanel ─────────────────────────────────────────────────────────────
+// Floating shell. Registers the protocol listener BEFORE announcing
+// availability — if the announce ran first, the host's activate could land
+// before our handler exists and the toolbar toggle would silently no-op.
+// The close button posts __edit_mode_dismissed so the host's toolbar toggle
+// flips off in lockstep; the host echoes __deactivate_edit_mode back which
+// is what actually hides the panel.
+function TweaksPanel({ title = 'Tweaks', children }) {
+  const [open, setOpen] = React.useState(false);
+  const dragRef = React.useRef(null);
+  const offsetRef = React.useRef({ x: 16, y: 16 });
+  const PAD = 16;
+
+  const clampToViewport = React.useCallback(() => {
+    const panel = dragRef.current;
+    if (!panel) return;
+    const w = panel.offsetWidth, h = panel.offsetHeight;
+    const maxRight = Math.max(PAD, window.innerWidth - w - PAD);
+    const maxBottom = Math.max(PAD, window.innerHeight - h - PAD);
+    offsetRef.current = {
+      x: Math.min(maxRight, Math.max(PAD, offsetRef.current.x)),
+      y: Math.min(maxBottom, Math.max(PAD, offsetRef.current.y)),
+    };
+    panel.style.right = offsetRef.current.x + 'px';
+    panel.style.bottom = offsetRef.current.y + 'px';
+  }, []);
+
+  React.useEffect(() => {
+    if (!open) return;
+    clampToViewport();
+    if (typeof ResizeObserver === 'undefined') {
+      window.addEventListener('resize', clampToViewport);
+      return () => window.removeEventListener('resize', clampToViewport);
+    }
+    const ro = new ResizeObserver(clampToViewport);
+    ro.observe(document.documentElement);
+    return () => ro.disconnect();
+  }, [open, clampToViewport]);
+
+  React.useEffect(() => {
+    const onMsg = (e) => {
+      const t = e?.data?.type;
+      if (t === '__activate_edit_mode') setOpen(true);
+      else if (t === '__deactivate_edit_mode') setOpen(false);
+    };
+    window.addEventListener('message', onMsg);
+    window.parent.postMessage({ type: '__edit_mode_available' }, '*');
+    return () => window.removeEventListener('message', onMsg);
+  }, []);
+
+  const dismiss = () => {
+    setOpen(false);
+    window.parent.postMessage({ type: '__edit_mode_dismissed' }, '*');
+  };
+
+  const onDragStart = (e) => {
+    const panel = dragRef.current;
+    if (!panel) return;
+    const r = panel.getBoundingClientRect();
+    const sx = e.clientX, sy = e.clientY;
+    const startRight = window.innerWidth - r.right;
+    const startBottom = window.innerHeight - r.bottom;
+    const move = (ev) => {
+      offsetRef.current = {
+        x: startRight - (ev.clientX - sx),
+        y: startBottom - (ev.clientY - sy),
+      };
+      clampToViewport();
+    };
+    const up = () => {
+      window.removeEventListener('mousemove', move);
+      window.removeEventListener('mouseup', up);
+    };
+    window.addEventListener('mousemove', move);
+    window.addEventListener('mouseup', up);
+  };
+
+  if (!open) return null;
+  return (
+    <>
+      <style>{__TWEAKS_STYLE}</style>
+      <div ref={dragRef} className="twk-panel"
+           style={{ right: offsetRef.current.x, bottom: offsetRef.current.y }}>
+        <div className="twk-hd" onMouseDown={onDragStart}>
+          <b>{title}</b>
+          <button className="twk-x" aria-label="Close tweaks"
+                  onMouseDown={(e) => e.stopPropagation()}
+                  onClick={dismiss}>✕</button>
+        </div>
+        <div className="twk-body">{children}</div>
+      </div>
+    </>
+  );
+}
+
+// ── Layout helpers ──────────────────────────────────────────────────────────
+
+function TweakSection({ label, children }) {
+  return (
+    <>
+      <div className="twk-sect">{label}</div>
+      {children}
+    </>
+  );
+}
+
+function TweakRow({ label, value, children, inline = false }) {
+  return (
+    <div className={inline ? 'twk-row twk-row-h' : 'twk-row'}>
+      <div className="twk-lbl">
+        <span>{label}</span>
+        {value != null && <span className="twk-val">{value}</span>}
+      </div>
+      {children}
+    </div>
+  );
+}
+
+// ── Controls ────────────────────────────────────────────────────────────────
+
+function TweakSlider({ label, value, min = 0, max = 100, step = 1, unit = '', onChange }) {
+  return (
+    <TweakRow label={label} value={`${value}${unit}`}>
+      <input type="range" className="twk-slider" min={min} max={max} step={step}
+             value={value} onChange={(e) => onChange(Number(e.target.value))} />
+    </TweakRow>
+  );
+}
+
+function TweakToggle({ label, value, onChange }) {
+  return (
+    <div className="twk-row twk-row-h">
+      <div className="twk-lbl"><span>{label}</span></div>
+      <button type="button" className="twk-toggle" data-on={value ? '1' : '0'}
+              role="switch" aria-checked={!!value}
+              onClick={() => onChange(!value)}><i /></button>
+    </div>
+  );
+}
+
+function TweakRadio({ label, value, options, onChange }) {
+  const trackRef = React.useRef(null);
+  const [dragging, setDragging] = React.useState(false);
+  const opts = options.map((o) => (typeof o === 'object' ? o : { value: o, label: o }));
+  const idx = Math.max(0, opts.findIndex((o) => o.value === value));
+  const n = opts.length;
+
+  // The active value is read by pointer-move handlers attached for the lifetime
+  // of a drag — ref it so a stale closure doesn't fire onChange for every move.
+  const valueRef = React.useRef(value);
+  valueRef.current = value;
+
+  const segAt = (clientX) => {
+    const r = trackRef.current.getBoundingClientRect();
+    const inner = r.width - 4;
+    const i = Math.floor(((clientX - r.left - 2) / inner) * n);
+    return opts[Math.max(0, Math.min(n - 1, i))].value;
+  };
+
+  const onPointerDown = (e) => {
+    setDragging(true);
+    const v0 = segAt(e.clientX);
+    if (v0 !== valueRef.current) onChange(v0);
+    const move = (ev) => {
+      if (!trackRef.current) return;
+      const v = segAt(ev.clientX);
+      if (v !== valueRef.current) onChange(v);
+    };
+    const up = () => {
+      setDragging(false);
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', up);
+    };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up);
+  };
+
+  return (
+    <TweakRow label={label}>
+      <div ref={trackRef} role="radiogroup" onPointerDown={onPointerDown}
+           className={dragging ? 'twk-seg dragging' : 'twk-seg'}>
+        <div className="twk-seg-thumb"
+             style={{ left: `calc(2px + ${idx} * (100% - 4px) / ${n})`,
+                      width: `calc((100% - 4px) / ${n})` }} />
+        {opts.map((o) => (
+          <button key={o.value} type="button" role="radio" aria-checked={o.value === value}>
+            {o.label}
+          </button>
+        ))}
+      </div>
+    </TweakRow>
+  );
+}
+
+function TweakSelect({ label, value, options, onChange }) {
+  return (
+    <TweakRow label={label}>
+      <select className="twk-field" value={value} onChange={(e) => onChange(e.target.value)}>
+        {options.map((o) => {
+          const v = typeof o === 'object' ? o.value : o;
+          const l = typeof o === 'object' ? o.label : o;
+          return <option key={v} value={v}>{l}</option>;
+        })}
+      </select>
+    </TweakRow>
+  );
+}
+
+function TweakText({ label, value, placeholder, onChange }) {
+  return (
+    <TweakRow label={label}>
+      <input className="twk-field" type="text" value={value} placeholder={placeholder}
+             onChange={(e) => onChange(e.target.value)} />
+    </TweakRow>
+  );
+}
+
+function TweakNumber({ label, value, min, max, step = 1, unit = '', onChange }) {
+  const clamp = (n) => {
+    if (min != null && n < min) return min;
+    if (max != null && n > max) return max;
+    return n;
+  };
+  const startRef = React.useRef({ x: 0, val: 0 });
+  const onScrubStart = (e) => {
+    e.preventDefault();
+    startRef.current = { x: e.clientX, val: value };
+    const decimals = (String(step).split('.')[1] || '').length;
+    const move = (ev) => {
+      const dx = ev.clientX - startRef.current.x;
+      const raw = startRef.current.val + dx * step;
+      const snapped = Math.round(raw / step) * step;
+      onChange(clamp(Number(snapped.toFixed(decimals))));
+    };
+    const up = () => {
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', up);
+    };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up);
+  };
+  return (
+    <div className="twk-num">
+      <span className="twk-num-lbl" onPointerDown={onScrubStart}>{label}</span>
+      <input type="number" value={value} min={min} max={max} step={step}
+             onChange={(e) => onChange(clamp(Number(e.target.value)))} />
+      {unit && <span className="twk-num-unit">{unit}</span>}
+    </div>
+  );
+}
+
+function TweakColor({ label, value, onChange }) {
+  return (
+    <div className="twk-row twk-row-h">
+      <div className="twk-lbl"><span>{label}</span></div>
+      <input type="color" className="twk-swatch" value={value}
+             onChange={(e) => onChange(e.target.value)} />
+    </div>
+  );
+}
+
+function TweakButton({ label, onClick, secondary = false }) {
+  return (
+    <button type="button" className={secondary ? 'twk-btn secondary' : 'twk-btn'}
+            onClick={onClick}>{label}</button>
+  );
+}
+
+Object.assign(window, {
+  useTweaks, TweaksPanel, TweakSection, TweakRow,
+  TweakSlider, TweakToggle, TweakRadio, TweakSelect,
+  TweakText, TweakNumber, TweakColor, TweakButton,
+});
+
+
+// ── icons.jsx ──
+// Inline SVG icons. 16px nominal, currentColor.
+const Icon = {
+  Plus: ({ size = 16 }) => <svg width={size} height={size} viewBox="0 0 16 16" fill="none"><path d="M8 3v10M3 8h10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>,
+  Search: ({ size = 14 }) => <svg width={size} height={size} viewBox="0 0 16 16" fill="none"><circle cx="7" cy="7" r="4.5" stroke="currentColor" strokeWidth="1.5"/><path d="M10.5 10.5l3 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>,
+  Funnel: ({ size = 12 }) => <svg width={size} height={size} viewBox="0 0 12 12" fill="none"><path d="M2 2.5h8l-3 4v3l-2 1v-4l-3-4z" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round"/></svg>,
+  Close: ({ size = 14 }) => <svg width={size} height={size} viewBox="0 0 16 16" fill="none"><path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>,
+  Chevron: ({ size = 12, dir = 'down' }) => {
+    const r = { down: 0, up: 180, left: 90, right: -90 }[dir];
+    return <svg width={size} height={size} viewBox="0 0 12 12" style={{ transform: `rotate(${r}deg)` }}><path d="M2.5 4.5L6 8l3.5-3.5" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round"/></svg>;
+  },
+  External: ({ size = 12 }) => <svg width={size} height={size} viewBox="0 0 12 12" fill="none"><path d="M4 2h6v6M10 2L5 7M9 7v3H2V3h3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/></svg>,
+  Copy: ({ size = 12 }) => <svg width={size} height={size} viewBox="0 0 12 12" fill="none"><rect x="3" y="3" width="7" height="7" rx="1.2" stroke="currentColor" strokeWidth="1.3"/><path d="M2 8V2.5A1.5 1.5 0 0 1 3.5 1H8" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/></svg>,
+  Check: ({ size = 12 }) => <svg width={size} height={size} viewBox="0 0 12 12" fill="none"><path d="M2.5 6.5L5 9l4.5-5.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/></svg>,
+  Folder: ({ size = 14 }) => <svg width={size} height={size} viewBox="0 0 16 16" fill="none"><path d="M2 4.5A1.5 1.5 0 0 1 3.5 3h2.6L8 4.5h4.5A1.5 1.5 0 0 1 14 6v5.5A1.5 1.5 0 0 1 12.5 13h-9A1.5 1.5 0 0 1 2 11.5v-7z" stroke="currentColor" strokeWidth="1.3"/></svg>,
+  Dot: ({ size = 8 }) => <svg width={size} height={size} viewBox="0 0 8 8"><circle cx="4" cy="4" r="3" fill="currentColor"/></svg>,
+  Pulse: ({ size = 8 }) => <svg width={size} height={size} viewBox="0 0 8 8"><circle cx="4" cy="4" r="3" fill="currentColor"><animate attributeName="opacity" values="1;.35;1" dur="1.6s" repeatCount="indefinite"/></circle></svg>,
+  ArrowUp: ({ size = 12 }) => <svg width={size} height={size} viewBox="0 0 12 12" fill="none"><path d="M6 9V3M3 6l3-3 3 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>,
+  ArrowRight: ({ size = 12 }) => <svg width={size} height={size} viewBox="0 0 12 12" fill="none"><path d="M3 6h6M6 3l3 3-3 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>,
+  Bell: ({ size = 14 }) => <svg width={size} height={size} viewBox="0 0 16 16" fill="none"><path d="M4 11V7a4 4 0 0 1 8 0v4M2.5 11.5h11M6.5 13.5a1.5 1.5 0 0 0 3 0" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/></svg>,
+  Hash: ({ size = 12 }) => <svg width={size} height={size} viewBox="0 0 12 12" fill="none"><path d="M4.5 1.5L3 10.5M9 1.5L7.5 10.5M1.5 4.5h9M1 7.5h9" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/></svg>,
+  Clock: ({ size = 12 }) => <svg width={size} height={size} viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="4.5" stroke="currentColor" strokeWidth="1.3"/><path d="M6 3.5V6l1.8 1.2" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/></svg>,
+  Tokens: ({ size = 12 }) => <svg width={size} height={size} viewBox="0 0 12 12" fill="none"><circle cx="4.5" cy="6" r="3" stroke="currentColor" strokeWidth="1.3"/><circle cx="7.5" cy="6" r="3" stroke="currentColor" strokeWidth="1.3"/></svg>,
+};
+
+window.Icon = Icon;
+
+
+// ── mock-data.jsx ──
+// Mock data for crew dashboard prototype.
+// Realistic ticket titles, plausible tool calls, edge cases for every state.
+
+const NOW = new Date('2026-04-26T14:51:00');
+
+// ── Projects ────────────────────────────────────────────────────────────────
+const MOCK_PROJECTS = [
+  {
+    name: 'kanban-api',
+    repo_path: '~/code/kanban-api',
+    default_branch: 'main',
+    jira_project_key: 'KAN',
+    docker_compose: 'docker-compose.dev.yml',
+    test_command: 'pnpm test',
+    activeRuns: 4,
+    registered: '2026-02-12',
+  },
+  {
+    name: 'crew',
+    repo_path: '~/code/crew',
+    default_branch: 'main',
+    jira_project_key: 'CREW',
+    docker_compose: 'docker-compose.yml',
+    test_command: 'pnpm -r test',
+    activeRuns: 2,
+    registered: '2026-01-05',
+  },
+  {
+    name: 'lighthouse',
+    repo_path: '~/code/lighthouse',
+    default_branch: 'develop',
+    jira_project_key: 'LH',
+    docker_compose: 'compose.yml',
+    test_command: 'cargo test',
+    activeRuns: 1,
+    registered: '2026-03-20',
+  },
+  {
+    name: 'mailer-svc',
+    repo_path: '~/code/mailer-svc',
+    default_branch: 'main',
+    jira_project_key: 'MAIL',
+    docker_compose: 'docker-compose.yml',
+    test_command: 'go test ./...',
+    activeRuns: 0,
+    registered: '2026-02-28',
+  },
+];
+
+// ── Open Jira tickets per project (for New Run modal) ───────────────────────
+const MOCK_TICKETS = {
+  KAN: [
+    { key: 'KAN-31', title: 'Drag-and-drop reordering keeps stale board state after WS reconnect', priority: 'High' },
+    { key: 'KAN-32', title: 'Add bulk-archive action to swimlane context menu', priority: 'Medium' },
+    { key: 'KAN-33', title: 'Card detail modal traps focus inside attachment grid', priority: 'Low' },
+    { key: 'KAN-34', title: 'Optimistic update for label color change flickers on slow networks', priority: 'Medium' },
+    { key: 'KAN-35', title: 'Migrate legacy /v1/cards endpoint consumers to /v2', priority: 'High' },
+  ],
+  CREW: [
+    { key: 'CREW-19', title: 'Daemon should expose state-history endpoint per agent', priority: 'High' },
+    { key: 'CREW-20', title: 'Sticky favicon badge survives across browser tab restore', priority: 'Medium' },
+    { key: 'CREW-21', title: 'Truncate transcript output > 50KB with "show more" affordance', priority: 'Medium' },
+    { key: 'CREW-22', title: 'Add /jobs/finish endpoint and wire into UI', priority: 'High' },
+  ],
+  LH: [
+    { key: 'LH-08', title: 'Latency histogram aggregator drops samples under load', priority: 'High' },
+    { key: 'LH-09', title: 'Probe runner panics on malformed cron expression', priority: 'Medium' },
+  ],
+  MAIL: [
+    { key: 'MAIL-14', title: 'Bounce-handler retry uses linear backoff instead of exponential', priority: 'Medium' },
+    { key: 'MAIL-15', title: 'SMTP credentials rotated mid-run causes silent send failures', priority: 'High' },
+  ],
+};
+
+// ── Transcript factories ────────────────────────────────────────────────────
+const tool = (name, summary, ts, tokens, output) => ({
+  type: 'tool', name, summary, ts, tokens, output,
+});
+const seg = (state, startedAt, label) => ({ type: 'segment', state, startedAt, label });
+
+// Realistic transcripts per agent. Each is an array of segments + tool calls.
+function transcript_KAN_23() {
+  return [
+    seg('initializing', '14:30:02', 'Initializing'),
+    tool('Bash', 'docker compose -f docker-compose.dev.yml up -d', '14:30:04', 180, 'Creating network kanban-api_default\nCreating kanban-api_db_1\nCreating kanban-api_redis_1\nCreating kanban-api_web_1\n[+] Running 4/4'),
+    tool('Bash', 'pnpm install', '14:30:18', 95, 'Lockfile is up to date, resolution step is skipped\nProgress: resolved 1247, reused 1247, downloaded 0, added 0\nDone in 3.4s'),
+    seg('running', '14:30:24', 'Running'),
+    tool('Read', '/home/x/repo/src/board/dnd.ts', '14:30:26', 1200),
+    tool('Read', '/home/x/repo/src/board/sync.ts', '14:30:28', 980),
+    tool('Grep', "'reconnect' in src/", '14:30:31', 220, 'src/board/sync.ts:42:  socket.on(\'reconnect\', () => {\nsrc/board/sync.ts:78:  // TODO: re-emit pending mutations on reconnect\nsrc/lib/ws.ts:14:  reconnectionDelay: 500,'),
+    tool('Read', '/home/x/repo/src/lib/ws.ts', '14:30:34', 640),
+    tool('Edit', 'src/board/sync.ts (+34 −12)', '14:30:51', 2100, "@@ -75,7 +75,12 @@\n   socket.on('reconnect', () => {\n-    log.info('reconnected');\n+    log.info('reconnected, replaying %d pending mutations', queue.length);\n+    for (const m of queue) {\n+      socket.emit('mutate', m);\n+    }\n+    queue.length = 0;\n   });"),
+    tool('Bash', 'pnpm test board/sync', '14:31:14', 850, 'PASS  src/board/sync.test.ts\n  ✓ replays pending mutations on reconnect (118 ms)\n  ✓ does not duplicate mutations on rapid reconnect (94 ms)\nTests: 2 passed, 2 total'),
+    tool('Edit', 'src/board/dnd.ts (+8 −2)', '14:31:33', 540),
+    tool('Bash', 'pnpm test', '14:31:48', 1820, 'Test Suites: 47 passed, 47 total\nTests: 312 passed, 312 total\nSnapshots: 18 passed\nTime: 24.118 s'),
+    seg('waiting', '14:38:22', 'Waiting on me'),
+    tool('Question', 'Should reconnect-replay be gated behind feature flag REPLAY_QUEUE_V2?', '14:38:22', 90),
+  ];
+}
+
+function transcript_CREW_19() {
+  return [
+    seg('initializing', '14:42:10', 'Initializing'),
+    tool('Bash', 'docker compose up -d', '14:42:12', 80),
+    seg('running', '14:42:30', 'Running'),
+    tool('Read', 'packages/daemon/src/server.ts', '14:42:32', 720),
+    tool('Read', 'packages/daemon/src/agents/store.ts', '14:42:35', 1100),
+    tool('Grep', "'state-history' in packages/", '14:42:38', 60, 'No matches found.'),
+    tool('Edit', 'packages/daemon/src/agents/store.ts (+22 −0)', '14:42:55', 1400),
+    tool('Edit', 'packages/daemon/src/server.ts (+18 −1)', '14:43:11', 880),
+    tool('Bash', 'pnpm -r typecheck', '14:43:30', 320, 'Tasks:    8 successful, 8 total\nCached:    7 cached, 8 total\nTime:    4.118s'),
+    tool('Read', 'packages/daemon/src/agents/store.test.ts', '14:43:42', 540),
+    tool('Edit', 'packages/daemon/src/agents/store.test.ts (+45 −0)', '14:44:03', 1900),
+    tool('Bash', 'pnpm test daemon/agents/store', '14:44:18', 720, 'PASS  packages/daemon/src/agents/store.test.ts\n  state-history\n    ✓ records every transition (32 ms)\n    ✓ returns history sorted by ts asc (18 ms)\n    ✓ caps history at 1000 entries (44 ms)\nTests: 3 passed'),
+  ];
+}
+
+function transcript_KAN_31() {
+  return [
+    seg('initializing', '14:18:00', 'Initializing'),
+    seg('running', '14:18:14', 'Running'),
+    tool('Read', '/home/x/repo/src/board/dnd.ts', '14:18:18', 1200),
+    tool('Read', '/home/x/repo/src/board/dnd.test.ts', '14:18:21', 880),
+    tool('Edit', 'src/board/dnd.ts (+18 −4)', '14:18:42', 1100),
+    tool('Bash', 'pnpm test board/dnd', '14:19:01', 480, 'FAIL  src/board/dnd.test.ts\n  ● dnd › preserves order across WS reconnect\n    expect(received).toEqual(expected) // deep equality\n    Expected: [\'a\', \'b\', \'c\', \'d\']\n    Received: [\'a\', \'b\', \'d\', \'c\']'),
+    tool('Edit', 'src/board/dnd.ts (+6 −2)', '14:19:30', 540),
+    tool('Bash', 'pnpm test board/dnd', '14:19:48', 460, 'PASS  src/board/dnd.test.ts'),
+    tool('Bash', 'pnpm test', '14:20:08', 1820),
+    tool('Bash', 'gh pr create --fill', '14:20:42', 220, 'https://github.com/x/kanban-api/pull/847'),
+    seg('pr_open', '14:20:44', 'PR open'),
+  ];
+}
+
+function transcript_LH_08() {
+  return [
+    seg('initializing', '14:48:30', 'Initializing'),
+    seg('running', '14:48:45', 'Running'),
+    tool('Read', 'src/aggregator/histogram.rs', '14:48:48', 940),
+    tool('Bash', 'cargo build --release', '14:48:55', 60),
+    tool('Bash', 'cargo build --release', '14:49:42', 0, 'error[E0599]: no method named `merge_atomic` found for struct `Histogram` in the current scope\n  --> src/aggregator/histogram.rs:142:18\n   |\n142|         self.merge_atomic(other);\n   |              ^^^^^^^^^^^^ method not found'),
+    seg('error', '14:49:43', 'Error'),
+  ];
+}
+
+function transcript_MAIL_14() {
+  return [
+    seg('initializing', '13:51:02', 'Initializing'),
+    seg('running', '13:51:14', 'Running'),
+    tool('Read', 'internal/bounce/retry.go', '13:51:16', 540),
+    tool('Edit', 'internal/bounce/retry.go (+24 −8)', '13:51:42', 1100),
+    tool('Bash', 'go test ./internal/bounce/...', '13:52:01', 380, 'ok  github.com/x/mailer-svc/internal/bounce  0.412s'),
+    seg('idle', '13:52:14', 'Idle'),
+  ];
+}
+
+function transcript_KAN_28() {
+  return [
+    seg('initializing', '11:12:00', 'Initializing'),
+    seg('running', '11:12:18', 'Running'),
+    tool('Read', 'src/labels/color.ts', '11:12:20', 420),
+    tool('Edit', 'src/labels/color.ts (+12 −3)', '11:12:48', 700),
+    tool('Bash', 'pnpm test labels', '11:13:08', 320),
+    tool('Bash', 'gh pr create --fill', '11:13:42', 180, 'https://github.com/x/kanban-api/pull/843'),
+    seg('pr_open', '11:13:44', 'PR open'),
+    seg('finished', '11:32:10', 'Finished — merged'),
+  ];
+}
+
+function transcript_CREW_15() {
+  return [
+    seg('initializing', '09:02:00', 'Initializing'),
+    seg('running', '09:02:14', 'Running'),
+    tool('Edit', 'packages/cli/src/lib/transcripts/parser.ts (+14 −2)', '09:03:18', 880),
+    tool('Bash', 'pnpm test', '09:03:42', 1620),
+    seg('finished', '09:04:18', 'Finished'),
+  ];
+}
+
+// ── Token tables ────────────────────────────────────────────────────────────
+function tokens_KAN_23() {
+  return [
+    { tool: 'Bash', count: 18420, share: 38.4 },
+    { tool: 'Read', count: 12080, share: 25.2 },
+    { tool: 'Edit', count: 9640, share: 20.1 },
+    { tool: 'Grep', count: 4220, share: 8.8 },
+    { tool: 'Glob', count: 1840, share: 3.8 },
+    { tool: 'Question', count: 1240, share: 2.6 },
+    { tool: 'Write', count: 510, share: 1.1 },
+  ];
+}
+function tokens_default(total) {
+  return [
+    { tool: 'Bash', count: Math.round(total * 0.36), share: 36.0 },
+    { tool: 'Read', count: Math.round(total * 0.28), share: 28.0 },
+    { tool: 'Edit', count: Math.round(total * 0.22), share: 22.0 },
+    { tool: 'Grep', count: Math.round(total * 0.09), share: 9.0 },
+    { tool: 'Glob', count: Math.round(total * 0.05), share: 5.0 },
+  ];
+}
+
+// ── Agents ──────────────────────────────────────────────────────────────────
+// Curated mix demoing every state + edge cases (long titles, errors, idle, finished).
+const MOCK_AGENTS = [
+  // KAN — kanban-api
+  {
+    key: 'KAN-23',
+    project: 'kanban-api',
+    title: 'Reconnect should replay queued mutations to prevent stale board state on slow networks',
+    state: 'waiting',
+    started: '14:30:02',
+    runtime: '21m 14s',
+    runtimeSec: 21 * 60 + 14,
+    tokens: 47950,
+    pr: null,
+    worktree: '~/code/kanban-api/.worktrees/KAN-23',
+    docker: 'http://localhost:7421',
+    transcript: transcript_KAN_23(),
+    tokenTable: tokens_KAN_23(),
+    attention: true,
+  },
+  {
+    key: 'KAN-31',
+    project: 'kanban-api',
+    title: 'Drag-and-drop reordering keeps stale board state after WS reconnect',
+    state: 'pr_open',
+    started: '14:18:00',
+    runtime: '33m 04s',
+    runtimeSec: 33 * 60 + 4,
+    tokens: 38120,
+    pr: 'https://github.com/x/kanban-api/pull/847',
+    prNumber: 847,
+    worktree: '~/code/kanban-api/.worktrees/KAN-31',
+    docker: 'http://localhost:7422',
+    transcript: transcript_KAN_31(),
+    tokenTable: tokens_default(38120),
+    attention: true,
+  },
+  {
+    key: 'KAN-29',
+    project: 'kanban-api',
+    title: 'Add keyboard shortcut for archive (cmd+shift+e)',
+    state: 'running',
+    started: '14:46:00',
+    runtime: '5m 12s',
+    runtimeSec: 5 * 60 + 12,
+    tokens: 8420,
+    pr: null,
+    worktree: '~/code/kanban-api/.worktrees/KAN-29',
+    docker: 'http://localhost:7423',
+    transcript: [
+      seg('initializing', '14:46:00', 'Initializing'),
+      seg('running', '14:46:14', 'Running'),
+      tool('Read', 'src/keyboard/registry.ts', '14:46:16', 480),
+      tool('Read', 'src/labels/archive.ts', '14:46:19', 320),
+    ],
+    tokenTable: tokens_default(8420),
+    attention: false,
+  },
+  {
+    key: 'KAN-28',
+    project: 'kanban-api',
+    title: 'Optimistic update for label color change flickers',
+    state: 'finished',
+    started: '11:12:00',
+    runtime: '20m 10s',
+    runtimeSec: 20 * 60 + 10,
+    tokens: 22440,
+    pr: 'https://github.com/x/kanban-api/pull/843',
+    prNumber: 843,
+    worktree: '~/code/kanban-api/.worktrees/KAN-28',
+    docker: null,
+    transcript: transcript_KAN_28(),
+    tokenTable: tokens_default(22440),
+    attention: false,
+  },
+
+  // CREW
+  {
+    key: 'CREW-19',
+    project: 'crew',
+    title: 'Daemon should expose state-history endpoint per agent',
+    state: 'running',
+    started: '14:42:10',
+    runtime: '8m 50s',
+    runtimeSec: 8 * 60 + 50,
+    tokens: 14620,
+    pr: null,
+    worktree: '~/code/crew/.worktrees/CREW-19',
+    docker: 'http://localhost:7425',
+    transcript: transcript_CREW_19(),
+    tokenTable: tokens_default(14620),
+    attention: false,
+  },
+  {
+    key: 'CREW-15',
+    project: 'crew',
+    title: 'Truncate transcript output >50KB',
+    state: 'finished',
+    started: '09:02:00',
+    runtime: '2m 18s',
+    runtimeSec: 138,
+    tokens: 6420,
+    pr: null,
+    worktree: '~/code/crew/.worktrees/CREW-15',
+    docker: null,
+    transcript: transcript_CREW_15(),
+    tokenTable: tokens_default(6420),
+    attention: false,
+  },
+
+  // LH
+  {
+    key: 'LH-08',
+    project: 'lighthouse',
+    title: 'Latency histogram aggregator drops samples under load',
+    state: 'error',
+    started: '14:48:30',
+    runtime: '2m 30s',
+    runtimeSec: 150,
+    tokens: 3120,
+    pr: null,
+    worktree: '~/code/lighthouse/.worktrees/LH-08',
+    docker: 'http://localhost:7426',
+    transcript: transcript_LH_08(),
+    tokenTable: tokens_default(3120),
+    attention: true,
+  },
+
+  // MAIL
+  {
+    key: 'MAIL-14',
+    project: 'mailer-svc',
+    title: 'Bounce-handler retry uses linear backoff',
+    state: 'idle',
+    started: '13:51:02',
+    runtime: '59m 58s',
+    runtimeSec: 59 * 60 + 58,
+    tokens: 5840,
+    pr: null,
+    worktree: '~/code/mailer-svc/.worktrees/MAIL-14',
+    docker: 'http://localhost:7427',
+    transcript: transcript_MAIL_14(),
+    tokenTable: tokens_default(5840),
+    attention: false,
+  },
+];
+
+// Helpers
+function getAgent(key) {
+  return MOCK_AGENTS.find(a => a.key === key);
+}
+function agentsByProject() {
+  const groups = {};
+  for (const p of MOCK_PROJECTS) groups[p.name] = [];
+  for (const a of MOCK_AGENTS) {
+    if (!groups[a.project]) groups[a.project] = [];
+    groups[a.project].push(a);
+  }
+  return groups;
+}
+
+// Format helpers
+function formatTokens(n) {
+  if (n < 1000) return String(n);
+  if (n < 100_000) return (n / 1000).toFixed(1).replace(/\.0$/, '') + 'k';
+  if (n < 1_000_000) return Math.round(n / 1000) + 'k';
+  return (n / 1_000_000).toFixed(1) + 'M';
+}
+
+function formatRuntime(sec) {
+  const h = Math.floor(sec / 3600);
+  const m = Math.floor((sec % 3600) / 60);
+  const s = sec % 60;
+  if (h > 0) return `${h}h ${m}m`;
+  if (m > 0) return `${m}m ${String(s).padStart(2, '0')}s`;
+  return `${s}s`;
+}
+
+Object.assign(window, {
+  MOCK_PROJECTS,
+  MOCK_TICKETS,
+  MOCK_AGENTS,
+  getAgent,
+  agentsByProject,
+  formatTokens,
+  formatRuntime,
+});
+
+
+// ── agents-list.jsx ──
+// Agents list — home route. Project sections, carded rows.
+
+// Measure widest content per fixed-width column once, so column widths are
+// dynamic to data but consistent across all project sections. We measure with
+// a hidden canvas using the body's resolved sans/mono fonts so the result
+// reflects the live tweak font choices on first paint.
+function measureColumnWidths() {
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d');
+  const cs = getComputedStyle(document.body);
+  const sans = `500 12.5px ${cs.getPropertyValue('--font-sans') || 'sans-serif'}`;
+  const mono = `500 12px ${cs.getPropertyValue('--font-mono') || 'monospace'}`;
+
+  const widest = (font, strs) => {
+    ctx.font = font;
+    return strs.reduce((m, s) => Math.max(m, ctx.measureText(String(s)).width), 0);
+  };
+
+  // Pad each column to cover state pill chrome / cell padding / safety margin.
+  const stateW = Math.ceil(widest(mono, Object.values(STATE_META).map(m => m.label))) + 38; // dot + pill px
+  const idW = Math.ceil(widest(sans, MOCK_AGENTS.map(a => a.key))) + 4;
+  const runtimeW = Math.ceil(widest(mono, MOCK_AGENTS.map(a => a.runtime || ''))) + 14; // live-pulse dot
+  const tokensW = Math.ceil(widest(mono, MOCK_AGENTS.map(a => formatTokens(a.tokens)))) + 4;
+  return { stateW, idW, runtimeW, tokensW };
+}
+
+let __COL_WIDTHS = null;
+function getColumnWidthsStyle() {
+  if (!__COL_WIDTHS) __COL_WIDTHS = measureColumnWidths();
+  const { stateW, idW, runtimeW, tokensW } = __COL_WIDTHS;
+  return {
+    '--col-state': `${stateW}px`,
+    '--col-id': `${idW}px`,
+    '--col-runtime': `${runtimeW}px`,
+    '--col-tokens': `${tokensW}px`,
+  };
+}
+
+const STATE_META = {
+  initializing: { label: 'Initializing', color: 'blue', attention: false },
+  running:      { label: 'Running',      color: 'neutral', attention: false },
+  idle:         { label: 'Idle',         color: 'gray', attention: false },
+  waiting:      { label: 'Waiting',      color: 'yellow', attention: true },
+  pr_open:      { label: 'PR open',      color: 'purple', attention: true },
+  error:        { label: 'Error',        color: 'red', attention: true },
+  finished:     { label: 'Finished',     color: 'green', attention: false },
+};
+
+function StateBadge({ state, size = 'md', intensity = 'mid' }) {
+  const m = STATE_META[state] || STATE_META.running;
+  const cls = `state-pill state-pill--${m.color} state-pill--${size} state-pill--${intensity}`;
+  return (
+    <span className={cls}>
+      <span className="state-pill__dot">
+        {state === 'running' || state === 'initializing' ? <Icon.Pulse /> : <Icon.Dot />}
+      </span>
+      <span className="state-pill__label">{m.label}</span>
+    </span>
+  );
+}
+
+function QuickAction({ agent, onAction }) {
+  const stop = (e) => e.stopPropagation();
+  switch (agent.state) {
+    case 'idle':
+      return (
+        <div className="qa-group" onClick={stop}>
+          <button className="btn btn--sm" onClick={() => onAction('resume', agent)}>Resume</button>
+          <button className="btn btn--sm btn--ghost" onClick={() => onAction('finish', agent)}>Finish</button>
+        </div>
+      );
+    case 'waiting':
+      return <button className="btn btn--sm btn--accent" onClick={(e) => { stop(e); onAction('resume', agent); }}>Provide input</button>;
+    case 'pr_open':
+      return (
+        <div className="qa-group" onClick={stop}>
+          <a className="btn btn--sm" href={agent.pr} target="_blank" rel="noreferrer">View PR <Icon.External /></a>
+          <button className="btn btn--sm btn--ghost" onClick={() => onAction('finish', agent)}>Finish</button>
+        </div>
+      );
+    case 'error':
+      return <button className="btn btn--sm btn--danger" onClick={(e) => { stop(e); onAction('inspect', agent); }}>Inspect</button>;
+    default:
+      return null;
+  }
+}
+
+function AgentRow({ agent, onOpen, onAction, intensity, attentionTreatment, density, texture, layout, metaLabel }) {
+  const m = STATE_META[agent.state];
+  const attention = m.attention;
+  const tinted = attention && attentionTreatment !== 'subtle';
+  const isStacked = layout === 'stacked';
+  const cls = [
+    'agent-row',
+    `agent-row--layout-${layout || 'row'}`,
+    `agent-row--density-${density}`,
+    `agent-row--state-${m.color}`,
+    texture && texture !== 'none' && `agent-row--tex-${texture}`,
+    tinted && `agent-row--tint-${m.color}`,
+    attention && attentionTreatment === 'strong' && 'agent-row--strong',
+  ].filter(Boolean).join(' ');
+
+  const runtimeNode = (
+    agent.state === 'running' || agent.state === 'initializing' ? (
+      <span className="runtime-live">{agent.runtime}</span>
+    ) : agent.runtime
+  );
+
+  if (isStacked) {
+    const useIcon = metaLabel === 'icon';
+    return (
+      <div className={cls} onClick={() => onOpen(agent.key)} role="button" tabIndex={0}
+           onKeyDown={(e) => { if (e.key === 'Enter') onOpen(agent.key); }}>
+        <div className="agent-row__state">
+          <StateBadge state={agent.state} intensity={intensity} />
+        </div>
+        <div className="agent-row__title">{agent.title}</div>
+        <div className="agent-row__meta">
+          <span className={`agent-row__meta-item agent-row__meta-state mono state-color-${m.color}`} title="State">
+            <span className="agent-row__meta-dot">
+              {agent.state === 'running' || agent.state === 'initializing' ? <Icon.Pulse /> : <Icon.Dot />}
+            </span>
+            <span>{m.label}</span>
+          </span>
+          <span className="agent-row__meta-sep" aria-hidden="true">·</span>
+          <span className="agent-row__meta-item mono" title="ID">
+            {useIcon ? <Icon.Hash /> : <span className="agent-row__meta-lbl">ID</span>}
+            <span>{agent.key}</span>
+          </span>
+          <span className="agent-row__meta-sep" aria-hidden="true">·</span>
+          <span className="agent-row__meta-item mono" title="Runtime">
+            {useIcon ? <Icon.Clock /> : <span className="agent-row__meta-lbl">Runtime</span>}
+            <span>{runtimeNode}</span>
+          </span>
+          <span className="agent-row__meta-sep" aria-hidden="true">·</span>
+          <span className="agent-row__meta-item mono" title="Tokens">
+            {useIcon ? <Icon.Tokens /> : <span className="agent-row__meta-lbl">Tokens</span>}
+            <span>{formatTokens(agent.tokens)}</span>
+          </span>
+        </div>
+        <div className="agent-row__action">
+          <QuickAction agent={agent} onAction={onAction} />
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className={cls} onClick={() => onOpen(agent.key)} role="button" tabIndex={0}
+         onKeyDown={(e) => { if (e.key === 'Enter') onOpen(agent.key); }}>
+      <div className="agent-row__state">
+        <StateBadge state={agent.state} intensity={intensity} />
+      </div>
+      <div className="agent-row__key mono">{agent.key}</div>
+      <div className="agent-row__runtime mono">{runtimeNode}</div>
+      <div className="agent-row__tokens mono">{formatTokens(agent.tokens)}</div>
+      <div className="agent-row__title">{agent.title}</div>
+      <div className="agent-row__action">
+        <QuickAction agent={agent} onAction={onAction} />
+      </div>
+    </div>
+  );
+}
+
+function ColumnHeaderRow({ variant, density }) {
+  // Same grid as AgentRow so columns align. variant tweaks the visual treatment.
+  const cls = [
+    'agent-col-hd',
+    `agent-col-hd--${variant}`,
+    `agent-col-hd--density-${density}`,
+  ].join(' ');
+  return (
+    <div className={cls} aria-hidden="true">
+      <div className="agent-col-hd__cell">State</div>
+      <div className="agent-col-hd__cell">ID</div>
+      <div className="agent-col-hd__cell agent-col-hd__cell--right">Runtime</div>
+      <div className="agent-col-hd__cell agent-col-hd__cell--right">Tokens</div>
+      <div className="agent-col-hd__cell">Task</div>
+      <div className="agent-col-hd__cell" />
+    </div>
+  );
+}
+
+function ProjectSection({ project, agents, onOpen, onAction, tweaks, collapsed, onToggle, onOpenProject, showHeader }) {
+  const activeCount = agents.filter(a => a.state !== 'finished').length;
+  const headerVariant = tweaks.columnHeaders;
+  return (
+    <section className="project-section">
+      <header className="project-section__hd" onClick={onToggle}>
+        <div className="project-section__title">
+          <Icon.Chevron dir={collapsed ? 'right' : 'down'} />
+          <span className="project-section__name">{project.name}</span>
+          {onOpenProject && (
+            <button
+              className="icon-btn icon-btn--ghost project-section__open"
+              title="Open project page"
+              onClick={(e) => { e.stopPropagation(); onOpenProject(project.name); }}
+            >
+              <Icon.External />
+            </button>
+          )}
+          <span className="project-section__count">
+            {activeCount} active <span className="dim">· {agents.length} total</span>
+          </span>
+        </div>
+        <div className="project-section__path mono dim">{project.repo_path}</div>
+      </header>
+      {!collapsed && (
+        <div className={`project-section__rows${headerVariant === 'tab' ? ' project-section__rows--tab' : ''}`}>
+          {showHeader && agents.length > 0 && tweaks.rowLayout !== 'stacked' && (
+            <ColumnHeaderRow variant={headerVariant} density={tweaks.rowDensity} />
+          )}
+          {agents.length === 0 ? (
+            <div className="empty-row">No agents yet — start one with <kbd>+ New Run</kbd></div>
+          ) : agents.map(a => (
+            <AgentRow
+              key={a.key}
+              agent={a}
+              onOpen={onOpen}
+              onAction={onAction}
+              intensity={tweaks.stateIntensity}
+              attentionTreatment={tweaks.attentionTreatment}
+              density={tweaks.rowDensity}
+              texture={tweaks.rowTexture}
+              layout={tweaks.rowLayout}
+              metaLabel={tweaks.metaLabel}
+            />
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+
+function AgentsList({ onOpen, onAction, onNewRun, tweaks, projectFilter, onOpenProject }) {
+  const grouped = agentsByProject();
+  // Sort: attention states first, then by start time desc
+  const stateOrder = { waiting: 0, error: 1, pr_open: 2, running: 3, initializing: 4, idle: 5, finished: 6 };
+  const sortAgents = (arr) => [...arr].sort((a, b) => {
+    const so = stateOrder[a.state] - stateOrder[b.state];
+    if (so !== 0) return so;
+    return b.started.localeCompare(a.started);
+  });
+
+  const [collapsed, setCollapsed] = React.useState({});
+  const toggle = (name) => setCollapsed(c => ({ ...c, [name]: !c[name] }));
+
+  const projectsToRender = projectFilter
+    ? MOCK_PROJECTS.filter(p => p.name === projectFilter)
+    : MOCK_PROJECTS;
+
+  // Header placement strategy:
+  // - 'none'        → no headers
+  // - 'global'      → render once, sticky at the top of the list
+  // - 'per-section' → render under each project section header
+  // - 'floating'    → render under each project section, ghosted, no rule
+  // - 'tab'         → tab-like header attached to the top of each project's row stack
+  const variant = tweaks.columnHeaders;
+  const showGlobal = variant === 'global';
+  const showPerSection = variant === 'per-section' || variant === 'floating' || variant === 'tab';
+
+  return (
+    <div className="agents-list" style={getColumnWidthsStyle()}>
+      <div className="agents-list__inner">
+        {showGlobal && tweaks.rowLayout !== 'stacked' && (
+          <div className="agents-list__sticky-hd">
+            <ColumnHeaderRow variant="global" density={tweaks.rowDensity} />
+          </div>
+        )}
+        {projectsToRender.map(p => (
+          <ProjectSection
+            key={p.name}
+            project={p}
+            agents={sortAgents(grouped[p.name] || [])}
+            onOpen={onOpen}
+            onAction={onAction}
+            tweaks={tweaks}
+            collapsed={!!collapsed[p.name]}
+            onToggle={() => toggle(p.name)}
+            onOpenProject={projectFilter ? null : onOpenProject}
+            showHeader={showPerSection}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+Object.assign(window, { AgentsList, StateBadge, STATE_META });
+
+
+// ── agent-drawer.jsx ──
+// Agent detail — drawer (and same content used by full-page route).
+
+// ── Timeline filter catalog ───────────────────────────────────────────────
+// The six event-type categories the operator filters by. Tool-name
+// filtering (Bash / Read / Grep / …) is intentionally OUT of this iteration
+// — it's a separate UX problem (long, dynamic list).
+const EVENT_TYPES = [
+  { id: 'tool',      label: 'Tool calls' },
+  { id: 'assistant', label: 'Assistant prose' },
+  { id: 'thinking',  label: 'Thinking' },
+  { id: 'system',    label: 'System' },
+  { id: 'hooks',     label: 'Hooks & skills' },
+  { id: 'other',     label: 'Other' },
+];
+const EVENT_TYPE_IDS = EVENT_TYPES.map(e => e.id);
+const TIMELINE_FILTERS_KEY = 'crew.dashboard.timelineFilters';
+
+// Read/write the operator preference. Lives at a single global key so the
+// preference persists across drawer opens and across agents — not per-agent.
+// Implementer should swap into `useLocalStorage` or equivalent hook.
+function readStoredTimelineFilters() {
+  try {
+    const raw = localStorage.getItem(TIMELINE_FILTERS_KEY);
+    if (!raw) return new Set(EVENT_TYPE_IDS);
+    const arr = JSON.parse(raw);
+    if (!Array.isArray(arr)) return new Set(EVENT_TYPE_IDS);
+    return new Set(arr.filter(id => EVENT_TYPE_IDS.includes(id)));
+  } catch { return new Set(EVENT_TYPE_IDS); }
+}
+function writeStoredTimelineFilters(set) {
+  try { localStorage.setItem(TIMELINE_FILTERS_KEY, JSON.stringify([...set])); } catch {}
+}
+
+// Map a transcript entry to one of the six categories. The mock transcript
+// only emits 'segment' + 'tool' rows today; production stream will carry
+// `type` directly. Anything unrecognised falls into 'other'.
+function entryEventType(e) {
+  if (!e || e.type === 'segment') return null;
+  if (e.type === 'tool') return 'tool';
+  if (e.type === 'assistant' || e.type === 'prose') return 'assistant';
+  if (e.type === 'thinking') return 'thinking';
+  if (e.type === 'system') return 'system';
+  if (e.type === 'hook' || e.type === 'skill') return 'hooks';
+  return 'other';
+}
+
+// Counts shown next to each row. Implementer reads from the daemon's
+// per-agent type index; the demo synthesises plausible numbers from the
+// agent's transcript so the popover doesn't render with zeroes everywhere.
+function eventTypeCounts(agent) {
+  const t = agent.transcript || [];
+  const tool = t.filter(e => e.type === 'tool').length;
+  return {
+    tool,
+    assistant: Math.max(8, Math.round(tool * 0.42)),
+    thinking:  Math.max(4, Math.round(tool * 0.31)),
+    system:    Math.max(2, t.filter(e => e.type === 'segment').length),
+    hooks:     Math.max(0, Math.round(tool * 0.08)),
+    other:     2,
+  };
+}
+
+function CopyButton({ value }) {
+  const [copied, setCopied] = React.useState(false);
+  const onClick = (e) => {
+    e.stopPropagation();
+    navigator.clipboard?.writeText(value);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1200);
+  };
+  return (
+    <button className="copy-btn" onClick={onClick} title="Copy">
+      {copied ? <Icon.Check /> : <Icon.Copy />}
+    </button>
+  );
+}
+
+function TokenTable({ rows }) {
+  const [sort, setSort] = React.useState({ key: 'count', dir: 'desc' });
+  const sorted = [...rows].sort((a, b) => {
+    const v = (a[sort.key] - b[sort.key]) * (sort.dir === 'asc' ? 1 : -1);
+    return v;
+  });
+  const total = rows.reduce((s, r) => s + r.count, 0);
+  const max = Math.max(...rows.map(r => r.count));
+  const click = (k) => setSort(s => ({ key: k, dir: s.key === k && s.dir === 'desc' ? 'asc' : 'desc' }));
+
+  return (
+    <div className="ttbl">
+      <div className="ttbl__hd">
+        <div>Tool</div>
+        <div className="ttbl__num clickable" onClick={() => click('count')}>
+          Tokens {sort.key === 'count' ? (sort.dir === 'desc' ? '↓' : '↑') : ''}
+        </div>
+        <div className="ttbl__num clickable" onClick={() => click('share')}>
+          Share {sort.key === 'share' ? (sort.dir === 'desc' ? '↓' : '↑') : ''}
+        </div>
+      </div>
+      {sorted.map(r => (
+        <div className="ttbl__row" key={r.tool}>
+          <div className="ttbl__tool mono">{r.tool}</div>
+          <div className="ttbl__num mono">{formatTokens(r.count)}</div>
+          <div className="ttbl__share">
+            <div className="ttbl__bar"><div className="ttbl__bar-fill" style={{ width: `${(r.count / max) * 100}%` }}/></div>
+            <span className="mono">{r.share.toFixed(1)}%</span>
+          </div>
+        </div>
+      ))}
+      <div className="ttbl__total">
+        <div className="dim">Total</div>
+        <div className="mono">{formatTokens(total)}</div>
+        <div></div>
+      </div>
+    </div>
+  );
+}
+
+function StateHistory({ transcript, onJump }) {
+  const segments = transcript.filter(t => t.type === 'segment');
+  return (
+    <div className="state-history">
+      {segments.map((s, i) => (
+        <React.Fragment key={i}>
+          <button className="state-history__chip" onClick={() => onJump(s.startedAt)}>
+            <StateBadge state={s.state} size="sm" />
+            <span className="mono dim">{s.startedAt}</span>
+          </button>
+          {i < segments.length - 1 && <span className="state-history__arrow"><Icon.ArrowRight /></span>}
+        </React.Fragment>
+      ))}
+    </div>
+  );
+}
+
+function ToolCallCard({ entry, expanded, onToggle, density }) {
+  const tag = `[${entry.name}]`;
+  const dCls = `tcc tcc--${density}` + (expanded ? ' tcc--open' : '');
+  return (
+    <div className={dCls}>
+      <button className="tcc__hd" onClick={onToggle}>
+        <span className="tcc__line1 mono">
+          <span className={`tcc__tag tcc__tag--${entry.name.toLowerCase()}`}>{tag}</span>
+          <span className="tcc__summary">{entry.summary}</span>
+        </span>
+        <span className="tcc__line2 mono dim">
+          <span>{entry.ts}</span>
+          <span className="tcc__sep">·</span>
+          <span>{formatTokens(entry.tokens)} tok</span>
+        </span>
+      </button>
+      {expanded && entry.output && (
+        <pre className="tcc__output mono">{entry.output}</pre>
+      )}
+    </div>
+  );
+}
+
+function StateSegmentGroup({ segment, items, density, expandedSet, onToggleEntry, segRef, maxEvents }) {
+  const m = STATE_META[segment.state];
+  const [collapsed, setCollapsed] = React.useState(false);
+  const overflowing = maxEvents > 0 && items.length > maxEvents;
+  return (
+    <div className={`segment segment--${m.color}`} ref={segRef}>
+      <header className="segment__hd" onClick={() => setCollapsed(c => !c)}>
+        <Icon.Chevron dir={collapsed ? 'right' : 'down'} />
+        <StateBadge state={segment.state} size="sm" />
+        <span className="mono dim">started {segment.startedAt}</span>
+        <span className="segment__count dim">· {items.length} {items.length === 1 ? 'event' : 'events'}{overflowing ? ` · scroll for all` : ''}</span>
+      </header>
+      {!collapsed && (
+        <div
+          className={`segment__items${overflowing ? ' segment__items--scroll' : ''}`}
+          style={overflowing ? { maxHeight: `calc(var(--seg-row-h, 64px) * ${maxEvents})` } : undefined}
+        >
+          {items.map((e, i) => (
+            <ToolCallCard
+              key={i}
+              entry={e}
+              expanded={expandedSet.has(`${segment.startedAt}-${i}`)}
+              onToggle={() => onToggleEntry(`${segment.startedAt}-${i}`)}
+              density={density}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Filters: button + popover ─────────────────────────────────────────────
+// Visual variants exposed as an explicit `state` prop. The implementer
+// translates this into a `cva` variant on the production component.
+function FilterButton({ state, hiddenCount, expanded, onClick, btnRef }) {
+  return (
+    <button
+      ref={btnRef}
+      type="button"
+      className={`filter-btn filter-btn--${state}`}
+      aria-haspopup="dialog"
+      aria-expanded={expanded}
+      onClick={onClick}
+    >
+      <span className="filter-btn__dot" aria-hidden="true" />
+      <Icon.Funnel size={12} />
+      <span className="filter-btn__label">Filters</span>
+      {state === 'active' && (
+        <span className="filter-btn__count mono">
+          <span className="filter-btn__sep" aria-hidden="true">·</span>
+          {hiddenCount} hidden
+        </span>
+      )}
+      <Icon.Chevron dir={expanded ? 'up' : 'down'} size={10} />
+    </button>
+  );
+}
+
+// Closed by default; trigger opens. Designed to map cleanly onto
+// Radix `Popover` — trigger → portal → content with focus trap +
+// click-outside + escape. Reference markup uses semantic equivalents so the
+// implementer swaps the wrapper without rewriting the body.
+function FiltersPopover({ counts, selected, onChange, onClose, anchorRef }) {
+  const popoverRef = React.useRef(null);
+
+  React.useEffect(() => {
+    const onKey = (e) => {
+      if (e.key === 'Escape') { e.stopPropagation(); onClose(); }
+    };
+    const onMouse = (e) => {
+      if (popoverRef.current?.contains(e.target)) return;
+      if (anchorRef?.current?.contains(e.target)) return;
+      onClose();
+    };
+    window.addEventListener('keydown', onKey, true);
+    document.addEventListener('mousedown', onMouse);
+    return () => {
+      window.removeEventListener('keydown', onKey, true);
+      document.removeEventListener('mousedown', onMouse);
+    };
+  }, [onClose, anchorRef]);
+
+  // Focus first checkbox so keyboard users can tab through immediately.
+  React.useEffect(() => {
+    const first = popoverRef.current?.querySelector('input[type="checkbox"]');
+    first?.focus();
+  }, []);
+
+  const allOn  = EVENT_TYPE_IDS.every(id => selected.has(id));
+  const allOff = selected.size === 0;
+
+  const toggle = (id) => {
+    const next = new Set(selected);
+    next.has(id) ? next.delete(id) : next.add(id);
+    onChange(next);
+  };
+  const selectAll = () => onChange(new Set(EVENT_TYPE_IDS));
+  const clearAll  = () => onChange(new Set());
+
+  return (
+    <div
+      ref={popoverRef}
+      className="filter-popover"
+      role="dialog"
+      aria-label="Timeline filters"
+    >
+      <div className="filter-popover__hd">
+        <span className="filter-popover__hd-label">Show events</span>
+        <div className="filter-popover__hd-actions">
+          <button
+            type="button"
+            className="filter-popover__link"
+            onClick={selectAll}
+            disabled={allOn}
+          >Select all</button>
+          <span className="filter-popover__hd-sep" aria-hidden="true">·</span>
+          <button
+            type="button"
+            className="filter-popover__link"
+            onClick={clearAll}
+            disabled={allOff}
+          >Clear all</button>
+        </div>
+      </div>
+      <ul className="filter-popover__list" role="group" aria-label="Event types">
+        {EVENT_TYPES.map(et => {
+          const checked = selected.has(et.id);
+          const count = counts[et.id] ?? 0;
+          return (
+            <li key={et.id}>
+              <label className={`filter-row${checked ? ' filter-row--on' : ''}`}>
+                <input
+                  type="checkbox"
+                  checked={checked}
+                  onChange={() => toggle(et.id)}
+                />
+                <span className="filter-row__check" aria-hidden="true">
+                  {checked && <Icon.Check size={11} />}
+                </span>
+                <span className="filter-row__label">{et.label}</span>
+                <span className="filter-row__count mono">{count.toLocaleString()}</span>
+              </label>
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  );
+}
+
+function Timeline({ agent, density, liveDemo, maxEventsPerSegment }) {
+  const [search, setSearch] = React.useState('');
+  const [live, setLive] = React.useState(true);
+  const [expanded, setExpanded] = React.useState(new Set());
+  const [streamedExtra, setStreamedExtra] = React.useState([]);
+  const [newPending, setNewPending] = React.useState(0);
+  // Initialised from localStorage so the operator's preference is visible at
+  // mount; the implementer wraps this in a `useLocalStorage('crew.dashboard.timelineFilters')`
+  // hook in the real codebase.
+  const [filters, setFilters] = React.useState(() => readStoredTimelineFilters());
+  const [filtersOpen, setFiltersOpen] = React.useState(false);
+  const filterBtnRef = React.useRef(null);
+  const scrollerRef = React.useRef(null);
+  const segRefs = React.useRef({});
+
+  const counts = React.useMemo(() => eventTypeCounts(agent), [agent]);
+  const hiddenCount = EVENT_TYPE_IDS.length - filters.size;
+  const allFiltersOff = filters.size === 0;
+  const filterButtonState = filters.size === EVENT_TYPE_IDS.length ? 'default' : 'active';
+
+  const updateFilters = (next) => {
+    setFilters(next);
+    writeStoredTimelineFilters(next);
+  };
+
+  const toggleEntry = (id) => setExpanded(s => {
+    const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n;
+  });
+
+  // Group transcript into segments
+  const groups = React.useMemo(() => {
+    const allEntries = [...agent.transcript, ...streamedExtra];
+    const result = [];
+    let current = null;
+    for (const t of allEntries) {
+      if (t.type === 'segment') {
+        current = { segment: t, items: [] };
+        result.push(current);
+      } else if (current) {
+        current.items.push(t);
+      }
+    }
+    return result;
+  }, [agent, streamedExtra]);
+
+  // Live-mode demo: synth-stream new events
+  React.useEffect(() => {
+    if (!liveDemo || agent.state !== 'running') return;
+    const samples = [
+      { type: 'tool', name: 'Read', summary: 'src/index.ts', tokens: 420 },
+      { type: 'tool', name: 'Grep', summary: "'export' in src/", tokens: 180 },
+      { type: 'tool', name: 'Edit', summary: 'src/index.ts (+4 −1)', tokens: 380 },
+      { type: 'tool', name: 'Bash', summary: 'pnpm typecheck', tokens: 240 },
+      { type: 'tool', name: 'Read', summary: 'src/utils/parse.ts', tokens: 320 },
+    ];
+    let i = 0;
+    const id = setInterval(() => {
+      const s = samples[i % samples.length];
+      const now = new Date();
+      const ts = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
+      setStreamedExtra(prev => [...prev, { ...s, ts }]);
+      if (!live) setNewPending(n => n + 1);
+      i++;
+    }, 2200);
+    return () => clearInterval(id);
+  }, [liveDemo, agent.state, live]);
+
+  // Auto-scroll when live
+  React.useEffect(() => {
+    if (live && scrollerRef.current) {
+      scrollerRef.current.scrollTop = scrollerRef.current.scrollHeight;
+      setNewPending(0);
+    }
+  }, [streamedExtra, live]);
+
+  const filtered = groups.map(g => ({
+    ...g,
+    items: g.items.filter(e => {
+      const et = entryEventType(e);
+      if (et && !filters.has(et)) return false;
+      if (!search) return true;
+      const s = search.toLowerCase();
+      if (s.startsWith('error:')) return e.output && e.output.toLowerCase().includes('error');
+      return (e.name || '').toLowerCase().includes(s) || (e.summary || '').toLowerCase().includes(s);
+    }),
+  }));
+
+  return (
+    <div className="timeline">
+      <div className="timeline__controls">
+        <div className="timeline__filter-wrap">
+          <FilterButton
+            state={filterButtonState}
+            hiddenCount={hiddenCount}
+            expanded={filtersOpen}
+            onClick={() => setFiltersOpen(v => !v)}
+            btnRef={filterBtnRef}
+          />
+          {filtersOpen && (
+            <FiltersPopover
+              counts={counts}
+              selected={filters}
+              onChange={updateFilters}
+              onClose={() => setFiltersOpen(false)}
+              anchorRef={filterBtnRef}
+            />
+          )}
+        </div>
+        <div className="timeline__search">
+          <Icon.Search />
+          <input
+            placeholder="Search tool, input, or error:…"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+          />
+        </div>
+        <label className="live-toggle">
+          <input type="checkbox" checked={live} onChange={e => { setLive(e.target.checked); if (e.target.checked) setNewPending(0); }} />
+          <span className="live-toggle__pill"><span className={`live-toggle__dot ${live ? 'live' : ''}`} /></span>
+          <span>Live</span>
+        </label>
+      </div>
+      <div className="timeline__scroll" ref={scrollerRef}>
+        {allFiltersOff ? (
+          <div className="timeline__empty timeline__empty--all-filtered">
+            <div className="timeline__empty-msg">No event types selected.</div>
+            <button
+              type="button"
+              className="timeline__empty-link"
+              onClick={() => updateFilters(new Set(EVENT_TYPE_IDS))}
+            >Show all</button>
+          </div>
+        ) : (
+          <>
+            {filtered.map((g, i) => (
+              <StateSegmentGroup
+                key={i}
+                segment={g.segment}
+                items={g.items}
+                density={density}
+                expandedSet={expanded}
+                onToggleEntry={toggleEntry}
+                segRef={el => { if (el) segRefs.current[g.segment.startedAt] = el; }}
+                maxEvents={maxEventsPerSegment}
+              />
+            ))}
+            {filtered.every(g => g.items.length === 0) && search && (
+              <div className="timeline__empty">No events match "{search}"</div>
+            )}
+          </>
+        )}
+      </div>
+      {!live && newPending > 0 && (
+        <button className="new-events-pill" onClick={() => { setLive(true); }}>
+          <Icon.ArrowUp /> {newPending} new event{newPending === 1 ? '' : 's'}
+        </button>
+      )}
+    </div>
+  );
+}
+
+function AgentDetail({ agent, onClose, onAction, asPage, tweaks }) {
+  const m = STATE_META[agent.state];
+  const project = MOCK_PROJECTS.find(p => p.name === agent.project);
+
+  React.useEffect(() => {
+    if (asPage) return;
+    const onKey = (e) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [asPage, onClose]);
+
+  const primaryAction = (() => {
+    switch (agent.state) {
+      case 'idle': return <button className="btn" onClick={() => onAction('resume', agent)}>Resume</button>;
+      case 'waiting': return <button className="btn btn--accent" onClick={() => onAction('resume', agent)}>Provide input</button>;
+      case 'pr_open': return <a className="btn" href={agent.pr} target="_blank" rel="noreferrer">View PR <Icon.External /></a>;
+      case 'error': return <button className="btn btn--danger" onClick={() => onAction('retry', agent)}>Retry</button>;
+      case 'finished': return null;
+      default: return <button className="btn btn--ghost" onClick={() => onAction('pause', agent)}>Pause</button>;
+    }
+  })();
+
+  return (
+    <div className={`drawer ${asPage ? 'drawer--page' : 'drawer--overlay'}`}>
+      <header className="drawer__hd">
+        <div className="drawer__hd-top">
+          <div className="drawer__crumb">
+            <span className="dim">{project?.name}</span>
+            <span className="dim">/</span>
+            <span className="mono">{agent.key}</span>
+          </div>
+          <div className="drawer__hd-actions">
+            {!asPage && <a className="btn btn--ghost btn--sm" href={`#/agent/${agent.key}/full`}>↗ Open as page</a>}
+            {primaryAction}
+            {!asPage && <button className="icon-btn" onClick={onClose} aria-label="Close"><Icon.Close /></button>}
+          </div>
+        </div>
+        <h1 className="drawer__title">{agent.title}</h1>
+        <div className="drawer__meta">
+          <StateBadge state={agent.state} />
+          <span className="meta-sep" />
+          <span className="mono dim">runtime</span>
+          <span className="mono">{agent.runtime}</span>
+          <span className="meta-sep" />
+          <span className="mono dim">tokens</span>
+          <span className="mono">{formatTokens(agent.tokens)}</span>
+          <span className="meta-sep" />
+          <span className="mono dim">started</span>
+          <span className="mono">{agent.started}</span>
+        </div>
+        <div className="drawer__links">
+          <span className="link-row">
+            <Icon.Folder />
+            <span className="mono">{agent.worktree}</span>
+            <CopyButton value={agent.worktree} />
+          </span>
+          {agent.docker && (
+            <a className="link-row" href={agent.docker} target="_blank" rel="noreferrer">
+              <span className="dim mono">docker</span>
+              <span className="mono">{agent.docker}</span>
+              <Icon.External />
+            </a>
+          )}
+          {agent.pr && (
+            <a className="link-row" href={agent.pr} target="_blank" rel="noreferrer">
+              <span className="dim mono">PR</span>
+              <span className="mono">#{agent.prNumber}</span>
+              <Icon.External />
+            </a>
+          )}
+        </div>
+      </header>
+      <div className="drawer__body">
+        <section className="drawer__section">
+          <h2 className="drawer__section-title">Tokens by tool</h2>
+          <TokenTable rows={agent.tokenTable} />
+        </section>
+        <section className="drawer__section">
+          <h2 className="drawer__section-title">State history</h2>
+          <StateHistory transcript={agent.transcript} onJump={() => {}} />
+        </section>
+        <section className="drawer__section drawer__section--timeline">
+          <h2 className="drawer__section-title">Timeline</h2>
+          <Timeline agent={agent} density={tweaks.timelineDensity} liveDemo={tweaks.liveDemo} maxEventsPerSegment={tweaks.maxEventsPerSegment} />
+        </section>
+      </div>
+    </div>
+  );
+}
+
+Object.assign(window, { AgentDetail, FilterButton, FiltersPopover, EVENT_TYPES });
+
+
+// ── new-run-modal.jsx ──
+// New Run modal — pick project → pick ticket → confirm.
+
+function NewRunModal({ onClose, onConfirm }) {
+  const [step, setStep] = React.useState(1);
+  const [project, setProject] = React.useState(null);
+  const [ticket, setTicket] = React.useState(null);
+  const [filter, setFilter] = React.useState('');
+
+  React.useEffect(() => {
+    const onKey = (e) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
+
+  const tickets = project ? (MOCK_TICKETS[project.jira_project_key] || []) : [];
+  const filtered = tickets.filter(t =>
+    !filter || t.key.toLowerCase().includes(filter.toLowerCase()) ||
+    t.title.toLowerCase().includes(filter.toLowerCase())
+  );
+
+  return (
+    <div className="modal-scrim" onClick={onClose}>
+      <div className="modal" onClick={e => e.stopPropagation()}>
+        <header className="modal__hd">
+          <div className="modal__steps">
+            <span className={`modal__step ${step >= 1 ? 'on' : ''}`}>1 · Project</span>
+            <span className="modal__step-sep">›</span>
+            <span className={`modal__step ${step >= 2 ? 'on' : ''}`}>2 · Ticket</span>
+            <span className="modal__step-sep">›</span>
+            <span className={`modal__step ${step >= 3 ? 'on' : ''}`}>3 · Confirm</span>
+          </div>
+          <button className="icon-btn" onClick={onClose}><Icon.Close /></button>
+        </header>
+
+        {step === 1 && (
+          <div className="modal__body">
+            <h2 className="modal__title">Pick a project</h2>
+            <div className="modal__list">
+              {MOCK_PROJECTS.map(p => (
+                <button key={p.name} className="modal__list-item" onClick={() => { setProject(p); setStep(2); }}>
+                  <div className="modal__list-main">
+                    <span className="mono">{p.name}</span>
+                    <span className="dim mono">{p.repo_path}</span>
+                  </div>
+                  <div className="modal__list-meta">
+                    <span className="dim mono">{p.jira_project_key}</span>
+                    {p.activeRuns > 0 && <span className="badge-sm">{p.activeRuns} active</span>}
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {step === 2 && (
+          <div className="modal__body">
+            <h2 className="modal__title">
+              Pick a ticket <span className="dim mono">· {project.jira_project_key}</span>
+            </h2>
+            <div className="modal__search">
+              <Icon.Search />
+              <input autoFocus placeholder="Filter open tickets…" value={filter} onChange={e => setFilter(e.target.value)} />
+            </div>
+            <div className="modal__list modal__list--scroll">
+              {filtered.map(t => (
+                <button key={t.key} className="modal__list-item" onClick={() => { setTicket(t); setStep(3); }}>
+                  <div className="modal__list-main">
+                    <span className="mono ticket-key">{t.key}</span>
+                    <span>{t.title}</span>
+                  </div>
+                  <div className="modal__list-meta">
+                    <span className={`prio prio--${t.priority.toLowerCase()}`}>{t.priority}</span>
+                  </div>
+                </button>
+              ))}
+              {filtered.length === 0 && <div className="empty-row">No matching tickets</div>}
+            </div>
+            <div className="modal__footer">
+              <button className="btn btn--ghost" onClick={() => setStep(1)}>← Back</button>
+            </div>
+          </div>
+        )}
+
+        {step === 3 && (
+          <div className="modal__body">
+            <h2 className="modal__title">Confirm</h2>
+            <div className="confirm">
+              <div className="confirm__row">
+                <span className="dim">Project</span>
+                <span className="mono">{project.name}</span>
+              </div>
+              <div className="confirm__row">
+                <span className="dim">Ticket</span>
+                <span className="mono">{ticket.key}</span>
+              </div>
+              <div className="confirm__row">
+                <span className="dim">Title</span>
+                <span>{ticket.title}</span>
+              </div>
+              <div className="confirm__row">
+                <span className="dim">Worktree</span>
+                <span className="mono">{project.repo_path}/.worktrees/{ticket.key}</span>
+              </div>
+              <div className="confirm__row">
+                <span className="dim">Command</span>
+                <span className="mono">crew run {ticket.key}</span>
+              </div>
+            </div>
+            <div className="modal__footer">
+              <button className="btn btn--ghost" onClick={() => setStep(2)}>← Back</button>
+              <button className="btn btn--accent" onClick={() => onConfirm(project, ticket)}>
+                Spawn agent →
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+window.NewRunModal = NewRunModal;
+
+
+// ── projects-route.jsx ──
+// Projects route — full page list + detail/edit + register.
+
+function ProjectsList({ onOpen, onRegister }) {
+  return (
+    <div className="projects-page">
+      <div className="projects-page__hd">
+        <h1 className="page-title">Projects</h1>
+        <button className="btn btn--accent" onClick={onRegister}>
+          <Icon.Plus size={12} /> Register project
+        </button>
+      </div>
+      <div className="projects-list">
+        <div className="projects-list__hd">
+          <div>Name</div>
+          <div>Repo path</div>
+          <div>Branch</div>
+          <div>Jira</div>
+          <div>Active</div>
+          <div></div>
+        </div>
+        {MOCK_PROJECTS.map(p => (
+          <div key={p.name} className="projects-list__row" onClick={() => onOpen(p.name)}>
+            <div className="mono">{p.name}</div>
+            <div className="mono dim">{p.repo_path}</div>
+            <div className="mono">{p.default_branch}</div>
+            <div className="mono">{p.jira_project_key}</div>
+            <div className="mono">
+              {p.activeRuns > 0
+                ? <span className="badge-sm badge-sm--accent">{p.activeRuns}</span>
+                : <span className="dim">—</span>}
+            </div>
+            <div className="dim"><Icon.Chevron dir="right" /></div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function ProjectDetail({ project, onBack, onRemove, onAgentOpen, onAgentAction, tweaks }) {
+  const [editing, setEditing] = React.useState(false);
+  const [confirmRm, setConfirmRm] = React.useState(false);
+
+  const toml = `# generated by crew
+name = "${project.name}"
+repo_path = "${project.repo_path}"
+default_branch = "${project.default_branch}"
+jira_project_key = "${project.jira_project_key}"
+docker_compose = "${project.docker_compose}"
+test_command = "${project.test_command}"`;
+
+  return (
+    <div className="projects-page">
+      <div className="projects-page__hd">
+        <div>
+          <button className="btn btn--ghost btn--sm" onClick={onBack}>← Projects</button>
+          <h1 className="page-title" style={{marginTop: 8}}>
+            {project.name}
+          </h1>
+          <div className="dim mono" style={{fontSize: 12}}>~/.config/crew/projects/{project.name}.toml</div>
+        </div>
+        <div className="qa-group">
+          <button className="btn" onClick={() => setEditing(true)}>Edit</button>
+          <button className="btn btn--danger" onClick={() => setConfirmRm(true)}>Remove</button>
+        </div>
+      </div>
+
+      <pre className="toml-view mono">{toml}</pre>
+
+      {editing && (
+        <EditProjectModal project={project} onClose={() => setEditing(false)} onSave={() => setEditing(false)} />
+      )}
+
+      {confirmRm && (
+        <div className="modal-scrim" onClick={() => setConfirmRm(false)}>
+          <div className="modal modal--sm" onClick={e => e.stopPropagation()}>
+            <div className="modal__body">
+              <h2 className="modal__title">Remove <span className="mono">{project.name}</span>?</h2>
+              <p className="dim" style={{marginTop: 8, lineHeight: 1.5}}>
+                This deletes the registration TOML only. Your repo and worktrees are not touched.
+              </p>
+              <div className="modal__footer">
+                <button className="btn btn--ghost" onClick={() => setConfirmRm(false)}>Cancel</button>
+                <button className="btn btn--danger" onClick={() => { setConfirmRm(false); onRemove(); }}>Remove project</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="project-detail__agents">
+        <h2 className="projects-page__sub-hd">Agents</h2>
+        <AgentsList
+          onOpen={onAgentOpen}
+          onAction={onAgentAction}
+          tweaks={tweaks}
+          projectFilter={project.name}
+        />
+      </div>
+    </div>
+  );
+}
+
+function EditProjectModal({ project, onClose, onSave }) {
+  const [form, setForm] = React.useState({ ...project });
+  React.useEffect(() => {
+    const onKey = (e) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
+  return (
+    <div className="modal-scrim" onClick={onClose}>
+      <div className="modal" onClick={e => e.stopPropagation()}>
+        <header className="modal__hd">
+          <div className="modal__steps">
+            <span className="modal__step on">Edit <span className="mono">{project.name}</span></span>
+          </div>
+          <button className="icon-btn" onClick={onClose}><Icon.Close /></button>
+        </header>
+        <div className="modal__body">
+          <div className="form">
+            {[
+              ['name', 'Name'],
+              ['repo_path', 'Repo path'],
+              ['default_branch', 'Default branch'],
+              ['jira_project_key', 'Jira project key'],
+              ['docker_compose', 'Docker compose file'],
+              ['test_command', 'Test command'],
+            ].map(([k, lbl]) => (
+              <label key={k} className="form__field">
+                <span className="form__label">{lbl}</span>
+                <input className="form__input mono" value={form[k]}
+                  onChange={e => setForm(f => ({ ...f, [k]: e.target.value }))} />
+              </label>
+            ))}
+          </div>
+          <div className="modal__footer">
+            <button className="btn btn--ghost" onClick={onClose}>Cancel</button>
+            <button className="btn btn--accent" onClick={() => onSave(form)}>Save</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function RegisterProjectModal({ onClose }) {
+  const [form, setForm] = React.useState({
+    name: '', repo_path: '~/code/', default_branch: 'main',
+    jira_project_key: '', docker_compose: 'docker-compose.yml', test_command: '',
+  });
+  React.useEffect(() => {
+    const onKey = (e) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
+  return (
+    <div className="modal-scrim" onClick={onClose}>
+      <div className="modal" onClick={e => e.stopPropagation()}>
+        <header className="modal__hd">
+          <div className="modal__steps"><span className="modal__step on">Register a project</span></div>
+          <button className="icon-btn" onClick={onClose}><Icon.Close /></button>
+        </header>
+        <div className="modal__body">
+          <div className="form">
+            {[
+              ['name', 'Name', 'my-project'],
+              ['repo_path', 'Repo path', '~/code/my-project'],
+              ['default_branch', 'Default branch', 'main'],
+              ['jira_project_key', 'Jira project key', 'PROJ'],
+              ['docker_compose', 'Docker compose file', 'docker-compose.yml'],
+              ['test_command', 'Test command', 'pnpm test'],
+            ].map(([k, lbl, ph]) => (
+              <label key={k} className="form__field">
+                <span className="form__label">{lbl}</span>
+                <input className="form__input mono" placeholder={ph} value={form[k]}
+                  onChange={e => setForm(f => ({ ...f, [k]: e.target.value }))} />
+              </label>
+            ))}
+          </div>
+          <div className="modal__footer">
+            <button className="btn btn--ghost" onClick={onClose}>Cancel</button>
+            <button className="btn btn--accent" onClick={onClose}>Register</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ProjectsRoute({ subRoute, onNavigate, onAgentOpen, onAgentAction, tweaks }) {
+  const [registering, setRegistering] = React.useState(false);
+
+  if (subRoute && subRoute !== '') {
+    const project = MOCK_PROJECTS.find(p => p.name === subRoute);
+    if (project) return (
+      <ProjectDetail
+        project={project}
+        onBack={() => onNavigate('/projects')}
+        onRemove={() => onNavigate('/projects')}
+        onAgentOpen={onAgentOpen}
+        onAgentAction={onAgentAction}
+        tweaks={tweaks}
+      />
+    );
+  }
+
+  return (
+    <>
+      <ProjectsList
+        onOpen={(name) => onNavigate(`/projects/${name}`)}
+        onRegister={() => setRegistering(true)}
+      />
+      {registering && <RegisterProjectModal onClose={() => setRegistering(false)} />}
+    </>
+  );
+}
+
+window.ProjectsRoute = ProjectsRoute;
+
+
+// ── app.jsx ──
+// Root app — routing, top nav, drawer/modal orchestration, tweaks.
+
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "rowDensity": "regular",
+  "timelineDensity": "compact",
+  "stateIntensity": "mid",
+  "attentionTreatment": "strong",
+  "bgWarmth": "warm",
+  "bgFamily": "gray",
+  "bgShade": 900,
+  "useCustomBg": true,
+  "rowTexture": "gradient",
+  "columnHeaders": "none",
+  "rowLayout": "stacked",
+  "metaLabel": "icon",
+  "listMaxWidth": 940,
+  "pillPaddingStep": 6,
+  "pillFontSize": 13,
+  "maxEventsPerSegment": 15,
+  "accentSaturation": 0.19,
+  "monoFont": "Fira Code",
+  "sansFont": "Sora",
+  "pillFont": "mono",
+  "viewportWidth": "desktop",
+  "liveDemo": true
+}/*EDITMODE-END*/;
+
+// Tailwind spacing scale (rem * 16 = px). px-N maps to N*4 px,
+// except the small steps 0/0.5/1/1.5/2.
+const TW_SPACING = [
+  { step: 0,    px: 0,  label: 'px-0'   },
+  { step: 0.5,  px: 2,  label: 'px-0.5' },
+  { step: 1,    px: 4,  label: 'px-1'   },
+  { step: 1.5,  px: 6,  label: 'px-1.5' },
+  { step: 2,    px: 8,  label: 'px-2'   },
+  { step: 2.5,  px: 10, label: 'px-2.5' },
+  { step: 3,    px: 12, label: 'px-3'   },
+  { step: 3.5,  px: 14, label: 'px-3.5' },
+  { step: 4,    px: 16, label: 'px-4'   },
+  { step: 5,    px: 20, label: 'px-5'   },
+  { step: 6,    px: 24, label: 'px-6'   },
+  { step: 8,    px: 32, label: 'px-8'   },
+];
+
+// Tailwind neutral background palettes — darkest → 950, lightest 50.
+// We expose 700/800/900/950 (dashboard is dark-first).
+const TW_BG_FAMILIES = ['slate', 'zinc', 'neutral', 'stone', 'gray'];
+const TW_BG_SHADES = [700, 800, 900, 950];
+const TW_BG_HEX = {
+  slate:   { 700:'#334155', 800:'#1e293b', 900:'#0f172a', 950:'#020617' },
+  zinc:    { 700:'#3f3f46', 800:'#27272a', 900:'#18181b', 950:'#09090b' },
+  neutral: { 700:'#404040', 800:'#262626', 900:'#171717', 950:'#0a0a0a' },
+  stone:   { 700:'#44403c', 800:'#292524', 900:'#1c1917', 950:'#0c0a09' },
+  gray:    { 700:'#374151', 800:'#1f2937', 900:'#111827', 950:'#030712' },
+};
+
+const SANS_FONT_OPTIONS = [
+  'Geist Sans', 'Inter', 'Manrope', 'Satoshi', 'General Sans', 'Switzer',
+  'Plus Jakarta Sans', 'Public Sans', 'Hanken Grotesk', 'Space Grotesk',
+  'Outfit', 'Sora', 'Nunito Sans',
+];
+const MONO_FONT_OPTIONS = ['Fira Code', 'JetBrains Mono', 'IBM Plex Mono', 'Geist Mono'];
+const VIEWPORT_OPTIONS = ['desktop', 'vertical', 'mobile'];
+const VIEWPORT_PX = { desktop: 1440, vertical: 820, mobile: 390 };
+
+function useHashRoute() {
+  const [hash, setHash] = React.useState(window.location.hash || '#/');
+  React.useEffect(() => {
+    const h = () => setHash(window.location.hash || '#/');
+    window.addEventListener('hashchange', h);
+    return () => window.removeEventListener('hashchange', h);
+  }, []);
+  const path = hash.replace(/^#/, '') || '/';
+  const navigate = (to) => { window.location.hash = '#' + to; };
+  return [path, navigate];
+}
+
+function parseRoute(path) {
+  // /                          -> { route: 'home' }
+  // /agent/KAN-23              -> { route: 'home', agentKey, drawer: true }
+  // /agent/KAN-23/full         -> { route: 'agent-full', agentKey }
+  // /projects                  -> { route: 'projects' }
+  // /projects/foo              -> { route: 'projects', sub: 'foo' }
+  if (path.startsWith('/agent/')) {
+    const parts = path.split('/').filter(Boolean); // ['agent', 'KEY', maybe 'full']
+    const key = parts[1];
+    if (parts[2] === 'full') return { route: 'agent-full', agentKey: key };
+    return { route: 'home', agentKey: key, drawer: true };
+  }
+  if (path.startsWith('/projects')) {
+    const parts = path.split('/').filter(Boolean);
+    return { route: 'projects', sub: parts[1] };
+  }
+  return { route: 'home' };
+}
+
+function Favicon({ attentionCount, attentionColor }) {
+  React.useEffect(() => {
+    const c = document.createElement('canvas');
+    c.width = 32; c.height = 32;
+    const ctx = c.getContext('2d');
+    // base
+    ctx.fillStyle = '#1a1f2c';
+    ctx.beginPath(); ctx.roundRect(2, 2, 28, 28, 6); ctx.fill();
+    ctx.fillStyle = '#e5e7ec';
+    ctx.font = 'bold 16px ui-sans-serif';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('c', 16, 17);
+    if (attentionCount > 0) {
+      ctx.fillStyle = attentionColor;
+      ctx.beginPath(); ctx.arc(24, 8, 7, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#0a0b10';
+      ctx.font = 'bold 10px ui-sans-serif';
+      ctx.fillText(String(attentionCount), 24, 9);
+    }
+    let link = document.querySelector('link[rel="icon"]');
+    if (!link) {
+      link = document.createElement('link');
+      link.rel = 'icon';
+      document.head.appendChild(link);
+    }
+    link.href = c.toDataURL('image/png');
+  }, [attentionCount, attentionColor]);
+  return null;
+}
+
+function TopNav({ route, attentionCount, onNewRun, onClearAttention, onNavigate }) {
+  return (
+    <nav className="topnav">
+      <div className="topnav__left">
+        <div className="topnav__brand">
+          <span className="topnav__brand-mark" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none">
+              <circle cx="7"  cy="7"  r="2.4" fill="currentColor" opacity="0.92" />
+              <circle cx="17" cy="7"  r="2.4" fill="currentColor" opacity="0.55" />
+              <circle cx="7"  cy="17" r="2.4" fill="currentColor" opacity="0.55" />
+              <circle cx="17" cy="17" r="2.4" fill="currentColor" opacity="0.92" />
+              <path d="M9 9 L15 15 M15 9 L9 15" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" opacity="0.32" />
+            </svg>
+          </span>
+          <span className="topnav__brand-name">crew</span>
+        </div>
+        <div className="topnav__tabs">
+          <a className={`topnav__tab ${route.route === 'home' || route.route === 'agent-full' ? 'on' : ''}`} href="#/">Agents</a>
+          <a className={`topnav__tab ${route.route === 'projects' ? 'on' : ''}`} href="#/projects">Projects</a>
+        </div>
+      </div>
+      <div className="topnav__right">
+        {attentionCount > 0 && (
+          <button className="btn btn--ghost btn--sm clear-attention" onClick={onClearAttention}>
+            <span className="clear-attention__count">{attentionCount}</span>
+            Clear attention
+          </button>
+        )}
+        <button className="btn btn--accent" onClick={onNewRun}>
+          <Icon.Plus size={12} /> New Run
+        </button>
+      </div>
+    </nav>
+  );
+}
+
+function App() {
+  const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
+  const [path, navigate] = useHashRoute();
+  const route = parseRoute(path);
+  const [newRunOpen, setNewRunOpen] = React.useState(false);
+  const [attentionCleared, setAttentionCleared] = React.useState(false);
+  const [toast, setToast] = React.useState(null);
+
+  // Apply tweaks to root element via CSS variables
+  React.useEffect(() => {
+    const r = document.documentElement;
+    r.style.setProperty('--font-sans', `"${t.sansFont}", ui-sans-serif, system-ui, sans-serif`);
+    r.style.setProperty('--font-mono', `"${t.monoFont}", ui-monospace, monospace`);
+    // Pill font — maps logical names to font-family
+    const pillMap = {
+      'mono':       `"${t.monoFont}", ui-monospace, monospace`,
+      'sans':       `"${t.sansFont}", ui-sans-serif, system-ui, sans-serif`,
+      'small-caps': `"${t.sansFont}", ui-sans-serif, system-ui, sans-serif`,
+      'serif':      `"Iowan Old Style", "Charter", "Source Serif Pro", Georgia, serif`,
+      'rounded':    `"SF Pro Rounded", "Nunito", "Manrope", system-ui, sans-serif`,
+    };
+    r.style.setProperty('--font-pill', pillMap[t.pillFont] || pillMap.mono);
+    r.style.setProperty('--pill-variant', t.pillFont === 'small-caps' ? 'all-small-caps' : 'normal');
+    r.style.setProperty('--pill-transform', t.pillFont === 'small-caps' ? 'none' : 'lowercase');
+    r.style.setProperty('--pill-tracking', t.pillFont === 'small-caps' ? '0.04em' : '-0.005em');
+    // Background warmth or Tailwind class
+    if (t.useCustomBg) {
+      const fam = TW_BG_HEX[t.bgFamily] || TW_BG_HEX.zinc;
+      const baseHex = fam[t.bgShade] || fam[950];
+      const num = parseInt(baseHex.slice(1), 16);
+      const r0 = (num >> 16) & 255, g0 = (num >> 8) & 255, b0 = num & 255;
+      const lift = (rr,gg,bb,amt) => `rgb(${Math.min(255,rr+amt)},${Math.min(255,gg+amt)},${Math.min(255,bb+amt)})`;
+      r.style.setProperty('--bg', baseHex);
+      r.style.setProperty('--surface', lift(r0,g0,b0,10));
+      r.style.setProperty('--surface-2', lift(r0,g0,b0,20));
+      r.style.setProperty('--border', 'rgba(255,255,255,0.07)');
+    } else {
+      const bgs = {
+        'pitch':   { bg: '#0a0b0e', surface: '#101216', surface2: '#15181d', border: 'rgba(255,255,255,0.06)' },
+        'slate':   { bg: '#0e1219', surface: '#141923', surface2: '#1a2030', border: 'rgba(255,255,255,0.07)' },
+        'warm':    { bg: '#13141a', surface: '#1a1c24', surface2: '#21232d', border: 'rgba(255,255,255,0.07)' },
+      };
+      const b = bgs[t.bgWarmth] || bgs.warm;
+      r.style.setProperty('--bg', b.bg);
+      r.style.setProperty('--surface', b.surface);
+      r.style.setProperty('--surface-2', b.surface2);
+      r.style.setProperty('--border', b.border);
+    }
+    // Accent saturation — affects state colors
+    r.style.setProperty('--chr', String(t.accentSaturation));
+    // Pill horizontal padding — driven by Tailwind spacing step
+    const stepIdx = Math.max(0, Math.min(TW_SPACING.length - 1, t.pillPaddingStep ?? 4));
+    r.style.setProperty('--pill-px', `${TW_SPACING[stepIdx].px}px`);
+    r.style.setProperty('--pill-fs', `${t.pillFontSize ?? 11}px`);
+  }, [t.sansFont, t.monoFont, t.pillFont, t.bgWarmth, t.useCustomBg, t.bgFamily, t.bgShade, t.accentSaturation, t.pillPaddingStep, t.pillFontSize]);
+
+  // Attention count
+  const attentionAgents = MOCK_AGENTS.filter(a => STATE_META[a.state].attention);
+  const attentionCount = attentionCleared ? 0 : attentionAgents.length;
+  const attentionColor = attentionAgents.some(a => a.state === 'error') ? '#f87171'
+    : attentionAgents.some(a => a.state === 'waiting') ? '#facc15'
+    : '#a78bfa';
+
+  // Drawer agent
+  const drawerAgent = route.drawer && route.agentKey ? getAgent(route.agentKey) : null;
+  const fullPageAgent = route.route === 'agent-full' && route.agentKey ? getAgent(route.agentKey) : null;
+
+  const onAgentOpen = (key) => navigate(`/agent/${key}`);
+  const onAgentClose = () => navigate('/');
+  const onAgentAction = (action, agent) => {
+    if (action === 'inspect') navigate(`/agent/${agent.key}`);
+    else if (action === 'view-pr') window.open(agent.pr, '_blank');
+    else setToast(`${action} → ${agent.key}`);
+  };
+
+  const onConfirmNewRun = (project, ticket) => {
+    setNewRunOpen(false);
+    setToast(`Spawning agent for ${ticket.key}…`);
+  };
+
+  React.useEffect(() => {
+    if (toast) {
+      const id = setTimeout(() => setToast(null), 2400);
+      return () => clearTimeout(id);
+    }
+  }, [toast]);
+
+  // Viewport simulation
+  const vw = VIEWPORT_PX[t.viewportWidth];
+  const isMobile = t.viewportWidth === 'mobile';
+  const isVertical = t.viewportWidth === 'vertical';
+
+  return (
+    <div className={`app app--vw-${t.viewportWidth}`} style={{ '--app-vw': vw + 'px', '--list-maxw': t.listMaxWidth + 'px' }}>
+      <Favicon attentionCount={attentionCount} attentionColor={attentionColor} />
+      <div className="viewport-frame">
+        <div className="viewport-frame__inner">
+          <TopNav
+            route={route}
+            attentionCount={attentionCount}
+            onNewRun={() => setNewRunOpen(true)}
+            onClearAttention={() => setAttentionCleared(true)}
+            onNavigate={navigate}
+          />
+          <main className="main-area">
+            {route.route === 'home' && (
+              <AgentsList
+                onOpen={onAgentOpen}
+                onAction={onAgentAction}
+                onNewRun={() => setNewRunOpen(true)}
+                tweaks={t}
+                onOpenProject={(name) => navigate(`/projects/${name}`)}
+              />
+            )}
+            {route.route === 'projects' && (
+              <ProjectsRoute
+                subRoute={route.sub}
+                onNavigate={navigate}
+                onAgentOpen={onAgentOpen}
+                onAgentAction={onAgentAction}
+                tweaks={t}
+              />
+            )}
+            {route.route === 'agent-full' && fullPageAgent && (
+              <AgentDetail agent={fullPageAgent} asPage onAction={onAgentAction} tweaks={t} />
+            )}
+          </main>
+
+          {drawerAgent && (
+            <>
+              <div className="drawer-scrim" onClick={onAgentClose} />
+              <AgentDetail agent={drawerAgent} onClose={onAgentClose} onAction={onAgentAction} tweaks={t} />
+            </>
+          )}
+
+          {newRunOpen && <NewRunModal onClose={() => setNewRunOpen(false)} onConfirm={onConfirmNewRun} />}
+
+          {toast && <div className="toast">{toast}</div>}
+        </div>
+      </div>
+
+      <TweaksPanel>
+        <TweakSection label="Layout" />
+        <TweakRadio label="Viewport" value={t.viewportWidth} options={VIEWPORT_OPTIONS}
+                    onChange={v => setTweak('viewportWidth', v)} />
+        <TweakSlider label="List max width" value={t.listMaxWidth} min={720} max={1600} step={20} unit="px"
+                     onChange={v => setTweak('listMaxWidth', v)} />
+        <TweakRadio label="Row density" value={t.rowDensity} options={['tight','regular','comfy']}
+                    onChange={v => setTweak('rowDensity', v)} />
+        <TweakSelect label="Column headers" value={t.columnHeaders}
+                     options={['none','global','per-section','floating','tab']}
+                     onChange={v => setTweak('columnHeaders', v)} />
+        <TweakRadio label="Row layout" value={t.rowLayout} options={['row','stacked']}
+                    onChange={v => setTweak('rowLayout', v)} />
+        {t.rowLayout === 'stacked' && (
+          <TweakRadio label="Meta labels" value={t.metaLabel} options={['icon','text']}
+                      onChange={v => setTweak('metaLabel', v)} />
+        )}
+        <TweakRadio label="Timeline density" value={t.timelineDensity} options={['compact','padded']}
+                    onChange={v => setTweak('timelineDensity', v)} />
+
+        <TweakSection label="State + attention" />
+        <TweakRadio label="State intensity" value={t.stateIntensity} options={['muted','mid','loud']}
+                    onChange={v => setTweak('stateIntensity', v)} />
+        <TweakRadio label="Attention treatment" value={t.attentionTreatment} options={['subtle','medium','strong']}
+                    onChange={v => setTweak('attentionTreatment', v)} />
+        <TweakSlider label={`Pill padding (${TW_SPACING[t.pillPaddingStep]?.label || 'px-2'})`}
+                     value={t.pillPaddingStep} min={0} max={TW_SPACING.length - 1} step={1}
+                     onChange={v => setTweak('pillPaddingStep', v)} />
+        <TweakSlider label={`Pill font size (${t.pillFontSize}px)`}
+                     value={t.pillFontSize} min={8} max={18} step={1}
+                     onChange={v => setTweak('pillFontSize', v)} />
+        <TweakSlider label={t.maxEventsPerSegment === 0 ? 'Max events / segment (unlimited)' : `Max events / segment (${t.maxEventsPerSegment})`}
+                     value={t.maxEventsPerSegment} min={0} max={50} step={1}
+                     onChange={v => setTweak('maxEventsPerSegment', v)} />
+        <TweakSelect label="Pill font" value={t.pillFont}
+                     options={['mono','sans','small-caps','serif','rounded']}
+                     onChange={v => setTweak('pillFont', v)} />
+        <TweakSelect label="Row texture" value={t.rowTexture}
+                     options={['none','grid','dots','stripes','stripes-thick','triangles','noise','scanlines','gradient']}
+                     onChange={v => setTweak('rowTexture', v)} />
+        <TweakSlider label="Accent saturation" value={t.accentSaturation} min={0.04} max={0.24} step={0.01}
+                     onChange={v => setTweak('accentSaturation', v)} />
+
+        <TweakSection label="Theme + type" />
+        <TweakToggle label="Tailwind palette" value={t.useCustomBg}
+                     onChange={v => setTweak('useCustomBg', v)} />
+        {t.useCustomBg ? (
+          <>
+            <TweakSelect label="bg- family" value={t.bgFamily} options={TW_BG_FAMILIES}
+                         onChange={v => setTweak('bgFamily', v)} />
+            <TweakRadio label={`bg-${t.bgFamily}-${t.bgShade}`} value={t.bgShade} options={TW_BG_SHADES}
+                        onChange={v => setTweak('bgShade', v)} />
+          </>
+        ) : (
+          <TweakRadio label="Background warmth" value={t.bgWarmth} options={['pitch','slate','warm']}
+                      onChange={v => setTweak('bgWarmth', v)} />
+        )}
+        <TweakSelect label="Sans font" value={t.sansFont} options={SANS_FONT_OPTIONS}
+                     onChange={v => setTweak('sansFont', v)} />
+        <TweakSelect label="Mono font" value={t.monoFont} options={MONO_FONT_OPTIONS}
+                     onChange={v => setTweak('monoFont', v)} />
+
+        <TweakSection label="Demo" />
+        <TweakToggle label="Live timeline streaming" value={t.liveDemo}
+                     onChange={v => setTweak('liveDemo', v)} />
+      </TweaksPanel>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+
+</script>
+</body>
+</html>
