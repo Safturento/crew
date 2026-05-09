@@ -5,7 +5,16 @@ meta {
 }
 
 get {
-  url: {{baseUrl}}/api/agents/BRUNO-1/timeline
+  url: {{baseUrl}}/api/agents/{{agentKey}}/timeline
+}
+
+script:pre-request {
+  // Fallback for standalone runs. The smoke chain populates `agentKey`
+  // via post-register-run.bru's `vars:post-response`; this only fires
+  // when running this card alone.
+  if (!bru.getVar("agentKey")) {
+    bru.setVar("agentKey", "BRUNO-1");
+  }
 }
 
 assert {
@@ -33,4 +42,9 @@ tests {
       expect(res.headers["x-crew-warning"]).to.equal("transcript-missing");
     }
   });
+}
+
+docs {
+  Reference card. `agentKey` comes from the smoke chain (set by
+  post-register-run.bru) or the pre-request fallback for standalone runs.
 }
