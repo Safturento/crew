@@ -5,6 +5,7 @@ import { formatTokens } from '../format/tokens.js';
 import { useAgent } from '../data/queries.js';
 import type { AgentDetail, AgentState } from '../data/types.js';
 import { StateBadge } from './StateBadge.js';
+import { Timeline } from './Timeline/Timeline.js';
 
 const ACTIVE_STATES = new Set<AgentState>(['running', 'initializing']);
 
@@ -35,15 +36,10 @@ export function AgentBody({ agentKey, mode }: AgentBodyProps) {
   }
 
   return (
-    <div className="flex h-full min-h-0 flex-col">
+    <div data-testid="agent-body" className="flex h-full min-h-0 flex-col">
       <AgentHeader detail={data} mode={mode} />
-      <div className="min-h-0 flex-1 overflow-y-auto p-6">
-        <div
-          data-testid="agent-body-placeholder"
-          className="rounded-[14px] border border-dashed border-white/10 bg-surface px-6 py-10 text-center text-sm text-text-3"
-        >
-          Timeline, state history, and token table land in CREW-J.
-        </div>
+      <div className="min-h-0 flex-1">
+        <Timeline agentKey={agentKey} agentState={data.state} />
       </div>
     </div>
   );

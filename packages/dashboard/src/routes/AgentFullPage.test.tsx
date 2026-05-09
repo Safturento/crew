@@ -3,7 +3,7 @@ import { screen } from '@testing-library/react';
 
 import { AgentFullPage } from './AgentFullPage.js';
 import { defaultClient } from '../data/queries.js';
-import type { AgentDetail } from '../data/types.js';
+import type { AgentDetail, TranscriptEvent } from '../data/types.js';
 import { renderWithProviders } from '../test/renderWithProviders.js';
 
 const SAMPLE_DETAIL: AgentDetail = {
@@ -21,6 +21,7 @@ const SAMPLE_DETAIL: AgentDetail = {
 
 beforeEach(() => {
   vi.spyOn(defaultClient, 'getAgent').mockResolvedValue(SAMPLE_DETAIL);
+  vi.spyOn(defaultClient, 'getTimeline').mockResolvedValue({ events: [] as TranscriptEvent[] });
 });
 
 afterEach(() => {
@@ -46,8 +47,9 @@ describe('AgentFullPage', () => {
     expect(screen.queryByRole('link', { name: /open as page/i })).not.toBeInTheDocument();
   });
 
-  it('renders the body placeholder slot', async () => {
+  it('renders the Timeline inside the body slot', async () => {
     renderWithProviders(<AgentFullPage agentKey="KAN-1" />);
-    expect(await screen.findByTestId('agent-body-placeholder')).toBeInTheDocument();
+    expect(await screen.findByTestId('agent-body')).toBeInTheDocument();
+    expect(await screen.findByTestId('timeline-empty')).toBeInTheDocument();
   });
 });

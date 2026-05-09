@@ -7,6 +7,7 @@ Format: see the user-level `~/.claude/CLAUDE.md` "Followup detection" section.
 ## Contents
 
 - [Active](#active)
+  - [2026-05-08 — Wire `StateHistoryBar` and `TokenTable` into `AgentBody` alongside the timeline](#2026-05-08--wire-statehistorybar-and-tokentable-into-agentbody-alongside-the-timeline)
   - [2026-05-07 — Port allocator detects collisions only at `docker compose up` time, not at allocation time](#2026-05-07--port-allocator-detects-collisions-only-at-docker-compose-up-time-not-at-allocation-time)
   - [2026-05-05 — Per-ticket model selection (use Sonnet for trivial work to save tokens)](#2026-05-05--per-ticket-model-selection-use-sonnet-for-trivial-work-to-save-tokens)
   - [2026-05-05 — Dashboard silently drops agents whose project isn't in `/api/projects`](#2026-05-05--dashboard-silently-drops-agents-whose-project-isnt-in-apiprojects)
@@ -53,6 +54,28 @@ Format: see the user-level `~/.claude/CLAUDE.md` "Followup detection" section.
 - [Abandoned](#abandoned)
 
 ## Active
+
+### 2026-05-08 — Wire `StateHistoryBar` and `TokenTable` into `AgentBody` alongside the timeline
+
+**What:** CREW-109 wired `<Timeline>` into `packages/dashboard/src/components/AgentBody.tsx` (replacing the `agent-body-placeholder` div) so the e2e timeline scenarios could pass. The original placeholder copy promised "Timeline, state history, and token table" — the latter two (`<StateHistoryBar>`, `<TokenTable>`) ship in CREW-104 but are still unmounted. The drawer is functional today, but the spec §5a/§5b composition isn't complete.
+
+**Why noticed:** While reading the slice 1c plan (`docs/superpowers/plans/2026-05-05-slice-1c-agent-drawer-and-push-updates.md`), I noticed that no plan task actually composes Tasks 20 (TokenTable) and 21 (StateHistoryBar) into AgentBody — the plan jumped straight from building the components (Tasks 20–28) to the E2E scenarios (Task 30) that test only the timeline portion. CREW-J / CREW-104's ticket file likewise mentions integration as deliberately out of scope.
+
+**Anchors:**
+
+- `packages/dashboard/src/components/AgentBody.tsx` — currently renders only `<Timeline>` under the header
+- `packages/dashboard/src/components/StateHistoryBar.tsx`, `packages/dashboard/src/components/TokenTable.tsx` — built but unmounted
+- `docs/superpowers/specs/2026-05-05-slice-1c-agent-drawer-and-push-updates-design.md` §5a/§5b — composition contract
+- Slice 1c Epic: [CREW-94](https://safturento.atlassian.net/browse/CREW-94)
+
+**What's been considered:** Doing the full integration inside CREW-109 would have grown a "test ticket" into a layout/composition decision touching token-table sort + state-history scroll-to-timestamp wiring (StateHistoryBar's `onScrollTo(ts)` needs a Timeline scroll target). Keeping CREW-109 narrow ships the e2e coverage that gates the rest of the slice without locking in a layout that hasn't been visually reviewed.
+
+**Shape of work:** One ticket under CREW-94. Expect two-pane layout (token-table sidebar + main timeline) plus a state-history strip above the timeline, with `StateHistoryBar.onScrollTo` wired into Timeline's virtualizer (`scrollToIndex` by ts → event index lookup). Add a unit test asserting the new composition; existing AgentDrawer/AgentFullPage unit tests will need their `getTimeline` mocks extended with `getStateHistory` + token data.
+
+**Open questions:**
+
+- Where does TokenTable sit on narrow drawer widths? (collapsible side panel vs always-stacked.)
+- Does `onScrollTo(ts)` need new public Timeline API, or piggyback on an existing imperative handle?
 
 ### 2026-05-07 — Port allocator detects collisions only at `docker compose up` time, not at allocation time
 
@@ -388,7 +411,7 @@ The auto-detect option is the most user-friendly. The flag option is the cheapes
 
 **What:** Crew's per-worktree DB replication today is split awkwardly between crew and the project. The bringup script (`buildDockerBringupScript` in `start-bringup.ts`) calls a project-side shim — `<repo>/scripts/db-clone-from-main.sh` — which in turn calls `crew db-clone <branch>`. Meanwhile the project's own backend container runs migrations + seed via its `entrypoint.sh`, on the same database, with no coordination. The result is a brittle three-way handshake between (a) the project's docker-compose entrypoint, (b) crew's bringup orchestration, and (c) crew's `runDbClone` primitive. Generalize this so crew owns the whole DB lifecycle for a worktree dispatch and the project just declares the contract via config (the existing `[db_clone]` block, possibly extended).
 
-**Why noticed:** filed CREW-68 to fix the immediate race between db_clone and backend seed (concurrent TRUNCATE and INSERT on the same tables corrupts the worktree DB and exits the backend container). The fix lands as a quick-win — wait-for-healthcheck + better log on clone failure — but the underlying brittleness is structural, not local. The user's framing: _"this feels like a symptom of being in this middle state where crew is still relying on some scripts that are a part of recipe's infrastructure."_ Source conversation: 2026-05-01 session debugging KAN-40's failed dispatch under CREW-61's playwright manual gate.
+**Why noticed:** filed CREW-68 to fix the immediate race between db*clone and backend seed (concurrent TRUNCATE and INSERT on the same tables corrupts the worktree DB and exits the backend container). The fix lands as a quick-win — wait-for-healthcheck + better log on clone failure — but the underlying brittleness is structural, not local. The user's framing: *"this feels like a symptom of being in this middle state where crew is still relying on some scripts that are a part of recipe's infrastructure."\_ Source conversation: 2026-05-01 session debugging KAN-40's failed dispatch under CREW-61's playwright manual gate.
 
 **Anchors:**
 
