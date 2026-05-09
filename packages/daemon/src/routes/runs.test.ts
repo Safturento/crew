@@ -6,6 +6,7 @@ import { buildApp } from '../app.js';
 import { parseDaemonConfig } from '../config.js';
 import { createDb, runMigrations } from '../db.js';
 import { useTmpDir } from '../test/tmpdir.js';
+import type { SseEvent } from '../services/EventBus.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const MIGRATIONS_DIR = resolve(__dirname, '..', 'migrations');
@@ -22,7 +23,8 @@ async function setupApp() {
   const db = createDb(config.dbFile);
   await runMigrations(db, MIGRATIONS_DIR);
   const app = await buildApp({ config, logger: silentLogger, db });
-  return { app, db };
+  const eventBus = app.diContainer.cradle.eventBus;
+  return { app, db, eventBus };
 }
 
 const validBody = {
@@ -169,6 +171,63 @@ describe('POST /api/agents/runs/:runId/complete', () => {
         payload: { exitCode: 0, completedAt: '2026-04-29T13:00:00Z' },
       });
       expect(res.statusCode).toBe(409);
+    } finally {
+      await app.close();
+      await db.destroy();
+    }
+  });
+
+  it('publishes run.completed for a finish run that completes ok', async () => {
+    const { app, db, eventBus } = await setupApp();
+    try {
+      const seen: SseEvent[] = [];
+      eventBus.subscribe({ onEvent: (event) => seen.push(event) });
+
+      const reg = await app.inject({
+        method: 'POST',
+        url: '/api/agents/runs',
+        payload: { ...validBody, sessionId: 'finish-1', command: 'finish' },
+      });
+      const runId = (reg.json() as { run: { id: number } }).run.id;
+
+      await app.inject({
+        method: 'POST',
+        url: `/api/agents/runs/${runId}/complete`,
+        payload: { exitCode: 0, completedAt: '2026-04-29T13:00:00Z' },
+      });
+
+      const completed = seen.filter((e) => e.type === 'run.completed');
+      expect(completed).toHaveLength(1);
+      expect(completed[0]?.data).toEqual({
+        key: validBody.key,
+        ts: Date.parse('2026-04-29T13:00:00Z'),
+      });
+    } finally {
+      await app.close();
+      await db.destroy();
+    }
+  });
+
+  it('does not publish run.completed when exit_code is non-zero', async () => {
+    const { app, db, eventBus } = await setupApp();
+    try {
+      const seen: SseEvent[] = [];
+      eventBus.subscribe({ onEvent: (event) => seen.push(event) });
+
+      const reg = await app.inject({
+        method: 'POST',
+        url: '/api/agents/runs',
+        payload: { ...validBody, sessionId: 'finish-fail', command: 'finish' },
+      });
+      const runId = (reg.json() as { run: { id: number } }).run.id;
+
+      await app.inject({
+        method: 'POST',
+        url: `/api/agents/runs/${runId}/complete`,
+        payload: { exitCode: 1, completedAt: '2026-04-29T13:00:00Z' },
+      });
+
+      expect(seen.filter((e) => e.type === 'run.completed')).toHaveLength(0);
     } finally {
       await app.close();
       await db.destroy();

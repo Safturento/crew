@@ -5,6 +5,9 @@ import { claudeProjectDirFor } from 'crew-shared';
 import type { DaemonApp } from '../app.js';
 import { ConflictError, NotFoundError } from '../errors.js';
 
+const RunCommand = z.enum(['run', 'fix-pr', 'finish']);
+type RunCommandType = z.infer<typeof RunCommand>;
+
 const RegisterRunBody = z.object({
   key: z.string().min(1),
   projectName: z.string().min(1),
@@ -12,7 +15,7 @@ const RegisterRunBody = z.object({
   worktreePath: z.string().min(1),
   branch: z.string(),
   sessionId: z.string().min(1),
-  command: z.enum(['run', 'fix-pr']),
+  command: RunCommand,
   startedAt: z.string().min(1),
 });
 
@@ -27,7 +30,7 @@ const RegisterRunResponse = z.object({
   run: z.object({
     id: z.number(),
     agentKey: z.string(),
-    command: z.enum(['run', 'fix-pr']),
+    command: RunCommand,
     sessionId: z.string(),
     startedAt: z.string(),
   }),
@@ -136,7 +139,7 @@ export async function registerRunsRoutes(app: DaemonApp): Promise<void> {
         run: {
           id: inserted.id,
           agentKey: inserted.agent_key,
-          command: inserted.command as 'run' | 'fix-pr',
+          command: inserted.command as RunCommandType,
           sessionId: inserted.session_id,
           startedAt: inserted.started_at,
         },
@@ -157,6 +160,7 @@ export async function registerRunsRoutes(app: DaemonApp): Promise<void> {
       const { exitCode, completedAt } = req.body;
       const db = req.diScope.resolve('db');
       const ingest = req.diScope.resolve('ingestService');
+      const eventBus = req.diScope.resolve('eventBus');
 
       const run = await db
         .selectFrom('runs')
@@ -177,6 +181,17 @@ export async function registerRunsRoutes(app: DaemonApp): Promise<void> {
         .execute();
 
       ingest.detach(runId);
+
+      // `crew finish` has no transcript tail, so the dashboard's only signal
+      // that the agent has finished is this event. Publish unconditionally on
+      // ok-exit so dashboards subscribed to the agent invalidate and refetch
+      // (CREW-101 / CREW-94 plan task 14).
+      if (exitCode === 0) {
+        eventBus.publish({
+          type: 'run.completed',
+          data: { key: run.agent_key, ts: Date.parse(completedAt) },
+        });
+      }
 
       return reply.code(204).send();
     },
