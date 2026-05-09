@@ -49,6 +49,9 @@ desktop.ini
 *.swo
 *~
 
+# WSL / Windows alternate-data-stream metadata files (crash IntelliJ on click)
+*:Zone.Identifier
+
 # Local SQLite state for the daemon (per-machine, never useful in git)
 *.sqlite
 *.sqlite-journal
