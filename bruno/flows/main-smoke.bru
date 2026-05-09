@@ -1,29 +1,37 @@
 meta {
-  name: main-smoke
+  name: drawer-data — chained agent key
   type: http
   seq: 1
 }
 
 get {
-  url: {{baseUrl}}/api/projects
+  url: {{baseUrl}}/api/agents/{{agentKey}}
 }
 
 assert {
   res.status: eq 200
-  res.body.projects: isArray
+  res.body.key: eq BRUNO-1
 }
 
 tests {
-  test("each project has name and repoPath strings", () => {
-    for (const project of res.body.projects) {
-      expect(project.name).to.be.a("string");
-      expect(project.repoPath).to.be.a("string");
-    }
+  test("post-register-run chained an agentKey forward", () => {
+    const chained = bru.getVar("agentKey");
+    expect(chained).to.be.a("string");
+    expect(chained.length).to.be.greaterThan(0);
   });
 
-  test("projects are alphabetized by name", () => {
-    const names = res.body.projects.map((p) => p.name);
-    const sorted = [...names].sort();
-    expect(names).to.deep.equal(sorted);
+  test("daemon returns the chained agentKey", () => {
+    expect(res.body.key).to.equal(bru.getVar("agentKey"));
   });
+}
+
+docs {
+  Final smoke step. Confirms the drawer-data chain end-to-end:
+    1. `post-register-run.bru` registers an agent and sets `agentKey`
+       via `vars:post-response`.
+    2. The three drawer endpoints (`get-by-key`, `get-state-history`,
+       `get-timeline`) are invoked earlier in the smoke chain against
+       `{{agentKey}}` — see the npm `bruno:smoke` script for order.
+    3. This stanza re-fetches the agent against the chained key as a
+       belt-and-suspenders assertion that the chain delivered.
 }

@@ -8,8 +8,13 @@ get {
   url: {{baseUrl}}/api/agents/{{agentKey}}
 }
 
-vars:pre-request {
-  agentKey: BRUNO-1
+script:pre-request {
+  // Fallback for standalone runs. In the smoke chain, post-register-run.bru
+  // sets `agentKey` via `vars:post-response`; this only fires if the chain
+  // has not already populated it.
+  if (!bru.getVar("agentKey")) {
+    bru.setVar("agentKey", "BRUNO-1");
+  }
 }
 
 assert {
@@ -52,8 +57,10 @@ tests {
 }
 
 docs {
-  Reference card. `agentKey` defaults to BRUNO-1 (registered earlier in
-  the smoke chain by post-register-run.bru). Flows can override via
-  `vars:pre-request` or `bru.setEnvVar` to probe other keys.
+  Reference card. In the smoke chain, `agentKey` is set by
+  `post-register-run.bru`'s `vars:post-response` block — this card just
+  reads it. Standalone runs fall back to `BRUNO-1` via the pre-request
+  script; pass `--env-var agentKey=<other>` on the CLI to probe other
+  keys.
   404 when no run exists for the key — see get-by-key-not-found.bru.
 }

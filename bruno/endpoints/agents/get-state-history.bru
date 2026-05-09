@@ -8,8 +8,13 @@ get {
   url: {{baseUrl}}/api/agents/{{agentKey}}/state-history
 }
 
-vars:pre-request {
-  agentKey: BRUNO-1
+script:pre-request {
+  // Fallback for standalone runs. The smoke chain populates `agentKey`
+  // via post-register-run.bru's `vars:post-response`; this only fires
+  // when running this card alone.
+  if (!bru.getVar("agentKey")) {
+    bru.setVar("agentKey", "BRUNO-1");
+  }
 }
 
 assert {
@@ -45,5 +50,6 @@ tests {
 docs {
   Always returns 200 — unknown keys yield `{ "transitions": [] }`. State
   trail is populated by CREW-96's backfill (and, in future, by
-  IngestService writes).
+  IngestService writes). `agentKey` comes from the smoke chain (set by
+  post-register-run.bru) or the pre-request fallback for standalone runs.
 }
