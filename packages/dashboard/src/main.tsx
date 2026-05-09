@@ -34,6 +34,13 @@ eventStream.on('cache.miss', () => {
   void queryClient.refetchQueries();
 });
 
+// Dev-only: expose `window.__crewTestInjectEvent` so Playwright specs
+// can drive synthetic SSE events through the same dispatcher real
+// messages use. Vite strips this branch in prod builds.
+if (import.meta.env.DEV) {
+  eventStream.exposeTestInjector();
+}
+
 createRoot(rootEl).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>

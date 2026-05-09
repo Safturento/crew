@@ -163,4 +163,27 @@ describe('CrewEventStream', () => {
     first.onerror?.(new Event('error'));
     expect(first.closed).toBe(true);
   });
+
+  describe('exposeTestInjector', () => {
+    afterEach(() => {
+      delete (window as unknown as Record<string, unknown>).__crewTestInjectEvent;
+    });
+
+    it('exposes window.__crewTestInjectEvent that fans out to subscribers', () => {
+      const stream = new CrewEventStream('http://localhost/api/events');
+      stream.exposeTestInjector();
+
+      const seen: unknown[] = [];
+      stream.on('agent.state_changed', (e) => seen.push(e));
+
+      const inject = (
+        window as unknown as { __crewTestInjectEvent?: (n: string, d: unknown) => void }
+      ).__crewTestInjectEvent;
+      expect(typeof inject).toBe('function');
+
+      inject!('agent.state_changed', { key: 'KAN-1', from: 'running', to: 'pr_open', ts: 5 });
+
+      expect(seen).toEqual([{ key: 'KAN-1', from: 'running', to: 'pr_open', ts: 5 }]);
+    });
+  });
 });

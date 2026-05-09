@@ -49,6 +49,22 @@ export class CrewEventStream {
     };
   }
 
+  /**
+   * Attaches `window.__crewTestInjectEvent(name, data)` so Playwright
+   * specs can fan synthetic events through the same dispatcher real SSE
+   * messages use — without standing up a real `EventSource`. The shipped
+   * bundle leaves this off; entry-point wiring (`main.tsx`) only calls it
+   * under `import.meta.env.DEV`.
+   */
+  exposeTestInjector(): void {
+    (window as unknown as Record<string, unknown>).__crewTestInjectEvent = (
+      name: string,
+      data: unknown,
+    ): void => {
+      this.handlers.get(name)?.forEach((fn) => fn(data));
+    };
+  }
+
   private connect(): void {
     const url = this.lastEventId
       ? `${this.url}?last_event_id=${encodeURIComponent(this.lastEventId)}`
