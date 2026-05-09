@@ -10,6 +10,7 @@ import {
   type FinishDeps,
 } from './finish.js';
 import type { ProjectConfig } from '../lib/index.js';
+import type { CrewDaemonClient, DaemonResult, RegisterRunSuccess } from '../lib/daemon-client/index.js';
 
 vi.mock('execa', () => ({ execa: vi.fn() }));
 vi.mock('node:fs/promises', () => ({
@@ -25,6 +26,42 @@ const mockedExeca = vi.mocked(execa);
 const mockedReaddir = vi.mocked(readdir);
 const mockedStat = vi.mocked(stat);
 const mockedUnlink = vi.mocked(unlink);
+
+interface DaemonClientStub {
+  registerRun: ReturnType<typeof vi.fn>;
+  completeRun: ReturnType<typeof vi.fn>;
+}
+
+function makeDaemonClient(
+  overrides: Partial<{
+    registerResult: DaemonResult<RegisterRunSuccess>;
+    completeResult: DaemonResult<{ ok: true }>;
+  }> = {},
+): DaemonClientStub & Pick<CrewDaemonClient, 'baseUrl'> {
+  const registerResult: DaemonResult<RegisterRunSuccess> = overrides.registerResult ?? {
+    ok: true,
+    agent: {
+      key: 'KAN-23',
+      projectName: 'recipes-app',
+      ticketTitle: '',
+      worktreePath: '/home/u/Repos/Recipes-App-KAN-23',
+      branch: 'KAN-23',
+    },
+    run: {
+      id: 7,
+      agentKey: 'KAN-23',
+      command: 'finish',
+      sessionId: 'finish-KAN-23-fixed',
+      startedAt: '2026-04-29T12:00:00Z',
+    },
+  };
+  const completeResult: DaemonResult<{ ok: true }> = overrides.completeResult ?? { ok: true };
+  return {
+    baseUrl: 'http://localhost:7773',
+    registerRun: vi.fn().mockResolvedValue(registerResult),
+    completeRun: vi.fn().mockResolvedValue(completeResult),
+  };
+}
 
 const sampleConfig: ProjectConfig = {
   name: 'recipes-app',
@@ -44,12 +81,16 @@ const sampleConfig: ProjectConfig = {
   },
 };
 
-function makeDeps(overrides: Partial<FinishDeps> = {}): FinishDeps & {
+function makeDeps(overrides: Partial<Omit<FinishDeps, 'daemonClient'>> & {
+  daemonClient?: DaemonClientStub & Pick<CrewDaemonClient, 'baseUrl'>;
+} = {}): FinishDeps & {
   logs: string[];
   warns: string[];
+  daemonClient: DaemonClientStub & Pick<CrewDaemonClient, 'baseUrl'>;
 } {
   const logs: string[] = [];
   const warns: string[] = [];
+  const daemonClient = overrides.daemonClient ?? makeDaemonClient();
   return {
     cwd: '/home/u/Repos/Recipes-App',
     config: sampleConfig,
@@ -59,6 +100,11 @@ function makeDeps(overrides: Partial<FinishDeps> = {}): FinishDeps & {
     logs,
     warns,
     ...overrides,
+    daemonClient: daemonClient as unknown as CrewDaemonClient,
+  } as FinishDeps & {
+    logs: string[];
+    warns: string[];
+    daemonClient: DaemonClientStub & Pick<CrewDaemonClient, 'baseUrl'>;
   };
 }
 
@@ -473,5 +519,67 @@ describe('runFinish happy path', () => {
     // Only the getIssue call happened — no getTransitions, no transition POST
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(deps.logs.some((l) => /already Done/i.test(l))).toBe(true);
+  });
+});
+
+describe('runFinish daemon round-trips', () => {
+  it('registers a finish run with the daemon after gates pass, and completes ok', async () => {
+    mockHappyPathExeca();
+    fetchMock.mockResolvedValueOnce(
+      ok({ key: 'KAN-23', fields: { status: { name: 'In Progress' } } }),
+    );
+    fetchMock.mockResolvedValueOnce(
+      ok({ transitions: [{ id: '31', name: 'Done', to: { name: 'Done' } }] }),
+    );
+    fetchMock.mockResolvedValueOnce(noContent());
+    mockedUnlink.mockResolvedValue(undefined);
+
+    const deps = makeDeps();
+    const result = await runFinish('KAN-23', deps);
+    expect(result.ok).toBe(true);
+
+    expect(deps.daemonClient.registerRun).toHaveBeenCalledTimes(1);
+    const reg = deps.daemonClient.registerRun.mock.calls[0]![0] as Record<string, unknown>;
+    expect(reg).toMatchObject({
+      key: 'KAN-23',
+      projectName: 'recipes-app',
+      branch: 'KAN-23',
+      command: 'finish',
+      worktreePath: '/home/u/Repos/Recipes-App-KAN-23',
+    });
+    expect(typeof reg.sessionId).toBe('string');
+    expect((reg.sessionId as string).startsWith('finish-KAN-23-')).toBe(true);
+
+    expect(deps.daemonClient.completeRun).toHaveBeenCalledTimes(1);
+    expect(deps.daemonClient.completeRun.mock.calls[0]![0]).toBe(7); // runId from stub
+    expect(deps.daemonClient.completeRun.mock.calls[0]![1]).toMatchObject({ exitCode: 0 });
+  });
+
+  it('does not register the daemon run when a refusal gate trips (no PR)', async () => {
+    mockedExeca.mockResolvedValueOnce({ stdout: '[]' } as never);
+    const deps = makeDeps();
+    const result = await runFinish('KAN-23', deps);
+
+    expect(result.ok).toBe(false);
+    expect(deps.daemonClient.registerRun).not.toHaveBeenCalled();
+    expect(deps.daemonClient.completeRun).not.toHaveBeenCalled();
+  });
+
+  it('continues + exits 0 when registerRun reports daemon unreachable', async () => {
+    mockHappyPathExeca();
+    fetchMock.mockResolvedValueOnce(ok({ key: 'KAN-23', fields: { status: { name: 'Done' } } }));
+    mockedUnlink.mockResolvedValue(undefined);
+
+    const daemonClient = makeDaemonClient({
+      registerResult: { ok: false, reason: 'connect_error' },
+    });
+    const deps = makeDeps({ daemonClient });
+    const result = await runFinish('KAN-23', deps);
+
+    expect(result.ok).toBe(true);
+    expect(daemonClient.registerRun).toHaveBeenCalledTimes(1);
+    // No runId to complete — completeRun must be skipped to avoid a stray
+    // 4xx against the daemon when it comes back up.
+    expect(daemonClient.completeRun).not.toHaveBeenCalled();
   });
 });

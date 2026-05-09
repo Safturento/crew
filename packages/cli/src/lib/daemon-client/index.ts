@@ -1,5 +1,7 @@
 import pc from 'picocolors';
 
+export type RunCommand = 'run' | 'fix-pr' | 'finish';
+
 export interface RegisterRunInput {
   key: string;
   projectName: string;
@@ -7,7 +9,7 @@ export interface RegisterRunInput {
   worktreePath: string;
   branch: string;
   sessionId: string;
-  command: 'run' | 'fix-pr';
+  command: RunCommand;
   startedAt: string;
 }
 
@@ -23,7 +25,7 @@ export interface RegisterRunSuccess {
   run: {
     id: number;
     agentKey: string;
-    command: 'run' | 'fix-pr';
+    command: RunCommand;
     sessionId: string;
     startedAt: string;
   };

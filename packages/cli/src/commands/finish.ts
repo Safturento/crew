@@ -1,14 +1,20 @@
 import { Command } from 'commander';
 import { execa } from 'execa';
+import { randomUUID } from 'node:crypto';
 import { readdir, stat, unlink } from 'node:fs/promises';
 import { resolve, basename, dirname, join, sep } from 'node:path';
 import pc from 'picocolors';
 import { discoverProjectConfig, JiraClient, type ProjectConfig } from '../lib/index.js';
+import {
+  crewDaemonClientFromEnv,
+  type CrewDaemonClient,
+} from '../lib/daemon-client/index.js';
 
 export interface FinishDeps {
   cwd: string;
   config: ProjectConfig;
   jiraSecrets: { email: string; token: string } | null;
+  daemonClient: CrewDaemonClient;
   log: (msg: string) => void;
   warn: (msg: string) => void;
 }
@@ -175,7 +181,7 @@ async function unlinkIfExists(
 }
 
 export async function runFinish(key: string, deps: FinishDeps): Promise<FinishResult> {
-  const { cwd, config, jiraSecrets, log, warn } = deps;
+  const { cwd, config, jiraSecrets, daemonClient, log, warn } = deps;
   const worktreePath = computeWorktreePath(config.repo_path, key);
 
   if (isInsideWorktree(cwd, worktreePath)) {
@@ -211,65 +217,102 @@ export async function runFinish(key: string, deps: FinishDeps): Promise<FinishRe
     }
   }
 
-  if (worktreeRegistered) {
+  // Past the refusal gates — register a finish run with the daemon. crew finish
+  // has no Claude transcript to tail, so the sessionId is synthetic; the
+  // daemon's ingest tail attach will no-op silently for the missing JSONL.
+  // A downed daemon returns ok:false; runId stays null and we skip the
+  // companion completeRun. CLI proceeds with local merge work either way.
+  const startedAt = new Date().toISOString();
+  const registration = await daemonClient.registerRun({
+    key,
+    projectName: config.name,
+    ticketTitle: '',
+    worktreePath,
+    branch: key,
+    sessionId: `finish-${key}-${randomUUID()}`,
+    command: 'finish',
+    startedAt,
+  });
+  const runId = registration.ok ? registration.run.id : null;
+
+  let exitCode = 0;
+  try {
+    if (worktreeRegistered) {
+      await step(
+        'docker compose down -v',
+        async () => {
+          await execa('docker', ['compose', 'down', '-v'], { cwd: worktreePath });
+        },
+        log,
+        warn,
+      );
+      await step(
+        `git worktree remove ${worktreePath}`,
+        async () => {
+          await execa('git', ['-C', config.repo_path, 'worktree', 'remove', worktreePath]);
+        },
+        log,
+        warn,
+      );
+    } else {
+      warn(`docker compose down -v: skipped (worktree ${worktreePath} not registered)`);
+      warn(`git worktree remove: skipped (${worktreePath} not registered)`);
+    }
+
     await step(
-      'docker compose down -v',
+      `git branch -D ${key}`,
       async () => {
-        await execa('docker', ['compose', 'down', '-v'], { cwd: worktreePath });
+        await execa('git', ['-C', config.repo_path, 'branch', '-D', key]);
       },
       log,
       warn,
     );
+
     await step(
-      `git worktree remove ${worktreePath}`,
+      `git push origin --delete ${key}`,
       async () => {
-        await execa('git', ['-C', config.repo_path, 'worktree', 'remove', worktreePath]);
+        await execa('git', ['-C', config.repo_path, 'push', 'origin', '--delete', key]);
       },
       log,
       warn,
     );
-  } else {
-    warn(`docker compose down -v: skipped (worktree ${worktreePath} not registered)`);
-    warn(`git worktree remove: skipped (${worktreePath} not registered)`);
-  }
 
-  await step(
-    `git branch -D ${key}`,
-    async () => {
-      await execa('git', ['-C', config.repo_path, 'branch', '-D', key]);
-    },
-    log,
-    warn,
-  );
-
-  await step(
-    `git push origin --delete ${key}`,
-    async () => {
-      await execa('git', ['-C', config.repo_path, 'push', 'origin', '--delete', key]);
-    },
-    log,
-    warn,
-  );
-
-  await step(
-    'git fetch --prune origin',
-    async () => {
-      await execa('git', ['-C', config.repo_path, 'fetch', '--prune', 'origin']);
-    },
-    log,
-    warn,
-  );
-
-  if (jiraSecrets) {
-    await transitionJira(key, config, jiraSecrets, log, warn);
-  } else {
-    warn(
-      'jira transition to Done: skipped (CREW_JIRA_EMAIL / CREW_JIRA_API_TOKEN not set). Transition manually.',
+    await step(
+      'git fetch --prune origin',
+      async () => {
+        await execa('git', ['-C', config.repo_path, 'fetch', '--prune', 'origin']);
+      },
+      log,
+      warn,
     );
+
+    if (jiraSecrets) {
+      await transitionJira(key, config, jiraSecrets, log, warn);
+    } else {
+      warn(
+        'jira transition to Done: skipped (CREW_JIRA_EMAIL / CREW_JIRA_API_TOKEN not set). Transition manually.',
+      );
+    }
+
+    await unlinkIfExists(`/tmp/crew-run-${key}.log`, log, warn);
+    await unlinkIfExists(`/tmp/crew-fix-pr-${key}.log`, log, warn);
+  } catch (err) {
+    exitCode = 1;
+    if (runId !== null) {
+      await daemonClient.completeRun(runId, {
+        exitCode,
+        completedAt: new Date().toISOString(),
+      });
+    }
+    throw err;
   }
 
-  await unlinkIfExists(`/tmp/crew-run-${key}.log`, log, warn);
-  await unlinkIfExists(`/tmp/crew-fix-pr-${key}.log`, log, warn);
+  if (runId !== null) {
+    await daemonClient.completeRun(runId, {
+      exitCode,
+      completedAt: new Date().toISOString(),
+    });
+  }
 
   return { ok: true };
 }
@@ -296,6 +339,7 @@ export const finishCommand = new Command('finish')
         cwd,
         config,
         jiraSecrets: readJiraSecrets(process.env),
+        daemonClient: crewDaemonClientFromEnv(process.env),
         log: (msg) => console.log(pc.green('✓'), msg),
         warn: (msg) => console.log(pc.yellow('!'), msg),
       });

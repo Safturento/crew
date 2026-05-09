@@ -1,0 +1,42 @@
+meta {
+  name: POST /api/agents/runs (command: finish)
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{baseUrl}}/api/agents/runs
+  body: json
+}
+
+body:json {
+  {
+    "key": "BRUNO-FIN-1",
+    "projectName": "bruno-smoke",
+    "ticketTitle": "Bruno smoke finish run",
+    "worktreePath": "/tmp/bruno-smoke-worktree-fin",
+    "branch": "BRUNO-FIN-1",
+    "sessionId": "{{$randomUUID}}",
+    "command": "finish",
+    "startedAt": "2026-04-29T12:00:00Z"
+  }
+}
+
+assert {
+  res.status: eq 201
+  res.body.run.command: eq finish
+  res.body.run.id: isNumber
+}
+
+tests {
+  test("finish is a valid command on register-run", () => {
+    expect(res.body.run.command).to.equal("finish");
+    expect(res.body.run.sessionId).to.be.a("string");
+  });
+}
+
+docs {
+  Reference card for the `command: "finish"` variant added in CREW-101.
+  `crew finish` calls registerRun + completeRun around its local merge logic
+  so the dashboard can refresh the agent via the run.completed event.
+}
