@@ -7,6 +7,9 @@ Format: see the user-level `~/.claude/CLAUDE.md` "Followup detection" section.
 ## Contents
 
 - [Active](#active)
+  - [2026-05-08 — Tool-name filtering in the timeline Filters dropdown](#2026-05-08--tool-name-filtering-in-the-timeline-filters-dropdown)
+  - [2026-05-08 — Slice 1c shipped without citing the design hand-off (visual drift)](#2026-05-08--slice-1c-shipped-without-citing-the-design-hand-off-visual-drift)
+  - [2026-05-08 — Surface `crew finish` step results in the dashboard](#2026-05-08--surface-crew-finish-step-results-in-the-dashboard)
   - [2026-05-08 — Wire `StateHistoryBar` and `TokenTable` into `AgentBody` alongside the timeline](#2026-05-08--wire-statehistorybar-and-tokentable-into-agentbody-alongside-the-timeline)
   - [2026-05-07 — Port allocator detects collisions only at `docker compose up` time, not at allocation time](#2026-05-07--port-allocator-detects-collisions-only-at-docker-compose-up-time-not-at-allocation-time)
   - [2026-05-05 — Per-ticket model selection (use Sonnet for trivial work to save tokens)](#2026-05-05--per-ticket-model-selection-use-sonnet-for-trivial-work-to-save-tokens)
@@ -55,7 +58,97 @@ Format: see the user-level `~/.claude/CLAUDE.md` "Followup detection" section.
 
 ## Active
 
+### 2026-05-08 — Tool-name filtering in the timeline Filters dropdown
+
+**What:** Today's drawer timeline lets users filter by event *type* (Tool calls / Assistant prose / Thinking / System / Hooks & skills / Other). It doesn't let them filter by *tool name* (Bash / Read / Grep / Edit / etc.). Once a long-running agent racks up 800+ tool calls, "show me only the Bash invocations" becomes a useful triage gesture. Add a tool-name section inside the Filters dropdown built by CREW-118.
+
+**Why noticed:** 2026-05-08 triage of the chip→dropdown redesign. We agreed to keep the initial dropdown scoped to event-type filtering only — tool-name filtering has its own UX problems (long, dynamic list of tools per agent; needs ordering / search inside the popover; user might want to filter by "fewest" vs "most" used) that deserve a designer pass of their own. Captured here so it doesn't evaporate.
+
+**Anchors:**
+
+- [CREW-118](https://safturento.atlassian.net/browse/CREW-118) — the dropdown ticket this would extend
+- `docs/designs/design_handoff_crew_dashboard/` — design hand-off; would need an additional update for this layer
+- `packages/dashboard/src/components/FilterChips.tsx` (today) / Filters dropdown (post-CREW-118) — host component
+- The set of tool names is dynamic (varies per-agent based on what the agent actually invoked) — needs to read from the timeline event stream rather than a hardcoded list
+
+**What's been considered:**
+
+- **Sub-section in the same dropdown.** Type checkboxes on top, tool-name checkboxes below, separated by a divider. Densifies the popover but keeps everything in one place. Risk: long tool lists (12+ entries on a busy agent) make the popover scroll.
+- **Separate "Tools" dropdown.** Two buttons in the row: `[Filters ▾]  [Tools ▾]`. Cleaner per-section UX, but eats more horizontal space — fights the original motivation for consolidating the chip row.
+- **Search-inside-the-popover.** Type checkboxes always visible at top; tool-name section below with a small filter input that narrows the visible checkboxes. Scales to long lists.
+
+Lean toward search-inside-popover when this iteration ships. Worth re-asking the designer at design time.
+
+**Shape of work:** One ticket, dependent on CREW-118 landing first. Designer hand-off update for the new section, then implementation extends the dropdown's checkbox model with a tool-name list source (derived from the agent's timeline events). Persistence shape extends the same localStorage key.
+
+**Open questions:**
+
+- Should tool-name filters compose with type filters (AND), or be an alternative axis (OR)? Probably AND — `Filters {Tool calls} ∩ Tools {Bash}` reads as "only Bash tool-call cards." User can verify when it lands.
+- Are there tool aliases worth normalizing (e.g. `mcp__atlassian__jira_get_issue` → `Jira: get_issue`)? Or do we surface raw tool names? Raw is simplest; readability worsens.
+- Does the count next to each tool name want to be live-updating as new events stream in, or fixed at popover-open time? Fixed is much cheaper — recompute on each open.
+
+### 2026-05-08 — Slice 1c shipped without citing the design hand-off (visual drift)
+
+**What:** Slice 1c (CREW-94) shipped without citing the visual hand-off at `docs/designs/design_handoff_crew_dashboard/`. The dashboard *foundation* plan (CREW-15-era) had correctly established the convention — README.md is the visual contract, `source/*.jsx` is reference-only and not for verbatim copy — but the slice-1c spec, plan, and per-component tickets (CREW-104, CREW-105, CREW-106, CREW-109) made no reference to either. Result: TokenTable + StateHistoryBar built but unmounted, Timeline rendered as a flat tool-call list rather than the state-segment-grouped event cards the hand-off specifies, and the drawer header used a different information layout than the design. CREW-117 is the fidelity-sweep ticket closing the gap; this followup preserves the lesson so the next planner sees it before authoring the next slice.
+
+**Why noticed:** 2026-05-08 conversation comparing live dashboard screenshots against the claude.ai/design output that informed the hand-off folder. User's framing: "the implementation is way off from the design spec visually... maybe we didn't include the design spec as a part of the planning in a rigorous enough way." A grep across the slice-1c spec/plan/tickets confirmed zero references to `design_handoff_crew_dashboard/` — the visual contract was never in scope.
+
+**Anchors:**
+
+- `docs/designs/design_handoff_crew_dashboard/README.md` — visual contract that was overlooked
+- `docs/designs/design_handoff_crew_dashboard/source/agent-drawer.jsx` — reference implementation
+- `docs/superpowers/specs/2026-05-05-slice-1c-agent-drawer-and-push-updates-design.md` — slice spec (zero hand-off references)
+- `docs/superpowers/plans/2026-05-05-slice-1c-agent-drawer-and-push-updates.md` — slice plan (zero hand-off references)
+- `docs/superpowers/plans/2026-04-26-dashboard-foundation-and-agents-list.md` — foundation plan that DID cite the hand-off correctly (the convention to mirror)
+- [CREW-117](https://safturento.atlassian.net/browse/CREW-117) — fidelity-sweep ticket
+- `~/.claude/conventions/documentation.md` — user-level convention updated 2026-05-08 to require hand-off citations
+
+**What's been considered:** The lesson translates into two complementary actions, both happening alongside CREW-117:
+
+- **Convention update** at `~/.claude/conventions/documentation.md` — when a `docs/designs/<topic>/` folder exists with a README + reference source, plans for surfaces it covers MUST cite it inline; per-component implementation tickets MUST link to the relevant section. Reference source is "ground truth, not verbatim."
+- **Project followup** (this entry) — captures the project-scoped record of where the drift happened, which slices/tickets contained the gap, and what was done about it. The convention update prevents recurrence generically; this followup is the recoverable record for crew specifically.
+
+**Shape of work:** No code work — process artifact. The convention update lands at user level; this followup is the project-scoped index entry. Resolution gated on CREW-117 landing AND the convention edit being durable in `~/.claude/conventions/documentation.md`.
+
+**Open questions:**
+
+- Does the design hand-off itself need a refresh? The README is dated 2026-04-26; data-model details (e.g. state names, runs schema, attention semantics) may have drifted relative to the dashboard's current shape. Worth a quick audit when CREW-117 starts so the implementer doesn't faithfully replicate something stale.
+- Should the convention also require generic spec→plan→ticket citation chains? Probably overkill — the hand-off case is specific because it's a *visual contract* that's easy to silently miss in textual specs; other cross-doc citations are already covered by existing planning skills.
+
+### 2026-05-08 — Surface `crew finish` step results in the dashboard
+
+**What:** `crew finish` from the CLI prints a structured checklist as it runs — `step()` (`packages/cli/src/commands/finish.ts:120-132`) wraps each cleanup operation (docker compose down, worktree remove, branch delete, fetch prune, jira transition, /tmp log cleanup) and emits a green ✓ on success or yellow ! on skip/warn. None of this flows to the daemon. Once finish lands, the dashboard's only signal is the agent's terminal state — there's no record of which steps succeeded, which were skipped (e.g. "worktree not registered"), or what failed and why. The drawer should expose a per-step checklist with the same success/skip/error semantics, so the dashboard is sufficient for reviewing a finish run end-to-end without falling back to terminal scrollback.
+
+**Why noticed:** 2026-05-08 conversation triaging finish-related bugs in CREW-94. While walking through the comment "finish runs have no transcript by design" (see CREW-116's root cause #3), the user pointed out that finish *does* have an observable surface — the CLI's structured output — it just isn't piped through the daemon. Pairs with CREW-116: that ticket fixes "the finished state shows up correctly," this followup is "the finish step *results* show up correctly, including any errors."
+
+**Anchors:**
+
+- `packages/cli/src/commands/finish.ts:120-132` — `step()` helper, the natural emit point for per-step events
+- `packages/cli/src/commands/finish.ts:226-235, 301-315` — current daemon parity (registerRun + completeRun only)
+- `packages/daemon/src/services/EventBus.ts` — natural place to publish per-step events on the SSE firehose
+- `packages/dashboard/src/components/AgentBody.tsx` — where step results would render in the drawer
+- `packages/shared/src/transcripts/` — schema would land here if finish steps are modeled as a new event type
+- [CREW-116](https://safturento.atlassian.net/browse/CREW-116) — prerequisite bug-fix ticket (finish runs need to be correctly modeled in state derivation before adding more surface to them)
+
+**What's been considered:**
+
+- **Per-step SSE events.** New `finish-step` event type in `crew-shared` with `{ runId, step, status, message? }`. CLI emits via the existing daemon HTTP client (new `daemonClient.recordFinishStep(runId, ...)` method); daemon publishes to EventBus → dashboard subscribes via slice-1c's `CrewEventStream`. Live-updating checklist as finish runs. Most consistent with the rest of slice 1c.
+- **Per-step rows in a new `finish_steps` table.** CLI POSTs each step result to a new endpoint; daemon writes a row; drawer queries at open time. Simpler — no new event type, no SSE work. Doesn't stream live, but finish completes in tens of seconds so this is probably acceptable.
+- **Bundled completion payload.** CLI accumulates results, sends all at once when calling `completeRun`. Cheapest. Live-progress experience is lost; if finish hangs mid-step (e.g. `git push origin --delete` waits on auth), the dashboard sees nothing until completion or timeout.
+
+The SSE shape feels right — it matches slice 1c's "live updates" feel and gives the user real-time visibility into a process that *can* fail mid-way (auth hangs, jira 403s, docker daemon errors).
+
+**Shape of work:** One ticket, depends on CREW-116 so finish runs are correctly modeled before adding more surface. Author the new event type in `crew-shared`, add a daemon endpoint for per-step submission (or extend the existing run-update endpoint), emit from `finish.ts`'s `step()` helper, render in the drawer alongside (or above) the timeline. Producer/consumer are tightly coupled, so single ticket.
+
+**Open questions:**
+
+- Drawer layout: inline (between StateHistoryBar and Timeline) vs dedicated panel? Inline matches "everything important in the drawer's central column"; finish has at most ~6 steps so length isn't a problem.
+- Pre-existing finish runs in the DB will have no step data. Backfill is impossible (the CLI output is gone). Drawer should render nothing rather than an empty state.
+- Distinguish skip vs error in the schema. The CLI uses `warn()` for both ("worktree not registered" = benign skip; "docker compose down: connection refused" = error). The daemon-side schema should have three states (success/skip/error) even though the CLI today only emits two — lets the producer side tighten up later without a schema migration.
+
 ### 2026-05-08 — Wire `StateHistoryBar` and `TokenTable` into `AgentBody` alongside the timeline
+
+**Ticket:** [CREW-117](https://safturento.atlassian.net/browse/CREW-117) — subsumed into the broader drawer visual-fidelity sweep; resolution gated on that PR landing.
 
 **What:** CREW-109 wired `<Timeline>` into `packages/dashboard/src/components/AgentBody.tsx` (replacing the `agent-body-placeholder` div) so the e2e timeline scenarios could pass. The original placeholder copy promised "Timeline, state history, and token table" — the latter two (`<StateHistoryBar>`, `<TokenTable>`) ship in CREW-104 but are still unmounted. The drawer is functional today, but the spec §5a/§5b composition isn't complete.
 
