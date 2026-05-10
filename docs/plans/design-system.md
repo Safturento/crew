@@ -1,6 +1,6 @@
 ---
 core_library_url: 'https://www.figma.com/design/UkPJj6vd7HMKcey7M0XF4N/Core-Design-System'
-project_library_url: '<TBD: filled in by CREW-124>'
+project_library_url: 'https://www.figma.com/design/DsA7QuEa2WthDATkksd1Bq/Crew-Design-System'
 screens_file_url: 'https://www.figma.com/design/9FeJPriqdsdA4n9R5Xsrr8/Untitled'
 handoff_doc_root: 'docs/designs'
 sync_command: '<TBD: filled in by Phase 5 reconciliation tooling>'
@@ -24,7 +24,7 @@ Project-specific config for the `design-with-figma` skill (lives at `~/.claude/s
 | Phase 1 — Core library                          | Agent work complete (CREW-121); user must publish in Figma desktop |
 | Phase 2 code — shadcn install + token migration | In progress (CREW-122)                                             |
 | Phase 2 code — add primitives                   | Not started (CREW-123)                                             |
-| Phase 2 Figma — Crew DS override layer          | Not started (CREW-124)                                             |
+| Phase 2 Figma — Crew DS override layer          | Agent work complete (CREW-124); user must publish in Figma desktop |
 | Phase 2 — Code Connect                          | Not started (CREW-125)                                             |
 | Phase 3 — Migrate screens                       | Not started (CREW-126)                                             |
 | Phase 4 — Full Crew DS coverage                 | Not started (separate Epic)                                        |
@@ -111,9 +111,47 @@ The Figma desktop client is required to publish a library — the Plugin API exp
 
 After publish, downstream tickets unblock: `CREW-124` (Crew DS Figma file) imports Core, and Crew screens (`CREW-126`) eventually consume Crew DS.
 
+## Crew DS structure
+
+Crew Design System lives at `project_library_url` and is a thin override layer over Core. It currently consists of one variable collection and zero components — composites (AgentRow, ProjectSection, etc.) are added incrementally during Phase 4 fidelity tickets.
+
+### `Crew / Semantic Colors` collection
+
+Mirrors every variable in Core's `mode` collection 1:1. Each Crew variable shares its name with the Core token, declares the same type and explicit scopes Core uses, and aliases the Core token in both `light mode` and `dark mode`. Mode toggles in consuming files cascade through Crew → Core's `mode` → the underlying `tw/colors` (or `tw/border-radius`, `tw/border-width`, `tw/stroke-width`) primitive.
+
+Naming caveat: the collection is named `Crew / Semantic Colors` per the Phase 2 plan, but it actually mirrors all 48 Core `mode` tokens — 36 COLOR plus 12 FLOAT (10 radii + `border-width` + `stroke-width`). The FLOATs are included so the entire Core `mode` surface is overridable from a single Crew location, satisfying the "every Core mode token has an alias" definition of done. Future cleanup may rename the collection to drop the `Colors` qualifier.
+
+| Type  | Count | Names                                                                                                                                                                                                                                                                                                  | Scopes                                                                |
+| ----- | ----: | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------|
+| COLOR |    36 | `background`, `foreground`, `card`, `card-foreground`, `popover`, `popover-foreground`, `primary`, `primary-foreground`, `secondary`, `secondary-foreground`, `muted`, `muted-foreground`, `accent`, `accent-foreground`, `destructive`, `destructive-foreground`, `border`, `input`, `ring`, `chart-1`…`chart-5`, `sidebar`, `sidebar-foreground`, `sidebar-primary`, `sidebar-primary-foreground`, `sidebar-accent`, `sidebar-accent-foreground`, `sidebar-border`, `sidebar-ring`, `background-color`, `semantic-background`, `semantic-border`, `semantic-foreground` | `FRAME_FILL`, `SHAPE_FILL`, `TEXT_FILL`, `STROKE_COLOR`, `EFFECT_COLOR` |
+| FLOAT |    10 | `radius-none`, `radius-xs`, `radius-sm`, `radius-md`, `radius-lg`, `radius-xl`, `radius-2xl`, `radius-3xl`, `radius-4xl`, `radius-full`                                                                                                                                                                | `CORNER_RADIUS`                                                       |
+| FLOAT |     2 | `stroke-width`, `border-width`                                                                                                                                                                                                                                                                         | `STROKE_FLOAT`                                                        |
+
+Total: **48 variables across 1 collection**, no `ALL_SCOPES` defaults.
+
+### v1 overrides
+
+None for v1. The dashboard's existing dark slate aesthetic matches Core's shadcn-default `mode/dark mode` values closely enough that a delta layer isn't needed yet. All Crew aliases pass straight through to Core. Future Crew brand work re-points specific aliases (e.g. swap `Crew/primary` from Core's `mode/primary` to a `tw/colors / blue/500`) without touching consumer files.
+
+### Mode resolution
+
+Consumer files (Crew Dashboard Screens) bind to Crew's tokens. Mode resolution chains `Crew / Semantic Colors → Core / mode → Core / tw/colors`. Because the chain crosses two collections, consumer frames must set the mode on **both** Crew and Core for theming to track end-to-end — Phase 3 (CREW-126) will document and standardize this.
+
 ## Component inventory
 
 (Populated as Phase 2-3 lands. Each Crew DS component will be listed with its Figma node ID for ticket cross-references.)
+
+## User-only finalization step (Task 2.15)
+
+The Figma desktop client is required to publish a library — the Plugin API exposes no equivalent. To complete CREW-124 acceptance:
+
+1. Open the new `Crew Design System` file in Figma desktop (URL in `project_library_url`).
+2. The file was created in the team's Drafts via `create_new_file`. Move it into the team's `Design Systems` project (right-click in file browser → Move to project) so it sits alongside Core.
+3. With Core published already (CREW-121), Crew DS already has Core's variables imported by key — Assets → Libraries should show Core listed as a dependency. If it isn't shown, enable it manually.
+4. Click the Assets panel → Publish library button (top-right of the panel). Confirm the publish review (`Crew / Semantic Colors`, 48 variables, no components yet).
+5. Once the modal reports success, mark CREW-124 Done.
+
+After publish, downstream work unblocks: `CREW-125` (Code Connect mappings) needs Crew DS components later, and `CREW-126` (screen migration) consumes Crew DS variables.
 
 ## Conventions
 
