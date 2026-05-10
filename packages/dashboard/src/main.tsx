@@ -13,6 +13,8 @@ import './index.css';
 import { App } from './App';
 import { eventStream } from './data/eventStream.js';
 
+document.documentElement.classList.add('dark');
+
 const rootEl = document.getElementById('root');
 if (!rootEl) throw new Error('Missing #root element in index.html');
 

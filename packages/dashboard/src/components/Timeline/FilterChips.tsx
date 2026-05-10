@@ -30,8 +30,8 @@ export function FilterChips({ visible, onChange }: FilterChipsProps) {
             className={[
               'inline-flex h-[22px] items-center rounded-full border px-2 font-mono text-[11px] leading-none whitespace-nowrap transition-opacity hover:opacity-80',
               isOn
-                ? 'border-white/30 bg-white/10 text-text-1'
-                : 'border-white/10 bg-transparent text-text-3',
+                ? 'border-white/30 bg-white/10 text-foreground'
+                : 'border-white/10 bg-transparent text-muted-foreground',
             ].join(' ')}
           >
             {g.label}

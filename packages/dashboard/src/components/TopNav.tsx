@@ -13,15 +13,13 @@ interface TopNavProps {
 
 export function TopNav({ route, attentionCount, onClearAttention, onNewRun }: TopNavProps) {
   const agentsActive =
-    route.kind === 'agents-list' ||
-    route.kind === 'agent-drawer' ||
-    route.kind === 'agent-full';
+    route.kind === 'agents-list' || route.kind === 'agent-drawer' || route.kind === 'agent-full';
   const projectsActive = route.kind === 'projects';
 
   return (
-    <header className="flex items-center justify-between gap-4 border-b border-white/10 bg-surface px-5 py-3">
+    <header className="flex items-center justify-between gap-4 border-b border-white/10 bg-card px-5 py-3">
       <div className="flex items-center gap-6">
-        <a href="#/" className="flex items-center gap-2 text-text">
+        <a href="#/" className="flex items-center gap-2 text-foreground">
           <BrandMark className="h-[22px] w-[22px] text-state-running" />
           <span className="hidden text-sm font-semibold tracking-tight sm:inline">crew</span>
         </a>
@@ -39,7 +37,7 @@ export function TopNav({ route, attentionCount, onClearAttention, onNewRun }: To
           type="button"
           onClick={onClearAttention}
           disabled={attentionCount === 0}
-          className="flex items-center gap-2 rounded-md border border-white/10 px-3 py-1.5 text-xs text-text-2 hover:bg-surface-2 disabled:cursor-not-allowed disabled:opacity-40"
+          className="flex items-center gap-2 rounded-md border border-white/10 px-3 py-1.5 text-xs text-muted-foreground hover:bg-popover disabled:cursor-not-allowed disabled:opacity-40"
         >
           Clear attention
           {attentionCount > 0 && (
@@ -51,7 +49,7 @@ export function TopNav({ route, attentionCount, onClearAttention, onNewRun }: To
         <button
           type="button"
           onClick={onNewRun}
-          className="flex items-center gap-1.5 rounded-md bg-text px-3 py-1.5 text-xs font-semibold text-canvas hover:opacity-90"
+          className="flex items-center gap-1.5 rounded-md bg-foreground px-3 py-1.5 text-xs font-semibold text-background hover:opacity-90"
         >
           <Plus className="h-3.5 w-3.5" aria-hidden /> New Run
         </button>
@@ -75,7 +73,7 @@ function NavTab({
       aria-current={active ? 'page' : undefined}
       className={[
         'rounded-md px-3 py-1.5 text-xs font-medium transition-colors',
-        active ? 'bg-surface-2 text-text' : 'text-text-2 hover:text-text',
+        active ? 'bg-popover text-foreground' : 'text-muted-foreground hover:text-foreground',
       ].join(' ')}
     >
       {children}

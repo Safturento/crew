@@ -16,7 +16,7 @@ interface AgentRowProps {
 const ACTIVE_STATES = new Set<AgentState>(['running', 'initializing']);
 
 const agentRow = cva(
-  'group relative grid cursor-pointer items-center gap-4 rounded-[10px] border bg-surface px-4 py-3 transition-colors hover:bg-surface-2 grid-cols-[100px_90px_1fr_90px_70px_auto]',
+  'group relative grid cursor-pointer items-center gap-4 rounded-[10px] border bg-card px-4 py-3 transition-colors hover:bg-popover grid-cols-[100px_90px_1fr_90px_70px_auto]',
   {
     variants: {
       state: {
@@ -36,7 +36,7 @@ const quickActionButton = cva('rounded-md border px-3 py-1.5 text-xs font-medium
   variants: {
     variant: {
       primary: 'border-white/10 bg-state-waiting text-slate-950 hover:opacity-90',
-      secondary: 'border-white/10 text-text hover:bg-surface-2',
+      secondary: 'border-white/10 text-foreground hover:bg-popover',
     },
   },
   defaultVariants: { variant: 'secondary' },
@@ -91,10 +91,12 @@ export function AgentRow({ agent, onSelect }: AgentRowProps) {
         />
       )}
       <StateBadge state={agent.state} />
-      <span className="font-mono text-xs text-text-2">{agent.key}</span>
-      <span className="truncate text-[13.5px] text-text">{agent.ticketTitle}</span>
-      <span className="text-right font-mono text-xs tabular-nums text-text-2">{runtime}</span>
-      <span className="text-right font-mono text-xs tabular-nums text-text-2">
+      <span className="font-mono text-xs text-muted-foreground">{agent.key}</span>
+      <span className="truncate text-[13.5px] text-foreground">{agent.ticketTitle}</span>
+      <span className="text-right font-mono text-xs tabular-nums text-muted-foreground">
+        {runtime}
+      </span>
+      <span className="text-right font-mono text-xs tabular-nums text-muted-foreground">
         {formatTokens(agent.tokens)}
       </span>
       <QuickAction agent={agent} />
