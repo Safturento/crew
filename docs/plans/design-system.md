@@ -19,16 +19,16 @@ Project-specific config for the `design-with-figma` skill (lives at `~/.claude/s
 
 ## Status
 
-| Phase                                           | Status                      |
-| ----------------------------------------------- | --------------------------- |
-| Phase 1 — Core library                          | In progress (CREW-121)      |
-| Phase 2 code — shadcn install + token migration | In progress (CREW-122)      |
-| Phase 2 code — add primitives                   | Not started (CREW-123)      |
-| Phase 2 Figma — Crew DS override layer          | Not started (CREW-124)      |
-| Phase 2 — Code Connect                          | Not started (CREW-125)      |
-| Phase 3 — Migrate screens                       | Not started (CREW-126)      |
-| Phase 4 — Full Crew DS coverage                 | Not started (separate Epic) |
-| Phase 5 — Skill v1 + reconciliation tooling     | Not started (separate Epic) |
+| Phase                                           | Status                                                              |
+| ----------------------------------------------- | ------------------------------------------------------------------- |
+| Phase 1 — Core library                          | Agent work complete (CREW-121); user must publish in Figma desktop  |
+| Phase 2 code — shadcn install + token migration | In progress (CREW-122)                                              |
+| Phase 2 code — add primitives                   | Not started (CREW-123)                                              |
+| Phase 2 Figma — Crew DS override layer          | Not started (CREW-124)                                              |
+| Phase 2 — Code Connect                          | Not started (CREW-125)                                              |
+| Phase 3 — Migrate screens                       | Not started (CREW-126)                                              |
+| Phase 4 — Full Crew DS coverage                 | Not started (separate Epic)                                         |
+| Phase 5 — Skill v1 + reconciliation tooling     | Not started (separate Epic)                                         |
 
 ## shadcn CLI version
 
@@ -47,6 +47,68 @@ Pinned to **`shadcn@4.7.0`** (latest stable on 2026-05-09). The 4.x line ships w
 ## Core kit fork point
 
 Forked from the Figma community file `UkPJj6vd7HMKcey7M0XF4N` ("shadcn ui components with variables — Tailwind classes — Updated January 2026") on 2026-05-09. The community file is the source of upstream changes; we don't auto-track. Periodically (every ~6 months) check the upstream community file for meaningful additions (new shadcn primitives, lucide updates) worth manually porting.
+
+## Core kit notes
+
+The kit ships a `tokens` variable collection with 89 raw-numeric variables (`-0,8`, `0,4`, `640`, `1,25`, etc.). These are the kit's component-internal helpers — they are not semantically meaningful design tokens, and their `[]` empty scopes already keep them out of most Figma property pickers. Designers should ignore the `tokens` collection; pick from `tw/*` (primitives), `mode` (semantic light/dark aliases), or the new `Core / Breakpoints` collection instead.
+
+The kit was forked at the upstream community version `Updated January 2026`. We don't auto-track upstream — see `core_kit_origin` in the frontmatter for the source URL and re-evaluate every ~6 months.
+
+## Core library inventory
+
+Captured 2026-05-09 from CREW-121 agent run. All 17 collections have explicit per-variable scopes (no `ALL_SCOPES` defaults).
+
+| Collection | Modes | Variables | Types | Scopes applied |
+|---|---|---:|---|---|
+| `tw/colors` | Mode 1 | 244 | COLOR | `EFFECT_COLOR`, `FRAME_FILL`, `SHAPE_FILL`, `STROKE_COLOR`, `TEXT_FILL` |
+| `tw/padding` | Mode 1 | 245 | FLOAT | `GAP`, `WIDTH_HEIGHT` |
+| `tw/space` | Mode 1 | 68 | FLOAT | `GAP`, `WIDTH_HEIGHT` |
+| `tw/border-radius` | Mode 1 | 149 | FLOAT | `CORNER_RADIUS` |
+| `tw/margin` | Mode 1 | 245 | FLOAT | `GAP`, `WIDTH_HEIGHT` |
+| `tokens` | Mode 1 | 89 | FLOAT | (left empty — kit internals; see Core kit notes) |
+| `mode` | light mode, dark mode | 48 | 36 COLOR + 12 FLOAT | color vars: full color scopes; `radius-*` → `CORNER_RADIUS`; `border-width` / `stroke-width` → `STROKE_FLOAT` |
+| `tw/border-width` | Mode 1 | 45 | FLOAT | `STROKE_FLOAT` |
+| `tw/gap` | Mode 1 | 102 | FLOAT | `GAP`, `WIDTH_HEIGHT` |
+| `tw/stroke-width` | Mode 1 | 11 | FLOAT | `STROKE_FLOAT` |
+| `tw/font` | Mode 1 | 47 | 6 STRING + 41 FLOAT | per-variable: `family/*` → `FONT_FAMILY`; `style/*` → `FONT_STYLE`; `size/*` → `FONT_SIZE`; `weight/*` → `FONT_WEIGHT`; `leading/line-height` → `LINE_HEIGHT`; `tracking/letter-spacing` → `LETTER_SPACING` |
+| `tw/height` | Mode 1 | 24 | FLOAT | `WIDTH_HEIGHT` |
+| `tw/max-height` | Mode 1 | 35 | FLOAT | `WIDTH_HEIGHT` |
+| `tw/max-width` | Mode 1 | 51 | FLOAT | `WIDTH_HEIGHT` |
+| `rdx/colors` | light mode, dark mode | 396 | COLOR | full color scopes |
+| `tw/opacity` | Mode 1 | 21 | FLOAT | `OPACITY` |
+| `Core / Breakpoints` (new in CREW-121) | Mode 1 | 5 | FLOAT | `WIDTH_HEIGHT` |
+
+Total: **1,825 variables across 17 collections.**
+
+### Phase 1 deltas vs upstream kit
+
+- **Variable scopes retrofitted.** Upstream kit defaulted color collections (`tw/colors`, `mode`, `rdx/colors`) to `["ALL_SCOPES"]`, which floods every Figma property picker. CREW-121 walks every variable and sets explicit scopes per type. Other `tw/*` collections already had reasonable scopes from upstream and were left consistent.
+- **`mode / destructive-foreground` added.** Upstream `mode` collection had `destructive` but was missing the matching `destructive-foreground` semantic token (shadcn convention requires both). Added as a COLOR variable in `mode`, aliased to `tw/colors / slate/50` in both light and dark modes (light text on red works in both). Scopes: full color set.
+- **`Core / Breakpoints` collection added.** New collection holding 5 FLOAT variables aliasing the kit's raw breakpoint numerics in `tokens` to semantic names: `breakpoint/sm` → `tokens / 640`, `breakpoint/md` → `tokens / 768`, `breakpoint/lg` → `tokens / 1024`, `breakpoint/xl` → `tokens / 1280`, `breakpoint/2xl` → `tokens / 1536`. Scopes: `["WIDTH_HEIGHT"]`. Use these instead of digging into `tokens` for responsive breakpoint values.
+- **Layout primitives added.** Three components on a new `Layout Primitives` page; details below.
+
+### Layout primitives (new in CREW-121)
+
+The kit doesn't ship with layout primitives. Three project-agnostic components were added to a new `Layout Primitives` page:
+
+| Component | Page node id | Auto-layout | Default spacing binding |
+|---|---|---|---|
+| `Stack` | `3016:3` | Vertical, hug width + height | `itemSpacing` → `tw/gap / gap-4` (16px) |
+| `Cluster` | `3016:10` | Horizontal, wrap on overflow | `itemSpacing` + `counterAxisSpacing` → `tw/gap / gap-4` |
+| `Container` | `3016:21` | Vertical, max-width-constrained, centered | `maxWidth` → `tw/max-width / max-w-7xl` (1280px) |
+
+Override the bound variable on an instance to switch to a different `tw/gap` or `tw/max-width` value.
+
+## User-only finalization step (Task 1.7)
+
+The Figma desktop client is required to publish a library — the Plugin API exposes no equivalent. To complete CREW-121 acceptance:
+
+1. Open `Core Design System` in the Figma desktop app.
+2. Click the Assets panel (left sidebar) → Publish library button (top-right of the panel).
+3. Confirm the publish review (reviews all collections + components added/changed by this ticket).
+4. Once the modal reports success, mark CREW-121 Done.
+
+After publish, downstream tickets unblock: `CREW-124` (Crew DS Figma file) imports Core, and Crew screens (`CREW-126`) eventually consume Crew DS.
 
 ## Component inventory
 
