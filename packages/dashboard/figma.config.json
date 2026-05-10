@@ -1,0 +1,13 @@
+{
+  "$schema": "https://www.figma.com/code-connect/schema.json",
+  "codeConnect": {
+    "include": ["src/components/ui/**/*.figma.tsx"],
+    "parser": "react",
+    "importPaths": {
+      "src/*": "@/*"
+    },
+    "paths": {
+      "@/*": ["src/*"]
+    }
+  }
+}

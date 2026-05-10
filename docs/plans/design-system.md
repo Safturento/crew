@@ -19,16 +19,16 @@ Project-specific config for the `design-with-figma` skill (lives at `~/.claude/s
 
 ## Status
 
-| Phase                                           | Status                                                             |
-| ----------------------------------------------- | ------------------------------------------------------------------ |
-| Phase 1 — Core library                          | Agent work complete (CREW-121); user must publish in Figma desktop |
-| Phase 2 code — shadcn install + token migration | In progress (CREW-122)                                             |
-| Phase 2 code — add primitives                   | Not started (CREW-123)                                             |
-| Phase 2 Figma — Crew DS override layer          | Agent work complete (CREW-124); user must publish in Figma desktop |
+| Phase                                           | Status                                                                                                                          |
+| ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| Phase 1 — Core library                          | Agent work complete (CREW-121); user must publish in Figma desktop                                                              |
+| Phase 2 code — shadcn install + token migration | Done (CREW-122)                                                                                                                 |
+| Phase 2 code — add primitives                   | Done (CREW-123)                                                                                                                 |
+| Phase 2 Figma — Crew DS override layer          | Agent work complete (CREW-124); user must publish in Figma desktop                                                              |
 | Phase 2 — Code Connect                          | `.figma.tsx` mapping files landed in CREW-125; `figma connect publish` intentionally skipped (see Code Connect publish section) |
-| Phase 3 — Migrate screens                       | Partial: font fix landed in CREW-126; color binding + composite swap deferred (see followups) |
-| Phase 4 — Full Crew DS coverage                 | Not started (separate Epic)                                        |
-| Phase 5 — Skill v1 + reconciliation tooling     | Not started (separate Epic)                                        |
+| Phase 3 — Migrate screens                       | Partial: font fix landed in CREW-126; color binding + composite swap deferred (see followups)                                   |
+| Phase 4 — Full Crew DS coverage                 | Not started (separate Epic)                                                                                                     |
+| Phase 5 — Skill v1 + reconciliation tooling     | Not started (separate Epic)                                                                                                     |
 
 ## shadcn CLI version
 
@@ -121,11 +121,11 @@ Mirrors every variable in Core's `mode` collection 1:1. Each Crew variable share
 
 Naming caveat: the collection is named `Crew / Semantic Colors` per the Phase 2 plan, but it actually mirrors all 48 Core `mode` tokens — 36 COLOR plus 12 FLOAT (10 radii + `border-width` + `stroke-width`). The FLOATs are included so the entire Core `mode` surface is overridable from a single Crew location, satisfying the "every Core mode token has an alias" definition of done. Future cleanup may rename the collection to drop the `Colors` qualifier.
 
-| Type  | Count | Names                                                                                                                                                                                                                                                                                                  | Scopes                                                                |
-| ----- | ----: | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------|
+| Type  | Count | Names                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     | Scopes                                                                  |
+| ----- | ----: | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
 | COLOR |    36 | `background`, `foreground`, `card`, `card-foreground`, `popover`, `popover-foreground`, `primary`, `primary-foreground`, `secondary`, `secondary-foreground`, `muted`, `muted-foreground`, `accent`, `accent-foreground`, `destructive`, `destructive-foreground`, `border`, `input`, `ring`, `chart-1`…`chart-5`, `sidebar`, `sidebar-foreground`, `sidebar-primary`, `sidebar-primary-foreground`, `sidebar-accent`, `sidebar-accent-foreground`, `sidebar-border`, `sidebar-ring`, `background-color`, `semantic-background`, `semantic-border`, `semantic-foreground` | `FRAME_FILL`, `SHAPE_FILL`, `TEXT_FILL`, `STROKE_COLOR`, `EFFECT_COLOR` |
-| FLOAT |    10 | `radius-none`, `radius-xs`, `radius-sm`, `radius-md`, `radius-lg`, `radius-xl`, `radius-2xl`, `radius-3xl`, `radius-4xl`, `radius-full`                                                                                                                                                                | `CORNER_RADIUS`                                                       |
-| FLOAT |     2 | `stroke-width`, `border-width`                                                                                                                                                                                                                                                                         | `STROKE_FLOAT`                                                        |
+| FLOAT |    10 | `radius-none`, `radius-xs`, `radius-sm`, `radius-md`, `radius-lg`, `radius-xl`, `radius-2xl`, `radius-3xl`, `radius-4xl`, `radius-full`                                                                                                                                                                                                                                                                                                                                                                                                                                   | `CORNER_RADIUS`                                                         |
+| FLOAT |     2 | `stroke-width`, `border-width`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            | `STROKE_FLOAT`                                                          |
 
 Total: **48 variables across 1 collection**, no `ALL_SCOPES` defaults.
 
@@ -145,30 +145,30 @@ Consumer files (Crew Dashboard Screens) bind to Crew's tokens. Mode resolution c
 
 Phase 3's plan asked for variable bindings + component instance swaps across all 11 frames in the screens file (`9FeJPriqdsdA4n9R5Xsrr8`). Inspection during the autonomous run found three blockers that scoped Phase 3 down to the font fix only:
 
-1. **Zero existing variable bindings** anywhere in the file. ~3,810 nodes total, ~2,400 fill-bearing nodes (FRAME + RECTANGLE), all hardcoded hex. Mapping hex → semantic Crew token requires designer judgment per element — close shades of slate (slate-900 vs slate-950) map to *different* tokens (`background` vs `card`), and a heuristic can't tell them apart from the hex alone. Doing this autonomously risked visually-broken screens.
+1. **Zero existing variable bindings** anywhere in the file. ~3,810 nodes total, ~2,400 fill-bearing nodes (FRAME + RECTANGLE), all hardcoded hex. Mapping hex → semantic Crew token requires designer judgment per element — close shades of slate (slate-900 vs slate-950) map to _different_ tokens (`background` vs `card`), and a heuristic can't tell them apart from the hex alone. Doing this autonomously risked visually-broken screens.
 2. **Crew DS has zero composite components** at this stage. Phase 4 builds those incrementally; Crew DS today is the `Crew / Semantic Colors` override collection only. The plan's "rebuild as Crew DS Modal/Dialog/Form instances" can't run because those components don't exist yet. Core's shadcn-kit primitives are searchable from the screens file but Core is not formally added as a library — only Crew DS is — so Core instantiation may fail and would deliver raw shadcn aesthetic rather than the intended Crew brand.
 3. **File rename is API-blocked.** `figma.root.name` setter throws "Setting the document name is currently not supported" in the Plugin API. Renaming "Document" → "Crew Dashboard Screens" requires manual desktop UI action.
 
-What CREW-126 *did* land:
+What CREW-126 _did_ land:
 
 - **Font fix on all 11 frames** — every text node using `Sora` (the html.to.design import substitute) was swapped to `Hanken Grotesk`, preserving each node's style (Regular, SemiBold). 429 single-font nodes mutated; 3 mixed-font nodes had their Sora segments replaced via `setRangeFontName`. Existing `Fira Code` segments (the dashboard's mono font, already correct) were left untouched. After the swap, font usage across the 920 text nodes is exclusively `Hanken Grotesk` + `Fira Code`. Verified visually on the Agents List frame.
 - **Documentation of deferred work** — three followup entries in `docs/followups.md` (color binding, composite rebuild, manual rename) capture the deferred scope with enough context to ticket later.
 
 Frame inventory (11 frames, all on Page 1):
 
-| # | Frame | Node ID | Type |
-|---|-------|---------|------|
-| 1 | Agents List (/) | `1:2` | imported |
-| 2 | Agents List (/) - Agent Drawer Open | `1:378` | imported |
-| 3 | Agent Page (/agent/XXX-123/full) | `1:1900` | imported |
-| 4 | Projects list (/projects) | `1:2334` | imported |
-| 5 | Project Page (/projects/project-name) | `1:2443` | imported |
-| 6 | Projects page (/projects) - Register modal | `1:2649` | imported |
-| 7 | New Run modal - 1. Select Project | `1:2980` | imported |
-| 8 | New Run modal - 2. Select Ticket | `1:3418` | imported |
-| 9 | New Run modal - 3. Confirm | `9:2` | ad-hoc |
-| 10 | Project Page - Delete confirmation modal | `18:2` | ad-hoc |
-| 11 | Project Page - Edit project modal | `23:2` | ad-hoc |
+| #   | Frame                                      | Node ID  | Type     |
+| --- | ------------------------------------------ | -------- | -------- |
+| 1   | Agents List (/)                            | `1:2`    | imported |
+| 2   | Agents List (/) - Agent Drawer Open        | `1:378`  | imported |
+| 3   | Agent Page (/agent/XXX-123/full)           | `1:1900` | imported |
+| 4   | Projects list (/projects)                  | `1:2334` | imported |
+| 5   | Project Page (/projects/project-name)      | `1:2443` | imported |
+| 6   | Projects page (/projects) - Register modal | `1:2649` | imported |
+| 7   | New Run modal - 1. Select Project          | `1:2980` | imported |
+| 8   | New Run modal - 2. Select Ticket           | `1:3418` | imported |
+| 9   | New Run modal - 3. Confirm                 | `9:2`    | ad-hoc   |
+| 10  | Project Page - Delete confirmation modal   | `18:2`   | ad-hoc   |
+| 11  | Project Page - Edit project modal          | `23:2`   | ad-hoc   |
 
 Library state on the screens file at end of CREW-126: only `Crew Design System` is formally added (verified via `get_libraries`). Crew DS variables resolve through Crew → Core's `mode` → `tw/colors` because Crew DS has Core formally linked (CREW-124). To bind fills directly to Core variables in this file, a future ticket would need to add Core as a library via the Figma desktop Libraries UI first (same `importVariableByKeyAsync`-without-formal-link gap documented in CREW-124).
 
@@ -215,11 +215,67 @@ Once Crew DS is published AND added to the screens file (`9FeJPriqdsdA4n9R5Xsrr8
 ```js
 // In a use_figma call against the screens file
 const libs = await figma.teamLibrary.getAvailableLibraryVariableCollectionsAsync();
-return libs.reduce((acc, c) => { acc[c.libraryName] = (acc[c.libraryName]||0) + 1; return acc; }, {});
+return libs.reduce((acc, c) => {
+  acc[c.libraryName] = (acc[c.libraryName] || 0) + 1;
+  return acc;
+}, {});
 // Expected: { "Crew Design System": 1 } at minimum (Core comes via alias chain, not directly)
 ```
 
 A non-empty result confirms the library link is formal. To prove the alias chain resolves end-to-end through both layers, bind a frame's fill to Crew's `background` variable and toggle modes — the resolved color should swap from Core's `white` (Light) to Core's `neutral/950` (Dark).
+
+## Code Connect mappings (CREW-125)
+
+Code Connect ties each shadcn primitive in `packages/dashboard/src/components/ui/*.tsx` to its Figma counterpart so designers see real shadcn JSX (with the right CVA variant prop bindings) when they Inspect a primitive in Figma.
+
+CLI: `@figma/code-connect` v1.4.4, dev-dep on `crew-dashboard`. Config at `packages/dashboard/figma.config.json` (`codeConnect.include = ["src/components/ui/**/*.figma.tsx"]`, `parser = "react"`, `importPaths` mapping `src/*` → `@/*`).
+
+> **Targets Core, not Crew DS.** Crew DS currently ships only the `Crew / Semantic Colors` override layer — zero components (composites land in Phase 4). Designers in Crew Dashboard Screens instance shadcn primitives directly from Core via the library link. Code Connect URLs therefore point at Core's component nodes (file `UkPJj6vd7HMKcey7M0XF4N`).
+
+| Code component       | Mapping file                                               | Figma component (Core)                  | Figma node id |
+| -------------------- | ---------------------------------------------------------- | --------------------------------------- | ------------- |
+| `Button`             | `packages/dashboard/src/components/ui/button.figma.tsx`    | `Buttons` set on Button page            | `73:3681`     |
+| `Badge`              | `packages/dashboard/src/components/ui/badge.figma.tsx`     | `Badge` set on Badge page               | `665:2024`    |
+| `Input`              | `packages/dashboard/src/components/ui/input.figma.tsx`     | `Default` set on Input page             | `520:3062`    |
+| `Dialog`             | `packages/dashboard/src/components/ui/dialog.figma.tsx`    | `Dialog` set on Dialog page             | `594:105`     |
+| `Label`              | `packages/dashboard/src/components/ui/label.figma.tsx`     | `Label` set on Label page               | `76:8617`     |
+| `Separator`          | `packages/dashboard/src/components/ui/separator.figma.tsx` | `Separator` component on Seperator page | `76:10202`    |
+| `FormItem` (form.\*) | `packages/dashboard/src/components/ui/form.figma.tsx`      | `Field` component on Field page         | `1188:5362`   |
+
+### Button variant mapping caveat
+
+The community kit conflates shadcn's `variant` and `size` axes into a single Figma `Type` enum (13 values: `primary`, `secondary`, `destructive`, `outline`, `hhost` (sic — upstream typo for `ghost`), `link`, `icon`, `with icon`, `loading`, `Size-small`, `Size-default`, `Size-large`, `Rounded`). The mapping reads `Type` twice — once into shadcn's `variant`, once into `size` — with every value covered in both, since unmapped Figma values silently render as `undefined`. The `hhost` typo is preserved so existing Figma instances don't break; we map it to shadcn `ghost` in code. When Crew DS rebuilds these as Crew composites in Phase 4, the kit's variant model can be redesigned cleanly.
+
+### Skipped: text-content extraction
+
+Layer names inside the kit's variants are the literal text characters (e.g. the primary Button's text layer is named `Button`, the icon variant has no text layer at all), so `figma.textContent("Button")` would only land on a subset of variants. The example snippets use placeholder strings (`Button`, `Badge`, `Email`, ...) instead. Phase 4 Crew composites are the right place to introduce a stable `Label` text-property name.
+
+# <<<<<<< HEAD
+
+### Heads-up for primitive maintainers
+
+The `*.figma.tsx` files live under `packages/dashboard/src/components/ui/` and are picked up by the dashboard's `tsc -p tsconfig.json`. Renaming a shadcn primitive's prop union (e.g. dropping `'lg'` from Button's `size` type) will break the typecheck in the matching `*.figma.tsx`. That's a feature, not a bug — it forces you to update the Code Connect mapping in the same change.
+
+## User-only finalization step (Task 2.16)
+
+The `figma connect publish` CLI requires a Figma personal access token with file-content write scope. The agent doesn't have the token, so publishing is a manual step. To complete CREW-125 acceptance:
+
+1. Generate a Figma PAT at `https://www.figma.com/settings` → Personal access tokens → Create new token, with the **File content (write)** scope. (Org tokens work too if you have one.)
+2. From `packages/dashboard/`, run:
+
+   ```bash
+   FIGMA_ACCESS_TOKEN=<your-pat> npx -w crew-dashboard figma connect publish
+   ```
+
+   Or `npx -w crew-dashboard figma connect publish --token <your-pat>`.
+
+3. Confirm the CLI reports each of the 7 mappings published successfully.
+4. In Figma desktop, open `Crew Dashboard Screens` (or any file with Core added as a library). Drop a Button instance, open the Inspect panel — code section should now show `<Button variant="..." size="...">Button</Button>` instead of generic Tailwind class soup.
+5. Once verified, mark CREW-125 Done.
+
+> **Re-publishing:** any time a `*.figma.tsx` file changes (new variant mapping, prop tweak, code component renamed), re-run the publish command. The CLI is idempotent — subsequent runs replace the prior mapping for each connected URL.
+
+> > > > > > > 18734ce (docs(design-system): refresh Phase 2 status + maintainer note (CREW-125))
 
 ## Conventions
 
