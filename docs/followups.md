@@ -295,9 +295,9 @@ The SSE shape feels right — it matches slice 1c's "live updates" feel and give
 
 ### 2026-05-08 — Wire `StateHistoryBar` and `TokenTable` into `AgentBody` alongside the timeline
 
-**Ticket:** [CREW-117](https://safturento.atlassian.net/browse/CREW-117) — subsumed into the broader drawer visual-fidelity sweep; resolution gated on that PR landing.
-
 **What:** CREW-109 wired `<Timeline>` into `packages/dashboard/src/components/AgentBody.tsx` (replacing the `agent-body-placeholder` div) so the e2e timeline scenarios could pass. The original placeholder copy promised "Timeline, state history, and token table" — the latter two (`<StateHistoryBar>`, `<TokenTable>`) ship in CREW-104 but are still unmounted. The drawer is functional today, but the spec §5a/§5b composition isn't complete.
+
+> **Update 2026-05-10:** CREW-117's ticket scope was expanded to a vertical-slice bundle (Crew DS composites + dashboard refactor + Figma frame migration + visual fidelity sweep) per `docs/superpowers/specs/2026-05-10-fidelity-vertical-slices-design.md`. The Definition of Done in the Jira ticket no longer covers this composition — CREW-117's autonomous run lands the 4 Crew DS composites (`AgentBody`, `StateHistoryBar`, `TokenTable`, `ViewportFrame`) and the dashboard refactor, but does NOT mount StateHistoryBar/TokenTable in AgentBody (the open questions below are still unresolved, and TokenTable's per-tool token data isn't exposed by the daemon today). Re-target this followup to a fresh ticket once the open questions are settled.
 
 **Why noticed:** While reading the slice 1c plan (`docs/superpowers/plans/2026-05-05-slice-1c-agent-drawer-and-push-updates.md`), I noticed that no plan task actually composes Tasks 20 (TokenTable) and 21 (StateHistoryBar) into AgentBody — the plan jumped straight from building the components (Tasks 20–28) to the E2E scenarios (Task 30) that test only the timeline portion. CREW-J / CREW-104's ticket file likewise mentions integration as deliberately out of scope.
 
@@ -316,6 +316,7 @@ The SSE shape feels right — it matches slice 1c's "live updates" feel and give
 
 - Where does TokenTable sit on narrow drawer widths? (collapsible side panel vs always-stacked.)
 - Does `onScrollTo(ts)` need new public Timeline API, or piggyback on an existing imperative handle?
+- TokenTable's `rows: { tool, tokens }[]` data isn't exposed by the daemon — the `AgentDetailTokens` shape only has `total/input/output/cache_read/cache_creation` (no per-tool aggregation). Either add a daemon endpoint or compute client-side from transcript events.
 
 ### 2026-05-07 — Port allocator detects collisions only at `docker compose up` time, not at allocation time
 
