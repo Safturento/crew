@@ -21,7 +21,7 @@ export function AgentBody({ agentKey, mode }: AgentBodyProps) {
 
   if (isLoading) {
     return (
-      <div className="flex h-full items-center justify-center p-6 text-sm text-text-2">
+      <div className="flex h-full items-center justify-center p-6 text-sm text-muted-foreground">
         Loading agent…
       </div>
     );
@@ -29,7 +29,7 @@ export function AgentBody({ agentKey, mode }: AgentBodyProps) {
 
   if (error || !data) {
     return (
-      <div className="flex h-full items-center justify-center p-6 text-sm text-text-2">
+      <div className="flex h-full items-center justify-center p-6 text-sm text-muted-foreground">
         Failed to load agent.
       </div>
     );
@@ -53,30 +53,30 @@ function AgentHeader({ detail, mode }: { detail: AgentDetail; mode: AgentBodyMod
   return (
     <div
       data-testid="drawer-header"
-      className="flex flex-col gap-3 border-b border-white/10 bg-surface px-6 py-4"
+      className="flex flex-col gap-3 border-b border-white/10 bg-card px-6 py-4"
     >
       <div className="flex flex-wrap items-center gap-3">
-        <span className="font-mono text-xs uppercase tracking-wide text-text-3">
+        <span className="font-mono text-xs uppercase tracking-wide text-muted-foreground">
           {detail.project}
         </span>
-        <span className="font-mono text-xs text-text-2">{detail.ticket_key}</span>
+        <span className="font-mono text-xs text-muted-foreground">{detail.ticket_key}</span>
         <StateBadge state={detail.state} />
-        {runtime && <span className="font-mono text-xs tabular-nums text-text-2">{runtime}</span>}
-        <span className="font-mono text-xs tabular-nums text-text-2">
+        {runtime && <span className="font-mono text-xs tabular-nums text-muted-foreground">{runtime}</span>}
+        <span className="font-mono text-xs tabular-nums text-muted-foreground">
           {formatTokens(detail.tokens.total)}
         </span>
       </div>
-      <h1 className="text-xl font-semibold tracking-tight text-text">
+      <h1 className="text-xl font-semibold tracking-tight text-foreground">
         {detail.ticket_title ?? detail.ticket_key}
       </h1>
-      <div className="flex flex-wrap items-center gap-2 text-xs text-text-2">
+      <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
         <WorktreePathLink path={detail.worktree_path} />
         {detail.pr_url && (
           <a
             href={detail.pr_url}
             target="_blank"
             rel="noreferrer"
-            className="rounded-md border border-white/10 px-2 py-1 text-text hover:bg-surface-2"
+            className="rounded-md border border-white/10 px-2 py-1 text-foreground hover:bg-popover"
           >
             View PR ↗
           </a>
@@ -84,7 +84,7 @@ function AgentHeader({ detail, mode }: { detail: AgentDetail; mode: AgentBodyMod
         {mode === 'drawer' && (
           <a
             href={`#/agent/${encodeURIComponent(detail.key)}/full`}
-            className="rounded-md border border-white/10 px-2 py-1 text-text hover:bg-surface-2"
+            className="rounded-md border border-white/10 px-2 py-1 text-foreground hover:bg-popover"
           >
             ↗ Open as page
           </a>
@@ -106,12 +106,12 @@ function WorktreePathLink({ path }: { path: string }) {
 
   return (
     <span className="inline-flex items-center gap-1.5 rounded-md border border-white/10 px-2 py-1">
-      <span className="font-mono text-xs text-text-2">{path}</span>
+      <span className="font-mono text-xs text-muted-foreground">{path}</span>
       <button
         type="button"
         onClick={onCopy}
         aria-label="Copy worktree path"
-        className="rounded text-[10px] uppercase tracking-wide text-text-3 hover:text-text"
+        className="rounded text-[10px] uppercase tracking-wide text-muted-foreground hover:text-foreground"
       >
         {copied ? 'Copied' : 'Copy'}
       </button>

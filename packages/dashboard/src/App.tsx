@@ -84,10 +84,10 @@ function AppContent({ client }: { client: DaemonClient }) {
 function ProjectsPlaceholder() {
   return (
     <div className="mx-auto w-full max-w-[1240px] p-6">
-      <div className="rounded-[14px] border border-white/10 bg-surface px-6 py-8">
-        <p className="font-mono text-xs text-text-3">PROJECTS</p>
-        <p className="mt-1 text-2xl font-semibold tracking-tight text-text">Projects</p>
-        <p className="mt-3 text-sm text-text-2">The projects route ships in a follow-up plan.</p>
+      <div className="rounded-[14px] border border-white/10 bg-card px-6 py-8">
+        <p className="font-mono text-xs text-muted-foreground">PROJECTS</p>
+        <p className="mt-1 text-2xl font-semibold tracking-tight text-foreground">Projects</p>
+        <p className="mt-3 text-sm text-muted-foreground">The projects route ships in a follow-up plan.</p>
       </div>
     </div>
   );

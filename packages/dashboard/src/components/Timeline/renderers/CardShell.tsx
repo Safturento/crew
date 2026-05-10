@@ -14,7 +14,7 @@ export function CardShell({ lineOne, lineTwo, expanded, errorTone }: CardShellPr
     <div
       data-testid="event-card"
       className={`border-b border-white/5 px-3 py-2 font-mono text-xs ${
-        errorTone ? 'text-state-error' : 'text-text-2'
+        errorTone ? 'text-state-error' : 'text-muted-foreground'
       }`}
     >
       <button
@@ -23,20 +23,20 @@ export function CardShell({ lineOne, lineTwo, expanded, errorTone }: CardShellPr
         onClick={() => hasExpand && setOpen((v) => !v)}
         aria-expanded={hasExpand ? open : undefined}
         className={`block w-full truncate text-left ${
-          hasExpand ? 'cursor-pointer hover:text-text' : 'cursor-default'
+          hasExpand ? 'cursor-pointer hover:text-foreground' : 'cursor-default'
         }`}
       >
         {lineOne}
       </button>
       {lineTwo ? (
-        <div data-testid="card-line-2" className="text-text-3">
+        <div data-testid="card-line-2" className="text-muted-foreground">
           {lineTwo}
         </div>
       ) : null}
       {hasExpand && open ? (
         <pre
           data-testid="card-expanded"
-          className="mt-2 overflow-x-auto rounded-sm bg-black/30 p-2 text-[11px] whitespace-pre-wrap text-text"
+          className="mt-2 overflow-x-auto rounded-sm bg-black/30 p-2 text-[11px] whitespace-pre-wrap text-foreground"
         >
           {expanded}
         </pre>

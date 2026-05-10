@@ -25,23 +25,23 @@ export function ProjectSection({ project, agents, onSelectAgent }: ProjectSectio
       >
         <span className="flex items-center gap-2">
           <ChevronDown
-            className={`h-4 w-4 text-text-3 transition-transform ${collapsed ? '-rotate-90' : ''}`}
+            className={`h-4 w-4 text-muted-foreground transition-transform ${collapsed ? '-rotate-90' : ''}`}
             aria-hidden
           />
-          <Folder className="h-4 w-4 text-text-3" aria-hidden />
-          <span className="text-sm font-semibold tracking-tight text-text">{project.name}</span>
-          <span className="text-xs text-text-3">
+          <Folder className="h-4 w-4 text-muted-foreground" aria-hidden />
+          <span className="text-sm font-semibold tracking-tight text-foreground">{project.name}</span>
+          <span className="text-xs text-muted-foreground">
             {active} active · {agents.length} total
           </span>
         </span>
-        <span className="font-mono text-xs text-text-3">{project.repoPath}</span>
+        <span className="font-mono text-xs text-muted-foreground">{project.repoPath}</span>
       </button>
       {!collapsed && (
         <div className="flex flex-col gap-1.5 pt-1">
           {agents.length === 0 ? (
-            <div className="rounded-[10px] border border-dashed border-white/10 px-4 py-6 text-center text-sm text-text-3">
+            <div className="rounded-[10px] border border-dashed border-white/10 px-4 py-6 text-center text-sm text-muted-foreground">
               No agents yet — start one with{' '}
-              <span className="font-mono text-text-2">+ New Run</span>
+              <span className="font-mono text-muted-foreground">+ New Run</span>
             </div>
           ) : (
             agents.map((a) => <AgentRow key={a.key} agent={a} onSelect={onSelectAgent} />)

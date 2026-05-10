@@ -23,7 +23,7 @@ export function StateHistoryBar({ transitions, onScrollTo }: StateHistoryBarProp
               <span
                 data-testid="state-history-arrow"
                 aria-hidden
-                className="font-mono text-xs text-text-3"
+                className="font-mono text-xs text-muted-foreground"
               >
                 →
               </span>

@@ -67,7 +67,7 @@ export function Timeline({ agentKey, agentState }: TimelineProps) {
     return (
       <div
         data-testid="timeline-loading"
-        className="flex items-center justify-center p-6 text-sm text-text-2"
+        className="flex items-center justify-center p-6 text-sm text-muted-foreground"
       >
         Loading timeline…
       </div>
@@ -92,7 +92,7 @@ export function Timeline({ agentKey, agentState }: TimelineProps) {
       {events.length === 0 ? (
         <div
           data-testid="timeline-empty"
-          className="flex flex-1 items-center justify-center p-6 text-sm text-text-3"
+          className="flex flex-1 items-center justify-center p-6 text-sm text-muted-foreground"
         >
           No timeline events yet.
         </div>
@@ -118,13 +118,13 @@ function FilterEmptyState({ onShowAll }: FilterEmptyStateProps) {
   return (
     <div
       data-testid="timeline-filter-empty"
-      className="flex flex-1 flex-col items-center justify-center gap-2 p-6 text-sm text-text-3"
+      className="flex flex-1 flex-col items-center justify-center gap-2 p-6 text-sm text-muted-foreground"
     >
       <p>No events match your filters.</p>
       <button
         type="button"
         onClick={onShowAll}
-        className="font-mono text-[11px] text-text-2 underline-offset-2 hover:underline"
+        className="font-mono text-[11px] text-muted-foreground underline-offset-2 hover:underline"
       >
         Show all
       </button>
@@ -150,7 +150,7 @@ function TimelineToolbar({
   onLiveModeChange,
 }: TimelineToolbarProps) {
   return (
-    <div className="flex items-center gap-2 border-b border-white/10 px-3 py-2 text-xs text-text-3">
+    <div className="flex items-center gap-2 border-b border-white/10 px-3 py-2 text-xs text-muted-foreground">
       <FilterChips visible={visibleGroups} onChange={onVisibleGroupsChange} />
       <SearchBar value={searchValue} onChange={onSearchChange} />
       <LiveModeToggle active={liveMode} onChange={onLiveModeChange} />

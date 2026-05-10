@@ -50,7 +50,7 @@ export function TokenTable({ rows }: TokenTableProps) {
   return (
     <table className="w-full border-collapse text-sm">
       <thead>
-        <tr className="border-b border-white/10 text-left text-xs uppercase tracking-wide text-text-3">
+        <tr className="border-b border-white/10 text-left text-xs uppercase tracking-wide text-muted-foreground">
           <SortableHeader
             column="tool"
             label="Tool"
@@ -73,7 +73,7 @@ export function TokenTable({ rows }: TokenTableProps) {
       <tbody>
         {sorted.length === 0 ? (
           <tr>
-            <td colSpan={3} className="px-3 py-6 text-center text-xs italic text-text-3">
+            <td colSpan={3} className="px-3 py-6 text-center text-xs italic text-muted-foreground">
               No tool calls yet.
             </td>
           </tr>
@@ -82,11 +82,11 @@ export function TokenTable({ rows }: TokenTableProps) {
             const share = total > 0 ? Math.round((row.tokens / total) * 100) : 0;
             return (
               <tr key={row.tool} className="border-b border-white/5 last:border-0">
-                <td className="px-3 py-2 font-mono text-text">{row.tool}</td>
-                <td className="px-3 py-2 text-right font-mono tabular-nums text-text">
+                <td className="px-3 py-2 font-mono text-foreground">{row.tool}</td>
+                <td className="px-3 py-2 text-right font-mono tabular-nums text-foreground">
                   {formatTokens(row.tokens)}
                 </td>
-                <td className="px-3 py-2 text-right font-mono tabular-nums text-text-2">
+                <td className="px-3 py-2 text-right font-mono tabular-nums text-muted-foreground">
                   {share}%
                 </td>
               </tr>
@@ -126,9 +126,9 @@ function SortableHeader({ column, label, sort, onClick, align }: SortableHeaderP
         }
       }}
       tabIndex={0}
-      className={`cursor-pointer select-none px-3 py-2 font-mono hover:text-text ${
+      className={`cursor-pointer select-none px-3 py-2 font-mono hover:text-foreground ${
         align === 'right' ? 'text-right' : 'text-left'
-      } ${active ? 'text-text' : ''}`}
+      } ${active ? 'text-foreground' : ''}`}
     >
       {label}
       {indicator}
