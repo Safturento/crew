@@ -22,13 +22,17 @@ Project-specific config for the `design-with-figma` skill (lives at `~/.claude/s
 | Phase | Status |
 |---|---|
 | Phase 1 — Core library | In progress (CREW-121) |
-| Phase 2 code — shadcn install + token migration | Not started (CREW-122) |
+| Phase 2 code — shadcn install + token migration | In progress (CREW-122) |
 | Phase 2 code — add primitives | Not started (CREW-123) |
 | Phase 2 Figma — Crew DS override layer | Not started (CREW-124) |
 | Phase 2 — Code Connect | Not started (CREW-125) |
 | Phase 3 — Migrate screens | Not started (CREW-126) |
 | Phase 4 — Full Crew DS coverage | Not started (separate Epic) |
 | Phase 5 — Skill v1 + reconciliation tooling | Not started (separate Epic) |
+
+## shadcn CLI version
+
+Pinned to **`shadcn@4.7.0`** (latest stable on 2026-05-09). The 4.x line ships with native Tailwind v4 support; CSS variables (`--css-variables`) is the default. Re-pin by running `npx -y shadcn@<new-version> init --help` from a scratch directory and checking the changelog at <https://ui.shadcn.com/docs/changelog> before bumping.
 
 ## Core kit fork point
 
