@@ -26,7 +26,7 @@ Project-specific config for the `design-with-figma` skill (lives at `~/.claude/s
 | Phase 2 code — add primitives                   | Not started (CREW-123)                                             |
 | Phase 2 Figma — Crew DS override layer          | Agent work complete (CREW-124); user must publish in Figma desktop |
 | Phase 2 — Code Connect                          | Not started (CREW-125)                                             |
-| Phase 3 — Migrate screens                       | Not started (CREW-126)                                             |
+| Phase 3 — Migrate screens                       | Partial: font fix landed in CREW-126; color binding + composite swap deferred (see followups) |
 | Phase 4 — Full Crew DS coverage                 | Not started (separate Epic)                                        |
 | Phase 5 — Skill v1 + reconciliation tooling     | Not started (separate Epic)                                        |
 
@@ -139,7 +139,46 @@ Consumer files (Crew Dashboard Screens) bind to Crew's tokens. Mode resolution c
 
 ## Component inventory
 
-(Populated as Phase 2-3 lands. Each Crew DS component will be listed with its Figma node ID for ticket cross-references.)
+(Populated as Phase 4 fidelity tickets land. Each Crew DS composite — AgentRow, ProjectSection, Modal/Dialog/Form wrappers — will be listed with its Figma node ID for ticket cross-references. Phase 3 (CREW-126) did not add composites; see "Phase 3 partial scope" below.)
+
+## Phase 3 partial scope (CREW-126, 2026-05-09)
+
+Phase 3's plan asked for variable bindings + component instance swaps across all 11 frames in the screens file (`9FeJPriqdsdA4n9R5Xsrr8`). Inspection during the autonomous run found three blockers that scoped Phase 3 down to the font fix only:
+
+1. **Zero existing variable bindings** anywhere in the file. ~3,810 nodes total, ~2,400 fill-bearing nodes (FRAME + RECTANGLE), all hardcoded hex. Mapping hex → semantic Crew token requires designer judgment per element — close shades of slate (slate-900 vs slate-950) map to *different* tokens (`background` vs `card`), and a heuristic can't tell them apart from the hex alone. Doing this autonomously risked visually-broken screens.
+2. **Crew DS has zero composite components** at this stage. Phase 4 builds those incrementally; Crew DS today is the `Crew / Semantic Colors` override collection only. The plan's "rebuild as Crew DS Modal/Dialog/Form instances" can't run because those components don't exist yet. Core's shadcn-kit primitives are searchable from the screens file but Core is not formally added as a library — only Crew DS is — so Core instantiation may fail and would deliver raw shadcn aesthetic rather than the intended Crew brand.
+3. **File rename is API-blocked.** `figma.root.name` setter throws "Setting the document name is currently not supported" in the Plugin API. Renaming "Document" → "Crew Dashboard Screens" requires manual desktop UI action.
+
+What CREW-126 *did* land:
+
+- **Font fix on all 11 frames** — every text node using `Sora` (the html.to.design import substitute) was swapped to `Hanken Grotesk`, preserving each node's style (Regular, SemiBold). 429 single-font nodes mutated; 3 mixed-font nodes had their Sora segments replaced via `setRangeFontName`. Existing `Fira Code` segments (the dashboard's mono font, already correct) were left untouched. After the swap, font usage across the 920 text nodes is exclusively `Hanken Grotesk` + `Fira Code`. Verified visually on the Agents List frame.
+- **Documentation of deferred work** — three followup entries in `docs/followups.md` (color binding, composite rebuild, manual rename) capture the deferred scope with enough context to ticket later.
+
+Frame inventory (11 frames, all on Page 1):
+
+| # | Frame | Node ID | Type |
+|---|-------|---------|------|
+| 1 | Agents List (/) | `1:2` | imported |
+| 2 | Agents List (/) - Agent Drawer Open | `1:378` | imported |
+| 3 | Agent Page (/agent/XXX-123/full) | `1:1900` | imported |
+| 4 | Projects list (/projects) | `1:2334` | imported |
+| 5 | Project Page (/projects/project-name) | `1:2443` | imported |
+| 6 | Projects page (/projects) - Register modal | `1:2649` | imported |
+| 7 | New Run modal - 1. Select Project | `1:2980` | imported |
+| 8 | New Run modal - 2. Select Ticket | `1:3418` | imported |
+| 9 | New Run modal - 3. Confirm | `9:2` | ad-hoc |
+| 10 | Project Page - Delete confirmation modal | `18:2` | ad-hoc |
+| 11 | Project Page - Edit project modal | `23:2` | ad-hoc |
+
+Library state on the screens file at end of CREW-126: only `Crew Design System` is formally added (verified via `get_libraries`). Crew DS variables resolve through Crew → Core's `mode` → `tw/colors` because Crew DS has Core formally linked (CREW-124). To bind fills directly to Core variables in this file, a future ticket would need to add Core as a library via the Figma desktop Libraries UI first (same `importVariableByKeyAsync`-without-formal-link gap documented in CREW-124).
+
+### User-only finalization step (CREW-126)
+
+Same pattern as Phases 1 and 2: a few finalization actions can only be done in Figma desktop.
+
+1. Open the file at `screens_file_url` (currently shown as "Document" in the file browser).
+2. Click the title at the top-left of the file and rename it to **Crew Dashboard Screens**. The slug in the URL is cosmetic and won't change.
+3. (Optional, blocks the color-binding followup) Open the Libraries panel (Assets panel → small library/grid icon, OR file menu → Libraries) and add `Core Design System` to the file. This formalizes access to Core's primitives so future tickets can swap detached structures to Core's `Button`, `Dialog`, etc. before Crew DS composites land in Phase 4.
 
 ## User-only finalization step (Task 2.15)
 
