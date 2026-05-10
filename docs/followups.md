@@ -7,6 +7,9 @@ Format: see the user-level `~/.claude/CLAUDE.md` "Followup detection" section.
 ## Contents
 
 - [Active](#active)
+  - [2026-05-09 — Crew Dashboard Screens — bind hardcoded fills to Crew DS semantic variables](#2026-05-09--crew-dashboard-screens--bind-hardcoded-fills-to-crew-ds-semantic-variables)
+  - [2026-05-09 — Crew Dashboard Screens — rebuild ad-hoc modals + detached primitives as Crew DS instances](#2026-05-09--crew-dashboard-screens--rebuild-ad-hoc-modals--detached-primitives-as-crew-ds-instances)
+  - [2026-05-09 — Manual rename of Figma screens file to "Crew Dashboard Screens"](#2026-05-09--manual-rename-of-figma-screens-file-to-crew-dashboard-screens)
   - [2026-05-08 — Tool-name filtering in the timeline Filters dropdown](#2026-05-08--tool-name-filtering-in-the-timeline-filters-dropdown)
   - [2026-05-08 — Slice 1c shipped without citing the design hand-off (visual drift)](#2026-05-08--slice-1c-shipped-without-citing-the-design-hand-off-visual-drift)
   - [2026-05-08 — Surface `crew finish` step results in the dashboard](#2026-05-08--surface-crew-finish-step-results-in-the-dashboard)
@@ -57,6 +60,73 @@ Format: see the user-level `~/.claude/CLAUDE.md` "Followup detection" section.
 - [Abandoned](#abandoned)
 
 ## Active
+
+### 2026-05-09 — Crew Dashboard Screens — bind hardcoded fills to Crew DS semantic variables
+
+**What:** All 11 frames in the Crew Dashboard Screens file (`9FeJPriqdsdA4n9R5Xsrr8`) currently render with hardcoded hex fills/strokes — zero existing variable bindings on any of the ~3,810 nodes. To make canvas-level mode toggling work and to let downstream design fidelity tickets cite specific tokens, every fill/stroke/effect color needs to be bound to the corresponding `Crew / Semantic Colors` variable.
+
+**Why noticed:** CREW-126 autonomous run on 2026-05-09. The Phase 3 plan asked an agent to script color bindings via use_figma, but inspection found 2,400+ fill-bearing nodes (FRAMEs + RECTANGLEs) with hundreds of unique hex colors. Mapping hex → semantic token (`Crew/background` vs `Crew/card` vs `Crew/border` vs etc.) requires designer judgment per element — heuristic classification by lightness/hue would either over-merge (collapse intentionally-different shades into one token) or mis-classify (e.g. read a gray border as `muted-foreground` text). Doing this in an autonomous run risks visually-broken screens. Deferred to designer-led work.
+
+**Anchors:**
+
+- [CREW-126](https://safturento.atlassian.net/browse/CREW-126) — the ticket where this scope reduction was decided
+- Figma screens file: `https://www.figma.com/design/9FeJPriqdsdA4n9R5Xsrr8`
+- `docs/plans/design-system.md` — `Crew / Semantic Colors` collection lists the 36 COLOR + 12 FLOAT tokens to bind to
+- The 11 top-level frame node IDs are listed in the CREW-126 ticket file (`docs/tickets/CREW-126.md`)
+
+**What's been considered:**
+
+- **Heuristic auto-binding** by OKLCH lightness + hue. Rejected for an autonomous run — the dashboard's dark theme uses many close shades of slate (slate-900, slate-950, slate-800, etc.) that map to *different* semantic tokens (`background` vs `card` vs `popover`), and a heuristic can't tell them apart from the hex alone.
+- **Per-frame designer pass.** Open each frame in Figma desktop, walk the layer tree, manually bind each fill via the picker. Slow but correct. Likely 1-2h per frame × 11 frames.
+- **Hybrid: agent-prepared candidate map + designer review.** Agent reports unique hex values per frame and proposes a binding for each (high-confidence ones get auto-applied, ambiguous ones flagged for human review). Cuts manual work but still needs a human in the loop.
+
+**Shape of work:** One ticket per frame (11 tickets), or one ticket per logical group (e.g. "list pages — Agents / Projects" / "detail pages — Agent / Project" / "modals"). Designer-led; agent assists with bulk binding scripts once the hex→token map is decided. Should be sequenced after the composite-rebuild followup below so the bindings flow through the new instances.
+
+**Open questions:**
+
+- [ ] Decide grouping (per-frame vs per-section tickets).
+- [ ] Define a hex→token map for the dashboard's actual palette (probably 15-25 unique tokens once consolidated).
+- [ ] Decide whether to also bind padding/gap/radius FLOAT variables in the same pass, or defer those to a separate ticket. The Crew DS only exposes `radius-*`, `stroke-width`, and `border-width` from the Core `mode` collection — most spacing values stay hardcoded for now.
+
+### 2026-05-09 — Crew Dashboard Screens — rebuild ad-hoc modals + detached primitives as Crew DS instances
+
+**What:** The 3 ad-hoc modals (`New Run modal - 3. Confirm`, `Project Page - Edit project modal`, `Project Page - Delete confirmation modal`) plus all detached primitive structures across the other 8 imported frames (e.g. `Background+Border+Shadow` frames acting as buttons, `Container+Border` frames acting as cards) need to be replaced with real component instances. The CREW-126 plan called for "Crew DS Modal/Dialog/Form" instances, but Crew DS currently has zero composite components — Phase 4 of the design system epic adds those incrementally.
+
+**Why noticed:** CREW-126 autonomous run on 2026-05-09. The plan assumed Crew DS composites existed by Phase 3, but `docs/plans/design-system.md` confirms Crew DS is a "thin override layer over Core … one variable collection and zero components." Core's shadcn-kit components (Button, Dialog, Alert dialog) are searchable from the screens file but Core is not formally added as a library to the screens file — only Crew DS is — so Core component instantiation may not work even if attempted, and even if it did, the Phase 4 plan calls for *Crew DS* composites (with Crew branding) not raw Core primitives.
+
+**Anchors:**
+
+- [CREW-126](https://safturento.atlassian.net/browse/CREW-126), [CREW-120](https://safturento.atlassian.net/browse/CREW-120) (Epic) — original scope
+- `docs/plans/design-system.md` — confirms Crew DS has zero composites and the Phase 4 plan
+- `docs/superpowers/plans/2026-05-09-design-system-bootstrap-phases-1-3.md` — Tasks 3.2-3.10 describe the swap work
+- 3 ad-hoc modal frame IDs: `9:2`, `18:2`, `23:2` (in screens file `9FeJPriqdsdA4n9R5Xsrr8`)
+
+**What's been considered:**
+
+- **Wait for Phase 4.** Crew DS gets composites (AgentRow, ProjectSection, Modal/Dialog/Form wrappers, etc.) in Phase 4 fidelity tickets. Easiest correctness story: build the composites first, then swap.
+- **Use Core's shadcn primitives directly.** Add `Core Design System` as a library to the screens file (manual step in Figma desktop), then swap to raw Core components. Lower fidelity (no Crew branding) but unblocks earlier.
+- **Mixed approach.** Use Core primitives for the obvious atomic swaps (Button, Input, Badge), defer composites (Modal/Dialog/Form layouts) to Phase 4.
+
+**Shape of work:** Almost certainly multiple tickets — one per frame is too granular; one for "all modals" + one per page-screen group (lists / details / forms) is probably right. Sequence after Phase 4 starts shipping composites unless the team picks the "use Core directly" option.
+
+**Open questions:**
+
+- [ ] Pick approach (wait for Phase 4 / use Core / mixed).
+- [ ] If using Core: who adds it as a library to the screens file, and when?
+- [ ] How are the 3 ad-hoc modals' content layouts captured before deletion (they were built ad-hoc in an earlier session — screenshots exist on the canvas but not in the repo)?
+
+### 2026-05-09 — Manual rename of Figma screens file to "Crew Dashboard Screens"
+
+**What:** The Figma screens file (`9FeJPriqdsdA4n9R5Xsrr8`) is currently named "Document". Phase 3 calls for renaming it to "Crew Dashboard Screens" so it's identifiable in the file browser and matches the convention set by Core/Crew Design System. The Figma Plugin API does not expose a setter for `figma.root.name` — `set_name` returns "Setting the document name is currently not supported" — so this can only be done through the Figma desktop UI by clicking the title at the top of the file.
+
+**Why noticed:** CREW-126 autonomous run on 2026-05-09. The agent attempted the rename via Plugin API and confirmed the API rejects it; the file URL slug ("Untitled") and current display name ("Document") both differ from the target.
+
+**Anchors:**
+
+- Figma screens file: `https://www.figma.com/design/9FeJPriqdsdA4n9R5Xsrr8`
+- `docs/plans/design-system.md` — `screens_file_url` frontmatter (slug-portion of URL doesn't change with rename, so the URL stays valid)
+
+**Shape of work:** One-time manual action by user. Open the file in Figma desktop, click the title at the top-left, type "Crew Dashboard Screens", press Enter. No code or ticket needed; just close this followup once done.
 
 ### 2026-05-08 — Tool-name filtering in the timeline Filters dropdown
 
