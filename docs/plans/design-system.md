@@ -19,16 +19,16 @@ Project-specific config for the `design-with-figma` skill (lives at `~/.claude/s
 
 ## Status
 
-| Phase                                           | Status                                                              |
-| ----------------------------------------------- | ------------------------------------------------------------------- |
-| Phase 1 — Core library                          | Agent work complete (CREW-121); user must publish in Figma desktop  |
-| Phase 2 code — shadcn install + token migration | In progress (CREW-122)                                              |
-| Phase 2 code — add primitives                   | Not started (CREW-123)                                              |
-| Phase 2 Figma — Crew DS override layer          | Not started (CREW-124)                                              |
-| Phase 2 — Code Connect                          | Not started (CREW-125)                                              |
-| Phase 3 — Migrate screens                       | Not started (CREW-126)                                              |
-| Phase 4 — Full Crew DS coverage                 | Not started (separate Epic)                                         |
-| Phase 5 — Skill v1 + reconciliation tooling     | Not started (separate Epic)                                         |
+| Phase                                           | Status                                                             |
+| ----------------------------------------------- | ------------------------------------------------------------------ |
+| Phase 1 — Core library                          | Agent work complete (CREW-121); user must publish in Figma desktop |
+| Phase 2 code — shadcn install + token migration | In progress (CREW-122)                                             |
+| Phase 2 code — add primitives                   | Not started (CREW-123)                                             |
+| Phase 2 Figma — Crew DS override layer          | Not started (CREW-124)                                             |
+| Phase 2 — Code Connect                          | Not started (CREW-125)                                             |
+| Phase 3 — Migrate screens                       | Not started (CREW-126)                                             |
+| Phase 4 — Full Crew DS coverage                 | Not started (separate Epic)                                        |
+| Phase 5 — Skill v1 + reconciliation tooling     | Not started (separate Epic)                                        |
 
 ## shadcn CLI version
 
@@ -58,25 +58,25 @@ The kit was forked at the upstream community version `Updated January 2026`. We 
 
 Captured 2026-05-09 from CREW-121 agent run. All 17 collections have explicit per-variable scopes (no `ALL_SCOPES` defaults).
 
-| Collection | Modes | Variables | Types | Scopes applied |
-|---|---|---:|---|---|
-| `tw/colors` | Mode 1 | 244 | COLOR | `EFFECT_COLOR`, `FRAME_FILL`, `SHAPE_FILL`, `STROKE_COLOR`, `TEXT_FILL` |
-| `tw/padding` | Mode 1 | 245 | FLOAT | `GAP`, `WIDTH_HEIGHT` |
-| `tw/space` | Mode 1 | 68 | FLOAT | `GAP`, `WIDTH_HEIGHT` |
-| `tw/border-radius` | Mode 1 | 149 | FLOAT | `CORNER_RADIUS` |
-| `tw/margin` | Mode 1 | 245 | FLOAT | `GAP`, `WIDTH_HEIGHT` |
-| `tokens` | Mode 1 | 89 | FLOAT | (left empty — kit internals; see Core kit notes) |
-| `mode` | light mode, dark mode | 48 | 36 COLOR + 12 FLOAT | color vars: full color scopes; `radius-*` → `CORNER_RADIUS`; `border-width` / `stroke-width` → `STROKE_FLOAT` |
-| `tw/border-width` | Mode 1 | 45 | FLOAT | `STROKE_FLOAT` |
-| `tw/gap` | Mode 1 | 102 | FLOAT | `GAP`, `WIDTH_HEIGHT` |
-| `tw/stroke-width` | Mode 1 | 11 | FLOAT | `STROKE_FLOAT` |
-| `tw/font` | Mode 1 | 47 | 6 STRING + 41 FLOAT | per-variable: `family/*` → `FONT_FAMILY`; `style/*` → `FONT_STYLE`; `size/*` → `FONT_SIZE`; `weight/*` → `FONT_WEIGHT`; `leading/line-height` → `LINE_HEIGHT`; `tracking/letter-spacing` → `LETTER_SPACING` |
-| `tw/height` | Mode 1 | 24 | FLOAT | `WIDTH_HEIGHT` |
-| `tw/max-height` | Mode 1 | 35 | FLOAT | `WIDTH_HEIGHT` |
-| `tw/max-width` | Mode 1 | 51 | FLOAT | `WIDTH_HEIGHT` |
-| `rdx/colors` | light mode, dark mode | 396 | COLOR | full color scopes |
-| `tw/opacity` | Mode 1 | 21 | FLOAT | `OPACITY` |
-| `Core / Breakpoints` (new in CREW-121) | Mode 1 | 5 | FLOAT | `WIDTH_HEIGHT` |
+| Collection                             | Modes                 | Variables | Types               | Scopes applied                                                                                                                                                                                              |
+| -------------------------------------- | --------------------- | --------: | ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `tw/colors`                            | Mode 1                |       244 | COLOR               | `EFFECT_COLOR`, `FRAME_FILL`, `SHAPE_FILL`, `STROKE_COLOR`, `TEXT_FILL`                                                                                                                                     |
+| `tw/padding`                           | Mode 1                |       245 | FLOAT               | `GAP`, `WIDTH_HEIGHT`                                                                                                                                                                                       |
+| `tw/space`                             | Mode 1                |        68 | FLOAT               | `GAP`, `WIDTH_HEIGHT`                                                                                                                                                                                       |
+| `tw/border-radius`                     | Mode 1                |       149 | FLOAT               | `CORNER_RADIUS`                                                                                                                                                                                             |
+| `tw/margin`                            | Mode 1                |       245 | FLOAT               | `GAP`, `WIDTH_HEIGHT`                                                                                                                                                                                       |
+| `tokens`                               | Mode 1                |        89 | FLOAT               | (left empty — kit internals; see Core kit notes)                                                                                                                                                            |
+| `mode`                                 | light mode, dark mode |        48 | 36 COLOR + 12 FLOAT | color vars: full color scopes; `radius-*` → `CORNER_RADIUS`; `border-width` / `stroke-width` → `STROKE_FLOAT`                                                                                               |
+| `tw/border-width`                      | Mode 1                |        45 | FLOAT               | `STROKE_FLOAT`                                                                                                                                                                                              |
+| `tw/gap`                               | Mode 1                |       102 | FLOAT               | `GAP`, `WIDTH_HEIGHT`                                                                                                                                                                                       |
+| `tw/stroke-width`                      | Mode 1                |        11 | FLOAT               | `STROKE_FLOAT`                                                                                                                                                                                              |
+| `tw/font`                              | Mode 1                |        47 | 6 STRING + 41 FLOAT | per-variable: `family/*` → `FONT_FAMILY`; `style/*` → `FONT_STYLE`; `size/*` → `FONT_SIZE`; `weight/*` → `FONT_WEIGHT`; `leading/line-height` → `LINE_HEIGHT`; `tracking/letter-spacing` → `LETTER_SPACING` |
+| `tw/height`                            | Mode 1                |        24 | FLOAT               | `WIDTH_HEIGHT`                                                                                                                                                                                              |
+| `tw/max-height`                        | Mode 1                |        35 | FLOAT               | `WIDTH_HEIGHT`                                                                                                                                                                                              |
+| `tw/max-width`                         | Mode 1                |        51 | FLOAT               | `WIDTH_HEIGHT`                                                                                                                                                                                              |
+| `rdx/colors`                           | light mode, dark mode |       396 | COLOR               | full color scopes                                                                                                                                                                                           |
+| `tw/opacity`                           | Mode 1                |        21 | FLOAT               | `OPACITY`                                                                                                                                                                                                   |
+| `Core / Breakpoints` (new in CREW-121) | Mode 1                |         5 | FLOAT               | `WIDTH_HEIGHT`                                                                                                                                                                                              |
 
 Total: **1,825 variables across 17 collections.**
 
@@ -92,11 +92,11 @@ Total: **1,825 variables across 17 collections.**
 
 The kit doesn't ship with layout primitives. Three project-agnostic components were added to a new `Layout Primitives` page:
 
-| Component | Page node id | Auto-layout | Default spacing binding |
-|---|---|---|---|
-| `Stack` | `3016:3` | Vertical, hug width + height | `itemSpacing` → `tw/gap / gap-4` (16px) |
-| `Cluster` | `3016:10` | Horizontal, wrap on overflow | `itemSpacing` + `counterAxisSpacing` → `tw/gap / gap-4` |
-| `Container` | `3016:21` | Vertical, max-width-constrained, centered | `maxWidth` → `tw/max-width / max-w-7xl` (1280px) |
+| Component   | Page node id | Auto-layout                               | Default spacing binding                                 |
+| ----------- | ------------ | ----------------------------------------- | ------------------------------------------------------- |
+| `Stack`     | `3016:3`     | Vertical, hug width + height              | `itemSpacing` → `tw/gap / gap-4` (16px)                 |
+| `Cluster`   | `3016:10`    | Horizontal, wrap on overflow              | `itemSpacing` + `counterAxisSpacing` → `tw/gap / gap-4` |
+| `Container` | `3016:21`    | Vertical, max-width-constrained, centered | `maxWidth` → `tw/max-width / max-w-7xl` (1280px)        |
 
 Override the bound variable on an instance to switch to a different `tw/gap` or `tw/max-width` value.
 
