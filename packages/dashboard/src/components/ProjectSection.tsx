@@ -32,12 +32,20 @@ export function ProjectSection({
 
   return (
     <section className="flex flex-col">
-      <button
-        type="button"
+      <div
+        role="button"
+        tabIndex={0}
         onClick={() => setCollapsed((c) => !c)}
+        onKeyDown={(e) => {
+          if (e.target !== e.currentTarget) return;
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            setCollapsed((c) => !c);
+          }
+        }}
         aria-label={`Toggle ${project.name}`}
         aria-expanded={!collapsed}
-        className="group/header flex items-center justify-between gap-3 border-b border-white/10 py-2 text-left"
+        className="group/header flex cursor-pointer items-center justify-between gap-3 border-b border-white/10 py-2 text-left"
       >
         <span className="flex items-center gap-2">
           <ChevronDown
@@ -65,7 +73,7 @@ export function ProjectSection({
           </span>
         </span>
         <span className="font-mono text-xs text-muted-foreground">{project.repoPath}</span>
-      </button>
+      </div>
       {!collapsed && (
         <div className="flex flex-col gap-1.5 pt-1">
           <ColumnHeaderRow placement="per-section" />
