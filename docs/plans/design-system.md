@@ -27,7 +27,7 @@ Project-specific config for the `design-with-figma` skill (lives at `~/.claude/s
 | Phase 2 Figma — Crew DS override layer          | Agent work complete (CREW-124); user must publish in Figma desktop                                                              |
 | Phase 2 — Code Connect                          | `.figma.tsx` mapping files landed in CREW-125; `figma connect publish` intentionally skipped (see Code Connect publish section) |
 | Phase 3 — Migrate screens                       | Partial: font fix landed in CREW-126; color binding + composite swap deferred (see followups)                                   |
-| Phase 4 — Full Crew DS coverage                 | Partial: 10 of 11 composites built (6 in CREW-119 + 4 in CREW-117); only `ErrorFallback` remains. Frame migration deferred — see followup       |
+| Phase 4 — Full Crew DS coverage                 | Partial: 10 of 11 composites built (6 in CREW-119 + 4 in CREW-117); only `ErrorFallback` remains. Agents-related frames (`1:2`, `1:378`, `1:1900`) migrated 2026-05-10 (dark mode + Crew DS color bindings + StateBadge instances).        |
 | Phase 5 — Skill v1 + reconciliation tooling     | Not started (separate Epic)                                                                                                     |
 
 ## shadcn CLI version
@@ -171,11 +171,28 @@ All four are single components (no Figma variant axes). `AgentBody` composes a `
 
 After CREW-117, **Phase 4 has 10 of 11 composites built** — only `ErrorFallback` remains. It will land alongside the next fidelity ticket that surfaces a need for it (likely a settings or error-state route).
 
-### State-color semantic tokens (added in CREW-119)
+### State-color semantic tokens (added in CREW-119, extended 2026-05-10)
 
 `Crew / Semantic Colors` now includes **7 state tokens** (`state/initializing`, `state/running`, `state/idle`, `state/waiting`, `state/pr-open`, `state/error`, `state/finished`) — each a single-value alias to a `tw/colors` primitive in Core (`blue/500`, `slate/400`, `slate/500`, `amber/400`, `violet/500`, `red/500`, `emerald/500` respectively). No light/dark variant for state colors at this stage — both modes alias the same primitive. Used by `StateBadge` (token-bound fills + stroke + dot) and by the dashboard's `--color-state-*` Tailwind classes via the `@theme` block. First example of the Crew DS override layer growing past shadcn's vocabulary.
 
-Total Crew DS variable count: **55 across 1 collection** (was 48; +7 state tokens).
+A `state/foreground` token was added on 2026-05-10 — aliases `tw/colors / slate/950` (mode-invariant). Reserved for fixed-dark text on bright state-color backgrounds; not currently consumed by `StateBadge` (which uses the tinted-bg pattern below) but available for future overlays/tag treatments where a dark-on-bright contrast is wanted.
+
+Total Crew DS variable count: **56 across 1 collection** (48 from Phase 2 + 7 state tokens from CREW-119 + 1 state-foreground from 2026-05-10).
+
+### StateBadge visual pattern (canonical, 2026-05-10)
+
+The `StateBadge` set on the Crew DS Composites page is the canonical pill treatment. Every state pill in the dashboard screens — and any composite that embeds a state pill (e.g. `AgentBody`, `StateHistoryBar`, timeline event tags) — should follow this pattern rather than rolling its own:
+
+| Element        | Color                          | Opacity        |
+| -------------- | ------------------------------ | -------------- |
+| Background fill| `state/{variant}`              | **0.18**       |
+| Stroke         | `state/{variant}`              | 1.0            |
+| Dot (Ellipse)  | `state/{variant}`              | 1.0            |
+| Text           | `state/{variant}`              | 1.0            |
+
+Read: tinted background + matching-color full-opacity border, dot, and text. The 0.18 bg opacity gives the subtle washed-color body without overwhelming the surface; the full-opacity border + text are what carry the recognizable state color.
+
+**Embedding caveat for composites:** when a composite (`AgentBody`, etc.) needs a state pill, it must compose a real `StateBadge` instance — not a hand-built ellipse + text. Hand-built pills don't inherit future StateBadge updates (e.g. opacity tweaks, new state variants) and can drift from the canonical pattern.
 
 ## Phase 3 partial scope (CREW-126, 2026-05-09)
 

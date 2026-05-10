@@ -8,8 +8,7 @@ Format: see the user-level `~/.claude/CLAUDE.md` "Followup detection" section.
 
 - [Active](#active)
   - [2026-05-10 — Wire dashboard QuickAction buttons (Resume / Finish / Inspect / Provide input) to daemon endpoints](#2026-05-10--wire-dashboard-quickaction-buttons-resume--finish--inspect--provide-input-to-daemon-endpoints)
-  - [2026-05-10 — Polish the 6 CREW-119 Crew DS composites (skeleton-fidelity → pixel-fidelity)](#2026-05-10--polish-the-6-crew-119-crew-ds-composites-skeleton-fidelity--pixel-fidelity)
-  - [2026-05-10 — Migrate the agents-related Figma frames (Agents List, Drawer Open, Agent Page full) to Crew DS instances + semantic-token bindings](#2026-05-10--migrate-the-agents-related-figma-frames-agents-list-drawer-open-agent-page-full-to-crew-ds-instances--semantic-token-bindings)
+  - [2026-05-10 — Polish the CREW-119/CREW-117 Crew DS composites (skeleton-fidelity → pixel-fidelity)](#2026-05-10--polish-the-crew-119crew-117-crew-ds-composites-skeleton-fidelity--pixel-fidelity)
   - [2026-05-09 — Crew Dashboard Screens — bind hardcoded fills to Crew DS semantic variables](#2026-05-09--crew-dashboard-screens--bind-hardcoded-fills-to-crew-ds-semantic-variables)
   - [2026-05-09 — Crew Dashboard Screens — rebuild ad-hoc modals + detached primitives as Crew DS instances](#2026-05-09--crew-dashboard-screens--rebuild-ad-hoc-modals--detached-primitives-as-crew-ds-instances)
   - [2026-05-09 — Manual rename of Figma screens file to "Crew Dashboard Screens"](#2026-05-09--manual-rename-of-figma-screens-file-to-crew-dashboard-screens)
@@ -53,6 +52,7 @@ Format: see the user-level `~/.claude/CLAUDE.md` "Followup detection" section.
   - [2026-04-27 — Dashboard mobile responsive layout polish](#2026-04-27--dashboard-mobile-responsive-layout-polish)
   - [2026-04-26 — Architecture doc open questions still unresolved](#2026-04-26--architecture-doc-open-questions-still-unresolved)
 - [Resolved](#resolved)
+  - [2026-05-10 — Migrate the agents-related Figma frames (Agents List, Drawer Open, Agent Page full) to Crew DS instances + semantic-token bindings](#2026-05-10--migrate-the-agents-related-figma-frames-agents-list-drawer-open-agent-page-full-to-crew-ds-instances--semantic-token-bindings)
   - [2026-05-07 — `sandbox-network-note.md` recommends `crew restart --hard` for docker recovery, but `--hard` nukes the worktree](#2026-05-07--sandbox-network-notemd-recommends-crew-restart---hard-for-docker-recovery-but---hard-nukes-the-worktree)
   - [2026-05-05 — Dashboard Dockerfile doesn't copy `tsconfig.base.json`, breaks vite at runtime with TSCONFIG_ERROR](#2026-05-05--dashboard-dockerfile-doesnt-copy-tsconfigbasejson-breaks-vite-at-runtime-with-tsconfig_error)
   - [2026-05-05 — Worktree env-injection of `CREW_SEED_FIXTURES=1` not wired](#2026-05-05--worktree-env-injection-of-crew_seed_fixtures1-not-wired)
@@ -83,6 +83,8 @@ Format: see the user-level `~/.claude/CLAUDE.md` "Followup detection" section.
 - **Single `POST /agents/:key/action { kind }` endpoint** vs verb-per-action. Verb-per-action mirrors REST norms and pairs cleanly with the existing `/agents/:key/finish` path; a single dispatcher would centralize permissions but loses semantic clarity in logs.
 - **Route through `useMutation` from TanStack Query** rather than imperative client calls so optimistic updates + invalidation are uniform with the existing list query.
 
+**Visual styling consistency note (added 2026-05-10):** the `Inspect` button on the latency row in frame `1:2` currently renders as a solid red bg with dark text — html.to.design captured it as a destructive-tinted action button but the styling drifted from the canonical pill pattern during the migration. When this ticket lands the dashboard handler, also pick a button styling pattern that's consistent with the StateBadge tinted-bg approach (tinted error bg + bright error text/border) OR explicitly decide it should be a solid destructive shadcn `Button` variant. The current state is neither.
+
 **Shape of work:** Likely two tickets — one daemon-side (add the four endpoints + matching `.bru` files) and one dashboard-side (mount `onAgentAction` in `App.tsx`, wire each kind through TanStack `useMutation`, surface success/error toasts). Both can run in parallel after the endpoint contracts are settled.
 
 **Open questions:**
@@ -90,18 +92,20 @@ Format: see the user-level `~/.claude/CLAUDE.md` "Followup detection" section.
 - [ ] Does `inspect` need its own daemon-side action or is "open the agent drawer focused on the error transcript" enough? The v2 design hand-off doesn't specify.
 - [ ] Should `resume` from `idle` reuse the `crew run` codepath or be a separate "rehydrate" verb?
 
-### 2026-05-10 — Polish the 6 CREW-119 Crew DS composites (skeleton-fidelity → pixel-fidelity)
+### 2026-05-10 — Polish the CREW-119/CREW-117 Crew DS composites (skeleton-fidelity → pixel-fidelity)
 
-**What:** CREW-119 built six Crew DS composites on the Composites page in `DsA7QuEa2WthDATkksd1Bq` (`BrandMark`, `StateBadge` set, `TopNav`, `AgentRow`, `ProjectSection`, `AgentsList`) at **skeleton fidelity** — names, semantic-token bindings (where applicable), and slot structure are correct, but the visual treatment is intentionally minimal. `BrandMark` and `StateBadge` are pixel-fidel (the latter has all 7 state variants with token-bound fill/stroke/text/dot). The other four are placeholder boxes with sample text. They need a designer pass — type ramps tightened, padding/gap bound to Core `tw/space`, hover/focus states added (where applicable), variant axes grown (`AgentRow.state`, `TopNav.route`, `ProjectSection.expanded`).
+**What:** CREW-119 + CREW-117 built ten Crew DS composites on the Composites page in `DsA7QuEa2WthDATkksd1Bq` at **skeleton fidelity** — names, semantic-token bindings (where applicable), and slot structure are correct, but the visual treatment is intentionally minimal. `BrandMark` and `StateBadge` are now pixel-fidel after the 2026-05-10 frame migration polish (StateBadge canonical pattern documented in `docs/plans/design-system.md`). The other composites are placeholder boxes with sample text. They need a designer pass — type ramps tightened, padding/gap bound to Core `tw/space`, hover/focus states added (where applicable), variant axes grown (`AgentRow.state`, `TopNav.route`, `ProjectSection.expanded`).
 
-**Why noticed:** CREW-119 autonomous run on 2026-05-10 — the Crew DS build-out was descoped from pixel-perfect to skeleton fidelity to keep the run scope reasonable (the original ticket goal was the visual fidelity sweep on the dashboard side, which landed in code). Documenting the gap here so designer time picks it up rather than the next agent run silently rebuilding from scratch.
+**Specific known defect — AgentBody embeds a hardcoded state pill:** during the 2026-05-10 frame-migration session the user noticed `AgentBody` (`24:2`) renders its state pill as a solid color block even after StateBadge was polished. Root cause: AgentBody was built with a hand-rolled ellipse + text rather than composing a real `StateBadge` instance, so it can't pick up StateBadge's future updates. Fix during the polish pass: rebuild AgentBody's pill slot as an actual `StateBadge` instance (matching whichever state the embedded sample uses).
+
+**Why noticed:** CREW-119 + CREW-117 autonomous runs on 2026-05-10 — the Crew DS build-out was descoped from pixel-perfect to skeleton fidelity to keep the runs' scopes reasonable (the original tickets' goals were the visual fidelity sweep on the dashboard side, which landed in code). The AgentBody-specific defect surfaced 2026-05-10 mid-day during the manual frame-migration session that resolved the migration followup below this one.
 
 **Anchors:**
 
 - Crew DS file: `https://www.figma.com/design/DsA7QuEa2WthDATkksd1Bq` — `Composites` page
-- Component node IDs: `BrandMark=19:3`, `StateBadge=20:23`, `TopNav=21:2`, `AgentRow=21:9`, `ProjectSection=21:21`, `AgentsList=21:25`
-- Dashboard CVA configs (the source of truth for variant axes): `packages/dashboard/src/components/{AgentRow,StateBadge,TopNav,ProjectSection}.tsx`
-- `docs/plans/design-system.md` — Component inventory section lists all 6 with their dashboard counterparts
+- Component node IDs: `BrandMark=19:3`, `StateBadge=20:23`, `TopNav=21:2`, `AgentRow=21:9`, `ProjectSection=21:21`, `AgentsList=21:25`, `AgentBody=24:2`, `StateHistoryBar=25:4`, `TokenTable=26:4`, `ViewportFrame=27:4`
+- Dashboard CVA configs (the source of truth for variant axes): `packages/dashboard/src/components/{AgentRow,StateBadge,TopNav,ProjectSection,AgentBody,StateHistoryBar,TokenTable,ViewportFrame}.tsx`
+- `docs/plans/design-system.md` — Component inventory + new "StateBadge visual pattern (canonical)" section describing the tinted-bg + bright-border-text-dot pattern other composites should mirror
 
 **What's been considered:**
 
@@ -109,34 +113,6 @@ Format: see the user-level `~/.claude/CLAUDE.md` "Followup detection" section.
 - **One-shot designer pass** to polish all six at once. Good-faith effort but loses the just-in-time signal that drives the rest of Phase 4.
 
 **Shape of work:** Likely folded into individual fidelity tickets as they arise (e.g. a future "Projects List fidelity" ticket would polish `TopNav` because that surface uses it). No standalone ticket needed unless the user wants to schedule a dedicated polish pass.
-
-### 2026-05-10 — Migrate the agents-related Figma frames (Agents List, Drawer Open, Agent Page full) to Crew DS instances + semantic-token bindings
-
-**What:** The fidelity vertical slices plan (`docs/superpowers/plans/2026-05-10-fidelity-vertical-slices.md`) asked the two implementing tickets to migrate three frames in the Crew Dashboard Screens file (`9FeJPriqdsdA4n9R5Xsrr8`): bind hardcoded fills to Crew DS semantic + state tokens, and swap detached primitive structures (state pills, action buttons, agent rows, project section headers, drawer chrome, state-history chips, token table, viewport frame) for Crew DS instances.
-
-- **Phase A (CREW-119, Tasks A.13 + A.14):** `Agents List (/)` — frame `1:2`
-- **Phase B (CREW-117, Tasks B.8 + B.9):** `Agents List (/) - Agent Drawer Open` — frame `1:378`, and `Agent Page (/agent/XXX-123/full)` — frame `1:1900`
-
-Both autonomous runs (CREW-119 on 2026-05-10 morning, CREW-117 on 2026-05-10 mid-day) deferred the migrations for the same reason: per-element semantic-role binding is designer judgment, not heuristic. The dashboard-side fidelity sweep (the user-facing ticket goal) and the Crew DS composite buildout landed in both tickets, but the Figma frames still carry hardcoded fills + detached structures.
-
-**Why noticed:** Frame migration is a separable concern from "build the Crew DS components" — it consumes them, and only matters once the dashboard view is what the designer reviews against. Keeping it as a fast-follow gives designer time for the per-element semantic-role decisions (the same judgment-call problem from CREW-126's color-binding deferral).
-
-**Anchors:**
-
-- Crew Dashboard Screens file: `https://www.figma.com/design/9FeJPriqdsdA4n9R5Xsrr8` — frames `1:2`, `1:378`, `1:1900`
-- Crew DS composites that land as instances:
-  - From CREW-119: `BrandMark=19:3`, `StateBadge=20:23`, `TopNav=21:2`, `AgentRow=21:9`, `ProjectSection=21:21`, `AgentsList=21:25`
-  - From CREW-117: `AgentBody=24:2`, `StateHistoryBar=25:4`, `TokenTable=26:4`, `ViewportFrame=27:4`
-- State-color tokens to bind to: `Crew / Semantic Colors / state/{initializing|running|idle|waiting|pr-open|error|finished}`
-- Pattern reference: same recipe as the broader "bind hardcoded fills" followup below — but scoped to three frames whose Crew DS counterparts now exist.
-
-**What's been considered:**
-
-- **One ticket covering all three frames** (current shape of this entry). The work is identical in form, the screens file is shared, and serializing the Figma writes avoids cross-PR conflicts. Designer reviews three frames in one pass.
-- **Per-frame tickets** (one each for `1:2`, `1:378`, `1:1900`). Clean blast radius but tripled overhead and duplicated designer review surface area.
-- **Fold into the broader color-binding followup** (next entry in this file). Loses the connection to CREW-117/CREW-119 and the unlock window when the Crew DS composites are still fresh in the designer's head.
-
-**Shape of work:** One ticket, three frames, ~few hundred fill-bearing nodes per frame. Crew DS instances already exist so the swap is mechanical; per-element semantic-role decisions are the gating cost. ~3-4h of agent + designer time total. Should run before any major redesign of the agents-related screens.
 
 ### 2026-05-09 — Crew Dashboard Screens — bind hardcoded fills to Crew DS semantic variables
 
@@ -1114,6 +1090,17 @@ The other two open questions (sandbox config drift, Phase 2 + Phase 3 separation
 ## Resolved
 
 (items move here when ticketed and shipped, or fixed inline — keep for historical context, prune when the file gets long)
+
+### 2026-05-10 — Migrate the agents-related Figma frames (Agents List, Drawer Open, Agent Page full) to Crew DS instances + semantic-token bindings
+
+**Resolved 2026-05-10:** Done in an interactive Figma-MCP session (no Jira ticket — manual designer work paired with the agent). Frames `1:2`, `1:378`, and `1:1900` in the Crew Dashboard Screens file (`9FeJPriqdsdA4n9R5Xsrr8`) all migrated: 258/267 + 183/186 + 267/267 fills bound to `Crew / Semantic Colors` tokens; 30 detached state-pill structures swapped for `StateBadge` instances; explicit `dark mode` set on both the Crew Semantic Colors and Core `mode` collections per frame. StateBadge component itself was repolished mid-session — text/dot/border bind to the matching `state/X` token at full opacity, bg fill drops to opacity 0.18 for the canonical tinted-pill look (now documented in `docs/plans/design-system.md` "StateBadge visual pattern (canonical)"). A new `state/foreground` token landed in Crew DS for fixed-dark contrast situations (currently unused but available). Lessons learned will land as a `figma-screen-migration` skill so future migrations don't relearn the gotchas (publish-cache invalidation, instance-override resetting, two-collection mode propagation, etc.).
+
+**What:** The fidelity vertical slices plan (`docs/superpowers/plans/2026-05-10-fidelity-vertical-slices.md`) asked the two implementing tickets to migrate three frames in the Crew Dashboard Screens file (`9FeJPriqdsdA4n9R5Xsrr8`): bind hardcoded fills to Crew DS semantic + state tokens, and swap detached primitive structures (state pills, action buttons, agent rows, project section headers, drawer chrome, state-history chips, token table, viewport frame) for Crew DS instances.
+
+- **Phase A (CREW-119, Tasks A.13 + A.14):** `Agents List (/)` — frame `1:2`
+- **Phase B (CREW-117, Tasks B.8 + B.9):** `Agents List (/) - Agent Drawer Open` — frame `1:378`, and `Agent Page (/agent/XXX-123/full)` — frame `1:1900`
+
+Both autonomous runs (CREW-119 on 2026-05-10 morning, CREW-117 on 2026-05-10 mid-day) deferred the migrations for the same reason: per-element semantic-role binding is designer judgment, not heuristic. The dashboard-side fidelity sweep (the user-facing ticket goal) and the Crew DS composite buildout landed in both tickets, but the Figma frames carried hardcoded fills + detached structures until the 2026-05-10 manual session resolved them.
 
 ### 2026-05-07 — `sandbox-network-note.md` recommends `crew restart --hard` for docker recovery, but `--hard` nukes the worktree
 
