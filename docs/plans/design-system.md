@@ -25,7 +25,7 @@ Project-specific config for the `design-with-figma` skill (lives at `~/.claude/s
 | Phase 2 code — shadcn install + token migration | In progress (CREW-122)                                             |
 | Phase 2 code — add primitives                   | Not started (CREW-123)                                             |
 | Phase 2 Figma — Crew DS override layer          | Agent work complete (CREW-124); user must publish in Figma desktop |
-| Phase 2 — Code Connect                          | Not started (CREW-125)                                             |
+| Phase 2 — Code Connect                          | `.figma.tsx` mapping files landed in CREW-125; `figma connect publish` intentionally skipped (see Code Connect publish section) |
 | Phase 3 — Migrate screens                       | Partial: font fix landed in CREW-126; color binding + composite swap deferred (see followups) |
 | Phase 4 — Full Crew DS coverage                 | Not started (separate Epic)                                        |
 | Phase 5 — Skill v1 + reconciliation tooling     | Not started (separate Epic)                                        |
@@ -193,6 +193,20 @@ The Figma desktop client is required to publish a library and to formalize cross
 > **Generalization:** the same `importVariableByKeyAsync`-without-formal-link gap applies to any future ticket where one published Figma library aliases variables from another. CREW-126 (screens consuming Crew DS) and any Phase 4 tickets that build composites referencing Core primitives will hit the same trap unless the agent or the user explicitly adds the source library via the Libraries UI in the consumer file.
 
 After publish, downstream work unblocks: `CREW-125` (Code Connect mappings) needs Crew DS components later, and `CREW-126` (screen migration) consumes Crew DS variables. **Note for CREW-126:** the screens file will need Crew DS added via the Libraries UI as a separate manual step — same pattern as step 3 above.
+
+## Code Connect publish: intentionally skipped
+
+The `figma connect publish` step from CREW-125's plan is **intentionally not run** for this project. Code Connect publishing requires a Figma **Organization or Enterprise** team plan (per <https://github.com/figma/code-connect/blob/main/README.md>); crew is on Figma Pro Full (Professional tier), so the publish call would fail with a permissions error.
+
+Decided 2026-05-09 evening that upgrading the team plan (~$45/seat/month vs Pro's ~$15) isn't justified for a single-dev project. Instead:
+
+- **`.figma.tsx` files in `packages/dashboard/src/components/ui/` stay in code** as canonical documentation of the Figma → shadcn mapping. They're inert without publish — they don't surface in Figma's Dev Mode Inspect panel — but they're still authoritative as a written contract.
+- **The `design-with-figma` skill (Phase 5, separate Epic) reads them from disk directly** when translating a Figma primitive instance into shadcn JSX. The skill's resolution path doesn't need Code Connect's Dev Mode integration; it talks to the codebase, not Figma's API.
+- **Future Crew DS components** (added in Phase 4) should still author the matching `.figma.tsx` file alongside each component. Same convention, just no publish at the end.
+- **No `FIGMA_ACCESS_TOKEN` setup needed.** No GitHub Actions secret for Figma publish needed.
+- **CREW-125's Definition of Done is reduced** to "all 7 primitives have a `.figma.tsx` file authored." The "publish + Inspect panel returns shadcn JSX" criterion is dropped.
+
+This is a reversible decision — the file structure stays compatible with future publish if the team plan ever changes. Re-evaluate if (a) we upgrade to Org for unrelated reasons, or (b) Code Connect publish becomes available on Professional plans, or (c) we want Dev Mode Inspect resolution for human devs who don't go through the design-with-figma skill.
 
 ### Verification (optional but recommended)
 
