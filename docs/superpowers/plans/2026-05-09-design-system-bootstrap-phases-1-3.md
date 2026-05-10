@@ -49,42 +49,43 @@
 
 | Deliverable | Location |
 |---|---|
-| Core Design System | New published Figma file in user's Figma team |
-| Crew Design System | New published Figma file, depends on Core |
-| Crew Dashboard Screens | Existing `Untitled` file (`9FeJPriqdsdA4n9R5Xsrr8`), renamed; refactored to consume Crew DS |
+| Core Design System | Forked from community kit `UkPJj6vd7HMKcey7M0XF4N` ("shadcn ui components with variables — Tailwind classes — Updated January 2026"); saved to user's Figma team in `Design Systems` project, renamed `Core Design System`, scopes retrofitted, layout primitives added, published. |
+| Crew Design System | New published Figma file in same team, depends on Core. Thin layer of theme overrides + Crew composites. |
+| Crew Dashboard Screens | Existing `Untitled` file (`9FeJPriqdsdA4n9R5Xsrr8`), renamed; refactored to consume Crew DS. |
 
 ---
 
-## Phase 1 — Core Library (10 tasks)
+## Phase 1 — Core Library (7 tasks)
 
-Sets up the project-agnostic Tailwind token vocabulary as Figma variables. No code changes in this phase. All work via Figma MCP.
+Adopts the existing community shadcn kit as the basis for Core. Forks it to user's Figma team, retrofits explicit variable scopes (the kit's biggest weakness — it defaults to `ALL_SCOPES`), adds layout primitives the kit doesn't have, documents the messy `tokens` collection as internal, and publishes. No code changes in this phase. All work via Figma MCP.
 
 ### Task 1.1: Verify Figma MCP access from a fresh subagent
 
 **Files:** None (verification only)
 
-- [ ] **Step 1:** Run `use_figma` with a no-op script that calls `figma.root.children.length`. Verify the call returns a number without auth error.
-- [ ] **Step 2:** Confirm `get_metadata` works on a known file (the existing `9FeJPriqdsdA4n9R5Xsrr8` Untitled file).
+- [ ] **Step 1:** Run `use_figma` with a no-op script that calls `figma.root.children.length` against the kit file (`UkPJj6vd7HMKcey7M0XF4N` while it's still in the user's Drafts, OR the team-located fork once moved). Verify the call returns a number without auth error.
 
 ```js
 // Step 1 script
 return figma.root.children.length;
 ```
 
-If either step fails with an auth error, the agent's MCP doesn't have OAuth token inheritance from the user-scope plugin install. Stop and surface to user — they may need to re-auth in the dispatched session.
+If it fails with an auth error, the agent's MCP doesn't have OAuth token inheritance from the user-scope plugin install. Stop and surface to user — they may need to re-auth in the dispatched session.
 
-- [ ] **Step 3:** Document MCP availability in `docs/plans/design-system.md` (create the file with just a "MCP verified" note for now; rest comes later).
+- [ ] **Step 2:** Confirm `get_metadata` works on a known existing file (the `9FeJPriqdsdA4n9R5Xsrr8` Untitled file).
 
-### Task 1.2: Create Core Design System Figma file in user's team
+- [ ] **Step 3:** Create `docs/plans/design-system.md` if absent, with just a "MCP verified" note for now.
+
+### Task 1.2: Move kit from drafts to team, rename to Core Design System
 
 **Files:**
 - Create: `docs/plans/design-system.md` (initial)
 
-This task requires user action (Figma file creation must happen in the user's Figma desktop or web app, not via MCP — `create_new_file` MCP tool exists but file creation in a specific team is best done through the UI).
+User has saved the kit copy to their Drafts. It needs to be moved into the team's `Design Systems` project so it can be published as a library.
 
-- [ ] **Step 1:** Surface to user: "Please create a new Figma file in your team named 'Core Design System' and paste the file URL here. The file should live in a team you control (not Drafts) so it can be published as a library."
+- [ ] **Step 1:** Surface to user: "In Figma, find the kit copy in Drafts (it's titled something like 'shadcn ui components with variables...'). Right-click → Move to project → select your team's `Design Systems` project. Then rename the file to `Core Design System` (click the title at top-left of the file). Send me the file URL — file key may change when moved between locations."
 
-- [ ] **Step 2:** Once URL provided, parse the file key (the segment after `/design/` in the URL).
+- [ ] **Step 2:** Once URL provided, parse the file key.
 
 - [ ] **Step 3:** Add to `docs/plans/design-system.md`:
 
@@ -99,221 +100,179 @@ sample_data:
   project: "kanban-api"
   ticket: "KAN-23"
   user: "kanban-api operator"
+core_kit_origin: "https://www.figma.com/community/file/1342715840824755935 (forked 2026-05-09)"
 ---
 
 # Crew Design System
 
 (Component inventory + conventions populated in Phase 2-3.)
+
+## Core kit fork point
+
+Forked from the community file `UkPJj6vd7HMKcey7M0XF4N` ("shadcn ui components with variables — Tailwind classes — Updated January 2026") on 2026-05-09. The community file is the source of upstream changes; we don't auto-track. Periodically check upstream for meaningful additions (new shadcn primitives, lucide updates) worth manually porting in.
 ```
 
 - [ ] **Step 4:** Commit:
 
 ```bash
 git add docs/plans/design-system.md
-git commit -m "docs(design-system): scaffold project config (Phase 1)"
+git commit -m "docs(design-system): scaffold project config + record core kit fork (Phase 1)"
 ```
 
-### Task 1.3: Bootstrap `Tailwind / Colors` variable collection
+### Task 1.3: Retrofit explicit variable scopes on all kit variables
 
 **Files:** None (Figma-only)
 
-The Tailwind v4 default palette has 22 color families × 11 shades each = 242 color variables, plus white/black/transparent. Source of truth: <https://tailwindcss.com/docs/colors>. Use the OKLCH values from Tailwind's `theme.css` (in their npm package source), not hex — v4 ships colors in OKLCH.
+The kit's biggest weakness: every variable is `["ALL_SCOPES"]` which floods every Figma property picker. This task walks every collection and sets explicit scopes per variable type.
 
-- [ ] **Step 1:** Define the expected outcome. List of color families:
-`slate`, `gray`, `zinc`, `neutral`, `stone`, `red`, `orange`, `amber`, `yellow`, `lime`, `green`, `emerald`, `teal`, `cyan`, `sky`, `blue`, `indigo`, `violet`, `purple`, `fuchsia`, `pink`, `rose`. Plus `white`, `black`. Each family has shades 50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950.
+- [ ] **Step 1:** Define the scope mapping per collection name:
+
+| Collection name | Variable type | Scopes to set |
+|---|---|---|
+| `tw/colors`, `mode`, `rdx/colors` | COLOR | `["FRAME_FILL", "SHAPE_FILL", "STROKE_COLOR", "TEXT_FILL", "EFFECT_COLOR"]` |
+| `tw/padding` | FLOAT | `["GAP", "WIDTH_HEIGHT"]` (padding-applicable) |
+| `tw/space`, `tw/gap` | FLOAT | `["GAP", "WIDTH_HEIGHT"]` |
+| `tw/margin` | FLOAT | `["GAP", "WIDTH_HEIGHT"]` |
+| `tw/border-radius` | FLOAT | `["CORNER_RADIUS"]` |
+| `tw/border-width`, `tw/stroke-width` | FLOAT | `["STROKE_FLOAT"]` |
+| `tw/font` | mixed (FLOAT + STRING) | per-variable: font-family vars get `["FONT_FAMILY"]`, font-size vars get `["FONT_SIZE"]`, weights get `["FONT_WEIGHT"]`, line-heights get `["LINE_HEIGHT"]`, letter-spacing gets `["LETTER_SPACING"]`. Detect by variable name prefix (e.g. `family/*`, `size/*`, `weight/*`). |
+| `tw/height`, `tw/max-height`, `tw/max-width` | FLOAT | `["WIDTH_HEIGHT"]` |
+| `tw/opacity` | FLOAT | `["OPACITY"]` |
+| `tokens` | mixed | LEAVE alone (these are kit internals; keeping their `[]` empty scopes hides them from pickers anyway) |
 
 - [ ] **Step 2:** Write a `use_figma` script that:
-  1. Creates a new variable collection named `Tailwind / Colors` with single mode `Default`.
-  2. Iterates the family + shade list, creating one COLOR variable per pair, named `color/<family>/<shade>` (e.g. `color/slate/950`).
-  3. Sets each variable's value to the corresponding Tailwind v4 OKLCH value (hardcoded in the script as a JSON map — extract from Tailwind's `dist/index.css` or use the values from <https://tailwindcss.com/docs/colors>).
-  4. Sets explicit scopes: `["FRAME_FILL", "SHAPE_FILL", "STROKE_COLOR", "TEXT_FILL", "EFFECT_COLOR"]`.
+  1. Iterates `getLocalVariableCollectionsAsync()`.
+  2. For each collection, iterates variables and applies the scope mapping.
+  3. Returns counts per collection of variables retrofitted.
 
 ```js
-// Pattern (full color map omitted for brevity; populate from Tailwind source)
-const TAILWIND_COLORS = {
-  slate: {
-    50: { l: 0.984, c: 0.003, h: 247 },
-    100: { l: 0.968, c: 0.007, h: 247 },
-    // ... all shades for all families
-  },
-  // ... all families
+const collections = await figma.variables.getLocalVariableCollectionsAsync();
+const counts = {};
+const errors = [];
+
+const scopesByCollection = {
+  "tw/colors": ["FRAME_FILL", "SHAPE_FILL", "STROKE_COLOR", "TEXT_FILL", "EFFECT_COLOR"],
+  "mode": ["FRAME_FILL", "SHAPE_FILL", "STROKE_COLOR", "TEXT_FILL", "EFFECT_COLOR"],
+  "rdx/colors": ["FRAME_FILL", "SHAPE_FILL", "STROKE_COLOR", "TEXT_FILL", "EFFECT_COLOR"],
+  "tw/padding": ["GAP", "WIDTH_HEIGHT"],
+  "tw/space": ["GAP", "WIDTH_HEIGHT"],
+  "tw/gap": ["GAP", "WIDTH_HEIGHT"],
+  "tw/margin": ["GAP", "WIDTH_HEIGHT"],
+  "tw/border-radius": ["CORNER_RADIUS"],
+  "tw/border-width": ["STROKE_FLOAT"],
+  "tw/stroke-width": ["STROKE_FLOAT"],
+  "tw/height": ["WIDTH_HEIGHT"],
+  "tw/max-height": ["WIDTH_HEIGHT"],
+  "tw/max-width": ["WIDTH_HEIGHT"],
+  "tw/opacity": ["OPACITY"],
 };
 
-const collection = figma.variables.createVariableCollection("Tailwind / Colors");
-const created = [];
-for (const [family, shades] of Object.entries(TAILWIND_COLORS)) {
-  for (const [shade, oklch] of Object.entries(shades)) {
-    const v = figma.variables.createVariable(
-      `color/${family}/${shade}`, collection, "COLOR"
-    );
-    // OKLCH → RGB conversion for Figma's color storage
-    const rgb = oklchToRgb(oklch.l, oklch.c, oklch.h);
-    v.setValueForMode(collection.modes[0].modeId, rgb);
-    v.scopes = ["FRAME_FILL", "SHAPE_FILL", "STROKE_COLOR", "TEXT_FILL", "EFFECT_COLOR"];
-    created.push(v.id);
+for (const c of collections) {
+  if (c.name === "tokens") continue; // skip internal helpers
+  const scopes = scopesByCollection[c.name];
+  if (!scopes && c.name !== "tw/font") {
+    errors.push(`Unknown collection: ${c.name}`);
+    continue;
   }
+  let count = 0;
+  for (const id of c.variableIds) {
+    const v = await figma.variables.getVariableByIdAsync(id);
+    if (!v) continue;
+    if (c.name === "tw/font") {
+      // Pattern-match by variable name
+      const name = v.name.toLowerCase();
+      let scope;
+      if (/family/.test(name)) scope = ["FONT_FAMILY"];
+      else if (/size/.test(name)) scope = ["FONT_SIZE"];
+      else if (/weight/.test(name)) scope = ["FONT_WEIGHT"];
+      else if (/line.?height|leading/.test(name)) scope = ["LINE_HEIGHT"];
+      else if (/letter.?spacing|tracking/.test(name)) scope = ["LETTER_SPACING"];
+      else { errors.push(`Unmatched font var: ${v.name}`); continue; }
+      v.scopes = scope;
+    } else {
+      v.scopes = scopes;
+    }
+    count++;
+  }
+  counts[c.name] = count;
 }
-return { createdNodeIds: created, count: created.length };
+
+return { counts, errors, mutatedNodeIds: [] };
 ```
 
-- [ ] **Step 3:** Run the script. Verify return shows expected count (~244).
+- [ ] **Step 3:** Run the script. Verify return shows counts roughly matching the inventory (~244 colors, ~245 padding, ~149 radii, etc.). Errors array should be empty or near-empty (any unmatched font vars are a fixable signal).
 
-- [ ] **Step 4:** Run `get_metadata` on the file root to confirm the variables collection exists. Visually verify in Figma desktop that variables appear under the Variables panel.
+- [ ] **Step 4:** Spot-check a few variables in Figma desktop's Variables panel — confirm scopes show as the explicit subset (not "All").
 
-- [ ] **Step 5:** No code commit needed — Figma-only.
+- [ ] **Step 5:** No code commit.
 
-### Task 1.4: Bootstrap `Tailwind / Spacing` variable collection
-
-**Files:** None (Figma-only)
-
-Tailwind v4's spacing scale: `0`, `0.5`, `1`, `1.5`, `2`, `2.5`, `3`, `3.5`, `4`, `5`, `6`, `7`, `8`, `9`, `10`, `11`, `12`, `14`, `16`, `20`, `24`, `28`, `32`, `36`, `40`, `44`, `48`, `52`, `56`, `60`, `64`, `72`, `80`, `96`. Each unit = 0.25rem = 4px.
-
-- [ ] **Step 1:** Define expected outcome (variables named `space/0` through `space/96`, ~34 entries).
-
-- [ ] **Step 2:** Write a `use_figma` script:
-
-```js
-const SPACING_SCALE = [
-  0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 5, 6, 7, 8, 9, 10, 11, 12,
-  14, 16, 20, 24, 28, 32, 36, 40, 44, 48, 52, 56, 60, 64, 72, 80, 96
-];
-const collection = figma.variables.createVariableCollection("Tailwind / Spacing");
-const created = [];
-for (const unit of SPACING_SCALE) {
-  const v = figma.variables.createVariable(`space/${unit}`, collection, "FLOAT");
-  v.setValueForMode(collection.modes[0].modeId, unit * 4); // 1 unit = 4px
-  v.scopes = ["GAP", "WIDTH_HEIGHT"];
-  created.push(v.id);
-}
-return { createdNodeIds: created, count: created.length };
-```
-
-- [ ] **Step 3:** Run script, verify count.
-- [ ] **Step 4:** No code commit.
-
-### Task 1.5: Bootstrap `Tailwind / Radii` variable collection
+### Task 1.4: Add layout primitive components (Stack, Cluster, Container)
 
 **Files:** None (Figma-only)
 
-Tailwind v4 radii: `none` (0), `xs` (2px), `sm` (4px), `md` (6px), `lg` (8px), `xl` (12px), `2xl` (16px), `3xl` (24px), `4xl` (32px), `full` (9999px).
+The kit doesn't ship layout primitives. Add them to Core since they're broadly useful and project-agnostic.
 
-- [ ] **Step 1:** Define expected outcome (10 variables).
+- **Stack:** vertical auto-layout, `itemSpacing` bound to a `tw/gap` variable.
+- **Cluster:** horizontal auto-layout (wrap-enabled), `itemSpacing` bound similarly.
+- **Container:** max-width-constrained frame, centers content. `maxWidth` bound to a `tw/max-width` variable (e.g. `max-w-7xl`).
 
-- [ ] **Step 2:** Write `use_figma` script following the spacing pattern above; variable names `radius/none`, `radius/xs`, ..., `radius/full`. Scopes: `["CORNER_RADIUS"]`.
+- [ ] **Step 1:** Identify which `tw/gap` and `tw/max-width` variables to bind to (default choices: `gap-4` for Stack/Cluster, `max-w-7xl` for Container).
 
-- [ ] **Step 3:** Run, verify count.
-
-- [ ] **Step 4:** No code commit.
-
-### Task 1.6: Bootstrap `Tailwind / Type` variable collection
-
-**Files:** None (Figma-only)
-
-Three sub-categories:
-- Font families: `sans` (default sans stack), `serif` (default serif stack), `mono` (default mono stack)
-- Font sizes: `xs` (12px), `sm` (14px), `base` (16px), `lg` (18px), `xl` (20px), `2xl` (24px), `3xl` (30px), `4xl` (36px), `5xl` (48px), `6xl` (60px), `7xl` (72px), `8xl` (96px), `9xl` (128px)
-- Font weights: `thin` (100), `extralight` (200), `light` (300), `normal` (400), `medium` (500), `semibold` (600), `bold` (700), `extrabold` (800), `black` (900)
-- Line heights: `none` (1), `tight` (1.25), `snug` (1.375), `normal` (1.5), `relaxed` (1.625), `loose` (2)
-- Letter spacing: `tighter` (-0.05em), `tight` (-0.025em), `normal` (0), `wide` (0.025em), `wider` (0.05em), `widest` (0.1em)
-
-- [ ] **Step 1:** Define expected outcome (~36 variables across 5 sub-types).
-
-- [ ] **Step 2:** Write `use_figma` script. Multiple scope sets per sub-type:
-  - Font families → `["FONT_FAMILY"]`
-  - Font sizes → `["FONT_SIZE"]`
-  - Font weights → `["FONT_WEIGHT"]`
-  - Line heights → `["LINE_HEIGHT"]`
-  - Letter spacing → `["LETTER_SPACING"]`
-
-- [ ] **Step 3:** Run, verify count.
-
-- [ ] **Step 4:** No code commit.
-
-### Task 1.7: Bootstrap `Tailwind / Breakpoints` variable collection
-
-**Files:** None (Figma-only)
-
-Tailwind v4 breakpoints: `sm` (640), `md` (768), `lg` (1024), `xl` (1280), `2xl` (1536). All in pixels.
-
-- [ ] **Step 1:** Define expected outcome (5 variables).
-
-- [ ] **Step 2:** Write `use_figma` script. Variable names `breakpoint/sm` through `breakpoint/2xl`. Scopes: `["WIDTH_HEIGHT"]`.
-
-- [ ] **Step 3:** Run, verify count.
-
-- [ ] **Step 4:** No code commit.
-
-### Task 1.8: Import Heroicons community library
-
-**Files:** None (Figma-only)
-
-The Heroicons community library (<https://www.figma.com/community/file/1143911270904274171/heroicons>) needs to be enabled as a library asset accessible to the Core file. The cleanest approach is to duplicate the community file into the user's team and re-publish it under the team. This avoids depending on community library availability.
-
-- [ ] **Step 1:** Surface to user: "Open the Heroicons community library URL, click 'Open in Figma', save a copy to your team, and provide the new file URL. Or alternatively, enable it as a library directly. Heroicons icons should appear as components in the new file."
-
-- [ ] **Step 2:** Once user confirms, document the chosen approach + Heroicons file URL in `docs/plans/design-system.md` under a `# Icon library` section.
-
-- [ ] **Step 3:** Verify icons are accessible from the Core file: open Core, try inserting a Heroicon via Assets panel.
-
-- [ ] **Step 4:** Commit the design-system.md update:
-
-```bash
-git add docs/plans/design-system.md
-git commit -m "docs(design-system): document Heroicons library access (Phase 1)"
-```
-
-> NOTE: Spec mentions lucide as a candidate alternative since `lucide-react` is already in the dashboard's package.json. If during this task lucide proves easier (lucide has an official Figma kit), swap to lucide and update the spec note. Choice is reversible early; less so after Phase 2 Code Connect mappings reference a specific icon library.
-
-### Task 1.9: Build layout primitive components (Stack, Cluster, Container)
-
-**Files:** None (Figma-only)
-
-Three layout primitives that designers compose with — analogous to common Tailwind utility patterns.
-
-- **Stack:** vertical auto-layout, `gap` bound to a Crew spacing variable (or Core spacing var if Crew DS doesn't exist yet — bind to a Core var since Phase 2 hasn't run; will get re-bound in Phase 2).
-- **Cluster:** horizontal auto-layout, wraps. `gap` bound similarly.
-- **Container:** max-width constrained frame, centers content. `width` bound to a breakpoint variable.
-
-- [ ] **Step 1:** For each primitive, define expected dimensions and bound variables.
-
-- [ ] **Step 2:** Write a `use_figma` script that creates each as a Figma component (`figma.createComponent()`), positions them in a row inside the Core file, and binds the `gap` (Stack/Cluster) or `maxWidth` (Container) properties to the appropriate Core variables via `setBoundVariable`.
-
-```js
-// Pattern for Stack
-await Promise.all([
-  figma.loadFontAsync({ family: "Inter", style: "Regular" }),
-]);
-
-const collection = (await figma.variables.getLocalVariableCollectionsAsync())
-  .find(c => c.name === "Tailwind / Spacing");
-const space4 = collection.variableIds
-  .map(id => figma.variables.getVariableById(id))
-  .find(v => v.name === "space/4");
-
-const stack = figma.createComponent();
-stack.name = "Stack";
-stack.layoutMode = "VERTICAL";
-stack.primaryAxisSizingMode = "AUTO";
-stack.counterAxisSizingMode = "AUTO";
-stack.setBoundVariable("itemSpacing", space4);
-// ... add a sample child to make the component visualizable
-return { createdNodeIds: [stack.id] };
-```
+- [ ] **Step 2:** Write a `use_figma` script that creates each as a Figma component with the appropriate auto-layout config and variable bindings. Place them on a new page named `Layout Primitives` to keep them organized.
 
 - [ ] **Step 3:** Run script, verify components appear in Core file's Assets panel.
 
 - [ ] **Step 4:** No code commit.
 
-### Task 1.10: Publish Core library + finalize design-system.md
+### Task 1.5: Add `destructive-foreground` + breakpoint semantic aliases
+
+**Files:** None (Figma-only)
+
+Two small gap-fills in the kit:
+
+1. The `mode` collection has `destructive` but appears to be missing `destructive-foreground` (shadcn convention requires both). Add it.
+2. Breakpoints exist in the kit's `tokens` collection as raw numerics (`640`, `768`, `1024`, `1280`, `1536`) with no semantic naming. Create a small new collection `Core / Breakpoints` aliasing them to `breakpoint/sm` ... `breakpoint/2xl`.
+
+- [ ] **Step 1:** Inspect `mode` collection to confirm `destructive-foreground` is missing (only `destructive` was visible in the initial inspection — check first).
+
+- [ ] **Step 2:** If missing, write a `use_figma` script to add it. Suggested values:
+  - Light mode → alias to `tw/colors / slate/50` (light text on red bg)
+  - Dark mode → alias to `tw/colors / slate/50` (light text on red bg works in both)
+  - Scopes: `["TEXT_FILL"]`
+
+- [ ] **Step 3:** Write a second script to create `Core / Breakpoints` collection with 5 FLOAT variables aliasing to the matching `tokens` numerics (`breakpoint/sm` → `tokens / 640`, etc.). Scopes: `["WIDTH_HEIGHT"]`.
+
+- [ ] **Step 4:** Run both scripts, verify in Variables panel.
+
+- [ ] **Step 5:** No code commit.
+
+### Task 1.6: Document the kit's `tokens` collection as internal
 
 **Files:**
 - Modify: `docs/plans/design-system.md`
 
-- [ ] **Step 1:** Surface to user: "Open the Core file in Figma desktop, then Assets panel → Publish library. Confirm publish succeeded."
+- [ ] **Step 1:** Update `docs/plans/design-system.md` with a `# Core kit notes` section explaining:
+  - The `tokens` collection (89 raw-numeric variables like `0,5`, `1,25`, `640`) is used internally by the kit's component implementations.
+  - Designers should ignore it in design work; values aren't semantically meaningful.
+  - Empty scopes (`[]`) on those variables already hide them from most property pickers, so visibility impact is minimal.
 
-- [ ] **Step 2:** Verify by querying Core file's variables via `get_metadata` on the file root — confirm the 5 variable collections exist with expected counts.
+- [ ] **Step 2:** Commit:
 
-- [ ] **Step 3:** Update `docs/plans/design-system.md` with a `# Core library inventory` section listing the 5 collections + total variable counts. Document any deviations from the plan (e.g., extra variables added).
+```bash
+git add docs/plans/design-system.md
+git commit -m "docs(design-system): document core kit tokens collection (Phase 1)"
+```
+
+### Task 1.7: Publish Core library + finalize design-system.md
+
+**Files:**
+- Modify: `docs/plans/design-system.md`
+
+- [ ] **Step 1:** Surface to user: "Open Core Design System file in Figma desktop, then Assets panel → Publish library. Confirm publish succeeded."
+
+- [ ] **Step 2:** Verify by querying Core file via `get_metadata` and a `use_figma` script that lists collections + variable counts. Confirm all 17 collections present (16 from kit + 1 new `Core / Breakpoints`), plus the layout primitives on `Layout Primitives` page.
+
+- [ ] **Step 3:** Update `docs/plans/design-system.md` with a `# Core library inventory` section listing every collection and its variable count + scopes summary, plus the layout primitives. Note any deviations encountered (e.g. extra unmatched font vars, kit collections with unexpected names).
 
 - [ ] **Step 4:** Commit:
 
@@ -322,11 +281,11 @@ git add docs/plans/design-system.md
 git commit -m "docs(design-system): finalize Phase 1 Core library inventory"
 ```
 
-**Phase 1 acceptance:** Core library published. design-system.md frontmatter has `core_library_url`. All 5 Tailwind variable collections present with expected variable counts. Heroicons accessible. Layout primitives exist as Figma components.
+**Phase 1 acceptance:** Core library published. design-system.md frontmatter has `core_library_url`. All variable collections have explicit scopes (no `ALL_SCOPES`). Layout primitives present. Kit fork point recorded.
 
 ---
 
-## Phase 2 — Crew DS + shadcn install + skill skeleton (15 tasks)
+## Phase 2 — Crew DS + shadcn install + skill skeleton (12 tasks)
 
 Combines code work (shadcn install + index.css migration) and Figma work (Crew DS file + components + Code Connect). Order matters: code work first to establish the shadcn token vocabulary, then Figma to mirror it.
 
@@ -704,73 +663,48 @@ git add docs/plans/design-system.md
 git commit -m "docs(design-system): record Crew DS file URL (Phase 2)"
 ```
 
-### Task 2.13: Bootstrap Crew DS semantic colors collection (Light + Dark modes)
+### Task 2.13: Build Crew theme override layer
 
 **Files:** None (Figma-only)
 
-Mirrors the shadcn semantic tokens we just put in `index.css`. Each semantic token aliases to a Core primitive per mode.
+Crew DS gets a small variable collection that overrides Core's `mode` aliases where Crew's brand differs from shadcn defaults. Most semantic tokens just pass through Core unchanged — this collection only overrides the deltas. To keep things flexible without a delta-detection step, build out a full Crew override collection that re-aliases EVERY semantic token to a Core primitive, even when the alias is identical to Core's. Lets future overrides happen by editing the alias, not adding a new variable.
 
-- [ ] **Step 1:** Define expected mappings (extract from `index.css` `:root` and `.dark` blocks; same OKLCH values).
+- [ ] **Step 1:** Inspect Core's `mode` collection from Crew DS to capture the list of semantic tokens (~47 vars: `background`, `foreground`, `card`, etc.) and their current Core aliases per mode.
 
-- [ ] **Step 2:** Write `use_figma` script (against Crew DS file):
-  1. Create variable collection `Crew / Semantic Colors` with two modes: `Light`, `Dark`.
-  2. Import each needed Core primitive via `figma.variables.importVariableByKeyAsync()` (need keys from Core; query Core file or pre-bake the key map in the script).
-  3. For each shadcn semantic token (`background`, `foreground`, `card`, ...), create a COLOR variable; for each mode, set its value to a `VariableAlias` pointing at the appropriate Core primitive.
-  4. Set scopes appropriately (per the spec's scopes table).
+- [ ] **Step 2:** Define Crew's intentional overrides. v1 list (TBD during execution; defaults to "no overrides — same as Core"):
+  - Probably none for v1. Crew's existing dashboard uses standard slate-950 dark backgrounds — likely matches kit defaults closely. If overrides emerge during inspection, document them inline.
 
-- [ ] **Step 3:** Run, verify count and bindings via `get_metadata`.
+- [ ] **Step 3:** Write a `use_figma` script (against Crew DS file):
+  1. Import all of Core's semantic tokens via `figma.variables.importVariableByKeyAsync()`.
+  2. Create variable collection `Crew / Semantic Colors` with two modes: `Light`, `Dark`.
+  3. For each Core semantic token, create a same-named Crew variable that aliases to the Core token per mode. Apply explicit scopes (color scopes per the spec).
+  4. Apply any v1 Crew overrides (re-point specific aliases to different Core primitives instead of the Core `mode` alias).
 
-- [ ] **Step 4:** Visually verify in Figma desktop: Variables panel shows the collection, modes are toggleable, switching modes changes resolved colors.
+- [ ] **Step 4:** Verify via `get_metadata`. Crew's Variables panel should show `Crew / Semantic Colors` with all the same token names as Core's `mode` collection. Mode toggle should work.
 
 - [ ] **Step 5:** No code commit.
 
-### Task 2.14: Bootstrap Crew DS semantic spacing / type / radii collections
-
-**Files:** None (Figma-only)
-
-Three single-mode collections. Each aliases curated subsets of Core primitives.
-
-- [ ] **Step 1:** Define expected mappings:
-  - `Crew / Semantic Spacing`: `space/page-x` → `space/8`, `space/section-y` → `space/16`, `space/card-padding` → `space/6`, `space/field-gap` → `space/3`, etc.
-  - `Crew / Type Scale`: `text/display`, `text/title`, `text/body`, `text/caption`, `text/mono` — each is a *grouping* concept; in Figma you typically can't bind multiple type properties to a single variable, so this collection holds the font-size choices used: `text-display-size` → `font-size/2xl`, etc. Keep simple in v1.
-  - `Crew / Radii`: `radius/control` → `radius/md`, `radius/card` → `radius/lg`, `radius/pill` → `radius/full`.
-
-- [ ] **Step 2:** Write `use_figma` scripts (one per collection; can be in same task).
-
-- [ ] **Step 3:** Run, verify.
-
-- [ ] **Step 4:** No code commit.
-
-### Task 2.15: Choose and adopt shadcn Figma kit; theme with Crew tokens
+### Task 2.14: Document the Crew DS / Core relationship
 
 **Files:**
 - Modify: `docs/plans/design-system.md`
 
-This task involves judgment + user input.
+- [ ] **Step 1:** Update `docs/plans/design-system.md` with a `# Crew DS structure` section explaining:
+  - Crew DS imports Core (the forked kit).
+  - Crew DS contains: `Crew / Semantic Colors` (override layer) + Crew composites (added in Phase 4 incrementally).
+  - To override a token: edit its alias in `Crew / Semantic Colors` to point at a different `tw/colors` primitive than Core's default.
+  - Document any Phase 2 overrides (likely none for v1).
 
-- [ ] **Step 1:** Survey shadcn Figma kits. Check:
-  - Official-ish kit (search "shadcn ui figma" on Figma Community)
-  - Most-duplicated community alternatives (sort community results by "Most duplicated")
-  - Quality criteria: complete primitive coverage, uses Figma variables (not hardcoded values), Light + Dark modes, recently updated
-
-- [ ] **Step 2:** Surface options to user with brief comparison; user picks one.
-
-- [ ] **Step 3:** Open user's chosen kit, save copy to user's Figma team. Add as a library.
-
-- [ ] **Step 4:** Enable the chosen kit as a library inside Crew DS file.
-
-- [ ] **Step 5:** Theme it with Crew's semantic colors: write a `use_figma` script that walks the kit's component instances (or master components) and rebinds their fill / stroke / etc. variable references from the kit's own variables to Crew's `Crew / Semantic Colors` aliases. This may require reading kit structure first to understand what bindings exist.
-
-- [ ] **Step 6:** Visually verify: open a Button instance from the kit inside Crew DS, switch the kit between Light and Dark modes — Crew colors should resolve correctly.
-
-- [ ] **Step 7:** Document choice + theming approach in `docs/plans/design-system.md` under `# shadcn Figma kit`. Commit.
+- [ ] **Step 2:** Commit:
 
 ```bash
 git add docs/plans/design-system.md
-git commit -m "docs(design-system): document shadcn Figma kit choice and theming (Phase 2)"
+git commit -m "docs(design-system): document Crew DS / Core override structure (Phase 2)"
 ```
 
-### Task 2.16: Publish Crew DS library
+> **Note:** Tasks 2.15 (semantic spacing/type/radii collections) and 2.16 (shadcn kit choice + theming) from the original plan are **REMOVED**. Core (the forked kit) already provides spacing/radii via `tw/*` collections and shadcn primitives via the kit's component pages. Crew DS doesn't need to recreate or theme them — it consumes Core directly and adds composites incrementally in Phase 4.
+
+### Task 2.15: Publish Crew DS library
 
 **Files:** None (Figma-only)
 
@@ -780,7 +714,7 @@ git commit -m "docs(design-system): document shadcn Figma kit choice and theming
 
 - [ ] **Step 3:** No code commit.
 
-### Task 2.17: Install `@figma/code-connect` and create Code Connect mappings for primitives
+### Task 2.16: Install `@figma/code-connect` and create Code Connect mappings for primitives
 
 **Files:**
 - Modify: `packages/dashboard/package.json` (add `@figma/code-connect` dev dep)
@@ -855,7 +789,7 @@ git add packages/dashboard/figma.config.json packages/dashboard/src/components/u
 git commit -m "feat(dashboard): Code Connect mappings for shadcn primitives (CREW-XXX)"
 ```
 
-### Task 2.18: Create design-with-figma skill skeleton (manual, not ticketed)
+### Task 2.17: Create design-with-figma skill skeleton (manual, not ticketed)
 
 **Files (manual, outside crew repo):**
 - Create: `~/.claude/skills/design-with-figma/SKILL.md`
@@ -874,7 +808,7 @@ Per CLAUDE.md "Don't ticket — handle manually" rule for `~/.claude/**` work, t
 
 - [ ] **Step 5:** No commit (skill files are user-machine-only).
 
-### Task 2.19: Verify Phase 2 acceptance + finalize design-system.md
+### Task 2.18: Verify Phase 2 acceptance + finalize design-system.md
 
 **Files:**
 - Modify: `docs/plans/design-system.md`
@@ -1026,9 +960,9 @@ git commit -m "docs(design-system): finalize Phase 3 — screens migrated (CREW-
 
 - [ ] **Placeholder scan.** No "TBD", "implement later", or vague "add validation" steps. The few `<TBD: phase 2>` / `<TBD: phase 5>` placeholders in design-system.md frontmatter are intentional — they get filled in by later tasks.
 
-- [ ] **Type consistency.** Variable names + scopes used in Phase 1 tasks match the references in Phase 2 tasks. Component primitive names align across Tasks 2.5-2.11 and 2.17.
+- [ ] **Type consistency.** Variable names + scopes used in Phase 1 tasks match the references in Phase 2 tasks. Component primitive names align across Tasks 2.5-2.11 and 2.16.
 
-- [ ] **Token mapping consistency.** The migration map in Task 2.4 matches the semantic naming used in Phase 1 spec section, Phase 2 Crew DS collection (Task 2.13), and Code Connect (Task 2.17).
+- [ ] **Token mapping consistency.** The migration map in Task 2.4 matches the semantic naming used in Phase 1 (kit's `mode` collection), Phase 2 Crew DS collection (Task 2.13), and Code Connect (Task 2.16).
 
 - [ ] **Commit messages reference ticket keys as `CREW-XXX` placeholders.** Real ticket keys get substituted when this plan is ticketed in Jira.
 
@@ -1038,19 +972,19 @@ git commit -m "docs(design-system): finalize Phase 3 — screens migrated (CREW-
 
 When converting this plan to Jira tickets per the global CLAUDE.md workflow:
 
-- **One Epic** for "Design System Bootstrap (Phases 1-3)"
-- **Child tickets** grouped roughly by:
-  - Ticket A: Phase 1 Tasks 1.1-1.10 (Core library — all Figma work, can complete in one focused session)
-  - Ticket B: Phase 2 Tasks 2.1-2.4 (shadcn install + token migration in code)
-  - Ticket C: Phase 2 Tasks 2.5-2.11 (add shadcn primitives — could be one ticket or split per primitive)
-  - Ticket D: Phase 2 Tasks 2.12-2.16 (Crew DS Figma file + components)
-  - Ticket E: Phase 2 Tasks 2.17 (Code Connect mappings)
-  - Ticket F: Phase 3 Tasks 3.1-3.11 (screen migration)
-  - Ticket G (NOT ticketed, manual): Task 2.18 (skill skeleton — handle in chat per CLAUDE.md)
-- **Dependency edges:**
-  - B blocks C, D
-  - A blocks D
-  - C blocks E
-  - D blocks E
-  - E blocks F
-- **Parallelism:** A and B can run concurrently (Phase 1 Figma + Phase 2 code prep are independent). C and D can also run concurrently after A + B are done.
+- **One Epic** for "Design System Bootstrap (Phases 1-3)" — already created as `CREW-120`
+- **Child tickets** (already created):
+  - `CREW-121`: Phase 1 Tasks 1.1-1.7 (Core library — fork kit, retrofit scopes, add layout primitives, publish)
+  - `CREW-122`: Phase 2 Tasks 2.1-2.4 (shadcn install + token migration in code)
+  - `CREW-123`: Phase 2 Tasks 2.5-2.11 (add 7 shadcn primitives)
+  - `CREW-124`: Phase 2 Tasks 2.12-2.15 (Crew DS Figma file + override layer + publish)
+  - `CREW-125`: Phase 2 Task 2.16 (Code Connect mappings)
+  - `CREW-126`: Phase 3 Tasks 3.1-3.11 (screen migration)
+  - **Not ticketed, manual:** Task 2.17 (skill skeleton — handled in chat per CLAUDE.md "Don't ticket" rule for `~/.claude/**` work)
+- **Dependency edges (set in Jira):**
+  - CREW-122 blocks CREW-123, CREW-124
+  - CREW-121 blocks CREW-124
+  - CREW-123 blocks CREW-125
+  - CREW-124 blocks CREW-125
+  - CREW-125 blocks CREW-126
+- **Parallelism:** CREW-121 and CREW-122 run concurrently (Phase 1 Figma + Phase 2 code prep are independent). CREW-123 and CREW-124 also run concurrently after the first batch merges.
