@@ -27,7 +27,7 @@ Project-specific config for the `design-with-figma` skill (lives at `~/.claude/s
 | Phase 2 Figma — Crew DS override layer          | Agent work complete (CREW-124); user must publish in Figma desktop                                                              |
 | Phase 2 — Code Connect                          | `.figma.tsx` mapping files landed in CREW-125; `figma connect publish` intentionally skipped (see Code Connect publish section) |
 | Phase 3 — Migrate screens                       | Partial: font fix landed in CREW-126; color binding + composite swap deferred (see followups)                                   |
-| Phase 4 — Full Crew DS coverage                 | Partial: 6 of 11 composites built in CREW-119 + 7 state-color semantic tokens added; CREW-117 picks up the next 4               |
+| Phase 4 — Full Crew DS coverage                 | Partial: 10 of 11 composites built (6 in CREW-119 + 4 in CREW-117); only `ErrorFallback` remains. Frame migration deferred — see followup       |
 | Phase 5 — Skill v1 + reconciliation tooling     | Not started (separate Epic)                                                                                                     |
 
 ## shadcn CLI version
@@ -155,6 +155,21 @@ All six composites live on the `Composites` page in Crew DS. The Figma builds ar
 | `AgentsList`     | `21:25`    | `packages/dashboard/src/components/AgentsList.tsx`                   | `packages/dashboard/src/components/AgentsList.figma.tsx`              |
 
 `StateBadge` is published as a **component set** with one variant per agent state (`state=initializing | running | idle | waiting | pr-open | error | finished`); the `.figma.tsx` mapping bridges Figma's kebab `pr-open` to the dashboard's snake `pr_open` via `figma.enum`. The other five are single components — Figma variant axes will grow as future fidelity tickets surface a need (e.g. AgentRow's `state` axis, TopNav's `route` axis).
+
+### CREW-117 (agent drawer vertical slice, 2026-05-10)
+
+Four additional composites added to the `Composites` page. Same skeleton-fidelity bar as CREW-119: structural slots, semantic-token bindings on fills/strokes, and representative content; pixel polish lands later.
+
+| Composite         | Figma node | Dashboard counterpart                                  | Code Connect mapping                                          |
+| ----------------- | ---------- | ------------------------------------------------------ | ------------------------------------------------------------- |
+| `AgentBody`       | `24:2`     | `packages/dashboard/src/components/AgentBody.tsx`      | `packages/dashboard/src/components/AgentBody.figma.tsx`       |
+| `StateHistoryBar` | `25:4`     | `packages/dashboard/src/components/StateHistoryBar.tsx`| `packages/dashboard/src/components/StateHistoryBar.figma.tsx` |
+| `TokenTable`      | `26:4`     | `packages/dashboard/src/components/TokenTable.tsx`     | `packages/dashboard/src/components/TokenTable.figma.tsx`      |
+| `ViewportFrame`   | `27:4`     | `packages/dashboard/src/components/ViewportFrame.tsx`  | `packages/dashboard/src/components/ViewportFrame.figma.tsx`   |
+
+All four are single components (no Figma variant axes). `AgentBody` composes a `StateBadge` instance in its header; the body slot is a placeholder — runtime composition (Timeline / StateHistoryBar / TokenTable mounting) is tracked separately (see followup `2026-05-08 — Wire StateHistoryBar and TokenTable into AgentBody`). The dashboard's `AgentBody.tsx` was refactored in CREW-117 to consume shadcn `Button` (variant `outline` + `ghost`, size `xs`) for the View PR / Open as page / Copy worktree-path actions, replacing inline `<a>` and `<button>` markup.
+
+After CREW-117, **Phase 4 has 10 of 11 composites built** — only `ErrorFallback` remains. It will land alongside the next fidelity ticket that surfaces a need for it (likely a settings or error-state route).
 
 ### State-color semantic tokens (added in CREW-119)
 
