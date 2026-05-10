@@ -9,7 +9,7 @@ Format: see the user-level `~/.claude/CLAUDE.md` "Followup detection" section.
 - [Active](#active)
   - [2026-05-10 — Wire dashboard QuickAction buttons (Resume / Finish / Inspect / Provide input) to daemon endpoints](#2026-05-10--wire-dashboard-quickaction-buttons-resume--finish--inspect--provide-input-to-daemon-endpoints)
   - [2026-05-10 — Polish the 6 CREW-119 Crew DS composites (skeleton-fidelity → pixel-fidelity)](#2026-05-10--polish-the-6-crew-119-crew-ds-composites-skeleton-fidelity--pixel-fidelity)
-  - [2026-05-10 — Migrate the `Agents List (/)` Figma frame to Crew DS instances + semantic-token bindings](#2026-05-10--migrate-the-agents-list--figma-frame-to-crew-ds-instances--semantic-token-bindings)
+  - [2026-05-10 — Migrate the agents-related Figma frames (Agents List, Drawer Open, Agent Page full) to Crew DS instances + semantic-token bindings](#2026-05-10--migrate-the-agents-related-figma-frames-agents-list-drawer-open-agent-page-full-to-crew-ds-instances--semantic-token-bindings)
   - [2026-05-09 — Crew Dashboard Screens — bind hardcoded fills to Crew DS semantic variables](#2026-05-09--crew-dashboard-screens--bind-hardcoded-fills-to-crew-ds-semantic-variables)
   - [2026-05-09 — Crew Dashboard Screens — rebuild ad-hoc modals + detached primitives as Crew DS instances](#2026-05-09--crew-dashboard-screens--rebuild-ad-hoc-modals--detached-primitives-as-crew-ds-instances)
   - [2026-05-09 — Manual rename of Figma screens file to "Crew Dashboard Screens"](#2026-05-09--manual-rename-of-figma-screens-file-to-crew-dashboard-screens)
@@ -110,29 +110,33 @@ Format: see the user-level `~/.claude/CLAUDE.md` "Followup detection" section.
 
 **Shape of work:** Likely folded into individual fidelity tickets as they arise (e.g. a future "Projects List fidelity" ticket would polish `TopNav` because that surface uses it). No standalone ticket needed unless the user wants to schedule a dedicated polish pass.
 
-### 2026-05-10 — Migrate the `Agents List (/)` Figma frame to Crew DS instances + semantic-token bindings
+### 2026-05-10 — Migrate the agents-related Figma frames (Agents List, Drawer Open, Agent Page full) to Crew DS instances + semantic-token bindings
 
-**What:** Phase A of the fidelity vertical slices plan (`docs/superpowers/plans/2026-05-10-fidelity-vertical-slices.md`, Tasks A.13 + A.14) asked CREW-119 to migrate the `Agents List (/)` frame in the Crew Dashboard Screens file (`9FeJPriqdsdA4n9R5Xsrr8`, frame `1:2`): bind hardcoded fills to Crew DS semantic + state tokens, and swap detached primitive structures (state pills, action buttons, agent rows, project section headers) for the new Crew DS instances. CREW-119 deferred this to keep the autonomous run scope reasonable — the dashboard-side fidelity sweep (the actual user-facing ticket goal) and the Crew DS composite buildout both landed in CREW-119, but the Figma frame still has hardcoded fills + detached structures.
+**What:** The fidelity vertical slices plan (`docs/superpowers/plans/2026-05-10-fidelity-vertical-slices.md`) asked the two implementing tickets to migrate three frames in the Crew Dashboard Screens file (`9FeJPriqdsdA4n9R5Xsrr8`): bind hardcoded fills to Crew DS semantic + state tokens, and swap detached primitive structures (state pills, action buttons, agent rows, project section headers, drawer chrome, state-history chips, token table, viewport frame) for Crew DS instances.
 
-**Why noticed:** CREW-119 autonomous run on 2026-05-10. The frame migration is a separable concern from "build the Crew DS components" — it consumes them, and only matters once the dashboard view is what the designer reviews against. Keeping it as a fast-follow gives designer time for the per-element semantic-role decisions (the same judgment-call problem from CREW-126's color-binding deferral).
+- **Phase A (CREW-119, Tasks A.13 + A.14):** `Agents List (/)` — frame `1:2`
+- **Phase B (CREW-117, Tasks B.8 + B.9):** `Agents List (/) - Agent Drawer Open` — frame `1:378`, and `Agent Page (/agent/XXX-123/full)` — frame `1:1900`
+
+Both autonomous runs (CREW-119 on 2026-05-10 morning, CREW-117 on 2026-05-10 mid-day) deferred the migrations for the same reason: per-element semantic-role binding is designer judgment, not heuristic. The dashboard-side fidelity sweep (the user-facing ticket goal) and the Crew DS composite buildout landed in both tickets, but the Figma frames still carry hardcoded fills + detached structures.
+
+**Why noticed:** Frame migration is a separable concern from "build the Crew DS components" — it consumes them, and only matters once the dashboard view is what the designer reviews against. Keeping it as a fast-follow gives designer time for the per-element semantic-role decisions (the same judgment-call problem from CREW-126's color-binding deferral).
 
 **Anchors:**
 
-- Crew Dashboard Screens file: `https://www.figma.com/design/9FeJPriqdsdA4n9R5Xsrr8` — frame `1:2` (`Agents List (/)`)
-- Crew DS composites that land as instances: `BrandMark=19:3`, `StateBadge=20:23`, `TopNav=21:2`, `AgentRow=21:9`, `ProjectSection=21:21`, `AgentsList=21:25`
+- Crew Dashboard Screens file: `https://www.figma.com/design/9FeJPriqdsdA4n9R5Xsrr8` — frames `1:2`, `1:378`, `1:1900`
+- Crew DS composites that land as instances:
+  - From CREW-119: `BrandMark=19:3`, `StateBadge=20:23`, `TopNav=21:2`, `AgentRow=21:9`, `ProjectSection=21:21`, `AgentsList=21:25`
+  - From CREW-117: `AgentBody=24:2`, `StateHistoryBar=25:4`, `TokenTable=26:4`, `ViewportFrame=27:4`
 - State-color tokens to bind to: `Crew / Semantic Colors / state/{initializing|running|idle|waiting|pr-open|error|finished}`
-- Pattern reference: same recipe as the broader "bind hardcoded fills" followup below — but scoped to one frame and now unblocked by Crew DS composites existing.
+- Pattern reference: same recipe as the broader "bind hardcoded fills" followup below — but scoped to three frames whose Crew DS counterparts now exist.
 
 **What's been considered:**
 
-- **Fold into the broader color-binding followup** (next entry in this file). Reasonable but loses the connection to CREW-119 — one ticket per frame is the cleaner unit.
-- **Pair this with CREW-117's Phase B work** since both touch the screens file. Keeps the Figma writes serialized and avoids stepping on each other; the agent doing CREW-117 should run Phase A's Task A.13 + A.14 first, then proceed.
+- **One ticket covering all three frames** (current shape of this entry). The work is identical in form, the screens file is shared, and serializing the Figma writes avoids cross-PR conflicts. Designer reviews three frames in one pass.
+- **Per-frame tickets** (one each for `1:2`, `1:378`, `1:1900`). Clean blast radius but tripled overhead and duplicated designer review surface area.
+- **Fold into the broader color-binding followup** (next entry in this file). Loses the connection to CREW-117/CREW-119 and the unlock window when the Crew DS composites are still fresh in the designer's head.
 
-**Shape of work:** Small ticket — one frame, ~few hundred fill-bearing nodes, Crew DS instances already exist so the swap is mechanical. ~1-2h of agent + designer time. Should run after CREW-119 merges and before any major redesign of the agents list visual.
-
-**Open questions:**
-
-- [ ] Should this be a standalone ticket or rolled into CREW-117's Phase B (which already migrates the drawer frame)?
+**Shape of work:** One ticket, three frames, ~few hundred fill-bearing nodes per frame. Crew DS instances already exist so the swap is mechanical; per-element semantic-role decisions are the gating cost. ~3-4h of agent + designer time total. Should run before any major redesign of the agents-related screens.
 
 ### 2026-05-09 — Crew Dashboard Screens — bind hardcoded fills to Crew DS semantic variables
 
@@ -291,9 +295,9 @@ The SSE shape feels right — it matches slice 1c's "live updates" feel and give
 
 ### 2026-05-08 — Wire `StateHistoryBar` and `TokenTable` into `AgentBody` alongside the timeline
 
-**Ticket:** [CREW-117](https://safturento.atlassian.net/browse/CREW-117) — subsumed into the broader drawer visual-fidelity sweep; resolution gated on that PR landing.
-
 **What:** CREW-109 wired `<Timeline>` into `packages/dashboard/src/components/AgentBody.tsx` (replacing the `agent-body-placeholder` div) so the e2e timeline scenarios could pass. The original placeholder copy promised "Timeline, state history, and token table" — the latter two (`<StateHistoryBar>`, `<TokenTable>`) ship in CREW-104 but are still unmounted. The drawer is functional today, but the spec §5a/§5b composition isn't complete.
+
+> **Update 2026-05-10:** CREW-117's ticket scope was expanded to a vertical-slice bundle (Crew DS composites + dashboard refactor + Figma frame migration + visual fidelity sweep) per `docs/superpowers/specs/2026-05-10-fidelity-vertical-slices-design.md`. The Definition of Done in the Jira ticket no longer covers this composition — CREW-117's autonomous run lands the 4 Crew DS composites (`AgentBody`, `StateHistoryBar`, `TokenTable`, `ViewportFrame`) and the dashboard refactor, but does NOT mount StateHistoryBar/TokenTable in AgentBody (the open questions below are still unresolved, and TokenTable's per-tool token data isn't exposed by the daemon today). Re-target this followup to a fresh ticket once the open questions are settled.
 
 **Why noticed:** While reading the slice 1c plan (`docs/superpowers/plans/2026-05-05-slice-1c-agent-drawer-and-push-updates.md`), I noticed that no plan task actually composes Tasks 20 (TokenTable) and 21 (StateHistoryBar) into AgentBody — the plan jumped straight from building the components (Tasks 20–28) to the E2E scenarios (Task 30) that test only the timeline portion. CREW-J / CREW-104's ticket file likewise mentions integration as deliberately out of scope.
 
@@ -312,6 +316,7 @@ The SSE shape feels right — it matches slice 1c's "live updates" feel and give
 
 - Where does TokenTable sit on narrow drawer widths? (collapsible side panel vs always-stacked.)
 - Does `onScrollTo(ts)` need new public Timeline API, or piggyback on an existing imperative handle?
+- TokenTable's `rows: { tool, tokens }[]` data isn't exposed by the daemon — the `AgentDetailTokens` shape only has `total/input/output/cache_read/cache_creation` (no per-tool aggregation). Either add a daemon endpoint or compute client-side from transcript events.
 
 ### 2026-05-07 — Port allocator detects collisions only at `docker compose up` time, not at allocation time
 
