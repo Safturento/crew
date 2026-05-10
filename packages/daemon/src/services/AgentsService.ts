@@ -74,12 +74,16 @@ export class AgentsService {
 
   async list(): Promise<AgentSummary[]> {
     // One row per agent. The `latest` join uses a correlated subquery to
-    // pick the agent's highest run id (autoincrement → newest). The
-    // `totals` join aggregates token columns and computes two boolean
-    // flags across ALL of the agent's runs: whether any tool_call ever
-    // matched `gh pr create` (drives `pr_open`), and whether the LATEST
-    // run has any tool_calls (distinguishes `initializing` from `running`
-    // for an open run).
+    // pick the agent's highest run id among non-finish runs (autoincrement
+    // → newest), so a `crew finish` run does not poison the latest-run
+    // signal that drives state derivation. `totals` aggregates token
+    // columns and computes two boolean flags across ALL of the agent's
+    // runs: whether any tool_call ever matched `gh pr create` (drives
+    // `pr_open`), and whether the LATEST non-finish run has any tool_calls
+    // (distinguishes `initializing` from `running` for an open run).
+    // `finish_status.has_finish_completed_ok` rolls up whether any finish
+    // run has completed cleanly — that's the signal that an agent is
+    // `finished`.
     const rows = await this.db
       .selectFrom('agents as a')
       .leftJoin(
@@ -89,7 +93,7 @@ export class AgentsService {
           .where(
             'r.id',
             '=',
-            sql<number>`(SELECT id FROM runs r2 WHERE r2.agent_key = r.agent_key ORDER BY r2.id DESC LIMIT 1)`,
+            sql<number>`(SELECT id FROM runs r2 WHERE r2.agent_key = r.agent_key AND r2.command IN ('run', 'fix-pr') ORDER BY r2.id DESC LIMIT 1)`,
           )
           .as('latest'),
         (join) => join.onRef('latest.agent_key', '=', 'a.key'),
@@ -106,13 +110,26 @@ export class AgentsService {
             sql<number>`MAX(CASE WHEN tc.tool_name = 'Bash' AND tc.input_summary LIKE 'gh pr create%' THEN 1 ELSE 0 END)`.as(
               'has_pr_create',
             ),
-            sql<number>`MAX(CASE WHEN tc.run_id = (SELECT id FROM runs r3 WHERE r3.agent_key = r.agent_key ORDER BY r3.id DESC LIMIT 1) THEN 1 ELSE 0 END)`.as(
+            sql<number>`MAX(CASE WHEN tc.run_id = (SELECT id FROM runs r3 WHERE r3.agent_key = r.agent_key AND r3.command IN ('run', 'fix-pr') ORDER BY r3.id DESC LIMIT 1) THEN 1 ELSE 0 END)`.as(
               'latest_has_tool_calls',
             ),
           ])
           .groupBy('r.agent_key')
           .as('totals'),
         (join) => join.onRef('totals.agent_key', '=', 'a.key'),
+      )
+      .leftJoin(
+        this.db
+          .selectFrom('runs as r')
+          .select([
+            'r.agent_key as agent_key',
+            sql<number>`MAX(CASE WHEN r.command = 'finish' AND r.completed_at IS NOT NULL AND r.exit_code = 0 THEN 1 ELSE 0 END)`.as(
+              'has_finish_completed_ok',
+            ),
+          ])
+          .groupBy('r.agent_key')
+          .as('finish_status'),
+        (join) => join.onRef('finish_status.agent_key', '=', 'a.key'),
       )
       .select([
         'a.key',
@@ -125,6 +142,7 @@ export class AgentsService {
         'totals.tokens',
         'totals.has_pr_create',
         'totals.latest_has_tool_calls',
+        'finish_status.has_finish_completed_ok',
       ])
       .orderBy('a.key', 'asc')
       .execute();
@@ -136,6 +154,7 @@ export class AgentsService {
         exitCode: row.exitCode,
         latestHasToolCalls: Boolean(row.latest_has_tool_calls),
         hasPrCreate: Boolean(row.has_pr_create),
+        finishCompletedOk: Boolean(row.has_finish_completed_ok),
       });
       const summary: AgentSummary = {
         key: row.key,
@@ -204,18 +223,27 @@ export class AgentsService {
     const toolCallCount = totals?.tool_call_count ?? 0;
     const hasPrCreate = Boolean(totals?.has_pr_create);
 
-    const latest = runRows[runRows.length - 1];
+    // Pick the latest non-finish run for state derivation: a `crew finish`
+    // run does not represent the meaningful work of the agent, so it must
+    // not feed `completedAt`/`exitCode`/`latestHasToolCalls`. Whether
+    // finish itself completed ok is handled separately below.
+    const meaningfulRuns = runRows.filter((r) => r.command !== 'finish');
+    const latest = meaningfulRuns[meaningfulRuns.length - 1] ?? runRows[runRows.length - 1];
     const latestHasToolCalls = await this.db
       .selectFrom('tool_calls')
       .select(sql<number>`COUNT(*)`.as('n'))
       .where('run_id', '=', latest.id)
       .executeTakeFirst();
+    const finishCompletedOk = runRows.some(
+      (r) => r.command === 'finish' && r.completed_at !== null && r.exit_code === 0,
+    );
 
     const state = deriveState({
       completedAt: latest.completed_at,
       exitCode: latest.exit_code,
       latestHasToolCalls: (latestHasToolCalls?.n ?? 0) > 0,
       hasPrCreate,
+      finishCompletedOk,
     });
 
     return {
@@ -272,9 +300,18 @@ interface DeriveStateInput {
   exitCode: number | null;
   latestHasToolCalls: boolean;
   hasPrCreate: boolean;
+  /**
+   * Whether any `crew finish` run for this agent has completed cleanly
+   * (`exit_code = 0`). When true, the agent is `finished` regardless of
+   * whether `gh pr create` was ever observed — the original `crew run`
+   * makes `hasPrCreate` true forever, so this flag is the only signal that
+   * the agent is past its merged-PR state. Drives CREW-116 acceptance.
+   */
+  finishCompletedOk: boolean;
 }
 
 function deriveState(input: DeriveStateInput): AgentState {
+  if (input.finishCompletedOk) return 'finished';
   if (input.completedAt === null) {
     return input.latestHasToolCalls ? 'running' : 'initializing';
   }

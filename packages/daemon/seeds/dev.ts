@@ -65,6 +65,14 @@ const FIXTURE_AGENTS: Omit<Insertable<AgentsTable>, 'created_at'>[] = [
     branch: 'KAN-202',
     pr_url: null,
   },
+  {
+    key: 'KAN-203',
+    project_name: 'recipes',
+    ticket_title: 'Macros chart legend',
+    worktree_path: '/home/dev/Repos/Recipes-KAN-203',
+    branch: 'KAN-203',
+    pr_url: 'https://github.com/Safturento/Recipes-App/pull/4321',
+  },
 ];
 
 const FIXTURE_RUNS: Insertable<RunsTable>[] = [
@@ -100,10 +108,33 @@ const FIXTURE_RUNS: Insertable<RunsTable>[] = [
     completed_at: '2026-05-05T09:18:00Z',
     exit_code: 0,
   },
+  // KAN-203 exercises the CREW-116 fix: an agent that opened a PR and then
+  // had `crew finish` run cleanly. The original `gh pr create` is in its
+  // tool_calls (so cross-run `has_pr_create` would return true forever),
+  // but the completed finish run shifts state to `finished`.
+  {
+    agent_key: 'KAN-203',
+    command: 'run',
+    session_id: 'sess-k203-run',
+    started_at: '2026-05-06T08:00:00Z',
+    completed_at: '2026-05-06T08:25:00Z',
+    exit_code: 0,
+  },
+  {
+    agent_key: 'KAN-203',
+    command: 'finish',
+    session_id: 'finish-KAN-203-fixture',
+    started_at: '2026-05-06T08:35:00Z',
+    completed_at: '2026-05-06T08:36:00Z',
+    exit_code: 0,
+  },
 ];
 
 interface FixtureToolCall extends Omit<Insertable<ToolCallsTable>, 'run_id'> {
   agent_key: string;
+  /** Optional: when an agent has multiple seeded runs, pick the one with
+   *  this `command`. Defaults to the first inserted run for the agent. */
+  run_command?: 'run' | 'fix-pr' | 'finish';
 }
 
 // Tool calls are pinned to specific agents so the AgentsService state
@@ -172,6 +203,17 @@ const FIXTURE_TOOL_CALLS: FixtureToolCall[] = [
     cache_creation_tokens: 0,
     occurred_at: '2026-05-05T09:10:00Z',
   },
+  {
+    agent_key: 'KAN-203',
+    run_command: 'run',
+    tool_name: 'Bash',
+    input_summary: 'gh pr create --title "feat: macros legend" --body ...',
+    output_tokens: 410,
+    input_tokens: 180,
+    cache_read_tokens: 720,
+    cache_creation_tokens: 0,
+    occurred_at: '2026-05-06T08:24:00Z',
+  },
 ];
 
 /**
@@ -196,15 +238,26 @@ export async function seedFixtures(db: Kysely<DaemonDatabase>): Promise<void> {
   const insertedRuns = await db
     .insertInto('runs')
     .values(FIXTURE_RUNS)
-    .returning(['id', 'agent_key'])
+    .returning(['id', 'agent_key', 'command'])
     .execute();
 
-  const runIdByAgent = new Map(insertedRuns.map((r) => [r.agent_key, r.id]));
+  const runIdByAgentFirst = new Map<string, number>();
+  for (const r of insertedRuns) {
+    if (!runIdByAgentFirst.has(r.agent_key)) runIdByAgentFirst.set(r.agent_key, r.id);
+  }
+  const runIdByAgentCommand = new Map<string, number>(
+    insertedRuns.map((r) => [`${r.agent_key}::${r.command}`, r.id]),
+  );
 
-  const toolCallRows = FIXTURE_TOOL_CALLS.map(({ agent_key, ...tc }) => {
-    const run_id = runIdByAgent.get(agent_key);
+  const toolCallRows = FIXTURE_TOOL_CALLS.map(({ agent_key, run_command, ...tc }) => {
+    const run_id =
+      run_command !== undefined
+        ? runIdByAgentCommand.get(`${agent_key}::${run_command}`)
+        : runIdByAgentFirst.get(agent_key);
     if (run_id === undefined) {
-      throw new Error(`fixture tool_call references unknown agent_key: ${agent_key}`);
+      throw new Error(
+        `fixture tool_call references unknown agent_key/run_command: ${agent_key}/${run_command ?? 'first'}`,
+      );
     }
     return { ...tc, run_id };
   });
