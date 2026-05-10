@@ -9,7 +9,9 @@ export function ErrorFallback({ error, resetErrorBoundary }: FallbackProps) {
         className="rounded-[14px] border border-state-error/40 bg-state-error/10 px-6 py-8"
       >
         <p className="font-mono text-xs text-state-error">DASHBOARD ERROR</p>
-        <p className="mt-1 text-2xl font-semibold tracking-tight text-foreground">Something went wrong</p>
+        <p className="mt-1 text-2xl font-semibold tracking-tight text-foreground">
+          Something went wrong
+        </p>
         <p className="mt-3 break-words text-sm text-muted-foreground">{message}</p>
         <button
           type="button"

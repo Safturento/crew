@@ -29,7 +29,9 @@ export function ProjectSection({ project, agents, onSelectAgent }: ProjectSectio
             aria-hidden
           />
           <Folder className="h-4 w-4 text-muted-foreground" aria-hidden />
-          <span className="text-sm font-semibold tracking-tight text-foreground">{project.name}</span>
+          <span className="text-sm font-semibold tracking-tight text-foreground">
+            {project.name}
+          </span>
           <span className="text-xs text-muted-foreground">
             {active} active · {agents.length} total
           </span>

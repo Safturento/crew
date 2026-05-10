@@ -93,7 +93,9 @@ export function AgentRow({ agent, onSelect }: AgentRowProps) {
       <StateBadge state={agent.state} />
       <span className="font-mono text-xs text-muted-foreground">{agent.key}</span>
       <span className="truncate text-[13.5px] text-foreground">{agent.ticketTitle}</span>
-      <span className="text-right font-mono text-xs tabular-nums text-muted-foreground">{runtime}</span>
+      <span className="text-right font-mono text-xs tabular-nums text-muted-foreground">
+        {runtime}
+      </span>
       <span className="text-right font-mono text-xs tabular-nums text-muted-foreground">
         {formatTokens(agent.tokens)}
       </span>

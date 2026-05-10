@@ -61,7 +61,9 @@ function AgentHeader({ detail, mode }: { detail: AgentDetail; mode: AgentBodyMod
         </span>
         <span className="font-mono text-xs text-muted-foreground">{detail.ticket_key}</span>
         <StateBadge state={detail.state} />
-        {runtime && <span className="font-mono text-xs tabular-nums text-muted-foreground">{runtime}</span>}
+        {runtime && (
+          <span className="font-mono text-xs tabular-nums text-muted-foreground">{runtime}</span>
+        )}
         <span className="font-mono text-xs tabular-nums text-muted-foreground">
           {formatTokens(detail.tokens.total)}
         </span>
