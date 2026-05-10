@@ -6,9 +6,9 @@
 
 ## Summary
 
-Bootstrap a multi-layer Figma design system for the crew dashboard, structured for reuse across future projects (Recipes is queued next). Establish a project-agnostic Core library (Tailwind v4 token vocabulary + Heroicons + responsive primitives), a project-specific Crew Design System extending Core (theme overrides + components matching `packages/dashboard/src/components/`), and a generic `design-with-figma` Claude Code skill that drives the design-via-discussion → Figma-via-MCP workflow. Adopt shadcn/ui as the codebase primitive layer in a coordinated refactor so Code Connect mappings are 1:1 from day one. Build a `crew design-sync` reconciliation CLI to detect drift between Figma variables and the Tailwind `@theme` block.
+Bootstrap a multi-layer Figma design system for the crew dashboard, structured for reuse across future projects (Recipes is queued next). Adopt an existing community shadcn/ui Figma kit (originally Figma community file `UkPJj6vd7HMKcey7M0XF4N` "shadcn ui components with variables — Tailwind classes — Updated January 2026") as the foundation — it already provides Tailwind primitives, shadcn-aligned semantic tokens with Light + Dark modes, the full lucide icon set (1,469 components), and every shadcn primitive component. We fork it (save copy to user's Figma team), rename it `Core Design System`, retrofit explicit variable scopes (the kit defaults to `ALL_SCOPES` which pollutes property pickers), add layout primitives (Stack/Cluster/Container), and publish. A project-specific Crew Design System extends Core with Crew-specific overrides and composites. Generic `design-with-figma` Claude Code skill drives the design-via-discussion → Figma-via-MCP workflow. Adopt shadcn/ui as the codebase primitive layer so Code Connect mappings are 1:1 from day one. Build a `crew design-sync` reconciliation CLI to detect drift between Figma variables and the Tailwind `@theme` block.
 
-Phased over five phases (~2 weeks of focused work, much of it incremental). Phases 1-3 are sequential and unblock the design fidelity tickets. Phases 4-5 are incremental and run alongside other work.
+Phased over five phases (~1 week of focused work for Phases 1-3 thanks to the kit shortcut, then incremental). Phases 1-3 are sequential and unblock the design fidelity tickets. Phases 4-5 are incremental and run alongside other work.
 
 ## Context & motivation
 
@@ -26,11 +26,13 @@ Three layers, in dependency order:
 
 | Layer | Lives in | Owner | Purpose |
 |---|---|---|---|
-| **Core Library** | New published Figma file in safturento's Figma team, e.g. `Core Design System` | safturento (project-agnostic) | Tailwind v4 token vocabulary as Figma variables (light + dark modes), Heroicons import (outline + solid, 24px), responsive breakpoint variables, layout primitives (Stack, Cluster, Container). Reusable across any project. |
-| **Crew Design System** | New published Figma file in same team, `Crew Design System`. Depends on (consumes) Core. | crew project | Crew-specific semantic theme aliases (shadcn-aligned naming: `background`, `foreground`, `primary`, `destructive`, etc.), Crew components matching `packages/dashboard/src/components/`, Code Connect mappings (1:1 to shadcn primitives + 1:1 to crew composites). |
+| **Core Library** | Forked from community kit `UkPJj6vd7HMKcey7M0XF4N`, saved to user's Figma team in `Design Systems` project, renamed `Core Design System`, published. | safturento (project-agnostic) | Tailwind primitives (multiple `tw/*` collections), shadcn-aligned semantic tokens with Light + Dark modes (`mode` collection: `background`, `foreground`, `primary`, `destructive`, `card`, `border`, etc.), all shadcn primitive components (Button, Input, Dialog, Form, etc. — 60+ component pages), full lucide icon set (1,469 icons), Radix color alternative (`rdx/colors`). Plus our additions: explicit variable scopes (retrofit), layout primitives (Stack, Cluster, Container). Reusable across any project. |
+| **Crew Design System** | New published Figma file in same team, `Crew Design System`. Depends on (consumes) Core. | crew project | Thin layer of Crew-specific overrides on Core's semantic tokens where Crew differs from shadcn defaults; Crew composites matching `packages/dashboard/src/components/` that aren't covered by Core's primitives; Code Connect mappings (1:1 to shadcn primitives + 1:1 to crew composites). |
 | **Crew Screens** | The current "Untitled" file (`9FeJPriqdsdA4n9R5Xsrr8`) renamed to `Crew Dashboard Screens`, plus future per-feature files. Consumes Crew DS. | per design effort | Screen compositions, prototype flows, design fidelity references for tickets. |
 
 Both libraries are **published** so Figma's library system handles versioning, deprecation flags, and consumer-side update prompts. Updates flow library → consumers via Figma's "Updates available" prompt.
+
+**Why fork an existing kit instead of building from scratch?** Aligns with the user's stated preference for stable existing solutions over reinventing. The kit author has already done the labor of bootstrapping ~1,800 variables, 60+ shadcn components, and 1,469 lucide icons — all using semantic naming that exactly matches shadcn convention. Forking (rather than depending on the community file directly) gives us full ownership: we customize freely, the upstream can change without affecting us. The kit's own caveats (default `ALL_SCOPES`, slightly messy `tokens` collection) are addressed by the retrofit work in Phase 1.
 
 ### Source-of-truth direction
 
@@ -45,37 +47,43 @@ Five phases. Sequential through phase 3, incremental thereafter.
 ### Phase 1 — Core Library v1
 
 **Deliverables:**
-- Figma file `Core Design System` published in safturento's Figma team
-- Variable collections:
-  - `Tailwind / Colors` — full default Tailwind v4 palette as variables (single mode; mode-invariant primitives)
-  - `Tailwind / Spacing` — `space/0` through `space/96`
-  - `Tailwind / Radii` — `radius/none` through `radius/full`
-  - `Tailwind / Type` — font-families (sans, mono), font-sizes, font-weights, line-heights, letter-spacings
-  - `Tailwind / Breakpoints` — `breakpoint/sm` through `breakpoint/2xl`
-- Heroicons import (outline + solid, 24px source size) from the Heroicons community library
-- Layout primitives (Stack, Cluster, Container) as base auto-layout templates
-- Documented variable scopes per type (no `ALL_SCOPES` defaults)
+- Forked community kit moved into user's Figma team, renamed `Core Design System`, published
+- All ~1,800 variables in the kit's collections retrofitted with **explicit scopes** per Figma's variable-scope semantics. Mapping by collection:
+  - `tw/colors` (244) → `["FRAME_FILL", "SHAPE_FILL", "STROKE_COLOR", "TEXT_FILL", "EFFECT_COLOR"]`
+  - `tw/padding`, `tw/margin`, `tw/space`, `tw/gap` → `["GAP", "WIDTH_HEIGHT"]` (with appropriate subset per type — padding restricted to padding scopes)
+  - `tw/border-radius` → `["CORNER_RADIUS"]`
+  - `tw/border-width`, `tw/stroke-width` → `["STROKE_FLOAT"]`
+  - `tw/font` → `["FONT_FAMILY", "FONT_SIZE", "FONT_WEIGHT", "LINE_HEIGHT", "LETTER_SPACING"]` per sub-type
+  - `tw/height`, `tw/max-height`, `tw/max-width` → `["WIDTH_HEIGHT"]`
+  - `tw/opacity` → `["OPACITY"]`
+  - `mode` (semantic colors with Light + Dark) → same as `tw/colors`
+  - `rdx/colors` → same as `tw/colors`
+- Layout primitives (Stack, Cluster, Container) as Figma components — added to Core since the kit doesn't have them
+- Document the messy `tokens` collection: leave intact (used by kit's components), document as "internal helpers; ignore in design work"
+- Add `destructive-foreground` semantic token if missing from `mode` collection (shadcn convention requires it)
+- Add semantic aliases for breakpoints (the kit has 640/768/1024/1280/1536 as raw numerics in `tokens`; alias them to `breakpoint/sm`...`breakpoint/2xl` in a new tiny collection)
 
-**Bootstrap mechanism:** A `use_figma` script that takes the Tailwind v4 default palette JSON (grabbed from Tailwind docs) and creates all primitive variables programmatically. Manual variable creation would take hours and be error-prone.
+**Bootstrap mechanism:** A series of `use_figma` scripts: (1) a scope-retrofit script that walks every variable in the kit and sets scopes per the mapping above, (2) a small script to add layout primitive components, (3) an inspection-and-document script that confirms final state.
 
-**Effort:** 2-3 days
+**What we're NOT doing:** No more bootstrapping Tailwind primitives from scratch. The kit already has them. No more separate Heroicons import — lucide is in the kit and lucide-react is the matching code library. No shadcn-kit-choice work — already chosen.
+
+**Effort:** ~half day (was 2-3 days before kit adoption)
 
 ### Phase 2 — Crew DS v1 + Skill v0 skeleton + shadcn install
 
 **Deliverables:**
 - `npx shadcn@latest init` run in `packages/dashboard` configured for Tailwind v4 (pin a CLI version known to work with v4)
 - Initial shadcn primitives installed: Button, Input, Dialog, Form, Badge, Label, Separator
-- Figma file `Crew Design System` published, depending on Core
-- Variable collection `Crew / Semantic Colors` with Light + Dark modes:
-  - shadcn-aligned tokens: `background`, `foreground`, `card`, `card-foreground`, `popover`, `popover-foreground`, `primary`, `primary-foreground`, `secondary`, `secondary-foreground`, `muted`, `muted-foreground`, `accent`, `accent-foreground`, `destructive`, `destructive-foreground`, `border`, `input`, `ring`
-  - Each token aliases to a Core primitive per mode
-- Variable collections `Crew / Semantic Spacing`, `Crew / Type Scale`, `Crew / Radii` (single mode each)
-- Choose and adopt a shadcn/ui Figma community kit as the basis for Crew DS primitive components — evaluate options during this phase, document choice. Theme imported components with Crew tokens.
-- Code Connect mappings for installed primitives (1:1 from day 1)
+- Figma file `Crew Design System` published, depending on Core (which now includes the kit's shadcn primitives + lucide + variables)
+- Crew theme override layer: a small variable collection in Crew DS that aliases Core's `mode` tokens to Crew-specific values where Crew differs from shadcn defaults. For example, if Crew wants its `primary` to be a specific Tailwind shade rather than the kit's chosen alias, override here. Most tokens just re-alias to Core unchanged.
+- Crew composites collection: components matching `packages/dashboard/src/components/` that aren't covered by Core's shadcn primitives (e.g. `AgentRow`, `StateBadge`, `StateHistoryBar`, `TokenTable`). These are bigger compositions specific to crew.
+- Code Connect mappings for installed primitives (1:1 from day 1) — point at Core's shadcn primitive components in Figma and dashboard's `components/ui/*` in code
 - Skill skeleton at `~/.claude/skills/design-with-figma/SKILL.md` — frontmatter + 5-step bullet outline + hard gates. Most prose is `<!-- TODO: refine in Phase 5 -->` placeholders.
 - Initial `crew/docs/plans/design-system.md` with Phase 1 + Phase 2 file URLs and conventions
 
-**Effort:** 3-4 days
+**What we're NOT doing in Phase 2 anymore:** No semantic colors collection from scratch — Core (the forked kit) already has it. No shadcn kit choice + adoption + theming — already done in Phase 1 by virtue of being the kit. Crew DS is now mostly ALIASES + ADDITIONS, not foundation-building.
+
+**Effort:** ~1 day for Crew DS Figma work; the code-side Phase 2 work (shadcn install + token migration + adding primitives + Code Connect) is unchanged at ~3-4 days
 
 ### Phase 3 — Migrate current screens to Crew DS
 
@@ -118,49 +126,80 @@ Five phases. Sequential through phase 3, incremental thereafter.
 
 ### Two-layer token system
 
-**Primitive tokens** (Core): Mirror Tailwind v4 raw palette 1:1. Mode-invariant. Example: `color/slate/950` resolves to a single oklch value regardless of theme.
+**Primitive tokens** (Core, in the `tw/*` collections from the forked kit): Mirror Tailwind v4 raw palette 1:1. Mode-invariant. Example: `slate/950` (in `tw/colors`) resolves to a single OKLCH value regardless of theme.
 
-**Semantic tokens** (Crew DS): Aliases pointing at primitives. Mode-aware. Example: `background` (Dark mode) → `color/slate/950`; `background` (Light mode) → `color/white`.
+**Semantic tokens** (Core, in the kit's `mode` collection — Light + Dark modes built in): Aliases pointing at `tw/colors` primitives. Mode-aware. The kit ships with shadcn's exact semantic vocabulary already wired: `background`, `foreground`, `card`, `popover`, `primary`, `secondary`, `muted`, `accent`, `destructive`, `border`, `input`, `ring`, plus the sidebar suite (`sidebar`, `sidebar-foreground`, etc.) and chart colors (`chart-1` through `chart-5`).
+
+**Crew theme overrides** (Crew DS): A small set of aliases that selectively re-point Core's `mode` tokens to different primitives where Crew's brand differs from shadcn defaults. Most semantic tokens just pass through Core unchanged.
 
 Components bind to semantic tokens, never primitives directly. Toggling Figma's mode flips the bound primitive automatically.
 
+### Kit collection inventory (Core, after retrofit)
+
+Kit ships with 16 collections; we add scopes and a small `Core / Layout` collection for our additions:
+
+| Collection | Modes | Variables | Purpose |
+|---|---|---|---|
+| `tw/colors` | single | 244 | Tailwind palette — 22 families × 11 shades, plus white/black/transparent |
+| `tw/padding` | single | 245 | Padding step values for Tailwind p-* classes |
+| `tw/space` | single | 68 | space-y/space-x utility step values |
+| `tw/border-radius` | single | 149 | rounded-* values incl. responsive variants (rounded-s-sm, etc.) |
+| `tw/margin` | single | 245 | m-* step values |
+| `tw/gap` | single | 102 | gap-* step values |
+| `tw/border-width` | single | 45 | border-{1,2,4,8} etc. |
+| `tw/stroke-width` | single | 11 | SVG stroke widths |
+| `tw/font` | single | 47 | Font-family/size/weight/line-height/letter-spacing |
+| `tw/height` | single | 24 | h-* step values |
+| `tw/max-height` | single | 35 | max-h-* values |
+| `tw/max-width` | single | 51 | max-w-* values incl. max-w-{sm,md,lg,xl,2xl,...} |
+| `tw/opacity` | single | 21 | opacity step values |
+| `mode` | **Light + Dark** | 47 | Semantic colors (shadcn-aligned) + `radius-*` + stroke/border-width semantic aliases |
+| `tokens` | single | 89 | Internal kit helpers — *raw numeric values like `0,5`, `1,25`, `640`. Document as "ignore in design work; used by kit's components."* |
+| `rdx/colors` | Light + Dark | 396 | Radix-style color palette (alternate to Tailwind). Available but Crew chooses Tailwind. |
+| **NEW** `Core / Layout` | single | ~3 | Stack, Cluster, Container layout primitive components (Phase 1 addition) |
+
 ### Variable scopes
 
-Every variable gets explicit scopes; default `ALL_SCOPES` floods every property picker. Mandatory in the design-with-figma skill workflow.
+The kit defaults every variable to `ALL_SCOPES`, which floods every property picker. **Mandatory Phase 1 retrofit:** walk every variable and set explicit scopes per type. Mapping:
 
-| Variable type | Typical scopes |
+| Variable category | Scopes |
 |---|---|
-| Color (background) | `FRAME_FILL`, `SHAPE_FILL` |
-| Color (text) | `TEXT_FILL` |
-| Color (border) | `STROKE_COLOR` |
-| Spacing | `GAP`, `WIDTH_HEIGHT` |
-| Radius | `CORNER_RADIUS` |
+| Color (in `tw/colors`, `mode`, `rdx/colors`) | `FRAME_FILL`, `SHAPE_FILL`, `STROKE_COLOR`, `TEXT_FILL`, `EFFECT_COLOR` |
+| Spacing (`tw/padding`, `tw/margin`, `tw/space`, `tw/gap`) | `GAP`, `WIDTH_HEIGHT` (with appropriate subset per type) |
+| Radius (`tw/border-radius`) | `CORNER_RADIUS` |
+| Border / stroke widths | `STROKE_FLOAT` |
 | Font family | `FONT_FAMILY` |
 | Font size | `FONT_SIZE` |
+| Font weight | `FONT_WEIGHT` |
+| Line height | `LINE_HEIGHT` |
+| Letter spacing | `LETTER_SPACING` |
+| Width / max-width / height / max-height | `WIDTH_HEIGHT` |
+| Opacity | `OPACITY` |
 
-Most semantic colors get multiple scopes (e.g. `border` is used as both stroke AND fill on dividers).
+The retrofit is a single use_figma script that walks `getLocalVariableCollectionsAsync()` and rewrites scopes per a switch on collection name + variable type. Idempotent and reversible.
 
 ### Naming convention
 
-Tailwind `@theme` block uses `--color-slate-950`, `--space-4`, etc. Figma variables use `/` separators for grouping: `color/slate/950`, `space/4`. The reconciliation tool maps between these conventions (kebab-with-double-dash vs slash-separated).
+Tailwind `@theme` block uses `--color-slate-950`, `--space-4`, etc. The kit's variables use `slate/950`, `space-4`, `rounded-md` — close to but not identical to Tailwind's CSS-variable naming (some use `/` as delimiter, some use `-`). The reconciliation tool maps between these conventions.
 
 ### Mode mapping example
 
+The kit's `mode` collection already wires Light and Dark mappings. Example bindings:
+
 ```
-Crew / Semantic Colors:
+mode collection:
   background:
-    Light → Tailwind / Colors / color/white
-    Dark  → Tailwind / Colors / color/slate/950
-  foreground:
-    Light → Tailwind / Colors / color/slate/950
-    Dark  → Tailwind / Colors / color/slate/50
+    light mode → tw/colors / slate/50  (kit's choice)
+    dark mode  → tw/colors / slate/950 (kit's choice)
   primary:
-    Light → Tailwind / Colors / color/slate/900
-    Dark  → Tailwind / Colors / color/slate/100
+    light mode → kit-chosen Tailwind shade
+    dark mode  → kit-chosen Tailwind shade
   destructive:
-    Light → Tailwind / Colors / color/red/600
-    Dark  → Tailwind / Colors / color/red/500
+    light mode → kit-chosen red shade
+    dark mode  → kit-chosen red shade
 ```
+
+**Crew DS overrides** can re-point any of these aliases to different `tw/colors` primitives if the kit's choices don't match crew's brand. For Phase 2 scoping, we'll likely override a small set (e.g. tweak `primary` to a specific Tailwind shade). Most tokens pass through unchanged.
 
 ## Component + Code Connect strategy
 
@@ -181,7 +220,7 @@ Adopting shadcn means:
 | **Primitives** (Button, Input, Dialog, Form, Badge, Label, Separator, etc.) | `packages/dashboard/src/components/ui/*` (shadcn-installed) | 1:1. Variant Figma properties (`variant=primary\|secondary\|destructive\|ghost`, `size=sm\|md\|lg`) map to shadcn's CVA variant props directly. |
 | **Crew composites** (AgentRow, ProjectSection, AgentBody, AgentsList, TopNav, StateBadge, StateHistoryBar, TokenTable, ViewportFrame, ErrorFallback, BrandMark) | `packages/dashboard/src/components/*` (custom) | 1:1. These don't have Figma variants beyond data — rendered with concrete props. |
 | **Layout primitives** (Stack, Cluster, Container, Grid) | shadcn's layout primitives if shipped, or custom utilities in `packages/dashboard/src/lib/layout.ts` | Templated Code Connect (Tailwind utility patterns, not extractable components) |
-| **Icons** | `lucide-react` (already in `package.json`) | Lucide Figma kit (community) imported, mapped to lucide-react components. NOT Heroicons — lucide is already installed and has wider icon coverage. |
+| **Icons** | `lucide-react` (already in `package.json`) | Lucide icons live inside Core (1,469 icon components in the `Lucide Icons` page from the forked kit, all 24×24, named `lucide/<icon-name>`). Code Connect maps each used icon to its `lucide-react` counterpart. NOT Heroicons. |
 
 ### Code Connect file locations
 
@@ -391,15 +430,17 @@ description: |
 
 1. **shadcn CLI Tailwind v4 compatibility.** Recent versions support v4, but the support is relatively new. Phase 2 must verify which CLI version works cleanly with the dashboard's existing v4 setup. Mitigation: pin a known-working version, document it in `crew/docs/plans/design-system.md`.
 
-2. **shadcn Figma kit choice.** Multiple community kits exist; quality varies. Phase 2 needs to evaluate options (official shadcn community kit, third-party kits like shadcn/ui-figma) and pick one. If none are suitable, fall back to building Crew DS primitives ourselves using shadcn's class strings as the spec.
+2. **Forked-kit upstream drift.** We fork the community kit (save copy to our team) and then modify it. The original community file may continue to evolve — new shadcn primitives added, lucide updated, tokens revised. We don't auto-track. Mitigation: this is the explicit tradeoff for owning Core. Periodically (every ~6 months) check whether the upstream kit has meaningful additions worth manually porting in. Document the fork point (kit version / last-updated date) in `docs/plans/design-system.md` so we know what we forked from.
 
-3. **Lucide Figma kit availability.** Need to verify a maintained lucide Figma kit exists. If not, Heroicons fallback (despite the slight code-side mismatch) is acceptable.
+3. **Kit's `tokens` collection is messy.** 89 raw-numeric variables with empty scopes, used internally by the kit's components. We document them as "ignore in design work" but they remain visible in the Figma Variables panel as noise. If they become a real annoyance, options are: (a) move them to a hidden collection, (b) prefix-rename them, or (c) accept as background noise. Defer decision until Phase 1 retrofit reveals impact.
 
 4. **Reconciliation tooling complexity.** The CVA AST parser for component-variant drift detection is the most complex piece. If it's too costly to build in Phase 5, ship reconciliation v1 with just token-value + semantic-alias drift; defer component-variant drift to a v2.
 
-5. **Figma library publishing requires Figma org/team setup.** safturento has Figma Pro Full which supports library publishing, but the Figma team itself may need to be configured (vs. publishing into draft space). Phase 1 should verify team setup early.
+5. **Figma library publishing requires Figma org/team setup.** safturento has Figma Pro Full which supports library publishing, but the team itself needs to support it. Phase 1 verifies team setup early via the manual file-creation step.
 
 6. **Drift-during-iteration ergonomics.** While iterating on a design, the reconciliation tool may flag transient drift that's about to be resolved. The skill should call `design-sync` as a precheck (not at every step) to avoid noise.
+
+7. **Kit may include components/features Crew doesn't need.** The kit ships 60+ shadcn component pages, 5 icon libraries, charts, blocks, examples — far more than Crew uses. Carrying them as part of Core is OK (they're inert until used) but inflates the publish surface. If publish performance becomes a real issue, we can prune in a future Phase. Not a v1 concern.
 
 ## Out of scope
 
@@ -418,10 +459,12 @@ The following are intentionally NOT in v1:
 
 | Phase | Sequential? | Effort | Key deliverable |
 |---|---|---|---|
-| 1 — Core Library v1 | Sequential, blocks 2 | 2-3 days | Published Core library with Tailwind tokens + Heroicons + responsive primitives |
-| 2 — Crew DS v1 + skill skeleton + shadcn install | Sequential, blocks 3 | 3-4 days | Published Crew DS depending on Core; shadcn primitives in dashboard; skill skeleton |
+| 1 — Core Library v1 | Sequential, blocks 2 | ~half day | Published Core library: forked kit with retrofitted scopes + layout primitives + breakpoint aliases |
+| 2 — Crew DS v1 + skill skeleton + shadcn install | Sequential (Crew DS Figma) + parallel (code work) | ~1 day Figma + 3-4 days code | Published Crew DS (theme overrides on Core); shadcn primitives in dashboard; skill skeleton |
 | 3 — Migrate current screens | Sequential, blocks 4 | 1-2 days | "Untitled" file refactored to consume Crew DS instead of detached imports |
 | 4 — Crew DS v2 full coverage | Incremental, opportunistic with fidelity tickets | ~5-8 small tickets | Remaining dashboard composites in Crew DS; primitive consumption in code via opportunistic refactor |
 | 5 — Skill v1 + reconciliation tooling | Starts after 3 | 2-3 days | `crew design-sync` CLI; refined skill from real Phase 3+4 experience |
 
 Phases 1-3 should run as a single Epic (sequential dependencies). Phase 4 is its own Epic with N child tickets. Phase 5 is its own Epic.
+
+> **Pivot note (2026-05-09 evening):** Original Phase 1 estimate was 2-3 days for from-scratch Tailwind primitive bootstrapping + Heroicons import + layout primitives. We discovered an existing comprehensive shadcn community kit (file `UkPJj6vd7HMKcey7M0XF4N`, "Updated January 2026") that already provides Tailwind primitives + shadcn components + lucide icons + Light/Dark modes. Adopting it as the basis for Core cuts Phase 1 effort to ~half day (the work is now retrofitting scopes + adding layout primitives) and Phase 2 Figma effort to ~1 day (Crew DS becomes overrides + composites rather than building semantic collections from scratch). Other phases unchanged.
