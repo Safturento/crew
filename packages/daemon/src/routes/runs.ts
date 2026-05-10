@@ -193,6 +193,14 @@ export async function registerRunsRoutes(app: DaemonApp): Promise<void> {
         });
       }
 
+      // CREW-116: when a `crew finish` run completes cleanly, write the
+      // `to_state = 'finished'` row + publish `agent.state_changed` so the
+      // StateHistoryBar reflects the transition. The transcript-tail path
+      // can't see this because finish does not spawn Claude.
+      if (run.command === 'finish' && exitCode === 0) {
+        await ingest.recordFinishCompleted(run.agent_key, completedAt);
+      }
+
       return reply.code(204).send();
     },
   );

@@ -146,6 +146,38 @@ export class IngestService {
     this.tails.clear();
   }
 
+  /**
+   * Records the `finished` state transition when a `crew finish` run
+   * completes cleanly (CREW-116). The transcript-tail path can't see this
+   * — finish does not spawn Claude — so the runs route calls in here
+   * after stamping `completed_at` + `exit_code`. Idempotent: re-firing for
+   * an agent already in `finished` is a no-op.
+   */
+  async recordFinishCompleted(agentKey: string, completedAtIso: string): Promise<void> {
+    const previous = await this.getCachedAgentState(agentKey);
+    if (previous === 'finished') return;
+
+    const ts = Date.parse(completedAtIso);
+    if (!Number.isFinite(ts)) {
+      this.logger.warn(
+        { agentKey, completedAtIso },
+        'unparseable completedAt; skipping finished transition',
+      );
+      return;
+    }
+
+    await this.db
+      .insertInto('state_transitions')
+      .values({ agent_key: agentKey, from_state: previous, to_state: 'finished', ts })
+      .execute();
+
+    this.agentStateCache.set(agentKey, 'finished');
+    this.eventBus.publish({
+      type: 'agent.state_changed',
+      data: { key: agentKey, from: previous, to: 'finished', ts },
+    });
+  }
+
   async ingestEvent(runId: number, event: TranscriptEvent): Promise<void> {
     const agentKey = await this.resolveAgentKey(runId);
     if (!agentKey) return;
@@ -365,13 +397,14 @@ function computeNextState(
   toolName: string,
   summary: string,
 ): TransitionState {
+  if (previous === 'finished') return 'finished';
   if (previous === 'pr_open') return 'pr_open';
   if (toolName === 'Bash' && summary.startsWith('gh pr create')) return 'pr_open';
   return 'running';
 }
 
 function isTransitionState(s: string | null | undefined): s is TransitionState {
-  return s === 'init' || s === 'running' || s === 'pr_open';
+  return s === 'init' || s === 'running' || s === 'pr_open' || s === 'finished';
 }
 
 function stringifyToolResultContent(content: unknown): string {

@@ -1,8 +1,6 @@
-import { join } from 'node:path';
 import { asValue, asFunction, createContainer, type AwilixContainer } from 'awilix';
 import type { Kysely } from 'kysely';
 import type { Logger } from 'pino';
-import { claudeProjectDirFor } from 'crew-shared';
 import type { DaemonConfig } from './config.js';
 import type { DaemonDatabase } from './db.js';
 import { ProjectsService } from './services/ProjectsService.js';
@@ -10,6 +8,7 @@ import { AgentsService } from './services/AgentsService.js';
 import { IngestService } from './services/IngestService.js';
 import { EventBus } from './services/EventBus.js';
 import { TimelineService } from './services/TimelineService.js';
+import { resolveJsonlPathForAgent } from './services/resolveJsonlPath.js';
 
 /**
  * The daemon's Awilix cradle. Routes resolve services by these names via
@@ -90,20 +89,4 @@ export function buildContainer(deps: BuildContainerDeps): AwilixContainer<Daemon
     ).scoped(),
   });
   return container;
-}
-
-async function resolveJsonlPathForAgent(
-  db: Kysely<DaemonDatabase>,
-  agentKey: string,
-): Promise<string | null> {
-  const row = await db
-    .selectFrom('runs')
-    .innerJoin('agents', 'agents.key', 'runs.agent_key')
-    .select(['runs.session_id as sessionId', 'agents.worktree_path as worktreePath'])
-    .where('runs.agent_key', '=', agentKey)
-    .orderBy('runs.id', 'desc')
-    .limit(1)
-    .executeTakeFirst();
-  if (!row) return null;
-  return join(claudeProjectDirFor(row.worktreePath), `${row.sessionId}.jsonl`);
 }

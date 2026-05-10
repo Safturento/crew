@@ -229,6 +229,54 @@ describe('AgentsService.list', () => {
       await db.destroy();
     }
   });
+
+  // CREW-116: finish runs must not poison state derivation.
+  it('returns finished after a finish run completes ok, even though gh pr create was observed earlier', async () => {
+    const db = await freshDb();
+    try {
+      await makeAgent(db, 'KAN-7');
+      const r1 = await makeRun(db, 'KAN-7', 's7a', {
+        completedAt: '2026-04-29T13:00:00Z',
+        exitCode: 0,
+      });
+      await makeToolCall(db, r1, {
+        tool: 'Bash',
+        summary: 'gh pr create --title hello',
+        tokens: 1,
+      });
+      await makeRun(db, 'KAN-7', `finish-KAN-7-${'a'.repeat(8)}`, {
+        command: 'finish',
+        completedAt: '2026-04-29T14:00:00Z',
+        exitCode: 0,
+      });
+      const agents = await new AgentsService({ db }).list();
+      expect(agents[0]).toMatchObject({ key: 'KAN-7', state: 'finished' });
+    } finally {
+      await db.destroy();
+    }
+  });
+
+  it('keeps the prior state (pr_open) while a finish run is in progress with no tool_calls', async () => {
+    const db = await freshDb();
+    try {
+      await makeAgent(db, 'KAN-8');
+      const r1 = await makeRun(db, 'KAN-8', 's8a', {
+        completedAt: '2026-04-29T13:00:00Z',
+        exitCode: 0,
+      });
+      await makeToolCall(db, r1, {
+        tool: 'Bash',
+        summary: 'gh pr create --title hi',
+        tokens: 1,
+      });
+      // Open finish run with no tool_calls.
+      await makeRun(db, 'KAN-8', `finish-KAN-8-${'b'.repeat(8)}`, { command: 'finish' });
+      const agents = await new AgentsService({ db }).list();
+      expect(agents[0]).toMatchObject({ key: 'KAN-8', state: 'pr_open' });
+    } finally {
+      await db.destroy();
+    }
+  });
 });
 
 describe('AgentsService.getByKey', () => {
@@ -334,6 +382,53 @@ describe('AgentsService.getByKey', () => {
       expect(detail).not.toBeNull();
       expect(detail?.pr_url).toBeNull();
       expect(detail?.state).toBe('initializing');
+    } finally {
+      await db.destroy();
+    }
+  });
+
+  // CREW-116: same finish-aware logic must apply on the single-agent endpoint.
+  it('returns finished after a finish run completes ok (single-agent endpoint)', async () => {
+    const db = await freshDb();
+    try {
+      await makeAgent(db, 'KAN-FIN-1');
+      const r1 = await makeRun(db, 'KAN-FIN-1', 'sfin1', {
+        completedAt: '2026-04-29T13:00:00Z',
+        exitCode: 0,
+      });
+      await makeToolCall(db, r1, {
+        tool: 'Bash',
+        summary: 'gh pr create --title finished',
+        tokens: 1,
+      });
+      await makeRun(db, 'KAN-FIN-1', `finish-KAN-FIN-1-1`, {
+        command: 'finish',
+        completedAt: '2026-04-29T14:00:00Z',
+        exitCode: 0,
+      });
+      const detail = await new AgentsService({ db }).getByKey('KAN-FIN-1');
+      expect(detail?.state).toBe('finished');
+    } finally {
+      await db.destroy();
+    }
+  });
+
+  it('keeps state at pr_open while a finish run is in progress (single-agent endpoint)', async () => {
+    const db = await freshDb();
+    try {
+      await makeAgent(db, 'KAN-FIN-2');
+      const r1 = await makeRun(db, 'KAN-FIN-2', 'sfin2', {
+        completedAt: '2026-04-29T13:00:00Z',
+        exitCode: 0,
+      });
+      await makeToolCall(db, r1, {
+        tool: 'Bash',
+        summary: 'gh pr create --title hi',
+        tokens: 1,
+      });
+      await makeRun(db, 'KAN-FIN-2', `finish-KAN-FIN-2-1`, { command: 'finish' });
+      const detail = await new AgentsService({ db }).getByKey('KAN-FIN-2');
+      expect(detail?.state).toBe('pr_open');
     } finally {
       await db.destroy();
     }

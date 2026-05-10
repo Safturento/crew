@@ -208,6 +208,104 @@ describe('POST /api/agents/runs/:runId/complete', () => {
     }
   });
 
+  // CREW-116: finish completion must record a `to_state='finished'` row and
+  // publish `agent.state_changed` so StateHistoryBar / SSE consumers see it.
+  it('writes a state_transitions row to finished when a finish run completes ok', async () => {
+    const { app, db, eventBus } = await setupApp();
+    try {
+      const seen: SseEvent[] = [];
+      eventBus.subscribe({ onEvent: (e) => seen.push(e) });
+
+      const reg = await app.inject({
+        method: 'POST',
+        url: '/api/agents/runs',
+        payload: { ...validBody, sessionId: 'finish-fin-ok', command: 'finish' },
+      });
+      const runId = (reg.json() as { run: { id: number } }).run.id;
+
+      await app.inject({
+        method: 'POST',
+        url: `/api/agents/runs/${runId}/complete`,
+        payload: { exitCode: 0, completedAt: '2026-04-29T13:00:00Z' },
+      });
+
+      const transitions = await db
+        .selectFrom('state_transitions')
+        .selectAll()
+        .where('agent_key', '=', validBody.key)
+        .execute();
+      expect(transitions).toHaveLength(1);
+      expect(transitions[0]).toMatchObject({
+        agent_key: validBody.key,
+        to_state: 'finished',
+        ts: Date.parse('2026-04-29T13:00:00Z'),
+      });
+
+      const stateChanged = seen.filter((e) => e.type === 'agent.state_changed');
+      expect(stateChanged).toHaveLength(1);
+      expect(stateChanged[0]?.data).toMatchObject({
+        key: validBody.key,
+        to: 'finished',
+        ts: Date.parse('2026-04-29T13:00:00Z'),
+      });
+    } finally {
+      await app.close();
+      await db.destroy();
+    }
+  });
+
+  it('does not write a finished transition when a finish run exits non-zero', async () => {
+    const { app, db } = await setupApp();
+    try {
+      const reg = await app.inject({
+        method: 'POST',
+        url: '/api/agents/runs',
+        payload: { ...validBody, sessionId: 'finish-fail-2', command: 'finish' },
+      });
+      const runId = (reg.json() as { run: { id: number } }).run.id;
+
+      await app.inject({
+        method: 'POST',
+        url: `/api/agents/runs/${runId}/complete`,
+        payload: { exitCode: 1, completedAt: '2026-04-29T13:00:00Z' },
+      });
+
+      const transitions = await db
+        .selectFrom('state_transitions')
+        .selectAll()
+        .where('agent_key', '=', validBody.key)
+        .execute();
+      expect(transitions).toHaveLength(0);
+    } finally {
+      await app.close();
+      await db.destroy();
+    }
+  });
+
+  it('does not write a finished transition when a non-finish run completes ok', async () => {
+    const { app, db } = await setupApp();
+    try {
+      const runId = await registerRun(app);
+      await app.inject({
+        method: 'POST',
+        url: `/api/agents/runs/${runId}/complete`,
+        payload: { exitCode: 0, completedAt: '2026-04-29T13:00:00Z' },
+      });
+
+      const transitions = await db
+        .selectFrom('state_transitions')
+        .selectAll()
+        .where('agent_key', '=', validBody.key)
+        .execute();
+      // No 'finished' row from a normal `run` completion — that path stays
+      // tool-call-driven (and for our test fixture there are no tool_calls).
+      expect(transitions.filter((t) => t.to_state === 'finished')).toHaveLength(0);
+    } finally {
+      await app.close();
+      await db.destroy();
+    }
+  });
+
   it('does not publish run.completed when exit_code is non-zero', async () => {
     const { app, db, eventBus } = await setupApp();
     try {
