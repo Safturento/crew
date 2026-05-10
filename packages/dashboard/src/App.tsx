@@ -60,6 +60,7 @@ function AppContent({ client }: { client: DaemonClient }) {
             projects={projects}
             agents={agents}
             onSelectAgent={(key) => navigate(`/agent/${key}`)}
+            onOpenProject={(name) => navigate(`/projects/${name}`)}
           />
         );
     }

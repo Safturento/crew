@@ -3,6 +3,7 @@ import { useState } from 'react';
 import type { Agent, Project } from '../data/types.js';
 import { sortAgentsByPriority } from '../data/state-meta.js';
 import { ProjectSection } from './ProjectSection.js';
+import type { QuickActionKind } from './AgentRow.js';
 
 const HIDE_FINISHED_KEY = 'crew.dashboard.hideFinished';
 
@@ -20,9 +21,17 @@ interface AgentsListProps {
   projects: Project[];
   agents: Agent[];
   onSelectAgent: (key: string) => void;
+  onAgentAction?: (kind: QuickActionKind, agent: Agent) => void;
+  onOpenProject?: (name: string) => void;
 }
 
-export function AgentsList({ projects, agents, onSelectAgent }: AgentsListProps) {
+export function AgentsList({
+  projects,
+  agents,
+  onSelectAgent,
+  onAgentAction,
+  onOpenProject,
+}: AgentsListProps) {
   const [hideFinished, setHideFinished] = useState<boolean>(readHideFinished);
 
   const toggleHideFinished = () => {
@@ -70,6 +79,8 @@ export function AgentsList({ projects, agents, onSelectAgent }: AgentsListProps)
               project={project}
               agents={sortAgentsByPriority(byProject.get(project.name) ?? [])}
               onSelectAgent={onSelectAgent}
+              onAgentAction={onAgentAction}
+              onOpenProject={onOpenProject}
             />
           ))}
       </div>

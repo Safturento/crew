@@ -3,6 +3,7 @@ import { Plus } from 'lucide-react';
 
 import type { Route } from '../routing/parseRoute.js';
 import { BrandMark } from './BrandMark.js';
+import { Button } from './ui/button.js';
 
 interface TopNavProps {
   route: Route;
@@ -33,11 +34,12 @@ export function TopNav({ route, attentionCount, onClearAttention, onNewRun }: To
         </nav>
       </div>
       <div className="flex items-center gap-2">
-        <button
-          type="button"
+        <Button
+          variant="outline"
+          size="xs"
           onClick={onClearAttention}
           disabled={attentionCount === 0}
-          className="flex items-center gap-2 rounded-md border border-white/10 px-3 py-1.5 text-xs text-muted-foreground hover:bg-popover disabled:cursor-not-allowed disabled:opacity-40"
+          className="border-white/10 text-muted-foreground hover:bg-popover disabled:opacity-40"
         >
           Clear attention
           {attentionCount > 0 && (
@@ -45,14 +47,15 @@ export function TopNav({ route, attentionCount, onClearAttention, onNewRun }: To
               {attentionCount}
             </span>
           )}
-        </button>
-        <button
-          type="button"
+        </Button>
+        <Button
+          variant="default"
+          size="xs"
           onClick={onNewRun}
-          className="flex items-center gap-1.5 rounded-md bg-foreground px-3 py-1.5 text-xs font-semibold text-background hover:opacity-90"
+          className="bg-foreground font-semibold text-background hover:bg-foreground/90"
         >
-          <Plus className="h-3.5 w-3.5" aria-hidden /> New Run
-        </button>
+          <Plus aria-hidden /> New Run
+        </Button>
       </div>
     </header>
   );

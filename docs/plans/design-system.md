@@ -27,7 +27,7 @@ Project-specific config for the `design-with-figma` skill (lives at `~/.claude/s
 | Phase 2 Figma — Crew DS override layer          | Agent work complete (CREW-124); user must publish in Figma desktop                                                              |
 | Phase 2 — Code Connect                          | `.figma.tsx` mapping files landed in CREW-125; `figma connect publish` intentionally skipped (see Code Connect publish section) |
 | Phase 3 — Migrate screens                       | Partial: font fix landed in CREW-126; color binding + composite swap deferred (see followups)                                   |
-| Phase 4 — Full Crew DS coverage                 | Not started (separate Epic)                                                                                                     |
+| Phase 4 — Full Crew DS coverage                 | Partial: 6 of 11 composites built in CREW-119 + 7 state-color semantic tokens added; CREW-117 picks up the next 4               |
 | Phase 5 — Skill v1 + reconciliation tooling     | Not started (separate Epic)                                                                                                     |
 
 ## shadcn CLI version
@@ -139,7 +139,28 @@ Consumer files (Crew Dashboard Screens) bind to Crew's tokens. Mode resolution c
 
 ## Component inventory
 
-(Populated as Phase 4 fidelity tickets land. Each Crew DS composite — AgentRow, ProjectSection, Modal/Dialog/Form wrappers — will be listed with its Figma node ID for ticket cross-references. Phase 3 (CREW-126) did not add composites; see "Phase 3 partial scope" below.)
+Each Crew DS composite is listed with its Figma node ID (in `DsA7QuEa2WthDATkksd1Bq`) and dashboard counterpart path. New entries land per fidelity ticket as Phase 4 unfolds.
+
+### CREW-119 (agents list vertical slice, 2026-05-10)
+
+All six composites live on the `Composites` page in Crew DS. The Figma builds are skeleton-fidelity — names, semantic-token bindings (where applicable), and slot structure are correct; pixel polish is opportunistic and lands during follow-on visual sweeps.
+
+| Composite        | Figma node | Dashboard counterpart                                                | Code Connect mapping                                                  |
+| ---------------- | ---------- | -------------------------------------------------------------------- | --------------------------------------------------------------------- |
+| `BrandMark`      | `19:3`     | `packages/dashboard/src/components/BrandMark.tsx`                    | `packages/dashboard/src/components/BrandMark.figma.tsx`               |
+| `StateBadge` set | `20:23`    | `packages/dashboard/src/components/StateBadge.tsx`                   | `packages/dashboard/src/components/StateBadge.figma.tsx`              |
+| `TopNav`         | `21:2`     | `packages/dashboard/src/components/TopNav.tsx`                       | `packages/dashboard/src/components/TopNav.figma.tsx`                  |
+| `AgentRow`       | `21:9`     | `packages/dashboard/src/components/AgentRow.tsx`                     | `packages/dashboard/src/components/AgentRow.figma.tsx`                |
+| `ProjectSection` | `21:21`    | `packages/dashboard/src/components/ProjectSection.tsx`               | `packages/dashboard/src/components/ProjectSection.figma.tsx`          |
+| `AgentsList`     | `21:25`    | `packages/dashboard/src/components/AgentsList.tsx`                   | `packages/dashboard/src/components/AgentsList.figma.tsx`              |
+
+`StateBadge` is published as a **component set** with one variant per agent state (`state=initializing | running | idle | waiting | pr-open | error | finished`); the `.figma.tsx` mapping bridges Figma's kebab `pr-open` to the dashboard's snake `pr_open` via `figma.enum`. The other five are single components — Figma variant axes will grow as future fidelity tickets surface a need (e.g. AgentRow's `state` axis, TopNav's `route` axis).
+
+### State-color semantic tokens (added in CREW-119)
+
+`Crew / Semantic Colors` now includes **7 state tokens** (`state/initializing`, `state/running`, `state/idle`, `state/waiting`, `state/pr-open`, `state/error`, `state/finished`) — each a single-value alias to a `tw/colors` primitive in Core (`blue/500`, `slate/400`, `slate/500`, `amber/400`, `violet/500`, `red/500`, `emerald/500` respectively). No light/dark variant for state colors at this stage — both modes alias the same primitive. Used by `StateBadge` (token-bound fills + stroke + dot) and by the dashboard's `--color-state-*` Tailwind classes via the `@theme` block. First example of the Crew DS override layer growing past shadcn's vocabulary.
+
+Total Crew DS variable count: **55 across 1 collection** (was 48; +7 state tokens).
 
 ## Phase 3 partial scope (CREW-126, 2026-05-09)
 
@@ -250,8 +271,6 @@ The community kit conflates shadcn's `variant` and `size` axes into a single Fig
 
 Layer names inside the kit's variants are the literal text characters (e.g. the primary Button's text layer is named `Button`, the icon variant has no text layer at all), so `figma.textContent("Button")` would only land on a subset of variants. The example snippets use placeholder strings (`Button`, `Badge`, `Email`, ...) instead. Phase 4 Crew composites are the right place to introduce a stable `Label` text-property name.
 
-# <<<<<<< HEAD
-
 ### Heads-up for primitive maintainers
 
 The `*.figma.tsx` files live under `packages/dashboard/src/components/ui/` and are picked up by the dashboard's `tsc -p tsconfig.json`. Renaming a shadcn primitive's prop union (e.g. dropping `'lg'` from Button's `size` type) will break the typecheck in the matching `*.figma.tsx`. That's a feature, not a bug — it forces you to update the Code Connect mapping in the same change.
@@ -274,8 +293,6 @@ The `figma connect publish` CLI requires a Figma personal access token with file
 5. Once verified, mark CREW-125 Done.
 
 > **Re-publishing:** any time a `*.figma.tsx` file changes (new variant mapping, prop tweak, code component renamed), re-run the publish command. The CLI is idempotent — subsequent runs replace the prior mapping for each connected URL.
-
-> > > > > > > 18734ce (docs(design-system): refresh Phase 2 status + maintainer note (CREW-125))
 
 ## Conventions
 

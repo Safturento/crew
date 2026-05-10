@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -23,17 +23,34 @@ describe('AgentRow', () => {
     expect(screen.getByText('48.2k')).toBeInTheDocument();
   });
 
+  it('renders cells in v2 column order: state, key, runtime, tokens, title, action', () => {
+    render(<AgentRow agent={baseAgent} onSelect={() => {}} />);
+    const row = screen.getByRole('button', { name: /KAN-31/ });
+    const visibleChildren = Array.from(row.children).filter(
+      (c) => c.getAttribute('aria-hidden') !== 'true',
+    );
+    const cellTexts = visibleChildren.map((c) => c.textContent ?? '');
+    // state pill, key, runtime, tokens, title, action
+    const keyIdx = cellTexts.findIndex((t) => t.includes('KAN-31'));
+    const runtimeIdx = cellTexts.findIndex((t) => /^33m/.test(t));
+    const tokensIdx = cellTexts.findIndex((t) => /48\.2k/.test(t));
+    const titleIdx = cellTexts.findIndex((t) => t.includes('Add board archival endpoint'));
+    expect(keyIdx).toBeLessThan(runtimeIdx);
+    expect(runtimeIdx).toBeLessThan(tokensIdx);
+    expect(tokensIdx).toBeLessThan(titleIdx);
+  });
+
   it('renders the state badge', () => {
     render(<AgentRow agent={baseAgent} onSelect={() => {}} />);
     expect(screen.getByRole('status')).toHaveAccessibleName('Waiting');
   });
 
-  it('renders an "Answer" quick action for waiting state', () => {
+  it('renders a "Provide input" quick action for waiting state', () => {
     render(<AgentRow agent={baseAgent} onSelect={() => {}} />);
-    expect(screen.getByRole('button', { name: 'Answer' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Provide input' })).toBeInTheDocument();
   });
 
-  it('renders a "View PR" quick action for pr_open state', () => {
+  it('renders "View PR" + "Finish" quick actions for pr_open state', () => {
     render(
       <AgentRow
         agent={{ ...baseAgent, state: 'pr_open', prUrl: 'https://example.com/pr/1' }}
@@ -44,11 +61,27 @@ describe('AgentRow', () => {
       'href',
       'https://example.com/pr/1',
     );
+    expect(screen.getByRole('button', { name: 'Finish' })).toBeInTheDocument();
   });
 
-  it('renders no quick action for running/initializing/idle', () => {
-    render(<AgentRow agent={{ ...baseAgent, state: 'running' }} onSelect={() => {}} />);
-    expect(screen.queryByRole('button', { name: /Answer|Retry|Archive/ })).not.toBeInTheDocument();
+  it('renders "Resume" + "Finish" quick actions for idle state', () => {
+    render(<AgentRow agent={{ ...baseAgent, state: 'idle' }} onSelect={() => {}} />);
+    expect(screen.getByRole('button', { name: 'Resume' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Finish' })).toBeInTheDocument();
+  });
+
+  it('renders no quick action for running/initializing/finished', () => {
+    for (const state of ['running', 'initializing', 'finished'] as AgentState[]) {
+      const { unmount } = render(
+        <AgentRow agent={{ ...baseAgent, state }} onSelect={() => {}} />,
+      );
+      expect(
+        screen.queryByRole('button', {
+          name: /Provide input|Inspect|Resume|Finish|Archive/,
+        }),
+      ).not.toBeInTheDocument();
+      unmount();
+    }
   });
 
   it('fires onSelect when the row is clicked', async () => {
@@ -63,7 +96,7 @@ describe('AgentRow', () => {
     const user = userEvent.setup();
     const onSelect = vi.fn();
     render(<AgentRow agent={baseAgent} onSelect={onSelect} />);
-    await user.click(screen.getByRole('button', { name: 'Answer' }));
+    await user.click(screen.getByRole('button', { name: 'Provide input' }));
     expect(onSelect).not.toHaveBeenCalled();
   });
 
@@ -71,7 +104,7 @@ describe('AgentRow', () => {
     const user = userEvent.setup();
     const onSelect = vi.fn();
     render(<AgentRow agent={baseAgent} onSelect={onSelect} />);
-    const action = screen.getByRole('button', { name: 'Answer' });
+    const action = screen.getByRole('button', { name: 'Provide input' });
     action.focus();
     await user.keyboard('{Enter}');
     expect(onSelect).not.toHaveBeenCalled();
@@ -85,14 +118,23 @@ describe('AgentRow', () => {
     );
   });
 
-  it('renders a "Retry" quick action for error state', () => {
+  it('renders an "Inspect" quick action for error state', () => {
     render(<AgentRow agent={{ ...baseAgent, state: 'error' }} onSelect={() => {}} />);
-    expect(screen.getByRole('button', { name: 'Retry' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Inspect' })).toBeInTheDocument();
   });
 
-  it('renders an "Archive" quick action for finished state', () => {
-    render(<AgentRow agent={{ ...baseAgent, state: 'finished' }} onSelect={() => {}} />);
-    expect(screen.getByRole('button', { name: 'Archive' })).toBeInTheDocument();
+  it('forwards onAction events with kind + agent', async () => {
+    const user = userEvent.setup();
+    const onAction = vi.fn();
+    render(
+      <AgentRow
+        agent={{ ...baseAgent, state: 'idle' }}
+        onSelect={() => {}}
+        onAction={onAction}
+      />,
+    );
+    await user.click(screen.getByRole('button', { name: 'Resume' }));
+    expect(onAction).toHaveBeenCalledWith('resume', expect.objectContaining({ key: 'KAN-31' }));
   });
 
   const ATTENTION_TOKENS: Array<[AgentState, string, string]> = [
@@ -117,5 +159,37 @@ describe('AgentRow', () => {
     render(<AgentRow agent={{ ...baseAgent, state }} onSelect={() => {}} />);
     const row = screen.getByRole('button', { name: /KAN-31/ });
     expect(row.className).toContain('border-white/10');
+  });
+
+  it('renders a qa-group wrapper when the state has two quick actions', () => {
+    render(<AgentRow agent={{ ...baseAgent, state: 'idle' }} onSelect={() => {}} />);
+    const resume = screen.getByRole('button', { name: 'Resume' });
+    const finish = screen.getByRole('button', { name: 'Finish' });
+    expect(resume.parentElement).toBe(finish.parentElement);
+    expect(resume.parentElement).toHaveAttribute('data-qa-group', 'true');
+  });
+
+  it('does not render a qa-group wrapper for single-action states', () => {
+    render(<AgentRow agent={{ ...baseAgent, state: 'waiting' }} onSelect={() => {}} />);
+    const button = screen.getByRole('button', { name: 'Provide input' });
+    expect(button.parentElement).not.toHaveAttribute('data-qa-group');
+  });
+
+  it('event-propagation guard: clicking inside qa-group does not select the row', async () => {
+    const user = userEvent.setup();
+    const onSelect = vi.fn();
+    render(
+      <AgentRow agent={{ ...baseAgent, state: 'idle' }} onSelect={onSelect} />,
+    );
+    const finish = screen.getByRole('button', { name: 'Finish' });
+    await user.click(finish);
+    expect(onSelect).not.toHaveBeenCalled();
+  });
+
+  it('row uses the v2 6-track grid template (state · key · runtime · tokens · title · action)', () => {
+    render(<AgentRow agent={baseAgent} onSelect={() => {}} />);
+    const row = screen.getByRole('button', { name: /KAN-31/ });
+    expect(row.className).toContain('grid-cols-[100px_90px_90px_70px_1fr_168px]');
+    expect(within(row).getByRole('status')).toBeInTheDocument();
   });
 });

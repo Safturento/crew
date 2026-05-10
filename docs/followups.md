@@ -7,6 +7,9 @@ Format: see the user-level `~/.claude/CLAUDE.md` "Followup detection" section.
 ## Contents
 
 - [Active](#active)
+  - [2026-05-10 — Wire dashboard QuickAction buttons (Resume / Finish / Inspect / Provide input) to daemon endpoints](#2026-05-10--wire-dashboard-quickaction-buttons-resume--finish--inspect--provide-input-to-daemon-endpoints)
+  - [2026-05-10 — Polish the 6 CREW-119 Crew DS composites (skeleton-fidelity → pixel-fidelity)](#2026-05-10--polish-the-6-crew-119-crew-ds-composites-skeleton-fidelity--pixel-fidelity)
+  - [2026-05-10 — Migrate the `Agents List (/)` Figma frame to Crew DS instances + semantic-token bindings](#2026-05-10--migrate-the-agents-list--figma-frame-to-crew-ds-instances--semantic-token-bindings)
   - [2026-05-09 — Crew Dashboard Screens — bind hardcoded fills to Crew DS semantic variables](#2026-05-09--crew-dashboard-screens--bind-hardcoded-fills-to-crew-ds-semantic-variables)
   - [2026-05-09 — Crew Dashboard Screens — rebuild ad-hoc modals + detached primitives as Crew DS instances](#2026-05-09--crew-dashboard-screens--rebuild-ad-hoc-modals--detached-primitives-as-crew-ds-instances)
   - [2026-05-09 — Manual rename of Figma screens file to "Crew Dashboard Screens"](#2026-05-09--manual-rename-of-figma-screens-file-to-crew-dashboard-screens)
@@ -60,6 +63,76 @@ Format: see the user-level `~/.claude/CLAUDE.md` "Followup detection" section.
 - [Abandoned](#abandoned)
 
 ## Active
+
+### 2026-05-10 — Wire dashboard QuickAction buttons (Resume / Finish / Inspect / Provide input) to daemon endpoints
+
+**What:** CREW-119 landed the v2 quick-action buttons in the agents list (`Resume + Finish` for `idle`, `Provide input` for `waiting`, `View PR + Finish` for `pr_open`, `Inspect` for `error`). The buttons fire an `onAction(kind, agent)` callback up through `AgentRow → ProjectSection → AgentsList`, but `App.tsx` currently does **not** mount a handler — clicks no-op. The visual contract is shipped; the functional contract is not. Each action needs a daemon endpoint and a mutation hook that the App-level handler dispatches.
+
+**Why noticed:** CREW-119 autonomous run on 2026-05-10. The original CREW-119 ticket scope was "visual fidelity sweep" — landing functional behavior for brand-new actions like `Resume` was out of scope (the daemon has no resume endpoint today), but landing the buttons visually wasn't. Splitting this off keeps the two concerns reviewable separately.
+
+**Anchors:**
+
+- `packages/dashboard/src/components/AgentRow.tsx` — exports `QuickActionKind` (`resume | finish | view-pr | provide-input | inspect`)
+- `packages/dashboard/src/App.tsx` — `<AgentsList … />` mount; add an `onAgentAction` prop that dispatches via `client.<verb>(agentKey)` for each kind
+- `packages/daemon/src/routes/` — needs new endpoints (`POST /agents/:key/resume`, `/finish`, `/inspect`, `/answer`) before the dashboard handler can land
+- `bruno/endpoints/agents/` — would gain four new `.bru` files
+
+**What's been considered:**
+
+- **Wire up incrementally as endpoints land.** Start with `finish` (closest to existing transcript completion), then `provide-input` (already partially supported by the answer flow), then `resume` and `inspect` (new daemon work).
+- **Single `POST /agents/:key/action { kind }` endpoint** vs verb-per-action. Verb-per-action mirrors REST norms and pairs cleanly with the existing `/agents/:key/finish` path; a single dispatcher would centralize permissions but loses semantic clarity in logs.
+- **Route through `useMutation` from TanStack Query** rather than imperative client calls so optimistic updates + invalidation are uniform with the existing list query.
+
+**Shape of work:** Likely two tickets — one daemon-side (add the four endpoints + matching `.bru` files) and one dashboard-side (mount `onAgentAction` in `App.tsx`, wire each kind through TanStack `useMutation`, surface success/error toasts). Both can run in parallel after the endpoint contracts are settled.
+
+**Open questions:**
+
+- [ ] Does `inspect` need its own daemon-side action or is "open the agent drawer focused on the error transcript" enough? The v2 design hand-off doesn't specify.
+- [ ] Should `resume` from `idle` reuse the `crew run` codepath or be a separate "rehydrate" verb?
+
+### 2026-05-10 — Polish the 6 CREW-119 Crew DS composites (skeleton-fidelity → pixel-fidelity)
+
+**What:** CREW-119 built six Crew DS composites on the Composites page in `DsA7QuEa2WthDATkksd1Bq` (`BrandMark`, `StateBadge` set, `TopNav`, `AgentRow`, `ProjectSection`, `AgentsList`) at **skeleton fidelity** — names, semantic-token bindings (where applicable), and slot structure are correct, but the visual treatment is intentionally minimal. `BrandMark` and `StateBadge` are pixel-fidel (the latter has all 7 state variants with token-bound fill/stroke/text/dot). The other four are placeholder boxes with sample text. They need a designer pass — type ramps tightened, padding/gap bound to Core `tw/space`, hover/focus states added (where applicable), variant axes grown (`AgentRow.state`, `TopNav.route`, `ProjectSection.expanded`).
+
+**Why noticed:** CREW-119 autonomous run on 2026-05-10 — the Crew DS build-out was descoped from pixel-perfect to skeleton fidelity to keep the run scope reasonable (the original ticket goal was the visual fidelity sweep on the dashboard side, which landed in code). Documenting the gap here so designer time picks it up rather than the next agent run silently rebuilding from scratch.
+
+**Anchors:**
+
+- Crew DS file: `https://www.figma.com/design/DsA7QuEa2WthDATkksd1Bq` — `Composites` page
+- Component node IDs: `BrandMark=19:3`, `StateBadge=20:23`, `TopNav=21:2`, `AgentRow=21:9`, `ProjectSection=21:21`, `AgentsList=21:25`
+- Dashboard CVA configs (the source of truth for variant axes): `packages/dashboard/src/components/{AgentRow,StateBadge,TopNav,ProjectSection}.tsx`
+- `docs/plans/design-system.md` — Component inventory section lists all 6 with their dashboard counterparts
+
+**What's been considered:**
+
+- **Build-out continues during the next fidelity ticket** that touches one of these surfaces — same vertical-slice strategy. Probably the right move: the Crew DS gets components polished only when there's a real demand, avoiding speculative design work.
+- **One-shot designer pass** to polish all six at once. Good-faith effort but loses the just-in-time signal that drives the rest of Phase 4.
+
+**Shape of work:** Likely folded into individual fidelity tickets as they arise (e.g. a future "Projects List fidelity" ticket would polish `TopNav` because that surface uses it). No standalone ticket needed unless the user wants to schedule a dedicated polish pass.
+
+### 2026-05-10 — Migrate the `Agents List (/)` Figma frame to Crew DS instances + semantic-token bindings
+
+**What:** Phase A of the fidelity vertical slices plan (`docs/superpowers/plans/2026-05-10-fidelity-vertical-slices.md`, Tasks A.13 + A.14) asked CREW-119 to migrate the `Agents List (/)` frame in the Crew Dashboard Screens file (`9FeJPriqdsdA4n9R5Xsrr8`, frame `1:2`): bind hardcoded fills to Crew DS semantic + state tokens, and swap detached primitive structures (state pills, action buttons, agent rows, project section headers) for the new Crew DS instances. CREW-119 deferred this to keep the autonomous run scope reasonable — the dashboard-side fidelity sweep (the actual user-facing ticket goal) and the Crew DS composite buildout both landed in CREW-119, but the Figma frame still has hardcoded fills + detached structures.
+
+**Why noticed:** CREW-119 autonomous run on 2026-05-10. The frame migration is a separable concern from "build the Crew DS components" — it consumes them, and only matters once the dashboard view is what the designer reviews against. Keeping it as a fast-follow gives designer time for the per-element semantic-role decisions (the same judgment-call problem from CREW-126's color-binding deferral).
+
+**Anchors:**
+
+- Crew Dashboard Screens file: `https://www.figma.com/design/9FeJPriqdsdA4n9R5Xsrr8` — frame `1:2` (`Agents List (/)`)
+- Crew DS composites that land as instances: `BrandMark=19:3`, `StateBadge=20:23`, `TopNav=21:2`, `AgentRow=21:9`, `ProjectSection=21:21`, `AgentsList=21:25`
+- State-color tokens to bind to: `Crew / Semantic Colors / state/{initializing|running|idle|waiting|pr-open|error|finished}`
+- Pattern reference: same recipe as the broader "bind hardcoded fills" followup below — but scoped to one frame and now unblocked by Crew DS composites existing.
+
+**What's been considered:**
+
+- **Fold into the broader color-binding followup** (next entry in this file). Reasonable but loses the connection to CREW-119 — one ticket per frame is the cleaner unit.
+- **Pair this with CREW-117's Phase B work** since both touch the screens file. Keeps the Figma writes serialized and avoids stepping on each other; the agent doing CREW-117 should run Phase A's Task A.13 + A.14 first, then proceed.
+
+**Shape of work:** Small ticket — one frame, ~few hundred fill-bearing nodes, Crew DS instances already exist so the swap is mechanical. ~1-2h of agent + designer time. Should run after CREW-119 merges and before any major redesign of the agents list visual.
+
+**Open questions:**
+
+- [ ] Should this be a standalone ticket or rolled into CREW-117's Phase B (which already migrates the drawer frame)?
 
 ### 2026-05-09 — Crew Dashboard Screens — bind hardcoded fills to Crew DS semantic variables
 
