@@ -143,15 +143,30 @@ Consumer files (Crew Dashboard Screens) bind to Crew's tokens. Mode resolution c
 
 ## User-only finalization step (Task 2.15)
 
-The Figma desktop client is required to publish a library — the Plugin API exposes no equivalent. To complete CREW-124 acceptance:
+The Figma desktop client is required to publish a library and to formalize cross-library dependencies — the Plugin API exposes no equivalent for either. To complete CREW-124 acceptance:
 
 1. Open the new `Crew Design System` file in Figma desktop (URL in `project_library_url`).
 2. The file was created in the team's Drafts via `create_new_file`. Move it into the team's `Design Systems` project (right-click in file browser → Move to project) so it sits alongside Core.
-3. With Core published already (CREW-121), Crew DS already has Core's variables imported by key — Assets → Libraries should show Core listed as a dependency. If it isn't shown, enable it manually.
-4. Click the Assets panel → Publish library button (top-right of the panel). Confirm the publish review (`Crew / Semantic Colors`, 48 variables, no components yet).
+3. **Add Core as a library dependency.** Open the Libraries panel (Assets panel → small library/grid icon at the top, OR file menu → Libraries). Search "Core" — `Core Design System` will appear in the discoverable list but **will not** be auto-added by the agent's work. Click **Add to file** next to it. This step is NON-OPTIONAL: the agent uses `importVariableByKeyAsync` to alias Crew variables to Core's, but that API doesn't establish the formal library link — only the Libraries UI does. Without the library link, Crew DS publishes successfully but downstream consumers cannot resolve the alias chain (their imported Crew variables dead-end at Crew's reference to a "missing" remote variable).
+4. Click the Assets panel → Publish library button (top-right of the panel). Confirm the publish review (`Crew / Semantic Colors`, 48 variables, plus the new Core Design System dependency, no components yet).
 5. Once the modal reports success, mark CREW-124 Done.
 
-After publish, downstream work unblocks: `CREW-125` (Code Connect mappings) needs Crew DS components later, and `CREW-126` (screen migration) consumes Crew DS variables.
+> **Generalization:** the same `importVariableByKeyAsync`-without-formal-link gap applies to any future ticket where one published Figma library aliases variables from another. CREW-126 (screens consuming Crew DS) and any Phase 4 tickets that build composites referencing Core primitives will hit the same trap unless the agent or the user explicitly adds the source library via the Libraries UI in the consumer file.
+
+After publish, downstream work unblocks: `CREW-125` (Code Connect mappings) needs Crew DS components later, and `CREW-126` (screen migration) consumes Crew DS variables. **Note for CREW-126:** the screens file will need Crew DS added via the Libraries UI as a separate manual step — same pattern as step 3 above.
+
+### Verification (optional but recommended)
+
+Once Crew DS is published AND added to the screens file (`9FeJPriqdsdA4n9R5Xsrr8`) as a library, run a quick MCP check from the screens file:
+
+```js
+// In a use_figma call against the screens file
+const libs = await figma.teamLibrary.getAvailableLibraryVariableCollectionsAsync();
+return libs.reduce((acc, c) => { acc[c.libraryName] = (acc[c.libraryName]||0) + 1; return acc; }, {});
+// Expected: { "Crew Design System": 1 } at minimum (Core comes via alias chain, not directly)
+```
+
+A non-empty result confirms the library link is formal. To prove the alias chain resolves end-to-end through both layers, bind a frame's fill to Crew's `background` variable and toggle modes — the resolved color should swap from Core's `white` (Light) to Core's `neutral/950` (Dark).
 
 ## Conventions
 
