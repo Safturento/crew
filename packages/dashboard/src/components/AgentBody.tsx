@@ -6,6 +6,7 @@ import { useAgent } from '../data/queries.js';
 import type { AgentDetail, AgentState } from '../data/types.js';
 import { StateBadge } from './StateBadge.js';
 import { Timeline } from './Timeline/Timeline.js';
+import { Button } from './ui/button.js';
 
 const ACTIVE_STATES = new Set<AgentState>(['running', 'initializing']);
 
@@ -74,22 +75,16 @@ function AgentHeader({ detail, mode }: { detail: AgentDetail; mode: AgentBodyMod
       <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
         <WorktreePathLink path={detail.worktree_path} />
         {detail.pr_url && (
-          <a
-            href={detail.pr_url}
-            target="_blank"
-            rel="noreferrer"
-            className="rounded-md border border-white/10 px-2 py-1 text-foreground hover:bg-popover"
-          >
-            View PR ↗
-          </a>
+          <Button variant="outline" size="xs" asChild>
+            <a href={detail.pr_url} target="_blank" rel="noreferrer">
+              View PR ↗
+            </a>
+          </Button>
         )}
         {mode === 'drawer' && (
-          <a
-            href={`#/agent/${encodeURIComponent(detail.key)}/full`}
-            className="rounded-md border border-white/10 px-2 py-1 text-foreground hover:bg-popover"
-          >
-            ↗ Open as page
-          </a>
+          <Button variant="outline" size="xs" asChild>
+            <a href={`#/agent/${encodeURIComponent(detail.key)}/full`}>↗ Open as page</a>
+          </Button>
         )}
       </div>
     </div>
@@ -109,14 +104,15 @@ function WorktreePathLink({ path }: { path: string }) {
   return (
     <span className="inline-flex items-center gap-1.5 rounded-md border border-white/10 px-2 py-1">
       <span className="font-mono text-xs text-muted-foreground">{path}</span>
-      <button
-        type="button"
+      <Button
+        variant="ghost"
+        size="xs"
         onClick={onCopy}
         aria-label="Copy worktree path"
-        className="rounded text-[10px] uppercase tracking-wide text-muted-foreground hover:text-foreground"
+        className="h-auto px-1 py-0 text-[10px] uppercase tracking-wide text-muted-foreground hover:text-foreground hover:bg-transparent"
       >
         {copied ? 'Copied' : 'Copy'}
-      </button>
+      </Button>
     </span>
   );
 }
