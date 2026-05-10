@@ -23,13 +23,13 @@
   --color-input: var(--input);
   --color-ring: var(--ring);
 
-  --color-state-initializing: oklch(0.7 0.16 250);
-  --color-state-running: oklch(0.78 0.005 260);
-  --color-state-idle: oklch(0.65 0.01 260);
-  --color-state-waiting: oklch(0.82 0.16 90);
-  --color-state-pr-open: oklch(0.72 0.16 295);
-  --color-state-error: oklch(0.7 0.16 25);
-  --color-state-finished: oklch(0.72 0.096 150);
+  --color-state-initializing: var(--color-blue-400);
+  --color-state-running: var(--color-slate-400);
+  --color-state-idle: var(--color-slate-500);
+  --color-state-waiting: var(--color-amber-400);
+  --color-state-pr-open: var(--color-violet-400);
+  --color-state-error: var(--color-red-400);
+  --color-state-finished: var(--color-emerald-500);
 
   --font-sans: 'Hanken Grotesk', ui-sans-serif, system-ui, -apple-system, sans-serif;
   --font-mono: 'Fira Code', ui-monospace, monospace;
@@ -43,50 +43,54 @@
 }
 
 :root {
-  /* Light mode primitives — shadcn slate (Tailwind v4 OKLCH defaults). */
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.13 0.028 261.692);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.13 0.028 261.692);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.13 0.028 261.692);
-  --primary: oklch(0.21 0.034 264.665);
-  --primary-foreground: oklch(0.985 0.002 247.839);
-  --secondary: oklch(0.967 0.003 264.542);
-  --secondary-foreground: oklch(0.21 0.034 264.665);
-  --muted: oklch(0.967 0.003 264.542);
-  --muted-foreground: oklch(0.551 0.027 264.364);
-  --accent: oklch(0.967 0.003 264.542);
-  --accent-foreground: oklch(0.21 0.034 264.665);
-  --destructive: oklch(0.577 0.245 27.325);
-  --destructive-foreground: oklch(0.985 0.002 247.839);
-  --border: oklch(0.928 0.006 264.531);
-  --input: oklch(0.928 0.006 264.531);
-  --ring: oklch(0.707 0.022 261.325);
+  /* Light mode primitives — stock Tailwind slate scale (was custom OKLCH
+     approximations of slate). Dashboard ships dark-only at runtime, but
+     the light tokens mirror the same Crew DS aliases for parity. */
+  --background: var(--color-white);
+  --foreground: var(--color-slate-950);
+  --card: var(--color-white);
+  --card-foreground: var(--color-slate-950);
+  --popover: var(--color-white);
+  --popover-foreground: var(--color-slate-950);
+  --primary: var(--color-slate-900);
+  --primary-foreground: var(--color-slate-50);
+  --secondary: var(--color-slate-100);
+  --secondary-foreground: var(--color-slate-900);
+  --muted: var(--color-slate-100);
+  --muted-foreground: var(--color-slate-500);
+  --accent: var(--color-slate-100);
+  --accent-foreground: var(--color-slate-900);
+  --destructive: var(--color-red-500);
+  --destructive-foreground: var(--color-slate-50);
+  --border: var(--color-slate-200);
+  --input: var(--color-slate-200);
+  --ring: var(--color-slate-400);
 }
 
 .dark {
-  /* Dark mode primitives — preserve crew's existing dashboard palette so
-     the token rename is visually invisible. Light mode is shadcn-stock. */
-  --background: #05060a;
-  --foreground: #e7e8ec;
-  --card: #1a1c24;
-  --card-foreground: #e7e8ec;
-  --popover: #21232d;
-  --popover-foreground: #e7e8ec;
-  --primary: #e7e8ec;
-  --primary-foreground: #05060a;
-  --secondary: #21232d;
-  --secondary-foreground: #e7e8ec;
-  --muted: #21232d;
-  --muted-foreground: #b8bbc4;
-  --accent: #292c38;
-  --accent-foreground: #e7e8ec;
-  --destructive: oklch(0.704 0.191 22.216);
-  --destructive-foreground: oklch(0.985 0.002 247.839);
-  --border: rgba(255, 255, 255, 0.07);
-  --input: rgba(255, 255, 255, 0.07);
-  --ring: #7e8290;
+  /* Dark mode primitives — stock Tailwind slate scale. Mirrors Crew DS
+     Figma `Crew / Semantic Colors` aliases, which point at the same
+     `tw/colors/slate-*` shades. --border / --input keep the canonical
+     white-at-7%-alpha overlay (not aliased through any token). */
+  --background: var(--color-slate-950);
+  --foreground: var(--color-slate-200);
+  --card: var(--color-slate-900);
+  --card-foreground: var(--color-slate-200);
+  --popover: var(--color-slate-900);
+  --popover-foreground: var(--color-slate-200);
+  --primary: var(--color-slate-200);
+  --primary-foreground: var(--color-slate-900);
+  --secondary: var(--color-slate-800);
+  --secondary-foreground: var(--color-slate-200);
+  --muted: var(--color-slate-800);
+  --muted-foreground: var(--color-slate-400);
+  --accent: var(--color-slate-800);
+  --accent-foreground: var(--color-slate-200);
+  --destructive: var(--color-red-400);
+  --destructive-foreground: var(--color-slate-50);
+  --border: rgb(255 255 255 / 0.07);
+  --input: rgb(255 255 255 / 0.07);
+  --ring: var(--color-slate-500);
 }
 
 @keyframes att-pulse {
