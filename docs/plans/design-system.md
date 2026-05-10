@@ -250,8 +250,6 @@ The community kit conflates shadcn's `variant` and `size` axes into a single Fig
 
 Layer names inside the kit's variants are the literal text characters (e.g. the primary Button's text layer is named `Button`, the icon variant has no text layer at all), so `figma.textContent("Button")` would only land on a subset of variants. The example snippets use placeholder strings (`Button`, `Badge`, `Email`, ...) instead. Phase 4 Crew composites are the right place to introduce a stable `Label` text-property name.
 
-# <<<<<<< HEAD
-
 ### Heads-up for primitive maintainers
 
 The `*.figma.tsx` files live under `packages/dashboard/src/components/ui/` and are picked up by the dashboard's `tsc -p tsconfig.json`. Renaming a shadcn primitive's prop union (e.g. dropping `'lg'` from Button's `size` type) will break the typecheck in the matching `*.figma.tsx`. That's a feature, not a bug — it forces you to update the Code Connect mapping in the same change.
@@ -274,8 +272,6 @@ The `figma connect publish` CLI requires a Figma personal access token with file
 5. Once verified, mark CREW-125 Done.
 
 > **Re-publishing:** any time a `*.figma.tsx` file changes (new variant mapping, prop tweak, code component renamed), re-run the publish command. The CLI is idempotent — subsequent runs replace the prior mapping for each connected URL.
-
-> > > > > > > 18734ce (docs(design-system): refresh Phase 2 status + maintainer note (CREW-125))
 
 ## Conventions
 
