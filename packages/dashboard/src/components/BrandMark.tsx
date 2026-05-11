@@ -1,4 +1,4 @@
-export function BrandMark({ className = 'h-[22px] w-[22px]' }: { className?: string }) {
+export function BrandMark({ className = 'h-6 w-6' }: { className?: string }) {
   return (
     <svg
       viewBox="0 0 24 24"

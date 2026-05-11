@@ -28,8 +28,8 @@ describe('ProjectRow', () => {
     expect(link.getAttribute('href')).toBe('#/projects/kanban-api');
   });
 
-  it('renders an em-dash when activeCount is zero', () => {
+  it('renders a muted "0" when activeCount is zero', () => {
     render(<ProjectRow project={{ ...sampleProject, activeCount: 0 }} />);
-    expect(screen.getByText('—')).toBeInTheDocument();
+    expect(screen.getByText('0')).toBeInTheDocument();
   });
 });

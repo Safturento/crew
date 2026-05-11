@@ -21,7 +21,7 @@ export function TopNav({ route, attentionCount, onClearAttention, onNewRun }: To
     <header className="flex items-center justify-between gap-4 border-b border-white/10 bg-card px-5 py-3">
       <div className="flex items-center gap-6">
         <a href="#/" className="flex items-center gap-2 text-foreground">
-          <BrandMark className="h-[22px] w-[22px] text-state-running" />
+          <BrandMark className="h-6 w-6 text-state-running" />
           <span className="hidden text-sm font-semibold tracking-tight sm:inline">crew</span>
         </a>
         <nav className="flex items-center gap-1">
@@ -43,7 +43,7 @@ export function TopNav({ route, attentionCount, onClearAttention, onNewRun }: To
         >
           Clear attention
           {attentionCount > 0 && (
-            <span className="inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-state-waiting px-1.5 text-[10px] font-semibold text-slate-950">
+            <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-state-waiting px-1.5 text-xs font-semibold text-slate-950">
               {attentionCount}
             </span>
           )}

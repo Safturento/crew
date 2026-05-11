@@ -9,11 +9,8 @@ interface CountBadgeProps {
 export function CountBadge({ count, state = 'initializing' }: CountBadgeProps) {
   if (count === 0) {
     return (
-      <span
-        data-state={state}
-        className="inline-flex h-5 w-5 items-center justify-center font-mono text-[11px] text-muted-foreground"
-      >
-        —
+      <span data-state={state} className="font-mono text-xs text-muted-foreground">
+        0
       </span>
     );
   }
@@ -22,7 +19,7 @@ export function CountBadge({ count, state = 'initializing' }: CountBadgeProps) {
   return (
     <span
       data-state={state}
-      className={`inline-flex h-5 min-w-5 items-center justify-center rounded-full border px-1 font-mono text-[10px] leading-none ${c.text} ${c.border30} ${c.bg10}`}
+      className={`inline-flex aspect-square h-6 items-center justify-center rounded-full px-1 font-mono text-sm leading-none ${c.text} ${c.border30} ${c.bg10}`}
     >
       {count}
     </span>

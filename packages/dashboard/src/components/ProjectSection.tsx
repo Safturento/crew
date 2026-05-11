@@ -78,7 +78,7 @@ export function ProjectSection({
         <div className="flex flex-col gap-1.5 pt-1">
           <ColumnHeaderRow placement="per-section" />
           {agents.length === 0 ? (
-            <div className="rounded-[10px] border border-dashed border-white/10 px-4 py-6 text-center text-sm text-muted-foreground">
+            <div className="rounded border border-dashed border-white/10 px-4 py-6 text-center text-sm text-muted-foreground">
               No agents yet — start one with{' '}
               <span className="font-mono text-muted-foreground">+ New Run</span>
             </div>

@@ -20,7 +20,7 @@ export function ProjectDetailPage({ slug }: ProjectDetailPageProps) {
 
   if (detailQuery.isLoading) {
     return (
-      <div className="mx-auto w-full max-w-[1240px] p-6 text-sm text-muted-foreground">
+      <div className="mx-auto w-full max-w-7xl p-6 text-sm text-muted-foreground">
         Loading project…
       </div>
     );
@@ -28,7 +28,7 @@ export function ProjectDetailPage({ slug }: ProjectDetailPageProps) {
 
   if (detailQuery.error || !detailQuery.data) {
     return (
-      <div className="mx-auto w-full max-w-[1240px] p-6 text-sm text-muted-foreground">
+      <div className="mx-auto w-full max-w-7xl p-6 text-sm text-muted-foreground">
         Project not found.
       </div>
     );
@@ -38,7 +38,7 @@ export function ProjectDetailPage({ slug }: ProjectDetailPageProps) {
   const filteredAgents = (agentsQuery.data ?? []).filter((a) => a.projectName === project.name);
 
   return (
-    <div className="mx-auto w-full max-w-[1240px] p-6">
+    <div className="mx-auto w-full max-w-7xl p-6">
       <ProjectHeader name={project.name} configPath={configPath} />
       <ProjectConfigBlock config={project} />
       <h2 className="mt-8 mb-2 font-mono text-xs uppercase tracking-wide text-muted-foreground">

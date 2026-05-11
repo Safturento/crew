@@ -14,9 +14,9 @@ export function ProjectRow({ project }: ProjectRowProps) {
     <a
       href={`#/projects/${project.name}`}
       aria-label={`Open ${project.name}`}
-      className={`grid items-center gap-4 ${PROJECT_ROW_GRID} rounded-[10px] border border-white/10 bg-card px-4 py-3 transition-colors hover:bg-popover`}
+      className={`grid items-center gap-4 ${PROJECT_ROW_GRID} px-4 py-3 transition-colors hover:bg-popover`}
     >
-      <span className="truncate text-[13.5px] font-semibold tracking-tight text-foreground">
+      <span className="truncate text-sm font-semibold tracking-tight text-foreground">
         {project.name}
       </span>
       <span className="truncate font-mono text-xs text-muted-foreground">{project.repoPath}</span>

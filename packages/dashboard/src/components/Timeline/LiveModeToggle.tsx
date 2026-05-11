@@ -12,7 +12,7 @@ export function LiveModeToggle({ active, onChange }: LiveModeToggleProps) {
       aria-label="Live"
       onClick={() => onChange(!active)}
       className={[
-        'inline-flex h-[22px] items-center gap-1.5 rounded-full border px-2 font-mono text-[11px] leading-none transition-opacity hover:opacity-80',
+        'inline-flex h-6 items-center gap-1.5 rounded-full border px-2 font-mono text-xs leading-none transition-opacity hover:opacity-80',
         active
           ? 'border-emerald-400/40 bg-emerald-400/15 text-emerald-100'
           : 'border-white/10 bg-transparent text-muted-foreground',
@@ -40,7 +40,7 @@ export function NewEventsPill({ count, onClick }: NewEventsPillProps) {
     <button
       type="button"
       onClick={onClick}
-      className="inline-flex h-[22px] items-center gap-1 rounded-full border border-white/30 bg-white/10 px-3 font-mono text-[11px] leading-none text-foreground shadow-sm transition-opacity hover:opacity-80"
+      className="inline-flex h-6 items-center gap-1 rounded-full border border-white/30 bg-white/10 px-3 font-mono text-xs leading-none text-foreground shadow-sm transition-opacity hover:opacity-80"
     >
       <span aria-hidden>↓</span>
       {count} new events

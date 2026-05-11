@@ -10,12 +10,9 @@ interface ProjectsListPageProps {
 
 export function ProjectsListPage({ projects }: ProjectsListPageProps) {
   return (
-    <div className="mx-auto w-full max-w-[1240px] p-6">
-      <div className="mb-6 flex items-start justify-between gap-4">
-        <div>
-          <p className="font-mono text-xs text-muted-foreground">PROJECTS</p>
-          <h1 className="mt-1 text-2xl font-semibold tracking-tight text-foreground">Projects</h1>
-        </div>
+    <div className="mx-auto w-full max-w-7xl p-6">
+      <div className="mb-6 flex items-center justify-between gap-4">
+        <h1 className="text-2xl font-semibold tracking-tight text-foreground">Projects</h1>
         <Button
           variant="outline"
           size="xs"

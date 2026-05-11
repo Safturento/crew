@@ -36,7 +36,7 @@ export function CardShell({ lineOne, lineTwo, expanded, errorTone }: CardShellPr
       {hasExpand && open ? (
         <pre
           data-testid="card-expanded"
-          className="mt-2 overflow-x-auto rounded-sm bg-black/30 p-2 text-[11px] whitespace-pre-wrap text-foreground"
+          className="mt-2 overflow-x-auto rounded-sm bg-black/30 p-2 text-xs whitespace-pre-wrap text-foreground"
         >
           {expanded}
         </pre>

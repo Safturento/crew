@@ -8,7 +8,7 @@ interface ProjectsTableProps {
 export function ProjectsTable({ projects }: ProjectsTableProps) {
   if (projects.length === 0) {
     return (
-      <div className="rounded-[10px] border border-dashed border-white/10 px-4 py-10 text-center text-sm text-muted-foreground">
+      <div className="rounded border border-dashed border-white/10 px-4 py-10 text-center text-sm text-muted-foreground">
         No projects registered yet — register one with{' '}
         <span className="font-mono text-muted-foreground">crew project register</span>.
       </div>
@@ -16,22 +16,24 @@ export function ProjectsTable({ projects }: ProjectsTableProps) {
   }
 
   return (
-    <div className="flex flex-col gap-1.5">
+    <div className="overflow-hidden rounded border border-white/10 bg-card">
       <div
         role="row"
         aria-label="Column headers"
-        className={`grid items-center gap-4 ${PROJECT_ROW_GRID} px-4 pb-2 font-mono text-[10px] font-semibold uppercase tracking-[0.1em] text-muted-foreground`}
+        className={`grid items-center gap-4 ${PROJECT_ROW_GRID} border-b border-white/10 bg-muted/40 px-4 py-2 font-mono text-xs font-semibold uppercase tracking-widest text-muted-foreground`}
       >
         <span>Name</span>
-        <span>Repo</span>
+        <span>Repo path</span>
         <span>Branch</span>
         <span>Jira</span>
         <span>Active</span>
         <span className="sr-only">Open</span>
       </div>
-      {projects.map((p) => (
-        <ProjectRow key={p.name} project={p} />
-      ))}
+      <div className="divide-y divide-white/5">
+        {projects.map((p) => (
+          <ProjectRow key={p.name} project={p} />
+        ))}
+      </div>
     </div>
   );
 }
