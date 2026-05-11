@@ -129,13 +129,84 @@ Naming caveat: the collection is named `Crew / Semantic Colors` per the Phase 2 
 
 Total: **48 variables across 1 collection**, no `ALL_SCOPES` defaults.
 
-### v1 overrides
+### v1 overrides — direct alias to Tailwind slate (CREW-127, 2026-05-10)
 
-None for v1. The dashboard's existing dark slate aesthetic matches Core's shadcn-default `mode/dark mode` values closely enough that a delta layer isn't needed yet. All Crew aliases pass straight through to Core. Future Crew brand work re-points specific aliases (e.g. swap `Crew/primary` from Core's `mode/primary` to a `tw/colors / blue/500`) without touching consumer files.
+Crew DS aliases all 19 standard shadcn semantic variables and 8 state tokens **directly** to `Core / tw/colors / *` primitives, **bypassing Core's `mode` collection**. The dashboard's `.dark` block in `packages/dashboard/src/index.css` was custom blue-tinted hex values (`#05060a` etc.) that didn't match Core's pure-grayscale neutral defaults — so the original "no override needed" assumption was invalidated. Both code (CSS) and Figma (Crew DS) now reference identical Tailwind shade names, ensuring code-design parity by construction.
+
+Mapping (both light and dark modes alias to the same `tw/colors` target since `tw/colors` is single-mode / mode-invariant):
+
+| Crew semantic            | → Core tw/colors target |
+| ------------------------ | ----------------------- |
+| `background`             | `slate/950`             |
+| `foreground`             | `slate/200`             |
+| `card`                   | `slate/900`             |
+| `card-foreground`        | `slate/200`             |
+| `popover`                | `slate/900`             |
+| `popover-foreground`     | `slate/200`             |
+| `primary`                | `slate/200`             |
+| `primary-foreground`     | `slate/900`             |
+| `secondary`              | `slate/800`             |
+| `secondary-foreground`   | `slate/200`             |
+| `muted`                  | `slate/800`             |
+| `muted-foreground`       | `slate/400`             |
+| `accent`                 | `slate/800`             |
+| `accent-foreground`      | `slate/200`             |
+| `destructive`            | `red/400`               |
+| `destructive-foreground` | `slate/50`              |
+| `border`                 | `white` (consumers carry alpha) |
+| `input`                  | `white` (consumers carry alpha) |
+| `ring`                   | `slate/500`             |
+
+State tokens use `*-400` shades to match the dashboard's lightness ~0.7 OKLCH values:
+
+| State token          | → Core tw/colors target |
+| -------------------- | ----------------------- |
+| `state/initializing` | `blue/400`              |
+| `state/running`      | `slate/400`             |
+| `state/idle`         | `slate/500`             |
+| `state/waiting`      | `amber/400`             |
+| `state/pr-open`      | `violet/400`            |
+| `state/error`        | `red/400`               |
+| `state/finished`     | `emerald/500`           |
+| `state/foreground`   | `slate/950`             |
+
+`border` and `input` alias to `white` (RGB only) — consumer fills carry the alpha (e.g. screens-file fills use opacity 0.04 / 0.06 / 0.07 / 0.12 for the white-overlay pattern). This pattern is required because Figma variable aliases don't have alpha overlay built-in.
+
+**Deferred groups (untouched, still aliased through Core's `mode` collection):**
+- 5 `chart-*` tokens (`chart-1` through `chart-5`)
+- 8 `sidebar-*` tokens (`sidebar`, `sidebar-foreground`, …, `sidebar-ring`)
+- 4 kit-extras (`background-color`, `semantic-background`, `semantic-border`, `semantic-foreground`)
+
+Total: 17 deferred variables — unused at runtime; address when first usage appears.
 
 ### Mode resolution
 
-Consumer files (Crew Dashboard Screens) bind to Crew's tokens. Mode resolution chains `Crew / Semantic Colors → Core / mode → Core / tw/colors`. Because the chain crosses two collections, consumer frames must set the mode on **both** Crew and Core for theming to track end-to-end — Phase 3 (CREW-126) will document and standardize this.
+Consumer files (Crew Dashboard Screens) bind to Crew's tokens. Mode resolution chains `Crew / Semantic Colors → Core / tw/colors` directly (since 2026-05-10's palette correction). Because `tw/colors` is mode-invariant (single-mode collection), consumer frames only need to set explicit mode on `Crew / Semantic Colors` — the underlying primitive doesn't change with mode. Light/dark differentiation comes from Crew DS's per-mode aliasing (currently both modes alias to the same slate shade since dashboard ships dark-only; future light-mode design pass would change the light-mode aliases).
+
+This simpler single-collection chain means the figma-design-system-propagation skill's Trap 2 (two-collection mode chain) **does not apply** to Crew DS consumers as of 2026-05-10.
+
+### Extending the palette
+
+Three patterns cover any future palette additions. Each preserves the convention that **the Tailwind class name in code matches the variable name in Figma** — designer says "I used `bg-warning`" → developer ships `bg-warning` → no translation step.
+
+**Pattern 1 — Color already in Tailwind palette.**
+- *Code:* use `bg-blue-500` directly, or hook through a semantic via `var(--color-blue-500)`
+- *Figma:* alias from Crew Semantic Colors to `Core / tw/colors / blue/500`. Or use the primitive directly without a semantic name.
+- No new infrastructure. Current palette correction (CREW-127) is entirely Pattern 1.
+
+**Pattern 2 — Brand-new custom color not in Tailwind.**
+- *Code:* extend `@theme` block in `packages/dashboard/src/index.css`:
+  ```css
+  @theme {
+    --color-brand-purple: #5b21b6;
+  }
+  ```
+  Tailwind v4 auto-generates `bg-brand-purple`, `text-brand-purple`, etc.
+- *Figma:* create a `Crew / Primitives` collection (JIT — only when first needed), add `brand-purple` variable. Optional: add a Crew Semantic Colors variable aliasing to it for semantic naming.
+
+**Pattern 3 — Custom semantic on existing Tailwind value.**
+- *Code:* extend `@theme` block: `--color-warning: var(--color-blue-500)`
+- *Figma:* add `warning` variable to Crew Semantic Colors aliasing to `tw/colors / blue/500`. Same shape as how state tokens (`state/waiting` → `tw/colors / amber/400`) work today (added in CREW-119).
 
 ## Component inventory
 
@@ -179,20 +250,25 @@ A `state/foreground` token was added on 2026-05-10 — aliases `tw/colors / slat
 
 Total Crew DS variable count: **56 across 1 collection** (48 from Phase 2 + 7 state tokens from CREW-119 + 1 state-foreground from 2026-05-10).
 
-### StateBadge visual pattern (canonical, 2026-05-10)
+### StateBadge visual pattern (canonical, 2026-05-10 / extended CREW-130)
 
-The `StateBadge` set on the Crew DS Composites page is the canonical pill treatment. Every state pill in the dashboard screens — and any composite that embeds a state pill (e.g. `AgentBody`, `StateHistoryBar`, timeline event tags) — should follow this pattern rather than rolling its own:
+The `StateBadge` set on the Crew DS Composites page is the canonical pill treatment, mirroring the dashboard's CVA `intensity` variant in `packages/dashboard/src/components/StateBadge.tsx`. The set has **21 variants**: 7 states × 3 intensities. Both surfaces (Figma + code) reference identical Tailwind opacity values via Tailwind v4 slash syntax (`bg-state-X/10`, `border-state-X/30`).
 
-| Element        | Color                          | Opacity        |
-| -------------- | ------------------------------ | -------------- |
-| Background fill| `state/{variant}`              | **0.18**       |
-| Stroke         | `state/{variant}`              | 1.0            |
-| Dot (Ellipse)  | `state/{variant}`              | 1.0            |
-| Text           | `state/{variant}`              | 1.0            |
+**Canonical opacities by intensity:**
 
-Read: tinted background + matching-color full-opacity border, dot, and text. The 0.18 bg opacity gives the subtle washed-color body without overwhelming the surface; the full-opacity border + text are what carry the recognizable state color.
+| Intensity | Bg fill           | Stroke            | Text         | Dot          |
+| --------- | ----------------- | ----------------- | ------------ | ------------ |
+| `muted`   | transparent (0%)  | `state/X` at 40%  | `state/X` ✓  | `state/X` ✓  |
+| `mid` (default) | `state/X` at **10%** | `state/X` at **30%** | `state/X` ✓ | `state/X` ✓ |
+| `loud`    | `state/X` at 100% | `state/X` at 100% | `state/foreground` (slate/950) | `state/X` ✓ |
 
-**Embedding caveat for composites:** when a composite (`AgentBody`, etc.) needs a state pill, it must compose a real `StateBadge` instance — not a hand-built ellipse + text. Hand-built pills don't inherit future StateBadge updates (e.g. opacity tweaks, new state variants) and can drift from the canonical pattern.
+`mid` is the default and what every state pill in migrated frames + composites uses today. `muted` and `loud` exist for future use (e.g. inline status indicators, full-color destructive call-out buttons).
+
+**Code-Figma parity contract:** the dashboard's `STATE_CLASSES` in `packages/dashboard/src/data/state-meta.ts` defines `bg10` → `bg-state-X/10` (10% bg) and `border30` → `border-state-X/30` (30% border) classes. When changing canonical opacities, update both the Figma variants AND `STATE_CLASSES` in code — same value in both places.
+
+**Embedding caveat for composites:** when a composite (`AgentBody`, `StateHistoryBar`, etc.) needs a state pill, it must compose a real `StateBadge` instance — not a hand-built ellipse + text. Hand-built pills don't inherit future StateBadge updates (opacity tweaks, new state variants) and drift from the canonical pattern. The `AgentBody` and `StateHistoryBar` composites both had hand-rolled pills until 2026-05-10 — both now compose real `StateBadge` instances.
+
+**Figma Plugin API gotcha:** `inst.fills = [...]` and `inst.strokes = [...]` overrides on a fresh instance (created via `variant.createInstance()`) **do not inherit** the variant's opacity property — instances default to opacity 1.0 even when the variant has 0.10. Always force opacity explicitly after `createInstance()` or `swapComponent()`. Same gotcha applies to `setBoundVariableForPaint` which silently drops the input paint's opacity. See `figma-design-system-propagation` skill Trap 1 for the workaround pattern.
 
 ## Phase 3 partial scope (CREW-126, 2026-05-09)
 
