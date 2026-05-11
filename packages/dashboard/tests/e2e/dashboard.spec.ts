@@ -46,12 +46,13 @@ test.describe('dashboard shell', () => {
     await expect(firstAgent).toBeVisible();
   });
 
-  test('navigates to the Projects placeholder', async ({ page }) => {
+  test('navigates to the Projects list', async ({ page }) => {
     await page.getByRole('link', { name: 'Projects' }).click();
     await expect(page.getByRole('link', { name: 'Projects' })).toHaveAttribute(
       'aria-current',
       'page',
     );
-    await expect(page.getByText('The projects route ships in a follow-up plan.')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Projects', level: 1 })).toBeVisible();
+    await expect(page.getByRole('button', { name: /register project/i })).toBeVisible();
   });
 });
