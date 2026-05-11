@@ -8,6 +8,9 @@ const ProjectsResponseSchema = z.object({
     z.object({
       name: z.string(),
       repoPath: z.string(),
+      branch: z.string(),
+      jiraKey: z.string(),
+      activeCount: z.number(),
     }),
   ),
 });

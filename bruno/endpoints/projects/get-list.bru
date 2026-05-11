@@ -14,10 +14,13 @@ assert {
 }
 
 tests {
-  test("each project has name and repoPath strings", () => {
+  test("each project carries the expanded shape", () => {
     for (const project of res.body.projects) {
       expect(project.name).to.be.a("string");
       expect(project.repoPath).to.be.a("string");
+      expect(project.branch).to.be.a("string");
+      expect(project.jiraKey).to.be.a("string");
+      expect(project.activeCount).to.be.a("number");
     }
   });
 

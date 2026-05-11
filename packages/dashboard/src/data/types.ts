@@ -27,6 +27,9 @@ export type TransitionState =
 export interface Project {
   name: string;
   repoPath: string;
+  branch: string;
+  jiraKey: string;
+  activeCount: number;
 }
 
 export interface Agent {

@@ -12,6 +12,7 @@ import type { DaemonClient } from './data/DaemonClient.js';
 import { HttpDaemonClient } from './data/HttpDaemonClient.js';
 import { AgentDrawer } from './routes/AgentDrawer.js';
 import { AgentFullPage } from './routes/AgentFullPage.js';
+import { ProjectsListPage } from './routes/ProjectsListPage.js';
 import { navigate, useHashRoute } from './routing/useHashRoute.js';
 
 const defaultClient: DaemonClient = new HttpDaemonClient();
@@ -51,7 +52,7 @@ function AppContent({ client }: { client: DaemonClient }) {
       case 'agent-full':
         return <AgentFullPage agentKey={route.key} />;
       case 'projects':
-        return <ProjectsPlaceholder />;
+        return <ProjectsListPage projects={projects} />;
       case 'agent-drawer':
       case 'agents-list':
       default:
@@ -79,19 +80,5 @@ function AppContent({ client }: { client: DaemonClient }) {
       <div className="flex-1 overflow-y-auto">{body}</div>
       {route.kind === 'agent-drawer' && <AgentDrawer agentKey={route.key} />}
     </>
-  );
-}
-
-function ProjectsPlaceholder() {
-  return (
-    <div className="mx-auto w-full max-w-[1240px] p-6">
-      <div className="rounded-[14px] border border-white/10 bg-card px-6 py-8">
-        <p className="font-mono text-xs text-muted-foreground">PROJECTS</p>
-        <p className="mt-1 text-2xl font-semibold tracking-tight text-foreground">Projects</p>
-        <p className="mt-3 text-sm text-muted-foreground">
-          The projects route ships in a follow-up plan.
-        </p>
-      </div>
-    </div>
   );
 }

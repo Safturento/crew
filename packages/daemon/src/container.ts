@@ -60,11 +60,11 @@ export function buildContainer(deps: BuildContainerDeps): AwilixContainer<Daemon
     // env schema). The service param is named `projectsDir` to describe
     // what it actually scans; if `DaemonConfig` later splits the two,
     // change this argument, not the service's parameter name.
-    projectsService: asFunction(
-      ({ config, logger }: DaemonCradle) =>
-        new ProjectsService({ projectsDir: config.configDir, logger }),
-    ).scoped(),
     agentsService: asFunction(({ db }: DaemonCradle) => new AgentsService({ db })).scoped(),
+    projectsService: asFunction(
+      ({ config, logger, agentsService }: DaemonCradle) =>
+        new ProjectsService({ projectsDir: config.configDir, logger, agentsService }),
+    ).scoped(),
     // One event bus per daemon process — its ring buffer + subscriber set
     // must be shared across every request that opens an SSE connection,
     // and across every service that publishes. Singleton, not scoped.

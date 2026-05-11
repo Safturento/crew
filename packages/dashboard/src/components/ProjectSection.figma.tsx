@@ -8,7 +8,13 @@ figma.connect(
   {
     example: () => (
       <ProjectSection
-        project={{ name: 'kanban-api', repoPath: '~/code/kanban-api' }}
+        project={{
+          name: 'kanban-api',
+          repoPath: '~/code/kanban-api',
+          branch: 'main',
+          jiraKey: 'KAN',
+          activeCount: 2,
+        }}
         agents={[]}
         onSelectAgent={() => {}}
       />

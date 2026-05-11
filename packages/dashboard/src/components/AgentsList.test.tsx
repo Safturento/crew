@@ -6,8 +6,20 @@ import { AgentsList } from './AgentsList.js';
 import type { Agent, Project } from '../data/types.js';
 
 const projects: Project[] = [
-  { name: 'kanban-api', repoPath: '~/code/kanban-api' },
-  { name: 'recipes-app', repoPath: '~/code/recipes-app' },
+  {
+    name: 'kanban-api',
+    repoPath: '~/code/kanban-api',
+    branch: 'main',
+    jiraKey: 'KAN',
+    activeCount: 2,
+  },
+  {
+    name: 'recipes-app',
+    repoPath: '~/code/recipes-app',
+    branch: 'main',
+    jiraKey: 'REC',
+    activeCount: 2,
+  },
 ];
 
 const agents: Agent[] = [
@@ -64,7 +76,10 @@ describe('AgentsList', () => {
   });
 
   it('omits projects with no agents', () => {
-    const projectsWithExtra: Project[] = [...projects, { name: 'crew', repoPath: '~/code/crew' }];
+    const projectsWithExtra: Project[] = [
+      ...projects,
+      { name: 'crew', repoPath: '~/code/crew', branch: 'main', jiraKey: 'CREW', activeCount: 0 },
+    ];
     render(<AgentsList projects={projectsWithExtra} agents={agents} onSelectAgent={() => {}} />);
     expect(screen.queryByText('crew')).not.toBeInTheDocument();
   });
