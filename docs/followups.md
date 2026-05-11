@@ -7,6 +7,7 @@ Format: see the user-level `~/.claude/CLAUDE.md` "Followup detection" section.
 ## Contents
 
 - [Active](#active)
+  - [2026-05-10 — Build `CountBadge` + `ProjectRow` Crew DS composites + migrate frame `1:2334` (CREW-132 Figma half)](#2026-05-10--build-countbadge--projectrow-crew-ds-composites--migrate-frame-12334-crew-132-figma-half)
   - [2026-05-10 — Build a `TimelineTag` component in Crew DS for tool-name pills](#2026-05-10--build-a-timelinetag-component-in-crew-ds-for-tool-name-pills)
   - [2026-05-10 — Wire dashboard QuickAction buttons (Resume / Finish / Inspect / Provide input) to daemon endpoints](#2026-05-10--wire-dashboard-quickaction-buttons-resume--finish--inspect--provide-input-to-daemon-endpoints)
   - [2026-05-10 — Polish the CREW-119/CREW-117 Crew DS composites (skeleton-fidelity → pixel-fidelity)](#2026-05-10--polish-the-crew-119crew-117-crew-ds-composites-skeleton-fidelity--pixel-fidelity)
