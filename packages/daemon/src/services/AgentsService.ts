@@ -272,6 +272,21 @@ export class AgentsService {
   }
 
   /**
+   * Per-project agent count. Single GROUP BY pass over the `agents` table —
+   * avoids the N+1 trap of calling `list()` (which carries heavy state-
+   * derivation joins). Used by ProjectsService.list() to populate the
+   * activeCount column on the projects API.
+   */
+  async countByProject(): Promise<Map<string, number>> {
+    const rows = await this.db
+      .selectFrom('agents')
+      .select(['project_name as projectName', sql<number>`COUNT(*)`.as('count')])
+      .groupBy('project_name')
+      .execute();
+    return new Map(rows.map((r) => [r.projectName, Number(r.count)]));
+  }
+
+  /**
    * Ordered state-transition trail for an agent. Reads directly from the
    * `state_transitions` table populated by CREW-96's backfill (and, in
    * future, by IngestService writes). Returns an empty list for agents

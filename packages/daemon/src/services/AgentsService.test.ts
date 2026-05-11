@@ -454,6 +454,46 @@ describe('AgentsService.getByKey', () => {
   });
 });
 
+describe('AgentsService.countByProject', () => {
+  it('returns an empty map when no agents exist', async () => {
+    const db = await freshDb();
+    try {
+      const svc = new AgentsService({ db });
+      expect(await svc.countByProject()).toEqual(new Map());
+    } finally {
+      await db.destroy();
+    }
+  });
+
+  it('returns one entry per project with the number of registered agents', async () => {
+    const db = await freshDb();
+    try {
+      await makeAgent(db, 'KAN-A', { projectName: 'kanban' });
+      await makeAgent(db, 'KAN-B', { projectName: 'kanban' });
+      await makeAgent(db, 'KAN-C', { projectName: 'kanban' });
+      await makeAgent(db, 'REC-A', { projectName: 'recipes' });
+      const svc = new AgentsService({ db });
+      const counts = await svc.countByProject();
+      expect(counts.get('kanban')).toBe(3);
+      expect(counts.get('recipes')).toBe(1);
+    } finally {
+      await db.destroy();
+    }
+  });
+
+  it('omits projects with no agents', async () => {
+    const db = await freshDb();
+    try {
+      await makeAgent(db, 'X-1', { projectName: 'has-agents' });
+      const counts = await new AgentsService({ db }).countByProject();
+      expect(counts.has('has-agents')).toBe(true);
+      expect(counts.has('absent')).toBe(false);
+    } finally {
+      await db.destroy();
+    }
+  });
+});
+
 describe('AgentsService.getStateHistory', () => {
   it('returns transitions ordered by ts ascending', async () => {
     const db = await freshDb();
