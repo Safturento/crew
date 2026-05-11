@@ -162,3 +162,39 @@ repo = "example/p"
     }
   });
 });
+
+describe('GET /api/projects/:slug', () => {
+  it('returns the full ProjectConfig + on-disk configPath for a known slug', async () => {
+    const { app, db, projectsDir } = await setup();
+    try {
+      writeFileSync(
+        join(projectsDir, 'kanban-api.toml'),
+        validToml('kanban-api', '/code/kanban-api'),
+      );
+      const res = await app.inject({ method: 'GET', url: '/api/projects/kanban-api' });
+      expect(res.statusCode).toBe(200);
+      const body = res.json();
+      expect(body.project).toMatchObject({
+        name: 'kanban-api',
+        repo_path: '/code/kanban-api',
+        jira: { project_key: 'KAN' },
+      });
+      expect(body.configPath).toBe(join(projectsDir, 'kanban-api.toml'));
+    } finally {
+      await app.close();
+      await db.destroy();
+    }
+  });
+
+  it('returns 404 for an unknown slug', async () => {
+    const { app, db } = await setup();
+    try {
+      const res = await app.inject({ method: 'GET', url: '/api/projects/does-not-exist' });
+      expect(res.statusCode).toBe(404);
+      expect(res.json()).toMatchObject({ resource: 'project', id: 'does-not-exist' });
+    } finally {
+      await app.close();
+      await db.destroy();
+    }
+  });
+});
