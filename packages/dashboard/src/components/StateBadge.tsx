@@ -1,7 +1,7 @@
 import { cva } from 'class-variance-authority';
 
-import type { AgentState } from '../data/types.js';
-import { STATE_CLASSES, STATE_META, type StateClassTokens } from '../data/state-meta.js';
+import type { AgentState } from '@/data/types';
+import { STATE_CLASSES, STATE_META, type StateClassTokens } from '@/data/state-meta';
 
 export type StateIntensity = 'muted' | 'mid' | 'loud';
 export type StateSize = 'sm' | 'md';
@@ -29,7 +29,7 @@ const INTENSITY_TEMPLATES: Record<StateIntensity, (c: StateClassTokens) => strin
 };
 
 const stateBadge = cva(
-  'inline-flex items-center gap-1.5 rounded-full font-mono leading-none whitespace-nowrap',
+  'inline-flex w-fit items-center gap-1.5 rounded-full font-mono leading-none whitespace-nowrap',
   {
     variants: {
       size: {
@@ -58,7 +58,7 @@ const stateBadge = cva(
         class: INTENSITY_TEMPLATES[intensity](STATE_CLASSES[state]),
       })),
     ),
-    defaultVariants: { size: 'md', intensity: 'mid' },
+    defaultVariants: { size: 'md', intensity: 'mid' } as const,
   },
 );
 

@@ -73,6 +73,26 @@ const FIXTURE_AGENTS: Omit<Insertable<AgentsTable>, 'created_at'>[] = [
     branch: 'KAN-203',
     pr_url: 'https://github.com/Safturento/Recipes-App/pull/4321',
   },
+  // CREW-103 → initializing: open run with NO tool_calls yet
+  // (deriveState: completedAt=null + latestHasToolCalls=false → 'initializing')
+  {
+    key: 'CREW-103',
+    project_name: 'crew',
+    ticket_title: 'Brainstorm new dashboard tabs',
+    worktree_path: '/home/dev/Repos/crew-CREW-103',
+    branch: 'CREW-103',
+    pr_url: null,
+  },
+  // KAN-204 → error: completed run with exit_code != 0
+  // (deriveState: completedAt set + exitCode=1 → 'error')
+  {
+    key: 'KAN-204',
+    project_name: 'recipes',
+    ticket_title: 'Migrate legacy macro schema',
+    worktree_path: '/home/dev/Repos/Recipes-KAN-204',
+    branch: 'KAN-204',
+    pr_url: null,
+  },
 ];
 
 const FIXTURE_RUNS: Insertable<RunsTable>[] = [
@@ -127,6 +147,24 @@ const FIXTURE_RUNS: Insertable<RunsTable>[] = [
     started_at: '2026-05-06T08:35:00Z',
     completed_at: '2026-05-06T08:36:00Z',
     exit_code: 0,
+  },
+  // Open run for CREW-103, no tool_calls below → 'initializing'
+  {
+    agent_key: 'CREW-103',
+    command: 'run',
+    session_id: 'sess-c103-a',
+    started_at: '2026-05-07T09:00:00Z',
+    completed_at: null,
+    exit_code: null,
+  },
+  // Completed run for KAN-204 with non-zero exit → 'error'
+  {
+    agent_key: 'KAN-204',
+    command: 'run',
+    session_id: 'sess-k204-a',
+    started_at: '2026-05-07T10:00:00Z',
+    completed_at: '2026-05-07T10:08:00Z',
+    exit_code: 1,
   },
 ];
 
