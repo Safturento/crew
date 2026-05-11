@@ -8,7 +8,7 @@ describe('ProjectHeader', () => {
     render(
       <ProjectHeader name="kanban-api" configPath="~/.config/crew/projects/kanban-api.toml" />,
     );
-    expect(screen.getByRole('link', { name: /Projects/ })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: '← Projects' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'kanban-api' })).toBeInTheDocument();
     expect(screen.getByText(/kanban-api\.toml/)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Edit' })).toBeInTheDocument();
@@ -17,7 +17,9 @@ describe('ProjectHeader', () => {
 
   it('the back link points at #/projects', () => {
     render(<ProjectHeader name="x" configPath="" />);
-    expect(screen.getByRole('link', { name: /Projects/ }).getAttribute('href')).toBe('#/projects');
+    expect(screen.getByRole('link', { name: '← Projects' }).getAttribute('href')).toBe(
+      '#/projects',
+    );
   });
 
   it('Edit and Remove are stubs that do not throw when clicked', () => {

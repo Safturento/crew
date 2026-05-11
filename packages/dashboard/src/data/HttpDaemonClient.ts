@@ -1,5 +1,4 @@
 import { z } from 'zod';
-import { projectConfigSchema } from 'crew-shared';
 
 import type { DaemonClient } from './DaemonClient.js';
 import type {
@@ -23,8 +22,23 @@ const ProjectsResponseSchema = z.object({
   ),
 });
 
+// Inline rather than importing crew-shared's projectConfigSchema directly:
+// the shared barrel re-exports a node-only loader, which Vite refuses to
+// bundle for the browser. The daemon's Zod serializer guarantees the
+// response shape matches projectConfigSchema, so we re-validate the
+// browser-relevant subset here using passthrough on optional sub-objects.
+const ProjectConfigShapeSchema = z
+  .object({
+    name: z.string(),
+    repo_path: z.string(),
+    default_branch: z.string(),
+    jira: z.object({ project_key: z.string(), site: z.string() }).passthrough(),
+    github: z.object({ repo: z.string() }).passthrough(),
+  })
+  .passthrough();
+
 const ProjectDetailResponseSchema = z.object({
-  project: projectConfigSchema,
+  project: ProjectConfigShapeSchema,
   configPath: z.string(),
 });
 
@@ -120,7 +134,7 @@ export class HttpDaemonClient implements DaemonClient {
     const res = await fetch(`${this.baseUrl}/api/projects/${encodeURIComponent(slug)}`);
     if (res.status === 404) throw new ProjectNotFoundError(slug);
     if (!res.ok) throw new Error(`GET /api/projects/${slug}: ${res.status}`);
-    return ProjectDetailResponseSchema.parse(await res.json());
+    return ProjectDetailResponseSchema.parse(await res.json()) as ProjectDetailResponse;
   }
 
   async listAgents(): Promise<Agent[]> {

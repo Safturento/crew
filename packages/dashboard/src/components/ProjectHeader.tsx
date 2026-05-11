@@ -1,5 +1,3 @@
-import { ArrowLeft } from 'lucide-react';
-
 import { Button } from './ui/button.js';
 
 interface ProjectHeaderProps {
@@ -15,8 +13,7 @@ export function ProjectHeader({ name, configPath }: ProjectHeaderProps) {
           href="#/projects"
           className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
         >
-          <ArrowLeft className="size-3" aria-hidden />
-          Projects
+          ← Projects
         </a>
         <h1 className="text-2xl font-semibold tracking-tight text-foreground">{name}</h1>
         <p className="font-mono text-xs text-muted-foreground">{configPath}</p>
