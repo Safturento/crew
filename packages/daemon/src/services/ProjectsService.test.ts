@@ -3,6 +3,7 @@ import { writeFileSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { pino, type Logger } from 'pino';
 import { ProjectsService, type AgentsCounter } from './ProjectsService.js';
+import { NotFoundError } from '../errors.js';
 import { useTmpDir } from '../test/tmpdir.js';
 
 const tmp = useTmpDir();
@@ -140,5 +141,103 @@ describe('ProjectsService.list', () => {
     const result = await svc.list();
     expect(result.find((p) => p.name === 'a')?.activeCount).toBe(3);
     expect(result.find((p) => p.name === 'b')?.activeCount).toBe(0);
+  });
+});
+
+describe('ProjectsService.getBySlug', () => {
+  it('returns the full ProjectConfig for a known slug', () => {
+    const dir = projectsDir();
+    writeFileSync(
+      join(dir, 'kanban-api.toml'),
+      validToml('kanban-api', '/code/kanban-api'),
+    );
+    const svc = new ProjectsService({
+      projectsDir: dir,
+      logger: silentLogger,
+      agentsService: emptyAgentsCounter,
+    });
+    expect(svc.getBySlug('kanban-api')).toMatchObject({
+      name: 'kanban-api',
+      repo_path: '/code/kanban-api',
+      jira: { project_key: 'KAN' },
+    });
+  });
+
+  it('throws NotFoundError for an unknown slug', () => {
+    const dir = projectsDir();
+    writeFileSync(join(dir, 'a.toml'), validToml('a', '/tmp/a'));
+    const svc = new ProjectsService({
+      projectsDir: dir,
+      logger: silentLogger,
+      agentsService: emptyAgentsCounter,
+    });
+    expect(() => svc.getBySlug('does-not-exist')).toThrow(NotFoundError);
+  });
+
+  it('throws NotFoundError when the projects dir does not exist', () => {
+    const svc = new ProjectsService({
+      projectsDir: join(tmp(), 'absent'),
+      logger: silentLogger,
+      agentsService: emptyAgentsCounter,
+    });
+    expect(() => svc.getBySlug('whatever')).toThrow(NotFoundError);
+  });
+
+  it('matches by the inner cfg.name, not the file basename', () => {
+    const dir = projectsDir();
+    // File is `weird-name.toml` but cfg.name is `canonical`. The slug exposed
+    // via the API is `cfg.name` (mirrors how list() reports each project), so
+    // getBySlug looks up by that field — not the filename.
+    writeFileSync(
+      join(dir, 'weird-name.toml'),
+      validToml('canonical', '/tmp/canonical'),
+    );
+    const svc = new ProjectsService({
+      projectsDir: dir,
+      logger: silentLogger,
+      agentsService: emptyAgentsCounter,
+    });
+    expect(svc.getBySlug('canonical')).toMatchObject({ name: 'canonical' });
+    expect(() => svc.getBySlug('weird-name')).toThrow(NotFoundError);
+  });
+});
+
+describe('ProjectsService.getConfigPath', () => {
+  it('returns the resolved file path for a project', () => {
+    const dir = projectsDir();
+    writeFileSync(
+      join(dir, 'kanban-api.toml'),
+      validToml('kanban-api', '/code/kanban-api'),
+    );
+    const svc = new ProjectsService({
+      projectsDir: dir,
+      logger: silentLogger,
+      agentsService: emptyAgentsCounter,
+    });
+    expect(svc.getConfigPath('kanban-api')).toBe(join(dir, 'kanban-api.toml'));
+  });
+
+  it('throws NotFoundError when no file matches the slug', () => {
+    const dir = projectsDir();
+    const svc = new ProjectsService({
+      projectsDir: dir,
+      logger: silentLogger,
+      agentsService: emptyAgentsCounter,
+    });
+    expect(() => svc.getConfigPath('nope')).toThrow(NotFoundError);
+  });
+
+  it('returns the actual file path even when filename differs from cfg.name', () => {
+    const dir = projectsDir();
+    writeFileSync(
+      join(dir, 'weird-name.toml'),
+      validToml('canonical', '/tmp/canonical'),
+    );
+    const svc = new ProjectsService({
+      projectsDir: dir,
+      logger: silentLogger,
+      agentsService: emptyAgentsCounter,
+    });
+    expect(svc.getConfigPath('canonical')).toBe(join(dir, 'weird-name.toml'));
   });
 });
