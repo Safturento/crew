@@ -9,9 +9,9 @@ describe('CountBadge', () => {
     expect(screen.getByText('6')).toBeInTheDocument();
   });
 
-  it('renders an em-dash when count is zero', () => {
+  it('renders a muted "0" when count is zero', () => {
     render(<CountBadge count={0} />);
-    expect(screen.getByText('—')).toBeInTheDocument();
+    expect(screen.getByText('0')).toBeInTheDocument();
   });
 
   it('exposes the state as a data attribute when count > 0', () => {
