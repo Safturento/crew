@@ -242,6 +242,28 @@ All four are single components (no Figma variant axes). `AgentBody` composes a `
 
 After CREW-117, **Phase 4 has 10 of 11 composites built** — only `ErrorFallback` remains. It will land alongside the next fidelity ticket that surfaces a need for it (likely a settings or error-state route).
 
+### CREW-131 (Projects view vertical slices, 2026-05-10)
+
+Four additional composites added to the `Composites` page. Built end-to-end during the CREW-131 closeout interactive session — the dashboard code (CREW-132 + CREW-133) shipped via autonomous `crew run`, then we built the matching Crew DS composites + migrated the screens-file frames in a follow-on session.
+
+| Composite           | Figma node | Dashboard counterpart                                       | Code Connect mapping                                              |
+| ------------------- | ---------- | ----------------------------------------------------------- | ----------------------------------------------------------------- |
+| `CountBadge`        | `77:28`    | `packages/dashboard/src/components/CountBadge.tsx`          | `packages/dashboard/src/components/CountBadge.figma.tsx`          |
+| `ProjectRow`        | `79:14`    | `packages/dashboard/src/components/ProjectRow.tsx`          | `packages/dashboard/src/components/ProjectRow.figma.tsx`          |
+| `ProjectHeader`     | `82:15`    | `packages/dashboard/src/components/ProjectHeader.tsx`       | `packages/dashboard/src/components/ProjectHeader.figma.tsx`       |
+| `ProjectConfigBlock`| `83:15`    | `packages/dashboard/src/components/ProjectConfigBlock.tsx`  | `packages/dashboard/src/components/ProjectConfigBlock.figma.tsx`  |
+
+`CountBadge` is published as a **component set** with one variant per agent state (`state=initializing | running | idle | waiting | pr-open | error | finished`) — same enum mapping pattern as `StateBadge`. The other three are single components. All use the canonical mid intensity (bg 10% / border 30% / text 100%) bound to Crew Semantic tokens.
+
+Notes:
+- `ProjectRow` composes a `CountBadge` instance (waiting variant) for the activeCount column. Designers can swap variant per-row to indicate a different state coloring.
+- `ProjectHeader`'s Edit/Remove action buttons are inline-styled (Edit = transparent + border; Remove = canonical mid destructive). They should eventually be replaced with real shadcn `Button` instances for full design-system consistency — tracked as a polish followup.
+- `ProjectConfigBlock` wraps a TOML-formatted text node in a `card`-styled frame with `border` overlay. Padding p-6 (24px), corner radius 14px to match the dashboard's `rounded-[14px]`.
+
+After CREW-131, **Phase 4 has 14 composites total** — 10 from CREW-117/119 + 4 from CREW-131. `ErrorFallback` is still the only un-built composite from the original Phase 4 inventory.
+
+Frames `1:2334` (Projects list) and `1:2443` (Project detail) in the screens file (`9FeJPriqdsdA4n9R5Xsrr8`) migrated 2026-05-10 — fills bound to Crew DS tokens (47/47 + 73/74 = 120/121 = 99%), explicit dark mode set on Crew Semantic Colors, detached state pills swapped to StateBadge instances, count-badge bg fills forced to opacity 0.18 per propagation skill Trap 1.
+
 ### State-color semantic tokens (added in CREW-119, extended 2026-05-10)
 
 `Crew / Semantic Colors` now includes **7 state tokens** (`state/initializing`, `state/running`, `state/idle`, `state/waiting`, `state/pr-open`, `state/error`, `state/finished`) — each a single-value alias to a `tw/colors` primitive in Core (`blue/500`, `slate/400`, `slate/500`, `amber/400`, `violet/500`, `red/500`, `emerald/500` respectively). No light/dark variant for state colors at this stage — both modes alias the same primitive. Used by `StateBadge` (token-bound fills + stroke + dot) and by the dashboard's `--color-state-*` Tailwind classes via the `@theme` block. First example of the Crew DS override layer growing past shadcn's vocabulary.
