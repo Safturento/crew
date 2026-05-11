@@ -37,13 +37,13 @@ describe('StateBadge', () => {
   });
 
   const STATES_AND_TOKENS: Array<[AgentState, string]> = [
-    ['waiting', 'state-waiting'],
-    ['running', 'state-running'],
-    ['error', 'state-error'],
-    ['pr_open', 'state-pr-open'],
-    ['finished', 'state-finished'],
-    ['initializing', 'state-initializing'],
-    ['idle', 'state-idle'],
+    ['waiting', 'text-amber-400'],
+    ['running', 'text-slate-400'],
+    ['error', 'text-red-400'],
+    ['pr_open', 'text-violet-400'],
+    ['finished', 'text-emerald-500'],
+    ['initializing', 'text-blue-400'],
+    ['idle', 'text-slate-500'],
   ];
 
   it.each(STATES_AND_TOKENS)('emits literal Tailwind tokens for %s', (state, token) => {

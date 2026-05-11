@@ -42,7 +42,9 @@ describe('StateHistoryBar', () => {
       />,
     );
     const pill = screen.getByRole('button');
-    expect(pill.className).toContain('state-pr-open');
+    expect(pill.className).toContain('bg-violet-1050');
+    expect(pill.className).toContain('border-violet-500');
+    expect(pill.className).toContain('text-violet-400');
   });
 
   it('renders nothing visible when there are no transitions', () => {

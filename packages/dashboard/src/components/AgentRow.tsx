@@ -28,9 +28,9 @@ const agentRow = cva(
         running: 'border-white/10',
         idle: 'border-white/10',
         finished: 'border-white/10',
-        waiting: `${STATE_CLASSES.waiting.border30} ${STATE_CLASSES.waiting.bg10}`,
-        pr_open: `${STATE_CLASSES.pr_open.border30} ${STATE_CLASSES.pr_open.bg10}`,
-        error: `${STATE_CLASSES.error.border30} ${STATE_CLASSES.error.bg10}`,
+        waiting: `${STATE_CLASSES.waiting.border} ${STATE_CLASSES.waiting.bg}`,
+        pr_open: `${STATE_CLASSES.pr_open.border} ${STATE_CLASSES.pr_open.bg}`,
+        error: `${STATE_CLASSES.error.border} ${STATE_CLASSES.error.bg}`,
       },
     },
   },
@@ -61,7 +61,7 @@ export function AgentRow({ agent, onSelect, onAction }: AgentRowProps) {
       {meta.attention && (
         <span
           aria-hidden
-          className={`absolute inset-y-1.5 left-0 w-1 rounded-full ${stateClasses.bg} animate-att-pulse`}
+          className={`absolute inset-y-1.5 left-0 w-1 rounded-full ${stateClasses.solidBg} animate-att-pulse`}
         />
       )}
       <StateBadge state={agent.state} />
@@ -110,7 +110,7 @@ function QuickActions({
             variant="default"
             size="xs"
             onClick={fire('provide-input')}
-            className="bg-state-waiting text-slate-950 hover:bg-state-waiting/90"
+            className="bg-amber-400 text-slate-950 hover:bg-amber-400/90"
           >
             Provide input
           </Button>
@@ -136,7 +136,7 @@ function QuickActions({
             variant="default"
             size="xs"
             onClick={fire('inspect')}
-            className="bg-state-error text-slate-950 hover:bg-state-error/90"
+            className="bg-red-400 text-slate-950 hover:bg-red-400/90"
           >
             Inspect
           </Button>
