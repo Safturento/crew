@@ -21,6 +21,20 @@ describe('parseRoute', () => {
     expect(parseRoute('#/projects')).toEqual({ kind: 'projects' });
   });
 
+  it('parses /projects/:slug as the project-detail route', () => {
+    expect(parseRoute('#/projects/kanban-api')).toEqual({
+      kind: 'project-detail',
+      slug: 'kanban-api',
+    });
+  });
+
+  it('decodes the slug when parsing /projects/:slug', () => {
+    expect(parseRoute('#/projects/foo%2Fbar')).toEqual({
+      kind: 'project-detail',
+      slug: 'foo/bar',
+    });
+  });
+
   it('falls back to agents-list for unknown routes', () => {
     expect(parseRoute('#/something/else')).toEqual({ kind: 'agents-list' });
   });
