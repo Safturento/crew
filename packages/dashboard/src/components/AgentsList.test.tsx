@@ -6,8 +6,20 @@ import { AgentsList } from './AgentsList.js';
 import type { Agent, Project } from '../data/types.js';
 
 const projects: Project[] = [
-  { name: 'kanban-api', repoPath: '~/code/kanban-api', branch: 'main', jiraKey: 'KAN', activeCount: 2 },
-  { name: 'recipes-app', repoPath: '~/code/recipes-app', branch: 'main', jiraKey: 'REC', activeCount: 2 },
+  {
+    name: 'kanban-api',
+    repoPath: '~/code/kanban-api',
+    branch: 'main',
+    jiraKey: 'KAN',
+    activeCount: 2,
+  },
+  {
+    name: 'recipes-app',
+    repoPath: '~/code/recipes-app',
+    branch: 'main',
+    jiraKey: 'REC',
+    activeCount: 2,
+  },
 ];
 
 const agents: Agent[] = [

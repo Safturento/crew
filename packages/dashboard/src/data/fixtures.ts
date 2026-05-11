@@ -1,8 +1,20 @@
 import type { Agent, Project } from './types.js';
 
 export const FIXTURE_PROJECTS: Project[] = [
-  { name: 'kanban-api', repoPath: '~/code/kanban-api', branch: 'main', jiraKey: 'KAN', activeCount: 3 },
-  { name: 'recipes-app', repoPath: '~/code/recipes-app', branch: 'main', jiraKey: 'REC', activeCount: 3 },
+  {
+    name: 'kanban-api',
+    repoPath: '~/code/kanban-api',
+    branch: 'main',
+    jiraKey: 'KAN',
+    activeCount: 3,
+  },
+  {
+    name: 'recipes-app',
+    repoPath: '~/code/recipes-app',
+    branch: 'main',
+    jiraKey: 'REC',
+    activeCount: 3,
+  },
   { name: 'crew', repoPath: '~/code/crew', branch: 'main', jiraKey: 'CREW', activeCount: 1 },
 ];
 

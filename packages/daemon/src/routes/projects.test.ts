@@ -114,7 +114,9 @@ repo = "example/p"
       const res = await app.inject({ method: 'GET', url: '/api/projects' });
       expect(res.statusCode).toBe(200);
       expect(res.json()).toEqual({
-        projects: [{ name: 'p', repoPath: '/p', branch: 'develop', jiraKey: 'PROJ', activeCount: 0 }],
+        projects: [
+          { name: 'p', repoPath: '/p', branch: 'develop', jiraKey: 'PROJ', activeCount: 0 },
+        ],
       });
     } finally {
       await app.close();

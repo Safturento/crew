@@ -82,4 +82,3 @@ function AppContent({ client }: { client: DaemonClient }) {
     </>
   );
 }
-

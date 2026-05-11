@@ -11,7 +11,13 @@ import type { Agent, AgentDetail, Project } from './data/types.js';
 import { renderWithProviders } from './test/renderWithProviders.js';
 
 const projects: Project[] = [
-  { name: 'kanban-api', repoPath: '~/code/kanban-api', branch: 'main', jiraKey: 'KAN', activeCount: 1 },
+  {
+    name: 'kanban-api',
+    repoPath: '~/code/kanban-api',
+    branch: 'main',
+    jiraKey: 'KAN',
+    activeCount: 1,
+  },
 ];
 
 const agents: Agent[] = [

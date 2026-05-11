@@ -40,9 +40,11 @@ const emptyAgentsCounter: AgentsCounter = {
 };
 
 function fixedCounter(counts: Record<string, number>): AgentsCounter {
-  return { async countByProject() {
-    return new Map(Object.entries(counts));
-  } };
+  return {
+    async countByProject() {
+      return new Map(Object.entries(counts));
+    },
+  };
 }
 
 describe('ProjectsService.list', () => {
