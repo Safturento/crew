@@ -8,6 +8,10 @@ get {
   url: {{baseUrl}}/api/projects
 }
 
+vars:post-response {
+  projectSlug: res.body.projects[0].name
+}
+
 assert {
   res.status: eq 200
   res.body.projects: isArray
