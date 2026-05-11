@@ -1,10 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import {
-  AgentNotFoundError,
-  HttpDaemonClient,
-  ProjectNotFoundError,
-} from './HttpDaemonClient.js';
+import { AgentNotFoundError, HttpDaemonClient, ProjectNotFoundError } from './HttpDaemonClient.js';
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -77,9 +73,15 @@ describe('HttpDaemonClient.getProject', () => {
 
   it('encodes the slug when constructing the URL', async () => {
     const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
-      new Response(JSON.stringify({ ...SAMPLE_PROJECT_DETAIL, project: { ...SAMPLE_PROJECT_DETAIL.project, name: 'foo/bar' } }), {
-        status: 200,
-      }),
+      new Response(
+        JSON.stringify({
+          ...SAMPLE_PROJECT_DETAIL,
+          project: { ...SAMPLE_PROJECT_DETAIL.project, name: 'foo/bar' },
+        }),
+        {
+          status: 200,
+        },
+      ),
     );
 
     await new HttpDaemonClient().getProject('foo/bar');

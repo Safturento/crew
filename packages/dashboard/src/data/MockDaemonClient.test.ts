@@ -1,11 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { MockDaemonClient } from './MockDaemonClient.js';
-import {
-  FIXTURE_AGENTS,
-  FIXTURE_PROJECT_DETAILS,
-  FIXTURE_PROJECTS,
-} from './fixtures.js';
+import { FIXTURE_AGENTS, FIXTURE_PROJECT_DETAILS, FIXTURE_PROJECTS } from './fixtures.js';
 
 describe('MockDaemonClient', () => {
   it('returns the fixture projects', async () => {

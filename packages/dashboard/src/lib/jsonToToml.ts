@@ -16,10 +16,7 @@ function isSection(v: unknown): v is Record<string, TomlValue> {
   return typeof v === 'object' && v !== null && !Array.isArray(v);
 }
 
-export function jsonToToml(
-  obj: Record<string, TomlValue>,
-  opts: JsonToTomlOptions = {},
-): string {
+export function jsonToToml(obj: Record<string, TomlValue>, opts: JsonToTomlOptions = {}): string {
   const lines: string[] = [];
   if (opts.leadingComment) lines.push(opts.leadingComment);
 

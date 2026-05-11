@@ -4,13 +4,7 @@ import { renderHook, waitFor } from '@testing-library/react';
 import type { ReactNode } from 'react';
 
 import { eventStream } from './eventStream.js';
-import {
-  defaultClient,
-  useAgent,
-  useProject,
-  useStateHistory,
-  useTimeline,
-} from './queries.js';
+import { defaultClient, useAgent, useProject, useStateHistory, useTimeline } from './queries.js';
 import type {
   AgentDetail,
   ProjectDetailResponse,

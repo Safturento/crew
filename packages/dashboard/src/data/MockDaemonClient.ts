@@ -1,10 +1,6 @@
 import type { DaemonClient } from './DaemonClient.js';
 import type { Agent, Project, ProjectDetailResponse } from './types.js';
-import {
-  FIXTURE_AGENTS,
-  FIXTURE_PROJECT_DETAILS,
-  FIXTURE_PROJECTS,
-} from './fixtures.js';
+import { FIXTURE_AGENTS, FIXTURE_PROJECT_DETAILS, FIXTURE_PROJECTS } from './fixtures.js';
 import { ProjectNotFoundError } from './HttpDaemonClient.js';
 
 export interface MockDaemonClientOptions {
