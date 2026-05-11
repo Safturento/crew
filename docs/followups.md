@@ -7,6 +7,7 @@ Format: see the user-level `~/.claude/CLAUDE.md` "Followup detection" section.
 ## Contents
 
 - [Active](#active)
+  - [2026-05-10 — Build a `TimelineTag` component in Crew DS for tool-name pills](#2026-05-10--build-a-timelinetag-component-in-crew-ds-for-tool-name-pills)
   - [2026-05-10 — Wire dashboard QuickAction buttons (Resume / Finish / Inspect / Provide input) to daemon endpoints](#2026-05-10--wire-dashboard-quickaction-buttons-resume--finish--inspect--provide-input-to-daemon-endpoints)
   - [2026-05-10 — Polish the CREW-119/CREW-117 Crew DS composites (skeleton-fidelity → pixel-fidelity)](#2026-05-10--polish-the-crew-119crew-117-crew-ds-composites-skeleton-fidelity--pixel-fidelity)
   - [2026-05-09 — Crew Dashboard Screens — bind hardcoded fills to Crew DS semantic variables](#2026-05-09--crew-dashboard-screens--bind-hardcoded-fills-to-crew-ds-semantic-variables)
@@ -63,6 +64,34 @@ Format: see the user-level `~/.claude/CLAUDE.md` "Followup detection" section.
 - [Abandoned](#abandoned)
 
 ## Active
+
+### 2026-05-10 — Build a `TimelineTag` component in Crew DS for tool-name pills
+
+**What:** The 22 timeline event tag pills (Bash / Read / Edit / Grep / Question across the timeline section in frames `1:378` + `1:1900` of the Crew Dashboard Screens file) currently live as detached structures — each pill is a manually-built frame with bg + stroke + text, styled to the canonical mid intensity (bg 10% + stroke 30% + text 100%) bound to a state color. They're not real component instances. To get a designer-friendly "brackets on/off" toggle (like the claude.ai tweaks-menu pattern) and to remove the per-pill maintenance burden, build a real `TimelineTag` component in Crew DS.
+
+**Why noticed:** During the CREW-130 visual fixes session on 2026-05-10, the user asked whether brackets on the timeline pills could be a Figma toggle (vs editing all 22 in place). Yes — Figma supports boolean variant properties exactly for this use case. We removed brackets in place to unblock the session, but the underlying component gap remains.
+
+**Anchors:**
+
+- Crew Dashboard Screens: `https://www.figma.com/design/9FeJPriqdsdA4n9R5Xsrr8` — frames `1:378`, `1:1900` (timeline sections)
+- Crew DS file: `https://www.figma.com/design/DsA7QuEa2WthDATkksd1Bq` — proposed home for the new `TimelineTag` component
+- Reference: existing `StateBadge` component set (`20:23`) follows a similar variant axis pattern (state × intensity); `TimelineTag` would mirror that with (tool × brackets × intensity)
+- Dashboard side: `packages/dashboard/src/components/TimelineEventRow.tsx` (or equivalent — check current implementation) for the runtime tool-name → state-color mapping
+
+**What's been considered:**
+
+- **Tool variant axis** with 7 values (Bash, Read, Edit, Grep, Question, Write, Glob) — each variant binds to a specific state color: Bash → state/waiting, Read → state/initializing, Edit → state/finished, Grep → state/pr-open, Question → state/waiting, Write → state/error (default), Glob → state/initializing (default)
+- **Boolean `brackets` property** (default true to preserve current visual) — when off, the text node renders just the label (`Bash`); when on, it wraps in `[Bash]`. Implementation likely via a hidden bracket prefix/suffix layer toggled by the boolean.
+- **Reuse the StateBadge intensity axis** (muted/mid/loud) for consistency, with mid as default — same canonical opacities as StateBadge (bg 10% + stroke 30% + text 100%).
+- **Alternative — text property only.** Rather than a tool variant axis, expose a single `label` text property and a `state` color enum. Simpler component, less type safety. Tradeoff: designer can typo a tool name with this approach.
+
+**Shape of work:** One ticket. Build the `TimelineTag` component in Crew DS (~7 tool variants × 2 brackets × 3 intensities = 42 variants if we go full matrix; cut down by skipping muted/loud since they're not currently used → 14 variants). Republish. Re-swap 22 pills in screens file to TimelineTag instances. Verify visually. Update `design-system.md` inventory. Likely fits in a small/medium ticket — most of the work is variant generation in Figma.
+
+**Open questions:**
+
+- [ ] Is the tool-name list locked at 7, or might it grow (e.g., new MCP tools)? If growth-prone, `label` text property might be more future-proof than a tool variant axis.
+- [ ] Should the brackets be a hard wrap (`[Bash]`) or a different decoration (e.g., a leading icon)? Visual decision.
+- [ ] Does the dashboard's TimelineEventRow.tsx already use Tailwind utilities for the same tinted-pill pattern, or does it need a code-side update too (similar to the StateBadge intensity refactor in CREW-129)?
 
 ### 2026-05-10 — Wire dashboard QuickAction buttons (Resume / Finish / Inspect / Provide input) to daemon endpoints
 
