@@ -8,15 +8,22 @@ afterEach(() => {
 
 describe('HttpDaemonClient.listProjects', () => {
   it('GETs /api/projects and returns the array', async () => {
+    const project = {
+      name: 'demo',
+      repoPath: '/x',
+      branch: 'main',
+      jiraKey: 'DEMO',
+      activeCount: 2,
+    };
     const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
-      new Response(JSON.stringify({ projects: [{ name: 'demo', repoPath: '/x' }] }), {
+      new Response(JSON.stringify({ projects: [project] }), {
         status: 200,
         headers: { 'content-type': 'application/json' },
       }),
     );
 
     const client = new HttpDaemonClient();
-    expect(await client.listProjects()).toEqual([{ name: 'demo', repoPath: '/x' }]);
+    expect(await client.listProjects()).toEqual([project]);
     expect(fetchSpy).toHaveBeenCalledWith('/api/projects');
   });
 

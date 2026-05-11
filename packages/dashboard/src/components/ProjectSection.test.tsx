@@ -5,7 +5,13 @@ import { describe, expect, it, vi } from 'vitest';
 import { ProjectSection } from './ProjectSection.js';
 import type { Agent, Project } from '../data/types.js';
 
-const project: Project = { name: 'kanban-api', repoPath: '~/code/kanban-api' };
+const project: Project = {
+  name: 'kanban-api',
+  repoPath: '~/code/kanban-api',
+  branch: 'main',
+  jiraKey: 'KAN',
+  activeCount: 2,
+};
 
 const agents: Agent[] = [
   {
