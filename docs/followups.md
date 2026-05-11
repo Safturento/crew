@@ -7,6 +7,9 @@ Format: see the user-level `~/.claude/CLAUDE.md` "Followup detection" section.
 ## Contents
 
 - [Active](#active)
+  - [2026-05-11 — Crew DS components are partials of Dashboard Screens equivalents](#2026-05-11--crew-ds-components-are-partials-of-dashboard-screens-equivalents)
+  - [2026-05-11 — Agent activity timeline + Bash event-tag components missing from Crew DS](#2026-05-11--agent-activity-timeline--bash-event-tag-components-missing-from-crew-ds)
+  - [2026-05-11 — `idle` and `waiting` agent states not reachable from daemon fixtures](#2026-05-11--idle-and-waiting-agent-states-not-reachable-from-daemon-fixtures)
   - [2026-05-10 — Polish CREW-131 Projects view composites (instance swaps + real Button instances)](#2026-05-10--polish-crew-131-projects-view-composites-instance-swaps--real-button-instances)
   - [2026-05-10 — Build a `TimelineTag` component in Crew DS for tool-name pills](#2026-05-10--build-a-timelinetag-component-in-crew-ds-for-tool-name-pills)
   - [2026-05-10 — Wire dashboard QuickAction buttons (Resume / Finish / Inspect / Provide input) to daemon endpoints](#2026-05-10--wire-dashboard-quickaction-buttons-resume--finish--inspect--provide-input-to-daemon-endpoints)
@@ -65,6 +68,68 @@ Format: see the user-level `~/.claude/CLAUDE.md` "Followup detection" section.
 - [Abandoned](#abandoned)
 
 ## Active
+
+### 2026-05-11 — Crew DS components are partials of Dashboard Screens equivalents
+
+**What:** Several Crew DS components are simpler skeletons than the rich equivalents drawn freehand in Crew Dashboard Screens. The Screens file currently renders agent rows, top-nav, project rows, etc. as hand-built compositions rather than instances of the DS components. The DS doesn't reflect what designers actually use on the page.
+
+**Why noticed:** During the 2026-05-11 state-color migration cleanup, after publishing Crew DS updates and re-checking Screens. Specifically caught comparing DS `AgentRow` (`21:9` — 6 plain text columns) against the richer agent rows in Screens — they don't match in structure.
+
+**Anchors:**
+- Crew DS: `DsA7QuEa2WthDATkksd1Bq` — AgentRow `21:9`, TopNav `21:2`, ProjectRow `79:14`, AgentBody `24:2`, ProjectHeader `82:15`
+- Crew Dashboard Screens: `9FeJPriqdsdA4n9R5Xsrr8` Page 1 — freehand compositions of the above
+
+**What's been considered:** Two paths surfaced:
+- **(a) DS as source of truth** — upgrade each partial DS component to match the rich Screens version, then replace each Screens hand-built composition with an instance. Cleanest long-term; bigger lift.
+- **(b) Per-slice migration** — leave Screens freehand for now, convert specific compositions to DS instances when they're about to ship. Cheaper short-term, DS stays partial.
+
+User picked **(a)**, to be tackled as a two-step process: phase 1 brings DS up to spec, phase 2 replaces Screens content with DS instances after republish.
+
+**Shape of work:** Per component: inspect freehand Screens version → update DS component to match (auto-layout adjustments + child structure + new variant axes where the DS doesn't yet cover them) → republish DS → swap Screens content to instances. Start with the most-diverged component (AgentRow) and work down. Likely 4–6 separate component passes.
+
+**Open questions:**
+- Variant axes that don't yet exist in DS (e.g. AgentRow expanded vs collapsed) — decide as we encounter them.
+
+### 2026-05-11 — Agent activity timeline + Bash event-tag components missing from Crew DS
+
+**What:** Crew Dashboard Screens has an "agent activity timeline" composition (collapsible state-header + list of tool-call events, each with a `Bash`-style event-type tag + command text + timestamp + token count) with no counterpart in Crew DS. The tag pills inside still reference the now-deleted `state/waiting` alias variable, leaving orphaned bindings that resolve to a fallback color but won't react to DS-level changes.
+
+**Why noticed:** During the 2026-05-11 state-color migration audit, after deleting the `state/*` aliases. A grep for remaining references found the timeline's event-tag pills (e.g. `Bash` tag at nodes `1:982`/`1:996` in Screens) still bind to `state/waiting`. The `StateBadge` instance in the same section was already migrated; the inline tags were not. Points at a structural absence: the tags should be a DS component but aren't.
+
+**Anchors:**
+- Crew Dashboard Screens: `9FeJPriqdsdA4n9R5Xsrr8` — `VerticalBorder` timeline at `1:964`; event-tag rects at `1:982`/`1:983` and `1:996`/`1:997`
+- Related: the 2026-05-10 followup "Build a `TimelineTag` component in Crew DS for tool-name pills" already flagged the leaf tag; this entry adds the container
+
+**What's been considered:** The leaf-tag followup (2026-05-10) overlaps. New dimension is that the entire timeline container is also missing, not just the leaf. Both should be designed together so the tag's variants (Bash / Edit / Read / etc.) align with the container's use.
+
+**Shape of work:** Design pass on timeline composition + leaf tag → add both to Crew DS (with tool-name variants on the tag) → migrate orphaned `state/waiting` bindings in Screens to the new tag's appropriate variant. Pairs with the partials-of-Screens followup above.
+
+**Open questions:**
+- Is the tag's color tied to "tool category" (Bash = warning amber, Read = neutral, Edit = info) or some other axis?
+- Does the timeline container have intensity tiers (e.g. compact vs expanded)?
+
+### 2026-05-11 — `idle` and `waiting` agent states not reachable from daemon fixtures
+
+**What:** The dashboard's `AgentState` union has 7 values; `StateBadge` + `STATE_CLASSES` cover all 7. But the daemon's `deriveState` only produces 5 of them (`initializing`, `running`, `pr_open`, `error`, `finished`) from runs + tool_calls. `idle` and `waiting` come from explicit `state_transitions` rows that the dev seed never writes. Result: those two badges are typed and styled but can't be visually exercised in dev.
+
+**Why noticed:** During the 2026-05-11 state-color migration verification, after extending `packages/daemon/seeds/dev.ts` to cover all daemon-producible states. The dashboard renders 5 states cleanly; the migration's correctness for `idle`/`waiting` is verified only via code paths, not visually.
+
+**Anchors:**
+- `packages/daemon/src/services/AgentsService.ts:328-336` — `deriveState` function returning the 5-state union
+- `packages/daemon/src/services/AgentsService.ts:45-52` — `StateTransitionState` union that types all 7
+- `packages/dashboard/src/data/state-meta.ts` — `STATE_CLASSES` covers all 7
+- `packages/dashboard/src/components/StateBadge.tsx` — renders all 7
+
+**What's been considered:** Two paths:
+- **Showcase route** — `#/dev/badges` (or similar) renders all 21 StateBadge variants × intensities + CountBadge × 7 + AgentRow attention-tint examples statically. Independent of daemon state, gives fast visual QA. ~30 min.
+- **Seed-level fix** — extend `dev.ts` to insert agents whose state arrives via `state_transitions` rows instead of being derived. Needs daemon-side understanding of when `idle`/`waiting` are emitted in prod. Larger scope.
+
+Showcase route is the smaller, more honest scope; the seed path requires daemon-design clarity we don't have yet.
+
+**Shape of work:** Either ~30 lines for the showcase route + a small `BadgeShowcase.tsx`, OR a daemon-side investigation + seed extension.
+
+**Open questions:**
+- Are `idle` and `waiting` ever expected to be the *current* state of an agent (visible in the agents list) or only intermediate transitions visible in `StateHistoryBar`? If only transitions, the showcase route is sufficient.
 
 ### 2026-05-10 — Polish CREW-131 Projects view composites (instance swaps + real Button instances)
 
