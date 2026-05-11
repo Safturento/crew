@@ -3,7 +3,12 @@ import { useQuery, useQueryClient, type UseQueryResult } from '@tanstack/react-q
 
 import { eventStream } from './eventStream.js';
 import { HttpDaemonClient } from './HttpDaemonClient.js';
-import type { AgentDetail, StateTransition, TranscriptEvent } from './types.js';
+import type {
+  AgentDetail,
+  ProjectDetailResponse,
+  StateTransition,
+  TranscriptEvent,
+} from './types.js';
 
 /**
  * Queries-layer client. The hooks all reach for `defaultClient` so call
@@ -71,6 +76,14 @@ export function useStateHistory(key: string): UseQueryResult<{ transitions: Stat
   return useQuery({
     queryKey: ['agent', key, 'state-history'],
     queryFn: () => defaultClient.getStateHistory(key),
+    refetchInterval: POLL_INTERVAL_MS,
+  });
+}
+
+export function useProject(slug: string): UseQueryResult<ProjectDetailResponse> {
+  return useQuery({
+    queryKey: ['project', slug],
+    queryFn: () => defaultClient.getProject(slug),
     refetchInterval: POLL_INTERVAL_MS,
   });
 }

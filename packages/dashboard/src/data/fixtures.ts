@@ -1,4 +1,4 @@
-import type { Agent, Project } from './types.js';
+import type { Agent, Project, ProjectDetailResponse } from './types.js';
 
 export const FIXTURE_PROJECTS: Project[] = [
   {
@@ -17,6 +17,60 @@ export const FIXTURE_PROJECTS: Project[] = [
   },
   { name: 'crew', repoPath: '~/code/crew', branch: 'main', jiraKey: 'CREW', activeCount: 1 },
 ];
+
+export const FIXTURE_PROJECT_DETAILS: Record<string, ProjectDetailResponse> = {
+  'kanban-api': {
+    project: {
+      name: 'kanban-api',
+      repo_path: '~/code/kanban-api',
+      default_branch: 'main',
+      jira: { project_key: 'KAN', site: 'https://example.atlassian.net' },
+      github: { repo: 'example/kanban-api' },
+      db_clone: {
+        postgres_service: 'postgres',
+        postgres_user: 'postgres',
+        postgres_database: 'postgres',
+        required_tables: [],
+        exclude_tables: ['kysely_migration*'],
+      },
+    },
+    configPath: '~/.config/crew/projects/kanban-api.toml',
+  },
+  'recipes-app': {
+    project: {
+      name: 'recipes-app',
+      repo_path: '~/code/recipes-app',
+      default_branch: 'main',
+      jira: { project_key: 'REC', site: 'https://example.atlassian.net' },
+      github: { repo: 'example/recipes-app' },
+      db_clone: {
+        postgres_service: 'postgres',
+        postgres_user: 'postgres',
+        postgres_database: 'postgres',
+        required_tables: [],
+        exclude_tables: ['kysely_migration*'],
+      },
+    },
+    configPath: '~/.config/crew/projects/recipes-app.toml',
+  },
+  crew: {
+    project: {
+      name: 'crew',
+      repo_path: '~/code/crew',
+      default_branch: 'main',
+      jira: { project_key: 'CREW', site: 'https://example.atlassian.net' },
+      github: { repo: 'example/crew' },
+      db_clone: {
+        postgres_service: 'postgres',
+        postgres_user: 'postgres',
+        postgres_database: 'postgres',
+        required_tables: [],
+        exclude_tables: ['kysely_migration*'],
+      },
+    },
+    configPath: '~/.config/crew/projects/crew.toml',
+  },
+};
 
 export const FIXTURE_AGENTS: Agent[] = [
   {

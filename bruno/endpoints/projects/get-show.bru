@@ -1,0 +1,43 @@
+meta {
+  name: GET /api/projects/:slug
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/api/projects/{{projectSlug}}
+}
+
+assert {
+  res.status: eq 200
+  res.body.project: isDefined
+  res.body.project.name: isString
+  res.body.project.repo_path: isString
+  res.body.project.jira: isDefined
+  res.body.project.jira.project_key: isString
+  res.body.configPath: isString
+}
+
+tests {
+  test("project.name matches the chained slug", () => {
+    expect(res.body.project.name).to.equal(bru.getVar("projectSlug"));
+  });
+
+  test("configPath ends in .toml", () => {
+    expect(res.body.configPath).to.match(/\.toml$/);
+  });
+
+  test("configPath includes the project slug or its filename", () => {
+    // The route resolves `getConfigPath(slug)`, which returns the actual file
+    // path on disk — so the basename mirrors the project's TOML file (which
+    // by convention matches `cfg.name`).
+    const slug = bru.getVar("projectSlug");
+    expect(res.body.configPath).to.include(slug);
+  });
+}
+
+docs {
+  Detail endpoint introduced for the dashboard's `#/projects/:slug` route.
+  Chains off `get-list.bru`'s `projectSlug` so the smoke uses whatever
+  the worktree's seeded fixtures happened to register first.
+}

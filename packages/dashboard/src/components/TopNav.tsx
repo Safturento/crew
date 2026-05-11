@@ -15,7 +15,7 @@ interface TopNavProps {
 export function TopNav({ route, attentionCount, onClearAttention, onNewRun }: TopNavProps) {
   const agentsActive =
     route.kind === 'agents-list' || route.kind === 'agent-drawer' || route.kind === 'agent-full';
-  const projectsActive = route.kind === 'projects';
+  const projectsActive = route.kind === 'projects' || route.kind === 'project-detail';
 
   return (
     <header className="flex items-center justify-between gap-4 border-b border-white/10 bg-card px-5 py-3">

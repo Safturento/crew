@@ -1,7 +1,14 @@
 import { z } from 'zod';
 
 import type { DaemonClient } from './DaemonClient.js';
-import type { Agent, AgentDetail, Project, StateTransition, TranscriptEvent } from './types.js';
+import type {
+  Agent,
+  AgentDetail,
+  Project,
+  ProjectDetailResponse,
+  StateTransition,
+  TranscriptEvent,
+} from './types.js';
 
 const ProjectsResponseSchema = z.object({
   projects: z.array(
@@ -13,6 +20,26 @@ const ProjectsResponseSchema = z.object({
       activeCount: z.number(),
     }),
   ),
+});
+
+// Inline rather than importing crew-shared's projectConfigSchema directly:
+// the shared barrel re-exports a node-only loader, which Vite refuses to
+// bundle for the browser. The daemon's Zod serializer guarantees the
+// response shape matches projectConfigSchema, so we re-validate the
+// browser-relevant subset here using passthrough on optional sub-objects.
+const ProjectConfigShapeSchema = z
+  .object({
+    name: z.string(),
+    repo_path: z.string(),
+    default_branch: z.string(),
+    jira: z.object({ project_key: z.string(), site: z.string() }).passthrough(),
+    github: z.object({ repo: z.string() }).passthrough(),
+  })
+  .passthrough();
+
+const ProjectDetailResponseSchema = z.object({
+  project: ProjectConfigShapeSchema,
+  configPath: z.string(),
 });
 
 const AgentSchema = z.object({
@@ -87,6 +114,13 @@ export class AgentNotFoundError extends Error {
   }
 }
 
+export class ProjectNotFoundError extends Error {
+  constructor(public readonly slug: string) {
+    super(`Project not found: ${slug}`);
+    this.name = 'ProjectNotFoundError';
+  }
+}
+
 export class HttpDaemonClient implements DaemonClient {
   constructor(private readonly baseUrl: string = '') {}
 
@@ -94,6 +128,13 @@ export class HttpDaemonClient implements DaemonClient {
     const res = await fetch(`${this.baseUrl}/api/projects`);
     if (!res.ok) throw new Error(`GET /api/projects: ${res.status}`);
     return ProjectsResponseSchema.parse(await res.json()).projects;
+  }
+
+  async getProject(slug: string): Promise<ProjectDetailResponse> {
+    const res = await fetch(`${this.baseUrl}/api/projects/${encodeURIComponent(slug)}`);
+    if (res.status === 404) throw new ProjectNotFoundError(slug);
+    if (!res.ok) throw new Error(`GET /api/projects/${slug}: ${res.status}`);
+    return ProjectDetailResponseSchema.parse(await res.json()) as ProjectDetailResponse;
   }
 
   async listAgents(): Promise<Agent[]> {

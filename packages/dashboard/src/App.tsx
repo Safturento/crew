@@ -12,6 +12,7 @@ import type { DaemonClient } from './data/DaemonClient.js';
 import { HttpDaemonClient } from './data/HttpDaemonClient.js';
 import { AgentDrawer } from './routes/AgentDrawer.js';
 import { AgentFullPage } from './routes/AgentFullPage.js';
+import { ProjectDetailPage } from './routes/ProjectDetailPage.js';
 import { ProjectsListPage } from './routes/ProjectsListPage.js';
 import { navigate, useHashRoute } from './routing/useHashRoute.js';
 
@@ -51,6 +52,8 @@ function AppContent({ client }: { client: DaemonClient }) {
     switch (route.kind) {
       case 'agent-full':
         return <AgentFullPage agentKey={route.key} />;
+      case 'project-detail':
+        return <ProjectDetailPage slug={route.slug} />;
       case 'projects':
         return <ProjectsListPage projects={projects} />;
       case 'agent-drawer':

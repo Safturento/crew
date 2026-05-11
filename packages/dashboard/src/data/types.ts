@@ -1,4 +1,4 @@
-import type { TranscriptEvent } from 'crew-shared';
+import type { ProjectConfig, TranscriptEvent } from 'crew-shared';
 
 export type AgentState =
   | 'initializing'
@@ -30,6 +30,11 @@ export interface Project {
   branch: string;
   jiraKey: string;
   activeCount: number;
+}
+
+export interface ProjectDetailResponse {
+  project: ProjectConfig;
+  configPath: string;
 }
 
 export interface Agent {
@@ -76,4 +81,4 @@ export interface StateTransition {
   ts: number;
 }
 
-export type { TranscriptEvent };
+export type { ProjectConfig, TranscriptEvent };
