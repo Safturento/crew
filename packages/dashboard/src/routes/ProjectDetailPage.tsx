@@ -45,7 +45,13 @@ export function ProjectDetailPage({ slug }: ProjectDetailPageProps) {
         AGENTS
       </h2>
       <ProjectSection
-        project={{ name: project.name, repoPath: project.repo_path }}
+        project={{
+          name: project.name,
+          repoPath: project.repo_path,
+          branch: project.default_branch,
+          jiraKey: project.jira.project_key,
+          activeCount: filteredAgents.filter((a) => a.state !== 'finished').length,
+        }}
         agents={filteredAgents}
         onSelectAgent={(key) => navigate(`/agent/${encodeURIComponent(key)}`)}
       />
