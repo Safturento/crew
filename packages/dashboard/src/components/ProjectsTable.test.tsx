@@ -24,7 +24,7 @@ describe('ProjectsTable', () => {
   it('renders the column headers when projects are present', () => {
     render(<ProjectsTable projects={[projectA]} />);
     expect(screen.getByText('Name')).toBeInTheDocument();
-    expect(screen.getByText('Repo')).toBeInTheDocument();
+    expect(screen.getByText('Repo path')).toBeInTheDocument();
     expect(screen.getByText('Branch')).toBeInTheDocument();
     expect(screen.getByText('Jira')).toBeInTheDocument();
     expect(screen.getByText('Active')).toBeInTheDocument();
