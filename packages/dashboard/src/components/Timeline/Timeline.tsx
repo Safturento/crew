@@ -124,7 +124,7 @@ function FilterEmptyState({ onShowAll }: FilterEmptyStateProps) {
       <button
         type="button"
         onClick={onShowAll}
-        className="font-mono text-[11px] text-muted-foreground underline-offset-2 hover:underline"
+        className="font-mono text-xs text-muted-foreground underline-offset-2 hover:underline"
       >
         Show all
       </button>

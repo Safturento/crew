@@ -20,7 +20,7 @@ interface AgentRowProps {
 const ACTIVE_STATES = new Set<AgentState>(['running', 'initializing']);
 
 const agentRow = cva(
-  'group relative grid cursor-pointer items-center gap-4 rounded-[10px] border bg-card px-4 py-3 transition-colors hover:bg-popover grid-cols-[100px_90px_90px_70px_1fr_168px]',
+  'group relative grid cursor-pointer items-center gap-4 rounded border bg-card px-4 py-3 transition-colors hover:bg-popover grid-cols-[100px_90px_90px_70px_1fr_168px]',
   {
     variants: {
       state: {
@@ -61,7 +61,7 @@ export function AgentRow({ agent, onSelect, onAction }: AgentRowProps) {
       {meta.attention && (
         <span
           aria-hidden
-          className={`absolute inset-y-1.5 left-0 w-[3px] rounded-full ${stateClasses.bg} animate-att-pulse`}
+          className={`absolute inset-y-1.5 left-0 w-1 rounded-full ${stateClasses.bg} animate-att-pulse`}
         />
       )}
       <StateBadge state={agent.state} />
@@ -72,7 +72,7 @@ export function AgentRow({ agent, onSelect, onAction }: AgentRowProps) {
       <span className="text-right font-mono text-xs tabular-nums text-muted-foreground">
         {formatTokens(agent.tokens)}
       </span>
-      <span className="truncate text-[13.5px] text-foreground">{agent.ticketTitle}</span>
+      <span className="truncate text-sm text-foreground">{agent.ticketTitle}</span>
       <QuickActions agent={agent} onAction={onAction} />
     </div>
   );

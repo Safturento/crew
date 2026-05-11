@@ -109,7 +109,7 @@ function WorktreePathLink({ path }: { path: string }) {
         size="xs"
         onClick={onCopy}
         aria-label="Copy worktree path"
-        className="h-auto px-1 py-0 text-[10px] uppercase tracking-wide text-muted-foreground hover:text-foreground hover:bg-transparent"
+        className="h-auto px-1 py-0 text-xs uppercase tracking-wide text-muted-foreground hover:text-foreground hover:bg-transparent"
       >
         {copied ? 'Copied' : 'Copy'}
       </Button>

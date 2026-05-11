@@ -52,7 +52,7 @@ export function AgentsList({
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-[1240px] flex-col gap-4 p-6">
+    <div className="mx-auto flex w-full max-w-7xl flex-col gap-4 p-6">
       <div className="flex items-center justify-end">
         <button
           type="button"
@@ -61,7 +61,7 @@ export function AgentsList({
           aria-label="Hide finished"
           onClick={toggleHideFinished}
           className={[
-            'inline-flex h-[22px] items-center gap-1.5 rounded-full border px-2 font-mono text-[11px] leading-none transition-opacity hover:opacity-80',
+            'inline-flex h-6 items-center gap-1.5 rounded-full border px-2 font-mono text-xs leading-none transition-opacity hover:opacity-80',
             hideFinished
               ? 'border-white/30 bg-white/10 text-foreground'
               : 'border-white/10 bg-transparent text-muted-foreground',

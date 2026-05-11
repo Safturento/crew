@@ -33,8 +33,8 @@ const stateBadge = cva(
   {
     variants: {
       size: {
-        sm: 'h-[18px] px-1.5 text-[10px]',
-        md: 'h-[22px] px-2 text-[11px]',
+        sm: 'h-5 px-1.5 text-xs',
+        md: 'h-6 px-2 text-xs',
       },
       state: {
         initializing: '',

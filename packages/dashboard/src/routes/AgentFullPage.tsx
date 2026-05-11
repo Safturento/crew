@@ -6,7 +6,7 @@ interface AgentFullPageProps {
 
 export function AgentFullPage({ agentKey }: AgentFullPageProps) {
   return (
-    <div className="mx-auto flex h-full w-full max-w-[1240px] flex-col">
+    <div className="mx-auto flex h-full w-full max-w-7xl flex-col">
       <AgentBody agentKey={agentKey} mode="full" />
     </div>
   );
