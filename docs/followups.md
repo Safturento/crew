@@ -65,6 +65,28 @@ Format: see the user-level `~/.claude/CLAUDE.md` "Followup detection" section.
 
 ## Active
 
+### 2026-05-10 — Build `CountBadge` + `ProjectRow` Crew DS composites + migrate frame `1:2334` (CREW-132 Figma half)
+
+**Ticket:** [CREW-131](https://safturento.atlassian.net/browse/CREW-131) — *Projects view Epic; resolution gated on the Epic, since CREW-133 likely surfaces a sibling Figma followup.*
+
+**What:** CREW-132 shipped the dashboard slice (route + components + tests) but stopped short of the Figma deliverables (Plan tasks A12–A16): two new Crew DS composites (`CountBadge`, `ProjectRow`), their `.figma.tsx` Code Connect mappings, and the migration of Crew Dashboard Screens frame `1:2334` to the slate palette + the new composite instances.
+
+**Why noticed:** Autonomous `crew run CREW-132` can't drive the user-only Crew DS publish step (Plugin API can't republish a library; Figma desktop is required). Shipping the dashboard code without the Figma work is non-blocking — the route is independently testable and renders the real `/api/projects` payload — but the ticket's full acceptance criteria stay open until a human runs the Figma + publish + frame-migration pass.
+
+**Anchors:**
+- Plan: `docs/superpowers/plans/2026-05-10-projects-view-vertical-slices.md` Tasks A12–A16 (in PR #166 on `docs/projects-view-vertical-slices-spec`)
+- Dashboard components: `packages/dashboard/src/components/CountBadge.tsx`, `packages/dashboard/src/components/ProjectRow.tsx`
+- Crew DS Figma file: `DsA7QuEa2WthDATkksd1Bq` (Composites page)
+- Screens file: `9FeJPriqdsdA4n9R5Xsrr8`, frame `1:2334` (Projects list)
+- Skills: `figma-use`, `figma-screen-migration`, `figma-design-system-propagation`
+- Precedent followup: "Polish the CREW-119/CREW-117 Crew DS composites" (same skeleton-fidelity scope, different frame)
+
+**What's been considered:** Same shape as the CREW-119/CREW-117 followup — skeleton-fidelity composites are cheap to build but the publish step is human-only, so it's cleanest to batch the publish across Epic 2's two tickets (CREW-132 + CREW-133) into one user session.
+
+**Shape of work:** ~30–60 min — build 2 composites via `figma-use` on the Composites page, capture node IDs, author `.figma.tsx` files, then run the `figma-screen-migration` pipeline on frame `1:2334` (audit, dark-mode set, bind colors, swap detached pills). Force opacity 0.10/0.30 on each new instance per Trap 1.
+
+**Open questions:** Coordinate timing with CREW-133's Figma half (`ProjectHeader` + `ProjectConfigBlock` + frame `1:2443`) so the user only publishes Crew DS once for the whole Epic.
+
 ### 2026-05-10 — Build a `TimelineTag` component in Crew DS for tool-name pills
 
 **What:** The 22 timeline event tag pills (Bash / Read / Edit / Grep / Question across the timeline section in frames `1:378` + `1:1900` of the Crew Dashboard Screens file) currently live as detached structures — each pill is a manually-built frame with bg + stroke + text, styled to the canonical mid intensity (bg 10% + stroke 30% + text 100%) bound to a state color. They're not real component instances. To get a designer-friendly "brackets on/off" toggle (like the claude.ai tweaks-menu pattern) and to remove the per-pill maintenance burden, build a real `TimelineTag` component in Crew DS.
