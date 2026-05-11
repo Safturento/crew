@@ -1,6 +1,10 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { AgentNotFoundError, HttpDaemonClient } from './HttpDaemonClient.js';
+import {
+  AgentNotFoundError,
+  HttpDaemonClient,
+  ProjectNotFoundError,
+} from './HttpDaemonClient.js';
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -40,6 +44,66 @@ describe('HttpDaemonClient.listProjects', () => {
       }),
     );
     await expect(new HttpDaemonClient().listProjects()).rejects.toThrow();
+  });
+});
+
+const SAMPLE_PROJECT_DETAIL = {
+  project: {
+    name: 'kanban-api',
+    repo_path: '/repos/kanban-api',
+    default_branch: 'main',
+    jira: { project_key: 'KAN', site: 'https://example.atlassian.net' },
+    github: { repo: 'example/kanban-api' },
+  },
+  configPath: '/etc/crew/projects/kanban-api.toml',
+};
+
+describe('HttpDaemonClient.getProject', () => {
+  it('GETs /api/projects/:slug and returns the parsed detail', async () => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify(SAMPLE_PROJECT_DETAIL), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      }),
+    );
+
+    const detail = await new HttpDaemonClient().getProject('kanban-api');
+
+    expect(detail.project.name).toBe('kanban-api');
+    expect(detail.project.jira.project_key).toBe('KAN');
+    expect(detail.configPath).toMatch(/kanban-api\.toml$/);
+    expect(fetchSpy).toHaveBeenCalledWith('/api/projects/kanban-api');
+  });
+
+  it('encodes the slug when constructing the URL', async () => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify({ ...SAMPLE_PROJECT_DETAIL, project: { ...SAMPLE_PROJECT_DETAIL.project, name: 'foo/bar' } }), {
+        status: 200,
+      }),
+    );
+
+    await new HttpDaemonClient().getProject('foo/bar');
+
+    expect(fetchSpy).toHaveBeenCalledWith('/api/projects/foo%2Fbar');
+  });
+
+  it('throws ProjectNotFoundError on 404', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('{}', { status: 404 }));
+    await expect(new HttpDaemonClient().getProject('gone')).rejects.toBeInstanceOf(
+      ProjectNotFoundError,
+    );
+  });
+
+  it('throws on other non-2xx', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('boom', { status: 500 }));
+    await expect(new HttpDaemonClient().getProject('kanban-api')).rejects.toThrow(/500/);
+  });
+
+  it('throws on schema mismatch', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify({ project: { name: 'x' } }), { status: 200 }),
+    );
+    await expect(new HttpDaemonClient().getProject('x')).rejects.toThrow();
   });
 });
 

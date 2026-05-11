@@ -4,8 +4,19 @@ import { renderHook, waitFor } from '@testing-library/react';
 import type { ReactNode } from 'react';
 
 import { eventStream } from './eventStream.js';
-import { defaultClient, useAgent, useStateHistory, useTimeline } from './queries.js';
-import type { AgentDetail, StateTransition, TranscriptEvent } from './types.js';
+import {
+  defaultClient,
+  useAgent,
+  useProject,
+  useStateHistory,
+  useTimeline,
+} from './queries.js';
+import type {
+  AgentDetail,
+  ProjectDetailResponse,
+  StateTransition,
+  TranscriptEvent,
+} from './types.js';
 
 type Handler = (data: unknown) => void;
 
@@ -28,6 +39,24 @@ const SAMPLE_HISTORY: { transitions: StateTransition[] } = {
 
 const SAMPLE_TIMELINE: { events: TranscriptEvent[]; warnings?: string[] } = {
   events: [],
+};
+
+const SAMPLE_PROJECT_DETAIL: ProjectDetailResponse = {
+  project: {
+    name: 'kanban-api',
+    repo_path: '~/code/kanban-api',
+    default_branch: 'main',
+    jira: { project_key: 'KAN', site: 'https://example.atlassian.net' },
+    github: { repo: 'example/kanban-api' },
+    db_clone: {
+      postgres_service: 'postgres',
+      postgres_user: 'postgres',
+      postgres_database: 'postgres',
+      required_tables: [],
+      exclude_tables: ['kysely_migration*'],
+    },
+  },
+  configPath: '~/.config/crew/projects/kanban-api.toml',
 };
 
 let handlers: Map<string, Set<Handler>>;
@@ -140,6 +169,19 @@ describe('useStateHistory', () => {
     fire('agent.state_changed', { key: 'KAN-1', from: null, to: 'pr_open', ts: 1 });
 
     expect(invalidate).toHaveBeenCalledWith({ queryKey: ['agent', 'KAN-1', 'state-history'] });
+  });
+});
+
+describe('useProject', () => {
+  it('queries with key [project, slug] via defaultClient.getProject', async () => {
+    const spy = vi.spyOn(defaultClient, 'getProject').mockResolvedValue(SAMPLE_PROJECT_DETAIL);
+
+    const { result } = renderHook(() => useProject('kanban-api'), { wrapper: makeWrapper(qc) });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(spy).toHaveBeenCalledWith('kanban-api');
+    expect(result.current.data).toEqual(SAMPLE_PROJECT_DETAIL);
+    expect(qc.getQueryData(['project', 'kanban-api'])).toEqual(SAMPLE_PROJECT_DETAIL);
   });
 });
 
