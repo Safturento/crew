@@ -23,13 +23,16 @@
   --color-input: var(--input);
   --color-ring: var(--ring);
 
-  --color-state-initializing: var(--color-blue-400);
-  --color-state-running: var(--color-slate-400);
-  --color-state-idle: var(--color-slate-500);
-  --color-state-waiting: var(--color-amber-400);
-  --color-state-pr-open: var(--color-violet-400);
-  --color-state-error: var(--color-red-400);
-  --color-state-finished: var(--color-emerald-500);
+  /* Custom dark-tinted shades extending Tailwind's scale (beyond 950).
+     Pixel-read of <state-color>@10% over slate-900 — used as solid bg for
+     mid/muted state pills, so opacity stays out of the runtime path. */
+  --color-blue-1050: #17253f;
+  --color-slate-1050: #1c2538;  /* running */
+  --color-slate-1100: #172134;  /* idle (one step darker than slate-1050) */
+  --color-amber-1050: #26282a;
+  --color-violet-1050: #1e233f;
+  --color-red-1050: #262031;
+  --color-emerald-1050: #0f2733;
 
   --font-sans: 'Hanken Grotesk', ui-sans-serif, system-ui, -apple-system, sans-serif;
   --font-mono: 'Fira Code', ui-monospace, monospace;
@@ -138,21 +141,5 @@ body {
     'liga' on;
 }
 
-@source inline(
-  "bg-state-initializing bg-state-running bg-state-idle bg-state-waiting bg-state-pr-open bg-state-error bg-state-finished"
-);
-@source inline(
-  "bg-state-initializing/10 bg-state-running/10 bg-state-idle/10 bg-state-waiting/10 bg-state-pr-open/10 bg-state-error/10 bg-state-finished/10"
-);
-@source inline(
-  "text-state-initializing text-state-running text-state-idle text-state-waiting text-state-pr-open text-state-error text-state-finished"
-);
-@source inline(
-  "border-state-initializing border-state-running border-state-idle border-state-waiting border-state-pr-open border-state-error border-state-finished"
-);
-@source inline(
-  "border-state-initializing/30 border-state-running/30 border-state-idle/30 border-state-waiting/30 border-state-pr-open/30 border-state-error/30 border-state-finished/30"
-);
-@source inline(
-  "border-state-initializing/40 border-state-running/40 border-state-idle/40 border-state-waiting/40 border-state-pr-open/40 border-state-error/40 border-state-finished/40"
-);
+/* All state-color classes resolve to literal strings in state-meta.ts so
+   Tailwind v4's scanner finds them directly. No @source inline needed. */

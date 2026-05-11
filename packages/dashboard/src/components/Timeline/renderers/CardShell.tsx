@@ -14,7 +14,7 @@ export function CardShell({ lineOne, lineTwo, expanded, errorTone }: CardShellPr
     <div
       data-testid="event-card"
       className={`border-b border-white/5 px-3 py-2 font-mono text-xs ${
-        errorTone ? 'text-state-error' : 'text-muted-foreground'
+        errorTone ? 'text-red-400' : 'text-muted-foreground'
       }`}
     >
       <button

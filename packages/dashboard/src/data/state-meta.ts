@@ -2,99 +2,80 @@ import type { Agent, AgentState, TransitionState } from './types.js';
 
 export interface StateMetaEntry {
   label: string;
-  colorVar: string;
   attention: boolean;
   sortRank: number;
 }
 
 export const STATE_META: Record<AgentState, StateMetaEntry> = {
-  waiting: { label: 'Waiting', colorVar: 'state-waiting', attention: true, sortRank: 0 },
-  error: { label: 'Error', colorVar: 'state-error', attention: true, sortRank: 1 },
-  pr_open: { label: 'PR open', colorVar: 'state-pr-open', attention: true, sortRank: 2 },
-  running: { label: 'Running', colorVar: 'state-running', attention: false, sortRank: 3 },
-  initializing: {
-    label: 'Initializing',
-    colorVar: 'state-initializing',
-    attention: false,
-    sortRank: 4,
-  },
-  idle: { label: 'Idle', colorVar: 'state-idle', attention: false, sortRank: 5 },
-  finished: { label: 'Finished', colorVar: 'state-finished', attention: false, sortRank: 6 },
+  waiting: { label: 'Waiting', attention: true, sortRank: 0 },
+  error: { label: 'Error', attention: true, sortRank: 1 },
+  pr_open: { label: 'PR open', attention: true, sortRank: 2 },
+  running: { label: 'Running', attention: false, sortRank: 3 },
+  initializing: { label: 'Initializing', attention: false, sortRank: 4 },
+  idle: { label: 'Idle', attention: false, sortRank: 5 },
+  finished: { label: 'Finished', attention: false, sortRank: 6 },
 };
 
 export interface StateClassTokens {
   text: string;
-  borderSolid: string;
-  border30: string;
-  border40: string;
   bg: string;
-  bg10: string;
+  border: string;
+  solidBg: string;
+  solidBorder: string;
 }
 
 export const STATE_CLASSES: Record<AgentState, StateClassTokens> = {
   initializing: {
-    text: 'text-state-initializing',
-    borderSolid: 'border-state-initializing',
-    border30: 'border-state-initializing/30',
-    border40: 'border-state-initializing/40',
-    bg: 'bg-state-initializing',
-    bg10: 'bg-state-initializing/10',
+    text: 'text-blue-400',
+    bg: 'bg-blue-1050',
+    border: 'border-blue-500',
+    solidBg: 'bg-blue-400',
+    solidBorder: 'border-blue-400',
   },
   running: {
-    text: 'text-state-running',
-    borderSolid: 'border-state-running',
-    border30: 'border-state-running/30',
-    border40: 'border-state-running/40',
-    bg: 'bg-state-running',
-    bg10: 'bg-state-running/10',
+    text: 'text-slate-400',
+    bg: 'bg-slate-1050',
+    border: 'border-slate-500',
+    solidBg: 'bg-slate-400',
+    solidBorder: 'border-slate-400',
   },
   idle: {
-    text: 'text-state-idle',
-    borderSolid: 'border-state-idle',
-    border30: 'border-state-idle/30',
-    border40: 'border-state-idle/40',
-    bg: 'bg-state-idle',
-    bg10: 'bg-state-idle/10',
+    text: 'text-slate-500',
+    bg: 'bg-slate-1100',
+    border: 'border-slate-600',
+    solidBg: 'bg-slate-500',
+    solidBorder: 'border-slate-500',
   },
   waiting: {
-    text: 'text-state-waiting',
-    borderSolid: 'border-state-waiting',
-    border30: 'border-state-waiting/30',
-    border40: 'border-state-waiting/40',
-    bg: 'bg-state-waiting',
-    bg10: 'bg-state-waiting/10',
+    text: 'text-amber-400',
+    bg: 'bg-amber-1050',
+    border: 'border-amber-500',
+    solidBg: 'bg-amber-400',
+    solidBorder: 'border-amber-400',
   },
   pr_open: {
-    text: 'text-state-pr-open',
-    borderSolid: 'border-state-pr-open',
-    border30: 'border-state-pr-open/30',
-    border40: 'border-state-pr-open/40',
-    bg: 'bg-state-pr-open',
-    bg10: 'bg-state-pr-open/10',
+    text: 'text-violet-400',
+    bg: 'bg-violet-1050',
+    border: 'border-violet-500',
+    solidBg: 'bg-violet-400',
+    solidBorder: 'border-violet-400',
   },
   error: {
-    text: 'text-state-error',
-    borderSolid: 'border-state-error',
-    border30: 'border-state-error/30',
-    border40: 'border-state-error/40',
-    bg: 'bg-state-error',
-    bg10: 'bg-state-error/10',
+    text: 'text-red-400',
+    bg: 'bg-red-1050',
+    border: 'border-red-500',
+    solidBg: 'bg-red-400',
+    solidBorder: 'border-red-400',
   },
   finished: {
-    text: 'text-state-finished',
-    borderSolid: 'border-state-finished',
-    border30: 'border-state-finished/30',
-    border40: 'border-state-finished/40',
-    bg: 'bg-state-finished',
-    bg10: 'bg-state-finished/10',
+    text: 'text-emerald-500',
+    bg: 'bg-emerald-1050',
+    border: 'border-emerald-600',
+    solidBg: 'bg-emerald-500',
+    solidBorder: 'border-emerald-500',
   },
 };
 
-/**
- * The state-history endpoint reports `init` where the agents-list reports
- * `initializing`. Map the transition vocabulary onto the AgentState keys
- * STATE_META and STATE_CLASSES use.
- */
 const TRANSITION_TO_AGENT_STATE: Record<TransitionState, AgentState> = {
   init: 'initializing',
   running: 'running',

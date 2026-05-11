@@ -6,9 +6,9 @@ export function ErrorFallback({ error, resetErrorBoundary }: FallbackProps) {
     <div className="mx-auto flex w-full max-w-7xl flex-col gap-4 p-6">
       <div
         role="alert"
-        className="rounded-lg border border-state-error/40 bg-state-error/10 px-6 py-8"
+        className="rounded-lg border border-red-500 bg-red-1050 px-6 py-8"
       >
-        <p className="font-mono text-xs text-state-error">DASHBOARD ERROR</p>
+        <p className="font-mono text-xs text-red-400">DASHBOARD ERROR</p>
         <p className="mt-1 text-2xl font-semibold tracking-tight text-foreground">
           Something went wrong
         </p>

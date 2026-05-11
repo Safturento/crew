@@ -32,7 +32,7 @@ export function StateHistoryBar({ transitions, onScrollTo }: StateHistoryBarProp
               type="button"
               onClick={() => onScrollTo(t.ts)}
               data-state={agentState}
-              className={`inline-flex h-6 items-center rounded-full border ${classes.border30} ${classes.bg10} ${classes.text} px-2 font-mono text-xs leading-none whitespace-nowrap transition-opacity hover:opacity-80`}
+              className={`inline-flex h-6 items-center rounded-full border ${classes.border} ${classes.bg} ${classes.text} px-2 font-mono text-xs leading-none whitespace-nowrap transition-opacity hover:opacity-80`}
             >
               {meta.label}
             </button>

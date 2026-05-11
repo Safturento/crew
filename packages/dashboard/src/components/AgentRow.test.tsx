@@ -138,9 +138,9 @@ describe('AgentRow', () => {
   });
 
   const ATTENTION_TOKENS: Array<[AgentState, string, string]> = [
-    ['waiting', 'border-state-waiting/30', 'bg-state-waiting/10'],
-    ['error', 'border-state-error/30', 'bg-state-error/10'],
-    ['pr_open', 'border-state-pr-open/30', 'bg-state-pr-open/10'],
+    ['waiting', 'border-amber-500', 'bg-amber-1050'],
+    ['error', 'border-red-500', 'bg-red-1050'],
+    ['pr_open', 'border-violet-500', 'bg-violet-1050'],
   ];
 
   it.each(ATTENTION_TOKENS)(

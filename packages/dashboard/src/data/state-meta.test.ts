@@ -63,7 +63,7 @@ const ALL_STATES: AgentState[] = [
   'finished',
 ];
 
-const TOKEN_KEYS = ['text', 'borderSolid', 'border30', 'border40', 'bg', 'bg10'] as const;
+const TOKEN_KEYS = ['text', 'bg', 'border', 'solidBg', 'solidBorder'] as const;
 
 describe('STATE_CLASSES', () => {
   it.each(ALL_STATES)('has non-empty class tokens for %s', (state) => {
