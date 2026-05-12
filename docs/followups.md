@@ -7,12 +7,14 @@ Format: see the user-level `~/.claude/CLAUDE.md` "Followup detection" section.
 ## Contents
 
 - [Active](#active)
+  - [2026-05-12 — Pill needs trailing-icon support (Filters chevron-down)](#2026-05-12--pill-needs-trailing-icon-support-filters-chevron-down)
+  - [2026-05-12 — CodeChip composite for mono-font URL/path display (docker URL, worktree path)](#2026-05-12--codechip-composite-for-mono-font-urlpath-display-docker-url-worktree-path)
+  - [2026-05-12 — Re-link 8 detached AgentRow tiles in modal-overlay screen backgrounds](#2026-05-12--re-link-8-detached-agentrow-tiles-in-modal-overlay-screen-backgrounds)
+  - [2026-05-12 — Update `.figma.tsx` Code Connect files after Crew DS consolidation](#2026-05-12--update-figmatsx-code-connect-files-after-crew-ds-consolidation)
   - [2026-05-12 — Explore intensity-axis for Button (parallels StateBadge muted/mid/loud)](#2026-05-12--explore-intensity-axis-for-button-parallels-statebadge-mutedmidloud)
-  - [2026-05-12 — Migrate main agents list project headers to ProjectHeader composite](#2026-05-12--migrate-main-agents-list-project-headers-to-projectheader-composite)
   - [2026-05-11 — Crew DS components are partials of Dashboard Screens equivalents](#2026-05-11--crew-ds-components-are-partials-of-dashboard-screens-equivalents)
   - [2026-05-11 — Agent activity timeline + Bash event-tag components missing from Crew DS](#2026-05-11--agent-activity-timeline--bash-event-tag-components-missing-from-crew-ds)
   - [2026-05-11 — `idle` and `waiting` agent states not reachable from daemon fixtures](#2026-05-11--idle-and-waiting-agent-states-not-reachable-from-daemon-fixtures)
-  - [2026-05-10 — Build a `TimelineTag` component in Crew DS for tool-name pills](#2026-05-10--build-a-timelinetag-component-in-crew-ds-for-tool-name-pills)
   - [2026-05-10 — Wire dashboard QuickAction buttons (Resume / Finish / Inspect / Provide input) to daemon endpoints](#2026-05-10--wire-dashboard-quickaction-buttons-resume--finish--inspect--provide-input-to-daemon-endpoints)
   - [2026-05-10 — Polish the CREW-119/CREW-117 Crew DS composites (skeleton-fidelity → pixel-fidelity)](#2026-05-10--polish-the-crew-119crew-117-crew-ds-composites-skeleton-fidelity--pixel-fidelity)
   - [2026-05-09 — Crew Dashboard Screens — bind hardcoded fills to Crew DS semantic variables](#2026-05-09--crew-dashboard-screens--bind-hardcoded-fills-to-crew-ds-semantic-variables)
@@ -58,6 +60,9 @@ Format: see the user-level `~/.claude/CLAUDE.md` "Followup detection" section.
   - [2026-04-27 — Dashboard mobile responsive layout polish](#2026-04-27--dashboard-mobile-responsive-layout-polish)
   - [2026-04-26 — Architecture doc open questions still unresolved](#2026-04-26--architecture-doc-open-questions-still-unresolved)
 - [Resolved](#resolved)
+  - [2026-05-12 — New Run modal list rows need a proper component (project / ticket rows lost metadata during bulk Button swap)](#2026-05-12--new-run-modal-list-rows-need-a-proper-component-project--ticket-rows-lost-metadata-during-bulk-button-swap)
+  - [2026-05-10 — Build a `TimelineTag` component in Crew DS for tool-name pills](#2026-05-10--build-a-timelinetag-component-in-crew-ds-for-tool-name-pills-1)
+  - [2026-05-12 — Migrate main agents list project headers to ProjectHeader composite](#2026-05-12--migrate-main-agents-list-project-headers-to-projectheader-composite)
   - [2026-05-10 — Polish CREW-131 Projects view composites (instance swaps + real Button instances)](#2026-05-10--polish-crew-131-projects-view-composites-instance-swaps--real-button-instances-1)
   - [2026-05-10 — Migrate the agents-related Figma frames (Agents List, Drawer Open, Agent Page full) to Crew DS instances + semantic-token bindings](#2026-05-10--migrate-the-agents-related-figma-frames-agents-list-drawer-open-agent-page-full-to-crew-ds-instances--semantic-token-bindings)
   - [2026-05-07 — `sandbox-network-note.md` recommends `crew restart --hard` for docker recovery, but `--hard` nukes the worktree](#2026-05-07--sandbox-network-notemd-recommends-crew-restart---hard-for-docker-recovery-but---hard-nukes-the-worktree)
@@ -70,6 +75,78 @@ Format: see the user-level `~/.claude/CLAUDE.md` "Followup detection" section.
 - [Abandoned](#abandoned)
 
 ## Active
+
+### 2026-05-12 — Pill needs trailing-icon support (Filters chevron-down)
+
+**What:** The `Pill` component set supports a leading `Icon` (BOOLEAN `Has Icon` + INSTANCE_SWAP `Icon`) but not a trailing icon. Two patterns in the current Crew screens use leading + trailing icons together: the "Filters" dropdown button (`lucide/filter` + `lucide/chevron-down`) and the docker URL chip (`docker` glyph + `lucide/arrow-up-right`). During the 2026-05-12 polish pass these were left as raw FRAMEs named "Filters (raw — pending trailing-icon Pill support)" and "CodeChip (raw — ...)" rather than being migrated to Pill instances.
+
+**Why noticed:** Polish-pass audit of Dashboard Screens found 4 raw frames (2× Filters + 2× docker URL) that couldn't migrate. "Open as page" (single label + leading arrow) and "View PR" (label + arrow) were migrate-able by using a leading arrow icon — that convention worked. But a leading-icon-only Pill can't represent "filter dropdown" (where the chevron is the affordance for the dropdown, not decorative).
+
+**Anchors:** Pill set node ID `272:120` in Figma file `9FeJPriqdsdA4n9R5Xsrr8`. Affected raw frames: `1:944` / `1:2115` (Filters), `1:807` / `1:1978` (docker URL — also blocked on mono font, see sibling followup).
+
+**What's been considered:**
+- Adding `Has Trailing Icon` (BOOLEAN) + `Trailing Icon` (INSTANCE_SWAP) to all 320 Pill variants. Cheap-ish but doubles the icon-related property surface.
+- Building a separate `DropdownButton` composite that wraps Pill with a fixed trailing chevron. Cleaner role-based composite, but adds DS surface.
+
+**Shape of work:** ~1 hour Figma plugin work to add 2 properties across 320 variants + add hidden trailing icon nodes. Or: ~30min to build DropdownButton wrapping Pill. The former generalizes better but the latter has clearer semantic intent.
+
+**Open questions:** Is the trailing-icon use case ONLY dropdown chevrons, or do we want general-purpose trailing icons? If only chevrons, DropdownButton is right.
+
+### 2026-05-12 — CodeChip composite for mono-font URL/path display (docker URL, worktree path)
+
+**What:** The agent drawer + agent page show two "code-style" chips in the header — `~/code/kanban-api/.worktrees/KAN-23` (worktree path with a folder icon + git-branch suffix) and `docker http://localhost:7421` (URL with external-link icon). Both use **Fira Code mono font**, neither fits `Pill` (which is Hanken Grotesk Medium 14). The path chip also has a trailing git-branch icon, the docker chip has a trailing external icon — so both also hit the trailing-icon limitation (sibling followup).
+
+**Why noticed:** Polish pass found `1:807` / `1:1978` (docker) as raw frames named "Link"; the worktree-path version (`1:822`-ish, didn't audit specifically) is similar shape. Renamed to "CodeChip (raw — pending mono-font Pill support)" so they're not flagged as Button.
+
+**Anchors:** Frames `1:807`, `1:1978` in Figma file `9FeJPriqdsdA4n9R5Xsrr8`.
+
+**What's been considered:**
+- Add a `type=code-chip` variant to Pill with Fira Code Medium. Inconsistent — Pill is otherwise Hanken Grotesk.
+- Build separate `CodeChip` composite with Fira Code + leading icon (Has Icon) + trailing icon (Has Trailing Icon). Mirrors the trailing-icon problem from the sibling followup.
+
+**Shape of work:** Small — one composite, 4 variants (color × intensity, or just two for monochrome use). Pair with the trailing-icon work.
+
+**Open questions:** Is mono treatment used anywhere else in the dashboard, or just these two header chips? Sample size of 2 is borderline for justifying its own composite.
+
+### 2026-05-12 — Re-link 8 detached AgentRow tiles in modal-overlay screen backgrounds
+
+**What:** The Project Page Delete/Edit modal-overlay screens (frames `18:2` and `23:2` in Figma file `9FeJPriqdsdA4n9R5Xsrr8`) show the project page in the background with the modal centered on top. The 4 AgentRow tiles in the background of each screen (8 total) are detached FRAMEs rather than `AgentRow` instances — likely a remnant of when those screens were duplicated from the live project page. Renamed to "AgentRow (detached)" during the 2026-05-12 polish pass so they're not flagged as raw "Button" frames in future audits.
+
+**Why noticed:** Polish-pass audit flagged 8 frames of size `940×65` named "Button". On inspection they're agent-row tiles with the right structure (Background+Shadow + 4 Containers) but as detached FRAMEs. Converting them properly would require extracting per-tile agent data (name, state, meta) and applying as instance overrides — non-trivial.
+
+**Anchors:** Tile IDs `18:62`, `18:98`, `18:139`, `18:174` (Delete modal screen) and `23:62`, `23:98`, `23:139`, `23:174` (Edit modal screen). AgentRow component set at `212:910`.
+
+**What's been considered:** Just leaving them as detached frames is fine if those screens are only used as context-showing previews and never as live UI. If we ever code-implement these as overlay states, we'd want to delete the duplicated background entirely (the modal overlay screen would just be the modal itself, rendered on top of whatever route was previously visible — no background-rebuild needed).
+
+**Shape of work:** Likely abandon — the modal-overlay screens may not need to exist as their own canvases at all if the design intent is just "Project page + Modal X overlaid". Worth a 5-min conversation before doing the conversion.
+
+**Open questions:** Do these modal-overlay screens have downstream consumers (designer specs, prototyping flows) that depend on them existing as standalone frames? If not, prefer deleting them over fixing the backgrounds.
+
+### 2026-05-12 — Update `.figma.tsx` Code Connect files after Crew DS consolidation
+
+**What:** All 21 `.figma.tsx` files under `packages/dashboard/src/components/` reference the **archived** standalone Crew DS file URL (`DsA7QuEa2WthDATkksd1Bq`) and node IDs that no longer exist after the 2026-05-12 consolidation. The Crew DS now lives inside the dashboard file at `9FeJPriqdsdA4n9R5Xsrr8`, and many components (Button, StateBadge, CountBadge, TimelineTag) were consolidated into `Pill`. Other new composites (`Modal`, `AlertModal`, `ModalSelectionRow`, `FormField`, `Input`, `Switch`, `Stepper`) have no `.figma.tsx` mappings yet.
+
+**Why noticed:** During the 2026-05-12 design session, after building the new composites. Files are intentionally not published per [[project_code_connect_skipped]] (Pro tier limitation), so they're inert docs — but they're docs that the future `design-with-figma` skill will read to translate Figma instances → React code. Stale URLs / removed component references mean wrong or missing translations.
+
+**Anchors:**
+
+- `packages/dashboard/src/components/` — 21 `.figma.tsx` files, all need URL + node ID updates
+- `packages/dashboard/src/components/ui/` — shadcn primitives subdirectory (button, dialog, badge, input, label, form, separator)
+- Crew DS now in file `9FeJPriqdsdA4n9R5Xsrr8` on Composites page; key nodes: Pill set, Modal, AlertModal, ModalSelectionRow, FormField, Input, Switch set, Stepper set
+- Mapping table: [[project_crew_ds_modal_composites]] and [[project_crew_ds_form_composites]] cover the new composites; [[project_crew_ds_pill_unified]] covers Pill → Button/Badge/StateBadge
+
+**What's been considered:**
+
+- **Bulk rewrite in one Epic** — most efficient if done as one focused pass. Walk each `.figma.tsx`, update URL to `figma.com/design/9FeJPriqdsdA4n9R5Xsrr8/Crew?node-id=X-Y`, update node IDs, update prop mappings (Pill's `type`/`color`/`intensity` → Button's `variant`/`size`). Add new files for Modal, AlertModal, FormField, Input (update existing), Switch, ModalSelectionRow, Stepper. Probably needs `<Switch>` and `<AlertDialog>` added to shadcn primitives first (we have base shadcn but not those two yet).
+- **Incremental — update as each component is touched.** Slower but less risky. Each PR that touches a component updates its `.figma.tsx`.
+- **Delete all and start fresh.** Justified since Pill consolidates many — but loses the existing prop-mapping work for components that DID survive (ProjectSection, AgentRow, etc.).
+
+**Shape of work:** One ticket / Epic. ~21 file updates + ~7 new files + adding `<Switch>`/`<AlertDialog>` shadcn primitives = ~half-day of focused work.
+
+**Open questions:**
+
+- [ ] Add Code Connect publish back into the plan if we upgrade to Figma Org tier later? Currently skipped.
+- [ ] For `Pill` → multiple React components (Button / Badge / StateBadge / custom Tag), use multiple `figma.connect()` calls scoped by variant (`{ variant: { type: 'button-sm' } }`)?
 
 ### 2026-05-12 — Explore intensity-axis for Button (parallels StateBadge muted/mid/loud)
 
@@ -98,29 +175,6 @@ Format: see the user-level `~/.claude/CLAUDE.md` "Followup detection" section.
 - [ ] Naming convention for siblings if going pairs-based.
 - [ ] Whether to backport to the existing `destructive` ↔ `danger` (e.g., would they become `error-solid` / `error-outline` under a unified naming scheme?). Probably not worth the rename churn but worth flagging.
 
-### 2026-05-12 — Migrate main agents list project headers to ProjectHeader composite
-
-**What:** The Crew Dashboard Screens file's main agents-list frames have per-project section headers (e.g. "kanban-api · 3 active · 4 total" headers above each project's agent group). These are currently hand-built compositions, not `ProjectHeader` composite instances. Should swap them to instances so future ProjectHeader updates flow through.
-
-**Why noticed:** During the 2026-05-12 in-session Button rollout Epic, while finishing Phase 3 (frame `1:2443` swap to ProjectHeader instance). User noted: "we'll want to update the project headers for each project on the main agents list to use the composite after this as well, though we need to update the composite to match first." Deferred so the Epic stayed bounded.
-
-**Anchors:**
-
-- Screens file: `9FeJPriqdsdA4n9R5Xsrr8` — Agents List frames (likely `1:2` and `1:378`, verify); search for "kanban-api" / "lighthouse" section headers
-- ProjectHeader composite: `82:15` in Crew DS file `DsA7QuEa2WthDATkksd1Bq`
-
-**What's been considered:**
-
-- **Composite needs design changes first.** Current `ProjectHeader` shows: back-link + title (h1) + config-path + Edit/Remove buttons. The agents-list section headers show: project name + active/total counts + repo path (right-aligned), plus a collapse chevron. Different content. Either ProjectHeader gets a `variant` axis (page-header vs section-header) OR a new `ProjectSectionHeader` composite gets built.
-- **Swap without composite change.** Would require detaching most of ProjectHeader's content per instance, defeating the linkage purpose.
-
-**Shape of work:** Composite design conversation first (variant axis on existing ProjectHeader vs new ProjectSectionHeader), then swap. Roughly 30 min design + 30 min implementation. Gated on the composite change.
-
-**Open questions:**
-
-- [ ] Extend `ProjectHeader` with a variant axis or build a new `ProjectSectionHeader` composite?
-- [ ] The section headers are collapsible (chevron toggle) — represent this in the DS composite (BOOLEAN + interactive variant prototyping?) or leave that to the screen?
-
 ### 2026-05-11 — Crew DS components are partials of Dashboard Screens equivalents
 
 **What:** Several Crew DS components are simpler skeletons than the rich equivalents drawn freehand in Crew Dashboard Screens. The Screens file currently renders agent rows, top-nav, project rows, etc. as hand-built compositions rather than instances of the DS components. The DS doesn't reflect what designers actually use on the page.
@@ -143,6 +197,8 @@ User picked **(a)**, to be tackled as a two-step process: phase 1 brings DS up t
 - Variant axes that don't yet exist in DS (e.g. AgentRow expanded vs collapsed) — decide as we encounter them.
 
 ### 2026-05-11 — Agent activity timeline + Bash event-tag components missing from Crew DS
+
+**Partially resolved 2026-05-12:** The **leaf event-tag pills** are now real components — the `TimelineTag` COMPONENT_SET (7 tool variants) was built in the Composites page of the consolidated Crew file and all 22 detached timeline pills swapped to instances. The **timeline container itself** (collapsible state-header + list-of-events composition wrapping each event row) remains a freehand structure on Dashboard Screens with no Crew DS counterpart — that part of the followup is still active. State-color bindings on the pills are now correctly routed through the localized `state/X` + `{color}-1050` vars; no orphaned references remain. See the now-resolved leaf-tag followup below for component details.
 
 **What:** Crew Dashboard Screens has an "agent activity timeline" composition (collapsible state-header + list of tool-call events, each with a `Bash`-style event-type tag + command text + timestamp + token count) with no counterpart in Crew DS. The tag pills inside still reference the now-deleted `state/waiting` alias variable, leaving orphaned bindings that resolve to a fallback color but won't react to DS-level changes.
 
@@ -183,34 +239,6 @@ Showcase route is the smaller, more honest scope; the seed path requires daemon-
 **Open questions:**
 - Are `idle` and `waiting` ever expected to be the *current* state of an agent (visible in the agents list) or only intermediate transitions visible in `StateHistoryBar`? If only transitions, the showcase route is sufficient.
 
-### 2026-05-10 — Build a `TimelineTag` component in Crew DS for tool-name pills
-
-**What:** The 22 timeline event tag pills (Bash / Read / Edit / Grep / Question across the timeline section in frames `1:378` + `1:1900` of the Crew Dashboard Screens file) currently live as detached structures — each pill is a manually-built frame with bg + stroke + text, styled to the canonical mid intensity (bg 10% + stroke 30% + text 100%) bound to a state color. They're not real component instances. To get a designer-friendly "brackets on/off" toggle (like the claude.ai tweaks-menu pattern) and to remove the per-pill maintenance burden, build a real `TimelineTag` component in Crew DS.
-
-**Why noticed:** During the CREW-130 visual fixes session on 2026-05-10, the user asked whether brackets on the timeline pills could be a Figma toggle (vs editing all 22 in place). Yes — Figma supports boolean variant properties exactly for this use case. We removed brackets in place to unblock the session, but the underlying component gap remains.
-
-**Anchors:**
-
-- Crew Dashboard Screens: `https://www.figma.com/design/9FeJPriqdsdA4n9R5Xsrr8` — frames `1:378`, `1:1900` (timeline sections)
-- Crew DS file: `https://www.figma.com/design/DsA7QuEa2WthDATkksd1Bq` — proposed home for the new `TimelineTag` component
-- Reference: existing `StateBadge` component set (`20:23`) follows a similar variant axis pattern (state × intensity); `TimelineTag` would mirror that with (tool × brackets × intensity)
-- Dashboard side: `packages/dashboard/src/components/TimelineEventRow.tsx` (or equivalent — check current implementation) for the runtime tool-name → state-color mapping
-
-**What's been considered:**
-
-- **Tool variant axis** with 7 values (Bash, Read, Edit, Grep, Question, Write, Glob) — each variant binds to a specific state color: Bash → state/waiting, Read → state/initializing, Edit → state/finished, Grep → state/pr-open, Question → state/waiting, Write → state/error (default), Glob → state/initializing (default)
-- **Boolean `brackets` property** (default true to preserve current visual) — when off, the text node renders just the label (`Bash`); when on, it wraps in `[Bash]`. Implementation likely via a hidden bracket prefix/suffix layer toggled by the boolean.
-- **Reuse the StateBadge intensity axis** (muted/mid/loud) for consistency, with mid as default — same canonical opacities as StateBadge (bg 10% + stroke 30% + text 100%).
-- **Alternative — text property only.** Rather than a tool variant axis, expose a single `label` text property and a `state` color enum. Simpler component, less type safety. Tradeoff: designer can typo a tool name with this approach.
-
-**Shape of work:** One ticket. Build the `TimelineTag` component in Crew DS (~7 tool variants × 2 brackets × 3 intensities = 42 variants if we go full matrix; cut down by skipping muted/loud since they're not currently used → 14 variants). Republish. Re-swap 22 pills in screens file to TimelineTag instances. Verify visually. Update `design-system.md` inventory. Likely fits in a small/medium ticket — most of the work is variant generation in Figma.
-
-**Open questions:**
-
-- [ ] Is the tool-name list locked at 7, or might it grow (e.g., new MCP tools)? If growth-prone, `label` text property might be more future-proof than a tool variant axis.
-- [ ] Should the brackets be a hard wrap (`[Bash]`) or a different decoration (e.g., a leading icon)? Visual decision.
-- [ ] Does the dashboard's TimelineEventRow.tsx already use Tailwind utilities for the same tinted-pill pattern, or does it need a code-side update too (similar to the StateBadge intensity refactor in CREW-129)?
-
 ### 2026-05-10 — Wire dashboard QuickAction buttons (Resume / Finish / Inspect / Provide input) to daemon endpoints
 
 **What:** CREW-119 landed the v2 quick-action buttons in the agents list (`Resume + Finish` for `idle`, `Provide input` for `waiting`, `View PR + Finish` for `pr_open`, `Inspect` for `error`). The buttons fire an `onAction(kind, agent)` callback up through `AgentRow → ProjectSection → AgentsList`, but `App.tsx` currently does **not** mount a handler — clicks no-op. The visual contract is shipped; the functional contract is not. Each action needs a daemon endpoint and a mutation hook that the App-level handler dispatches.
@@ -243,7 +271,7 @@ Showcase route is the smaller, more honest scope; the seed path requires daemon-
 
 **What:** CREW-119 + CREW-117 built ten Crew DS composites on the Composites page in `DsA7QuEa2WthDATkksd1Bq` at **skeleton fidelity** — names, semantic-token bindings (where applicable), and slot structure are correct, but the visual treatment is intentionally minimal. `BrandMark` and `StateBadge` are now pixel-fidel after the 2026-05-10 frame migration polish (StateBadge canonical pattern documented in `docs/plans/design-system.md`). The other composites are placeholder boxes with sample text. They need a designer pass — type ramps tightened, padding/gap bound to Core `tw/space`, hover/focus states added (where applicable), variant axes grown (`AgentRow.state`, `TopNav.route`, `ProjectSection.expanded`).
 
-**Specific known defect — AgentBody embeds a hardcoded state pill:** during the 2026-05-10 frame-migration session the user noticed `AgentBody` (`24:2`) renders its state pill as a solid color block even after StateBadge was polished. Root cause: AgentBody was built with a hand-rolled ellipse + text rather than composing a real `StateBadge` instance, so it can't pick up StateBadge's future updates. Fix during the polish pass: rebuild AgentBody's pill slot as an actual `StateBadge` instance (matching whichever state the embedded sample uses).
+**Specific known defect — AgentBody embeds a hardcoded state pill:** during the 2026-05-10 frame-migration session the user noticed `AgentBody` (`24:2`) renders its state pill as a solid color block even after StateBadge was polished. Root cause: AgentBody was built with a hand-rolled ellipse + text rather than composing a real `StateBadge` instance, so it can't pick up StateBadge's future updates. Fix during the polish pass: rebuild AgentBody's pill slot as an actual `StateBadge` instance (matching whichever state the embedded sample uses). **Sub-issue resolved 2026-05-12:** verified during the in-session DS consolidation that AgentBody's metadata row's pill node (now `220:233` in file `9FeJPriqdsdA4n9R5Xsrr8`) is a real `StateBadge` INSTANCE, not a hand-rolled ellipse — the broader composite polish (Timeline placeholder buildout, action-row buttons) remains active under this followup.
 
 **Why noticed:** CREW-119 + CREW-117 autonomous runs on 2026-05-10 — the Crew DS build-out was descoped from pixel-perfect to skeleton fidelity to keep the runs' scopes reasonable (the original tickets' goals were the visual fidelity sweep on the dashboard side, which landed in code). The AgentBody-specific defect surfaced 2026-05-10 mid-day during the manual frame-migration session that resolved the migration followup below this one.
 
@@ -1239,6 +1267,30 @@ The other two open questions (sandbox config drift, Phase 2 + Phase 3 separation
 ## Resolved
 
 (items move here when ticketed and shipped, or fixed inline — keep for historical context, prune when the file gets long)
+
+### 2026-05-12 — New Run modal list rows need a proper component (project / ticket rows lost metadata during bulk Button swap)
+
+**What:** Frame `1:2980` "New Run modal - 1. Select Project" originally rendered each project as a wide list row (h=42-43): project name on the left, repo path next to it, Jira key + active count on the right. Similarly modal step 2 "Select Ticket" rendered ticket rows with key + title + age + tokens. During the 2026-05-12 bulk Button swap, these 9 rows (4 project rows in step 1, 5 ticket rows in step 2) were misclassified as detached Buttons (because the imported frame name was "Button") and swapped to `variant=secondary, size=lg` Button instances — which only carried the leading text label across, dropping all the right-side metadata.
+
+**Why noticed:** During the 2026-05-12 in-session bulk Button swap pass, after seeing the rendered New Run modal — the projects collapsed to small pill-shaped buttons instead of full-width rows.
+
+**Resolved 2026-05-12:** Built a dedicated `ModalSelectionRow` composite (single component, not project/ticket-specific) that supports both contexts. Properties: `Primary` (TEXT, name/key), `Secondary` (TEXT, repo path / ticket title — Fira Code), `Meta` (TEXT, jira key / age — Fira Code right-aligned), `Show Badge` (BOOLEAN), plus an inner Pill (`type=tag, color=running, intensity=muted`) for the badge label. All 9 rows swapped: 4 project rows in step 1 with full metadata (kanban-api / ~/code/... / KAN / 4 active badge, etc.) and 5 ticket rows in step 2 with placeholder ticket metadata (KAN-31 / Drag-and-drop... / 8d / 38.1k badge, etc.). The original ticket metadata couldn't be recovered (lost in the bulk Button swap), so plausible placeholders were used — designers can override per-instance when real data lands. An earlier interim attempt mapped these to `Pill type=button-lg` which lost the metadata; that approach was discarded in favor of the dedicated composite after seeing the user's reference screenshot showing rich rows.
+
+### 2026-05-10 — Build a `TimelineTag` component in Crew DS for tool-name pills
+
+**What:** The 22 timeline event tag pills (Bash / Read / Edit / Grep / Question across the timeline section in frames `1:378` + `1:1900` of the Crew Dashboard Screens file) currently live as detached structures — each pill is a manually-built frame with bg + stroke + text, styled to the canonical mid intensity (bg 10% + stroke 30% + text 100%) bound to a state color. They're not real component instances. To get a designer-friendly "brackets on/off" toggle (like the claude.ai tweaks-menu pattern) and to remove the per-pill maintenance burden, build a real `TimelineTag` component in Crew DS.
+
+**Why noticed:** During the CREW-130 visual fixes session on 2026-05-10, the user asked whether brackets on the timeline pills could be a Figma toggle (vs editing all 22 in place). Yes — Figma supports boolean variant properties exactly for this use case. We removed brackets in place to unblock the session, but the underlying component gap remains.
+
+**Resolved 2026-05-12:** Built `TimelineTag` COMPONENT_SET (`263:134` in file `9FeJPriqdsdA4n9R5Xsrr8`) with 7 `tool` variants — Bash/Read/Edit/Grep/Question/Write/Glob — each styled with the canonical mid-intensity pattern: bg bound to `{color}-1050` (Crew/Tailwind Extensions premixed dark, matching StateBadge), stroke + text bound to the corresponding `state/X` semantic var. Mapping: Bash/Question→state/waiting (amber), Read/Glob→state/initializing (blue), Edit→state/finished (emerald), Grep→state/pr-open (violet), Write→destructive (red). Swapped all 22 detached Overlay pills inside timeline rows to TimelineTag instances, zero errors. **Deferred from original scope:** the `Brackets` BOOLEAN property (current dashboard doesn't render brackets, so default-off; can add when needed) and the muted/loud intensity tiers (only mid is in current use). Per-variant label hardcoding replaces the proposed set-level `Label` TEXT property since Figma TEXT properties can't have per-variant defaults — users still get per-instance text override via direct text edit.
+
+### 2026-05-12 — Migrate main agents list project headers to ProjectHeader composite
+
+**What:** The Crew Dashboard Screens file's main agents-list frames have per-project section headers (e.g. "kanban-api · 3 active · 4 total" headers above each project's agent group). These are currently hand-built compositions, not `ProjectHeader` composite instances. Should swap them to instances so future ProjectHeader updates flow through.
+
+**Why noticed:** During the 2026-05-12 in-session Button rollout Epic, while finishing Phase 3 (frame `1:2443` swap to ProjectHeader instance). User noted: "we'll want to update the project headers for each project on the main agents list to use the composite after this as well, though we need to update the composite to match first." Deferred so the Epic stayed bounded.
+
+**Resolved 2026-05-12:** Decided on **(b) new composite** — built the existing `ProjectSection` composite (220:224) up to match the dashboard rendering (chevron + name + ghost ExternalLink button + count + right-aligned mono repo path), with TEXT properties for projectName/countSummary/repoPath and BOOLEAN for showing the open button. Swapped all 22 detached section `Header` frames on Dashboard Screens to `ProjectSection` instances with per-section text overrides. Visual fidelity verified on `1:2` (Agents List) and `1:378` (Drawer Open). `ProjectHeader` composite (220:315) remained as the project-detail page header — separate concern. Folder icon between chevron and name (present in `ProjectSection.tsx`) intentionally skipped in the composite; can be added later if the design adopts it.
 
 ### 2026-05-10 — Polish CREW-131 Projects view composites (instance swaps + real Button instances)
 
