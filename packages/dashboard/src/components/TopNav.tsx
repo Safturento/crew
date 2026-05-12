@@ -35,7 +35,8 @@ export function TopNav({ route, attentionCount, onClearAttention, onNewRun }: To
       </div>
       <div className="flex items-center gap-2">
         <Button
-          variant="outline"
+          color="running"
+          intensity="mid"
           size="xs"
           onClick={onClearAttention}
           disabled={attentionCount === 0}
@@ -49,10 +50,11 @@ export function TopNav({ route, attentionCount, onClearAttention, onNewRun }: To
           )}
         </Button>
         <Button
-          variant="default"
+          color="white"
+          intensity="loud"
           size="xs"
           onClick={onNewRun}
-          className="bg-foreground font-semibold text-background hover:bg-foreground/90"
+          className="font-semibold"
         >
           <Plus aria-hidden /> New Run
         </Button>

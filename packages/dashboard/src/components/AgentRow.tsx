@@ -95,10 +95,10 @@ function QuickActions({
     case 'idle':
       return (
         <QaGroup>
-          <Button variant="outline" size="xs" onClick={fire('resume')}>
+          <Button color="running" intensity="mid" size="xs" onClick={fire('resume')}>
             Resume
           </Button>
-          <Button variant="ghost" size="xs" onClick={fire('finish')}>
+          <Button color="running" intensity="ghost" size="xs" onClick={fire('finish')}>
             Finish
           </Button>
         </QaGroup>
@@ -106,12 +106,7 @@ function QuickActions({
     case 'waiting':
       return (
         <SingleAction>
-          <Button
-            variant="default"
-            size="xs"
-            onClick={fire('provide-input')}
-            className="bg-amber-400 text-slate-950 hover:bg-amber-400/90"
-          >
+          <Button color="waiting" intensity="loud" size="xs" onClick={fire('provide-input')}>
             Provide input
           </Button>
         </SingleAction>
@@ -119,12 +114,12 @@ function QuickActions({
     case 'pr_open':
       return (
         <QaGroup>
-          <Button variant="outline" size="xs" asChild>
+          <Button color="running" intensity="mid" size="xs" asChild>
             <a href={agent.prUrl ?? '#'} target="_blank" rel="noreferrer" onClick={stop}>
               View PR ↗
             </a>
           </Button>
-          <Button variant="ghost" size="xs" onClick={fire('finish')}>
+          <Button color="running" intensity="ghost" size="xs" onClick={fire('finish')}>
             Finish
           </Button>
         </QaGroup>
@@ -132,12 +127,7 @@ function QuickActions({
     case 'error':
       return (
         <SingleAction>
-          <Button
-            variant="default"
-            size="xs"
-            onClick={fire('inspect')}
-            className="bg-red-400 text-slate-950 hover:bg-red-400/90"
-          >
+          <Button color="error" intensity="loud" size="xs" onClick={fire('inspect')}>
             Inspect
           </Button>
         </SingleAction>
