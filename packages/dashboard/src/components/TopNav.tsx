@@ -3,6 +3,7 @@ import { Plus } from 'lucide-react';
 
 import type { Route } from '../routing/parseRoute.js';
 import { BrandMark } from './BrandMark.js';
+import { Badge } from './ui/badge.js';
 import { Button } from './ui/button.js';
 
 interface TopNavProps {
@@ -44,9 +45,9 @@ export function TopNav({ route, attentionCount, onClearAttention, onNewRun }: To
         >
           Clear attention
           {attentionCount > 0 && (
-            <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-amber-400 px-1.5 text-xs font-semibold text-slate-950">
+            <Badge color="waiting" intensity="loud" className="font-semibold">
               {attentionCount}
-            </span>
+            </Badge>
           )}
         </Button>
         <Button

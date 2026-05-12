@@ -7,6 +7,7 @@ Format: see the user-level `~/.claude/CLAUDE.md` "Followup detection" section.
 ## Contents
 
 - [Active](#active)
+  - [2026-05-12 — Active-state pulse animation lost when StateBadge was folded into Badge](#2026-05-12--active-state-pulse-animation-lost-when-statebadge-was-folded-into-badge)
   - [2026-05-12 — Pill needs trailing-icon support (Filters chevron-down)](#2026-05-12--pill-needs-trailing-icon-support-filters-chevron-down)
   - [2026-05-12 — CodeChip composite for mono-font URL/path display (docker URL, worktree path)](#2026-05-12--codechip-composite-for-mono-font-urlpath-display-docker-url-worktree-path)
   - [2026-05-12 — Re-link 8 detached AgentRow tiles in modal-overlay screen backgrounds](#2026-05-12--re-link-8-detached-agentrow-tiles-in-modal-overlay-screen-backgrounds)
@@ -75,6 +76,16 @@ Format: see the user-level `~/.claude/CLAUDE.md` "Followup detection" section.
 - [Abandoned](#abandoned)
 
 ## Active
+
+### 2026-05-12 — Active-state pulse animation lost when StateBadge was folded into Badge
+
+**What:** The retired `StateBadge` component used `animate-pulse-dot` on its inner dot for `running` and `initializing` states, providing a subtle "agent is alive" signal in the agents list. The new `Badge` (`packages/dashboard/src/components/ui/badge.tsx`) renders only a static dot via `hasIcon`, so the pulse is gone.
+
+**Why noticed:** Self-review of CREW-135 (T1 — Pill primitives). The DS-to-code reconciliation plan replaced StateBadge with `<Badge color={state} intensity="muted" hasIcon>` and didn't carry the pulse over. The attention left-rail bar in `AgentRow.tsx` (still `animate-att-pulse`) only fires for attention states (waiting/error/pr_open), not for the active states the badge pulse covered.
+
+**Anchors:** `packages/dashboard/src/components/AgentRow.tsx:67-69` (Badge usage in row), `packages/dashboard/src/components/AgentBody.tsx` (Badge usage in drawer header), `packages/dashboard/src/components/ui/badge.tsx:43-49` (static dot), CREW-135 PR.
+
+**Shape of work:** Small — add an optional `pulse?: boolean` prop to `Badge` (or `Badge` reads an `animated` variant) and toggle it on at AgentRow's badge for running/initializing. Or: keep pulse out of `Badge` and add it via wrapper class at the call site. Either works.
 
 ### 2026-05-12 — Pill needs trailing-icon support (Filters chevron-down)
 
