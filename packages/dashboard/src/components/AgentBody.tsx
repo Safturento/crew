@@ -4,8 +4,9 @@ import { formatDuration } from '../format/duration.js';
 import { formatTokens } from '../format/tokens.js';
 import { useAgent } from '../data/queries.js';
 import type { AgentDetail, AgentState } from '../data/types.js';
-import { StateBadge } from './StateBadge.js';
+import { STATE_META } from '../data/state-meta.js';
 import { Timeline } from './Timeline/Timeline.js';
+import { Badge } from './ui/badge.js';
 import { Button } from './ui/button.js';
 
 const ACTIVE_STATES = new Set<AgentState>(['running', 'initializing']);
@@ -61,7 +62,15 @@ function AgentHeader({ detail, mode }: { detail: AgentDetail; mode: AgentBodyMod
           {detail.project}
         </span>
         <span className="font-mono text-xs text-muted-foreground">{detail.ticket_key}</span>
-        <StateBadge state={detail.state} />
+        <Badge
+          role="status"
+          aria-label={STATE_META[detail.state].label}
+          color={detail.state}
+          intensity="muted"
+          hasIcon
+        >
+          {STATE_META[detail.state].label}
+        </Badge>
         {runtime && (
           <span className="font-mono text-xs tabular-nums text-muted-foreground">{runtime}</span>
         )}

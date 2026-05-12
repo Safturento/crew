@@ -1,46 +1,59 @@
 import * as React from 'react';
-import { cva, type VariantProps } from 'class-variance-authority';
 import { Slot } from 'radix-ui';
 
 import { cn } from '@/lib/utils';
+import {
+  pillSurfaceClasses,
+  type PillColor,
+  type PillIntensity,
+} from '@/lib/pill-variants';
+import { STATE_CLASSES } from '@/data/state-meta';
+import type { AgentState } from '@/data/types';
 
-const badgeVariants = cva(
-  'inline-flex w-fit shrink-0 items-center justify-center gap-1 overflow-hidden rounded-full border border-transparent px-2 py-0.5 text-xs font-medium whitespace-nowrap transition-[color,box-shadow] focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 [&>svg]:pointer-events-none [&>svg]:size-3',
-  {
-    variants: {
-      variant: {
-        default: 'bg-primary text-primary-foreground [a&]:hover:bg-primary/90',
-        secondary: 'bg-secondary text-secondary-foreground [a&]:hover:bg-secondary/90',
-        destructive:
-          'bg-destructive text-white focus-visible:ring-destructive/20 dark:bg-destructive/60 dark:focus-visible:ring-destructive/40 [a&]:hover:bg-destructive/90',
-        outline:
-          'border-border text-foreground [a&]:hover:bg-accent [a&]:hover:text-accent-foreground',
-        ghost: '[a&]:hover:bg-accent [a&]:hover:text-accent-foreground',
-        link: 'text-primary underline-offset-4 [a&]:hover:underline',
-      },
-    },
-    defaultVariants: {
-      variant: 'default',
-    },
-  },
-);
+type BadgeProps = React.ComponentProps<'span'> & {
+  color?: PillColor;
+  intensity?: PillIntensity;
+  hasIcon?: boolean;
+  asChild?: boolean;
+};
+
+function dotClass(color: PillColor): string {
+  if (color === 'white') return 'bg-slate-500';
+  return STATE_CLASSES[color as AgentState].solidBg;
+}
 
 function Badge({
   className,
-  variant = 'default',
+  color = 'running',
+  intensity = 'mid',
+  hasIcon = false,
   asChild = false,
+  children,
   ...props
-}: React.ComponentProps<'span'> & VariantProps<typeof badgeVariants> & { asChild?: boolean }) {
+}: BadgeProps) {
   const Comp = asChild ? Slot.Root : 'span';
-
   return (
     <Comp
       data-slot="badge"
-      data-variant={variant}
-      className={cn(badgeVariants({ variant }), className)}
+      data-color={color}
+      data-intensity={intensity}
+      className={cn(
+        'inline-flex w-fit items-center gap-1.5 rounded-full px-2 py-0.5 font-mono text-xs leading-none whitespace-nowrap',
+        pillSurfaceClasses(color, intensity),
+        className,
+      )}
       {...props}
-    />
+    >
+      {hasIcon && (
+        <span
+          data-testid="badge-dot"
+          aria-hidden
+          className={cn('inline-block h-1.5 w-1.5 rounded-full', dotClass(color))}
+        />
+      )}
+      {children}
+    </Comp>
   );
 }
 
-export { Badge, badgeVariants };
+export { Badge };
