@@ -7,10 +7,11 @@ Format: see the user-level `~/.claude/CLAUDE.md` "Followup detection" section.
 ## Contents
 
 - [Active](#active)
+  - [2026-05-12 — Explore intensity-axis for Button (parallels StateBadge muted/mid/loud)](#2026-05-12--explore-intensity-axis-for-button-parallels-statebadge-mutedmidloud)
+  - [2026-05-12 — Migrate main agents list project headers to ProjectHeader composite](#2026-05-12--migrate-main-agents-list-project-headers-to-projectheader-composite)
   - [2026-05-11 — Crew DS components are partials of Dashboard Screens equivalents](#2026-05-11--crew-ds-components-are-partials-of-dashboard-screens-equivalents)
   - [2026-05-11 — Agent activity timeline + Bash event-tag components missing from Crew DS](#2026-05-11--agent-activity-timeline--bash-event-tag-components-missing-from-crew-ds)
   - [2026-05-11 — `idle` and `waiting` agent states not reachable from daemon fixtures](#2026-05-11--idle-and-waiting-agent-states-not-reachable-from-daemon-fixtures)
-  - [2026-05-10 — Polish CREW-131 Projects view composites (instance swaps + real Button instances)](#2026-05-10--polish-crew-131-projects-view-composites-instance-swaps--real-button-instances)
   - [2026-05-10 — Build a `TimelineTag` component in Crew DS for tool-name pills](#2026-05-10--build-a-timelinetag-component-in-crew-ds-for-tool-name-pills)
   - [2026-05-10 — Wire dashboard QuickAction buttons (Resume / Finish / Inspect / Provide input) to daemon endpoints](#2026-05-10--wire-dashboard-quickaction-buttons-resume--finish--inspect--provide-input-to-daemon-endpoints)
   - [2026-05-10 — Polish the CREW-119/CREW-117 Crew DS composites (skeleton-fidelity → pixel-fidelity)](#2026-05-10--polish-the-crew-119crew-117-crew-ds-composites-skeleton-fidelity--pixel-fidelity)
@@ -57,6 +58,7 @@ Format: see the user-level `~/.claude/CLAUDE.md` "Followup detection" section.
   - [2026-04-27 — Dashboard mobile responsive layout polish](#2026-04-27--dashboard-mobile-responsive-layout-polish)
   - [2026-04-26 — Architecture doc open questions still unresolved](#2026-04-26--architecture-doc-open-questions-still-unresolved)
 - [Resolved](#resolved)
+  - [2026-05-10 — Polish CREW-131 Projects view composites (instance swaps + real Button instances)](#2026-05-10--polish-crew-131-projects-view-composites-instance-swaps--real-button-instances-1)
   - [2026-05-10 — Migrate the agents-related Figma frames (Agents List, Drawer Open, Agent Page full) to Crew DS instances + semantic-token bindings](#2026-05-10--migrate-the-agents-related-figma-frames-agents-list-drawer-open-agent-page-full-to-crew-ds-instances--semantic-token-bindings)
   - [2026-05-07 — `sandbox-network-note.md` recommends `crew restart --hard` for docker recovery, but `--hard` nukes the worktree](#2026-05-07--sandbox-network-notemd-recommends-crew-restart---hard-for-docker-recovery-but---hard-nukes-the-worktree)
   - [2026-05-05 — Dashboard Dockerfile doesn't copy `tsconfig.base.json`, breaks vite at runtime with TSCONFIG_ERROR](#2026-05-05--dashboard-dockerfile-doesnt-copy-tsconfigbasejson-breaks-vite-at-runtime-with-tsconfig_error)
@@ -68,6 +70,56 @@ Format: see the user-level `~/.claude/CLAUDE.md` "Followup detection" section.
 - [Abandoned](#abandoned)
 
 ## Active
+
+### 2026-05-12 — Explore intensity-axis for Button (parallels StateBadge muted/mid/loud)
+
+**What:** Crew DS Button has 8 variants (default, destructive, danger, outline, secondary, ghost, link, warning) but each is a single visual treatment. StateBadge by contrast has an `intensity` VARIANT axis with 3 values (muted/mid/loud). User noticed that `warning` might benefit from an outline-style sibling treatment — same way `destructive` has its loud-solid version and `danger` is its quieter tinted+stroke counterpart. The pattern would extend: every "loud" colored button might want a "tinted" or "outline" sibling, mirroring StateBadge.
+
+**Why noticed:** Mid-session during Phase 1 of the Button rollout Epic on 2026-05-12. After seeing the new `warning` variant rendered (golden yellow solid bg), user said "I wonder if we should have an outline version for that as well like error vs destructive — we might just end up with the same variants as we have for the pills in the end." Discussion explicitly deferred to keep the in-session Epic bounded.
+
+**Anchors:**
+
+- Crew DS Button COMPONENT_SET: `204:50` in file `DsA7QuEa2WthDATkksd1Bq`
+- StateBadge intensity pattern: see [`project_crew_ds_palette_strategy`](https://github.com/Safturento/crew/) memory — muted/mid/loud × 7 states = 21 variants; canonical opacities are bg 10% + border 30% for `mid`
+- The current pair pattern: `destructive` (loud solid red) ↔ `danger` (quiet tinted red with stroke)
+
+**What's been considered:**
+
+- **Per-variant pairs** (existing pattern). Repeat what we did for destructive/danger: add a `warning-quiet` (or similar) for every "loud" variant that needs a tinted sibling. Pro: matches what already exists. Con: variant count balloons (one new variant × 4 sizes per "loud" color).
+- **Explicit `intensity` VARIANT axis** (StateBadge parallel). Single new axis on Button: `intensity = solid / tinted / outline`. Composable — every color gets every intensity. Con: naive expansion = 8 colors × 3 intensities × 4 sizes = 96 components (vs current 32). Better candidate for "only apply intensity to colored variants, not default/outline/ghost/link."
+- **Only certain colors get sibling treatments.** Maybe `warning` is the only one that needs an outline sibling and the answer is just `warning-outline` as a one-off, like we did for destructive/danger.
+
+**Shape of work:** Conversation first — settle which colors need intensity siblings and whether to refactor to a unified `intensity` axis. ~30–60 min spec discussion + 1–2 hours implementation depending on scope. Includes a possible token-naming alignment decision (do we adopt `state/X` semantic tokens to match StateBadge, or keep the `button/X-bg` namespace?).
+
+**Open questions:**
+
+- [ ] Unified `intensity` axis or stay with per-variant pairs?
+- [ ] If pairs: which colors need siblings? (`warning` for sure; `secondary`/`ghost` don't seem to need it; `default` is already neutral.)
+- [ ] Naming convention for siblings if going pairs-based.
+- [ ] Whether to backport to the existing `destructive` ↔ `danger` (e.g., would they become `error-solid` / `error-outline` under a unified naming scheme?). Probably not worth the rename churn but worth flagging.
+
+### 2026-05-12 — Migrate main agents list project headers to ProjectHeader composite
+
+**What:** The Crew Dashboard Screens file's main agents-list frames have per-project section headers (e.g. "kanban-api · 3 active · 4 total" headers above each project's agent group). These are currently hand-built compositions, not `ProjectHeader` composite instances. Should swap them to instances so future ProjectHeader updates flow through.
+
+**Why noticed:** During the 2026-05-12 in-session Button rollout Epic, while finishing Phase 3 (frame `1:2443` swap to ProjectHeader instance). User noted: "we'll want to update the project headers for each project on the main agents list to use the composite after this as well, though we need to update the composite to match first." Deferred so the Epic stayed bounded.
+
+**Anchors:**
+
+- Screens file: `9FeJPriqdsdA4n9R5Xsrr8` — Agents List frames (likely `1:2` and `1:378`, verify); search for "kanban-api" / "lighthouse" section headers
+- ProjectHeader composite: `82:15` in Crew DS file `DsA7QuEa2WthDATkksd1Bq`
+
+**What's been considered:**
+
+- **Composite needs design changes first.** Current `ProjectHeader` shows: back-link + title (h1) + config-path + Edit/Remove buttons. The agents-list section headers show: project name + active/total counts + repo path (right-aligned), plus a collapse chevron. Different content. Either ProjectHeader gets a `variant` axis (page-header vs section-header) OR a new `ProjectSectionHeader` composite gets built.
+- **Swap without composite change.** Would require detaching most of ProjectHeader's content per instance, defeating the linkage purpose.
+
+**Shape of work:** Composite design conversation first (variant axis on existing ProjectHeader vs new ProjectSectionHeader), then swap. Roughly 30 min design + 30 min implementation. Gated on the composite change.
+
+**Open questions:**
+
+- [ ] Extend `ProjectHeader` with a variant axis or build a new `ProjectSectionHeader` composite?
+- [ ] The section headers are collapsible (chevron toggle) — represent this in the DS composite (BOOLEAN + interactive variant prototyping?) or leave that to the screen?
 
 ### 2026-05-11 — Crew DS components are partials of Dashboard Screens equivalents
 
@@ -130,28 +182,6 @@ Showcase route is the smaller, more honest scope; the seed path requires daemon-
 
 **Open questions:**
 - Are `idle` and `waiting` ever expected to be the *current* state of an agent (visible in the agents list) or only intermediate transitions visible in `StateHistoryBar`? If only transitions, the showcase route is sufficient.
-
-### 2026-05-10 — Polish CREW-131 Projects view composites (instance swaps + real Button instances)
-
-**What:** The CREW-131 closeout interactive session built all 4 Projects-view composites (`CountBadge`, `ProjectRow`, `ProjectHeader`, `ProjectConfigBlock`) and migrated frames `1:2334` + `1:2443` to bound colors + StateBadge instances. Three structural-swap items were intentionally skipped to keep the session bounded:
-
-1. **Frame `1:2334` count badges + project rows are still detached.** The 3 visible count badges had their bg fills color-fixed (forced opacity 0.18 per Trap 1) but were not swapped to `CountBadge` instances. The 4 project rows are still hand-built layouts, not `ProjectRow` instances. Visual is correct; semantic linkage to the composites isn't there yet.
-2. **Frame `1:2443` project header is still detached.** The header section (back link + name + config path + Edit/Remove buttons) is hand-built, not a `ProjectHeader` instance. Same for the config block — not a `ProjectConfigBlock` instance.
-3. **`ProjectHeader` composite uses inline-styled action buttons.** The Edit (outline) and Remove (destructive-mid) buttons inside the composite are hand-built frames matching the canonical mid intensity, not real shadcn `Button` instances from the Core library. Future updates to the Core Button (e.g. focus ring tweaks) won't flow through.
-
-**Why noticed:** During the 2026-05-10 CREW-131 closeout. The composites + bindings + state-pill swaps got us to 99% bound + correctly-rendered frames; the structural swaps + Button inlining are polish that doesn't change visual fidelity but does affect design-system semantic linkage and future-update propagation.
-
-**Anchors:**
-- Crew DS: `DsA7QuEa2WthDATkksd1Bq` Composites page — composites at nodes `77:28` (CountBadge), `79:14` (ProjectRow), `82:15` (ProjectHeader), `83:15` (ProjectConfigBlock)
-- Screens file: `9FeJPriqdsdA4n9R5Xsrr8`, frames `1:2334` + `1:2443`
-- Core Button component set: search via `mcp__plugin_figma_figma__search_design_system` query "Button" — multiple Button sets exist; `Buttons` (key `b76a29cc05b855114d7882ed2c165926a52c5df5`) per CREW-125's mapping
-- Precedent: similar pattern as `AgentBody` rebuild during CREW-130 (replace hand-built pill with real StateBadge instance)
-
-**What's been considered:**
-- **Defer to per-frame polish tickets** — fold into the broader "polish CREW-119/CREW-117 composites" sweep that's already tracked
-- **Do inline during next vertical-slice (Epic 3)** — the New Run modal flow will likely surface similar structural-swap needs; batch the polish across all Phase 4 frames at once
-
-**Shape of work:** ~45–60 min. Three sub-tasks: (a) swap row + badge structures in 1:2334 to instances with text overrides per row data; (b) swap header + config block in 1:2443 to instances with text overrides; (c) update `ProjectHeader` composite to use Core Button instances with `Type=outline` + `Type=destructive` variants.
 
 ### 2026-05-10 — Build a `TimelineTag` component in Crew DS for tool-name pills
 
@@ -259,6 +289,8 @@ Showcase route is the smaller, more honest scope; the seed path requires daemon-
 - [ ] Decide whether to also bind padding/gap/radius FLOAT variables in the same pass, or defer those to a separate ticket. The Crew DS only exposes `radius-*`, `stroke-width`, and `border-width` from the Core `mode` collection — most spacing values stay hardcoded for now.
 
 ### 2026-05-09 — Crew Dashboard Screens — rebuild ad-hoc modals + detached primitives as Crew DS instances
+
+**Partially resolved 2026-05-12:** The detached-primitive portion in the Projects view (`1:2334`) and Project detail (`1:2443`) frames was completed during the in-session Button rollout Epic. Specifically: project rows → `ProjectRow` instances; count badges → `CountBadge` instances; project header + config block → `ProjectHeader` + `ProjectConfigBlock` instances; the 4 detached agent rows in `1:2443` → `AgentRow` instances with state + text overrides; redundant agents-section header removed. **What remains:** the 3 ad-hoc modals (`9:2`, `18:2`, `23:2`) still need to be rebuilt, and that work is blocked on a Crew DS `Modal`/`Dialog` composite which doesn't exist yet (the Modal composite is a separate forward-path Epic per `docs/superpowers/specs/2026-05-11-button-system-rollout-design.md`).
 
 **What:** The 3 ad-hoc modals (`New Run modal - 3. Confirm`, `Project Page - Edit project modal`, `Project Page - Delete confirmation modal`) plus all detached primitive structures across the other 8 imported frames (e.g. `Background+Border+Shadow` frames acting as buttons, `Container+Border` frames acting as cards) need to be replaced with real component instances. The CREW-126 plan called for "Crew DS Modal/Dialog/Form" instances, but Crew DS currently has zero composite components — Phase 4 of the design system epic adds those incrementally.
 
@@ -1207,6 +1239,24 @@ The other two open questions (sandbox config drift, Phase 2 + Phase 3 separation
 ## Resolved
 
 (items move here when ticketed and shipped, or fixed inline — keep for historical context, prune when the file gets long)
+
+### 2026-05-10 — Polish CREW-131 Projects view composites (instance swaps + real Button instances)
+
+**Resolved 2026-05-12:** Done as part of the in-session Button rollout Epic (spec: `docs/superpowers/specs/2026-05-11-button-system-rollout-design.md`). All three sub-items addressed:
+
+1. **Frame `1:2334` count badges + project rows** → 4 `ProjectRow` instances with per-row text overrides (kanban-api / crew / lighthouse / mailer-svc) + 3 `CountBadge` instances (`state=running` with count text overrides; mailer-svc's count slot hidden via `visible=false`).
+2. **Frame `1:2443` project header + config block** → `ProjectHeader` instance (with title + config-path text overrides) and `ProjectConfigBlock` instance (with TOML content override). Plus a bonus: the 4 detached AgentRow frames in `1:2443` were also swapped to `AgentRow` instances per state (waiting / pr-open / running / finished) with title/ticket/runtime/tokens overrides, and the redundant agents-section header was removed.
+3. **`ProjectHeader` composite Edit/Remove buttons** → real `Button` instances (`variant=outline, size=sm, Label="Edit"` + `variant=danger, size=sm, Label="Remove"`). Per a naming decision made in the rollout, `destructive` now means "loud solid red" (used for terminal/irreversible CTAs like the modal Delete) and `danger` means "quieter tinted red with stroke" (used for non-terminal red CTAs like Remove-that-opens-a-confirmation).
+
+The Crew DS composites were resized from 800w → 1052w in the same session to match the Screens content area, removing the original mismatch that would have made naive swaps look wrong.
+
+**What:** The CREW-131 closeout interactive session built all 4 Projects-view composites (`CountBadge`, `ProjectRow`, `ProjectHeader`, `ProjectConfigBlock`) and migrated frames `1:2334` + `1:2443` to bound colors + StateBadge instances. Three structural-swap items were intentionally skipped to keep the session bounded:
+
+1. **Frame `1:2334` count badges + project rows are still detached.** The 3 visible count badges had their bg fills color-fixed (forced opacity 0.18 per Trap 1) but were not swapped to `CountBadge` instances. The 4 project rows are still hand-built layouts, not `ProjectRow` instances. Visual is correct; semantic linkage to the composites isn't there yet.
+2. **Frame `1:2443` project header is still detached.** The header section (back link + name + config path + Edit/Remove buttons) is hand-built, not a `ProjectHeader` instance. Same for the config block — not a `ProjectConfigBlock` instance.
+3. **`ProjectHeader` composite uses inline-styled action buttons.** The Edit (outline) and Remove (destructive-mid) buttons inside the composite are hand-built frames matching the canonical mid intensity, not real shadcn `Button` instances from the Core library. Future updates to the Core Button (e.g. focus ring tweaks) won't flow through.
+
+**Why noticed:** During the 2026-05-10 CREW-131 closeout. The composites + bindings + state-pill swaps got us to 99% bound + correctly-rendered frames; the structural swaps + Button inlining are polish that doesn't change visual fidelity but does affect design-system semantic linkage and future-update propagation.
 
 ### 2026-05-10 — Migrate the agents-related Figma frames (Agents List, Drawer Open, Agent Page full) to Crew DS instances + semantic-token bindings
 
