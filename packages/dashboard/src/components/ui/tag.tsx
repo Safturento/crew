@@ -1,24 +1,14 @@
 import * as React from 'react';
 
 import { cn } from '@/lib/utils';
-import {
-  pillSurfaceClasses,
-  type PillColor,
-  type PillIntensity,
-} from '@/lib/pill-variants';
+import { pillSurfaceClasses, type PillColor, type PillIntensity } from '@/lib/pill-variants';
 
 type TagProps = React.ComponentProps<'span'> & {
   color?: PillColor;
   intensity?: PillIntensity;
 };
 
-function Tag({
-  className,
-  color = 'running',
-  intensity = 'mid',
-  children,
-  ...props
-}: TagProps) {
+function Tag({ className, color = 'running', intensity = 'mid', children, ...props }: TagProps) {
   return (
     <span
       data-slot="tag"

@@ -64,13 +64,7 @@ export function AgentRow({ agent, onSelect, onAction }: AgentRowProps) {
           className={`absolute inset-y-1.5 left-0 w-1 rounded-full ${stateClasses.solidBg} animate-att-pulse`}
         />
       )}
-      <Badge
-        role="status"
-        aria-label={meta.label}
-        color={agent.state}
-        intensity="muted"
-        hasIcon
-      >
+      <Badge role="status" aria-label={meta.label} color={agent.state} intensity="muted" hasIcon>
         {meta.label}
       </Badge>
       <span className="font-mono text-xs text-muted-foreground">{agent.key}</span>

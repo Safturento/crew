@@ -2,11 +2,7 @@ import * as React from 'react';
 import { Slot } from 'radix-ui';
 
 import { cn } from '@/lib/utils';
-import {
-  pillSurfaceClasses,
-  type PillColor,
-  type PillIntensity,
-} from '@/lib/pill-variants';
+import { pillSurfaceClasses, type PillColor, type PillIntensity } from '@/lib/pill-variants';
 import { STATE_CLASSES } from '@/data/state-meta';
 import type { AgentState } from '@/data/types';
 
