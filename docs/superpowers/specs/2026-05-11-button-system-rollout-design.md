@@ -38,6 +38,21 @@ The dashboard's `AgentRow.tsx` renders two buttons with inline `bg-state-waiting
 
 **Chosen: option 1.** First-class variants make the state-colored buttons reusable, surface them in the variant picker, and let the canvas documentation enumerate the full button surface. The expansion cost (8 components) is modest given the existing 24.
 
+### Naming the two red variants (`destructive` vs `danger`)
+
+The original Button set's `destructive` variant rendered as a tinted-dark-red surface with a bright red stroke and light coral text — a subdued treatment. Adding the new state-colored Inspect button raised the question of how the two reds relate. After comparing hex values it became clear that the dashboard's `--color-state-error` is `tw/colors/red/400` — the same primitive the existing `destructive` semantic resolves to. Both variants therefore live in the same red family but at opposite visual volumes.
+
+The naming swap chosen here: **`destructive` is the louder, solid red** (because the word implies an irreversible action that the user should be deliberate about — the button should be unmistakable), and **`danger` is the quieter, tinted-with-stroke red** (used as a "this needs attention but isn't a destruction" signal, e.g., the Inspect button on an errored agent or a Remove button that opens a confirmation flow before anything actually deletes).
+
+| | `destructive` (loud solid) | `danger` (quiet tinted) |
+|---|---|---|
+| **Fill** | `button/destructive-bg` → `tw/colors/red/400` (#F87171 bright coral) | `button/danger-bg` → `Crew/Tailwind Extensions/red-1050` (#261F31 burgundy tint) |
+| **Text** | `state/foreground` (#020617 dark slate) | `destructive` semantic → `tw/colors/red/400` (#F87171 bright coral) |
+| **Stroke** | none | `button/danger-border` → `tw/colors/red/500` (#EF4444), 1px INSIDE |
+| **Visual weight** | LOUD — high-contrast bright-on-dark | Subdued — tinted-on-dark with red outline |
+| **Semantic intent** | Irreversible destructive action — terminal commit | "Needs attention" or destructive-flow trigger that opens a confirmation |
+| **Where it appears** | Modal confirmation buttons (Delete, Confirm delete), final-step destructive CTAs | Inspect on errored agents; Remove on Project page (opens a delete-confirm modal); future "Resolve incident"-type CTAs |
+
 ### Ticket-slicing for the rollout
 
 Three approaches were considered:
@@ -64,23 +79,35 @@ A four-phase in-session execution, each phase a verification checkpoint before m
 
 ### Phase 1 — Extend the Button set
 
-Goal: Button COMPONENT_SET supports the two state-colored action-button styles needed by `AgentRow.tsx`, plus a `Label` text property for ergonomic content swapping.
+Goal: Button COMPONENT_SET supports the two state-colored action-button styles needed by `AgentRow.tsx`; the existing tinted-red treatment moves to a new `danger` variant; the `destructive` slot is repurposed for a loud solid-red treatment; a `Label` TEXT property is added for ergonomic content swapping.
 
-1. Add two new Crew Semantic Color variables in the `button/` namespace, both aliased to existing `state/` primitives:
-   - `button/warning-bg` → `state/waiting`
-   - `button/danger-bg` → `state/error`
-2. Build 8 new component variants (2 styles × 4 sizes), inserted into the existing variant set. Token bindings:
+This phase is the most involved because it includes a **token + variant rename** alongside adding new components — see the steps in order.
 
-   | Variant | Fill | Text |
-   |---------|------|------|
-   | `warning` | `button/warning-bg` | `state/foreground` |
-   | `danger` | `button/danger-bg` | `state/foreground` |
+1. **Token reorganization.** The existing tinted-red token bindings live in `button/destructive-bg` and `button/destructive-border`. After the rename, those names belong to the LOUD treatment, so the existing tinted tokens get renamed to the `danger/*` namespace first, and new `destructive/*` tokens are created afterward pointing at the loud values:
 
-   `state/foreground` is the dark-on-bright text color the StateBadge "loud" intensity already uses for the same reason — both new variants are bright-bg-light-fg patterns.
-3. Each new variant follows the existing Button anatomy: HORIZONTAL auto-layout, size-appropriate padding/itemSpacing/fontSize, fixed height, hidden `Leading Icon` instance as first child wired to the existing `Show Leading Icon` BOOLEAN + `Leading Icon` INSTANCE_SWAP properties.
-4. Add a `Label` TEXT property to the set, default `"Button"`. Bind each of the 32 variants' text node's `characters` to the new property via `componentPropertyReferences`.
+   | Step | Action |
+   |------|--------|
+   | 1.1 | Rename existing `button/destructive-bg` (aliased to `Crew/Tailwind Extensions/red-1050`) → `button/danger-bg`. Existing destructive component variants stay bound to the renamed token, so their visuals don't change until the variant rename in step 3. |
+   | 1.2 | Rename existing `button/destructive-border` (aliased to `tw/colors/red/500`) → `button/danger-border`. |
+   | 1.3 | Create new `button/destructive-bg` aliased to `tw/colors/red/400`. (The loud bright bg.) No corresponding `button/destructive-border` is needed — the loud destructive has no stroke. |
+   | 1.4 | Create new `button/warning-bg` aliased to `tw/colors/amber/400`. (Matches the dashboard's `--color-state-waiting` mapping.) |
 
-Result: 32-variant Button set with **five component properties** in total — two VARIANT axes (`variant`, `size`), one TEXT (`Label`), one BOOLEAN (`Show Leading Icon`), and one INSTANCE_SWAP (`Leading Icon`).
+2. **Rename existing destructive variants → danger.** The 4 existing destructive component variants (in xs/sm/default/lg) become `variant=danger, size=...`. Their fill / stroke / text bindings are already correct after step 1's token rename — no rebinding needed. The `variant` VARIANT property's option list updates from `[default, destructive, outline, secondary, ghost, link]` to include both `destructive` (now meaning "loud") and `danger`.
+
+3. **Build 8 new component variants.** Insert into the existing variant set:
+
+   | Variant | Fill | Text | Stroke |
+   |---------|------|------|--------|
+   | `destructive` (×4 sizes) | `button/destructive-bg` (red/400) | `state/foreground` (slate-950 dark) | none |
+   | `warning` (×4 sizes) | `button/warning-bg` (amber/400) | `state/foreground` | none |
+
+   Both new variant styles are "bright-bg + dark-text" — `state/foreground` is the dark-on-bright text color the StateBadge "loud" intensity already uses for the same reason.
+
+4. **Anatomy per new variant.** HORIZONTAL auto-layout, size-appropriate padding/itemSpacing/fontSize, fixed height, hidden `Leading Icon` instance as first child wired to the existing `Show Leading Icon` BOOLEAN + `Leading Icon` INSTANCE_SWAP properties. (Same anatomy as the existing 24 variants.)
+
+5. **Add a `Label` TEXT property to the set, default `"Button"`.** Bind each of the 32 variants' text node's `characters` to the new property via `componentPropertyReferences`.
+
+Result: 32-variant Button set with **five component properties** in total — two VARIANT axes (`variant` with 8 options, `size` with 4), one TEXT (`Label`), one BOOLEAN (`Show Leading Icon`), and one INSTANCE_SWAP (`Leading Icon`). New variant order in the picker (suggested): `default, destructive, danger, outline, secondary, ghost, link, warning` — groups the red family together.
 
 ### Phase 2 — Crew DS Composites
 
@@ -89,7 +116,7 @@ Goal: ProjectHeader and AgentRow stop using inline button-shaped frames and inst
 **ProjectHeader (`82:15`):**
 
 - Delete inline `Button.outline` (id `82:21`); replace with a Button instance: `variant=outline, size=sm, Label="Edit"`.
-- Delete inline `Button.destructive` (id `82:23`); replace with a Button instance: `variant=destructive, size=sm, Label="Remove"`.
+- Delete inline `Button.destructive` (id `82:23`); replace with a Button instance: `variant=danger, size=sm, Label="Remove"`. The Remove button opens a confirmation modal rather than committing the deletion directly, so it uses the quieter `danger` treatment — the loud `destructive` is reserved for the modal's terminal Delete CTA.
 - The existing `actions-block` auto-layout (id `82:20`) remains; only its children change.
 
 **AgentRow (`169:62`) — fill 7 state variants' `action` slots per `AgentRow.tsx`:**
@@ -124,7 +151,11 @@ Goal: three ad-hoc modals (`9:2`, `18:2`, `23:2`) use Button instances for their
 For each of the 3 modals:
 
 1. Identify the detached button-shaped frames inside (typically Cancel + Confirm/Delete).
-2. Replace each with a Button instance, variant + Label chosen to match the modal's intent (Delete confirmation → `variant=destructive` for the destructive action; New Run confirm → `variant=default`; etc.).
+2. Replace each with a Button instance, variant + Label chosen to match the modal's intent:
+   - Delete confirmation modal's terminal Delete CTA → `variant=destructive` (loud — the deletion is irreversible at this point)
+   - Cancel buttons → `variant=ghost` or `variant=outline`
+   - New Run confirm modal's primary CTA → `variant=default`
+   - Edit project modal's Save → `variant=default`
 3. Leave the modal's other detached structure (overlay, container, header text, etc.) for the future Modal-composite Epic.
 
 ## Verification
@@ -133,7 +164,7 @@ Each phase has a visual checkpoint before moving to the next:
 
 | Phase | Verification |
 |-------|--------------|
-| 1 | Screenshot of the extended 32-variant Button set. Test instance row at `size=default` with one of each new variant (`warning`, `danger`) with `Show Leading Icon=true` to confirm icon color inheritance via text-fill binding. Verify the new `Label` property is editable from the instance properties panel. |
+| 1 | Screenshot of the extended 32-variant Button set. Test instance row at `size=default` with the three new/changed variants (`destructive` loud-solid, `danger` quiet-tinted, `warning`), each with `Show Leading Icon=true` to confirm icon color inheritance via text-fill binding. Verify the previously-named "destructive" variant now appears under `variant=danger` (rename succeeded) and the new `variant=destructive` is the loud solid treatment. Verify the new `Label` property is editable from the instance properties panel. |
 | 2 | Side-by-side: ProjectHeader before/after. AgentRow: all 7 state variants rendered with action slots populated per the table. Spot-check that the `View PR` button's icon is `lucide/git-pull-request` and that the icon color matches the outline text color. |
 | 3 | Frame `1:2334` before/after, frame `1:2443` before/after. Confirm composite instances are properly placed and the cascading Button instances render. |
 | 4 | Each of the 3 modals rendered, button instances correctly resolve to the chosen variant and Label. Modal chrome (overlay, header) intentionally unchanged. |
@@ -142,7 +173,7 @@ Empirical comparison against the running dashboard is **deferred** — see Non-g
 
 ## Non-goals
 
-- **Updating `button.tsx`** (axis C). The dashboard's runtime appearance will visibly diverge from the new Figma design until a separate Epic addresses it. Specifically: `bg-state-waiting` / `bg-state-error` inline classNames remain in `AgentRow.tsx`; the `button/*` semantic tokens from Phases 1 and prior don't exist in `packages/dashboard/src/index.css` yet; the destructive variant's new tinted-bg-with-stroke styling is Figma-only.
+- **Updating `button.tsx`** (axis C). The dashboard's runtime appearance will visibly diverge from the new Figma design until a separate Epic addresses it. Specifically: `bg-state-waiting` / `bg-state-error` inline classNames remain in `AgentRow.tsx`; the `button/*` semantic tokens from Phases 1 and prior don't exist in `packages/dashboard/src/index.css` yet; the code's `destructive` variant is still the original solid red `bg-destructive text-white` (which happens to match the NEW Figma `destructive` loud treatment fairly closely), but there's no code-side `danger` or `warning` variant to back the Figma additions.
 - **Daemon QuickAction endpoint wiring.** The existing followup `2026-05-10 — Wire dashboard QuickAction buttons (Resume / Finish / Inspect / Provide input) to daemon endpoints` is unaffected by this Epic.
 - **Creating a Crew DS Modal/Dialog composite.** Phase 4 swaps Button instances inside modals but does not introduce a Modal primitive.
 - **Full Screens-file audit.** Frames beyond the four named (`1:2334`, `1:2443`, `9:2`, `18:2`, `23:2`) are out of scope. Anything noticed during execution becomes a fresh `docs/followups.md` entry.
