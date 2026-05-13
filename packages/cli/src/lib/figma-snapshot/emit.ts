@@ -31,7 +31,13 @@ const PAGE_DIR_MAP: Record<string, string> = {
 const EXPORTABLE_TYPES = new Set(['COMPONENT', 'COMPONENT_SET', 'FRAME']);
 
 function pageDir(name: string): string {
-  return PAGE_DIR_MAP[name] ?? name.toLowerCase().replace(/\s+/g, '-');
+  if (PAGE_DIR_MAP[name]) return PAGE_DIR_MAP[name];
+  const slug = name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+  if (!slug) throw new Error(`figma page name '${name}' is not safe to use as a directory`);
+  return slug;
 }
 
 function safeId(nodeId: string): string {

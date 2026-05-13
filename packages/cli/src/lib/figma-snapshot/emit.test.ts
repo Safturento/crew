@@ -24,17 +24,13 @@ const fileResponse: FigmaFileResponse = {
         id: '500:0',
         name: 'Dashboard Screens',
         type: 'CANVAS',
-        children: [
-          { id: '1:756', name: 'Agent drawer', type: 'FRAME', children: [] },
-        ],
+        children: [{ id: '1:756', name: 'Agent drawer', type: 'FRAME', children: [] }],
       },
       {
         id: '999:0',
         name: 'Sketches',
         type: 'CANVAS',
-        children: [
-          { id: '999:1', name: 'Junk', type: 'COMPONENT', children: [] },
-        ],
+        children: [{ id: '999:1', name: 'Junk', type: 'COMPONENT', children: [] }],
       },
     ],
   },
@@ -64,9 +60,9 @@ describe('emitSnapshot', () => {
       getFile: vi.fn().mockResolvedValue(fileResponse),
       getImages: vi.fn().mockResolvedValue(imagesResponse),
     };
-    const fetchImage = vi.fn().mockImplementation(async (url: string) =>
-      Buffer.from(`fake-bytes-for:${url}`),
-    );
+    const fetchImage = vi
+      .fn()
+      .mockImplementation(async (url: string) => Buffer.from(`fake-bytes-for:${url}`));
 
     const result = await emitSnapshot({
       fileKey: 'FILEKEY',
@@ -111,9 +107,7 @@ describe('emitSnapshot', () => {
     );
 
     // Per-component JSON includes id/name/type/page + raw node.
-    const componentJson = JSON.parse(
-      readFileSync(join(outDir, 'composites/272-120.json'), 'utf8'),
-    );
+    const componentJson = JSON.parse(readFileSync(join(outDir, 'composites/272-120.json'), 'utf8'));
     expect(componentJson).toMatchObject({
       id: '272:120',
       name: 'Pill',
@@ -139,6 +133,39 @@ describe('emitSnapshot', () => {
     expect(client.getImages).not.toHaveBeenCalled();
     expect(existsSync(join(outDir, 'index.json'))).toBe(true);
     expect(JSON.parse(readFileSync(join(outDir, 'index.json'), 'utf8'))).toEqual({});
+  });
+
+  it('sanitizes non-whitelisted page names into safe slugs (no path separators or traversal)', async () => {
+    const client = {
+      getFile: vi.fn().mockResolvedValue({
+        document: {
+          id: '0:0',
+          name: 'Document',
+          type: 'DOCUMENT',
+          children: [
+            {
+              id: '1:0',
+              name: '../Escape Hatch',
+              type: 'CANVAS',
+              children: [{ id: '2:0', name: 'X', type: 'COMPONENT', children: [] }],
+            },
+          ],
+        },
+      } as FigmaFileResponse),
+      getImages: vi.fn().mockResolvedValue({ images: { '2:0': null } } as FigmaImagesResponse),
+    };
+
+    const result = await emitSnapshot({
+      fileKey: 'FILEKEY',
+      pages: ['../Escape Hatch'],
+      outDir,
+      client: client as never,
+      fetchImage: async () => Buffer.from('x'),
+    });
+    expect(result.nodesExported).toBe(1);
+    expect(existsSync(join(outDir, '..'))).toBe(true); // tmp parent always exists
+    // No leakage into outDir's parent: the sanitized slug stays inside outDir.
+    expect(existsSync(join(outDir, 'escape-hatch/2-0.json'))).toBe(true);
   });
 
   it('still writes metadata when a node has no image URL (null in images response)', async () => {

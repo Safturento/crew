@@ -64,11 +64,7 @@ export class FigmaRestClient {
     return this.req<FigmaFileResponse>(`/files/${encodeURIComponent(fileKey)}`);
   }
 
-  async getImages(
-    fileKey: string,
-    nodeIds: string[],
-    scale = 2,
-  ): Promise<FigmaImagesResponse> {
+  async getImages(fileKey: string, nodeIds: string[], scale = 2): Promise<FigmaImagesResponse> {
     const params = new URLSearchParams({
       ids: nodeIds.join(','),
       scale: String(scale),

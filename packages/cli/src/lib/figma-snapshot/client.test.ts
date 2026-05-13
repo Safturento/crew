@@ -21,7 +21,9 @@ describe('FigmaRestClient', () => {
     process.env.FIGMA_API_TOKEN = 'tok-env';
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
-      json: async () => ({ document: { id: '0:0', name: 'Document', type: 'DOCUMENT', children: [] } }),
+      json: async () => ({
+        document: { id: '0:0', name: 'Document', type: 'DOCUMENT', children: [] },
+      }),
     });
     const client = new FigmaRestClient({ fetch: fetchMock });
     await client.getFile('FILEKEY');
@@ -35,7 +37,9 @@ describe('FigmaRestClient', () => {
     process.env.FIGMA_API_TOKEN = 'tok-env';
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
-      json: async () => ({ document: { id: '0:0', name: 'Document', type: 'DOCUMENT', children: [] } }),
+      json: async () => ({
+        document: { id: '0:0', name: 'Document', type: 'DOCUMENT', children: [] },
+      }),
     });
     const client = new FigmaRestClient({ token: 'tok-explicit', fetch: fetchMock });
     await client.getFile('FILEKEY');

@@ -36,10 +36,10 @@ export async function runFigmaSnapshot(deps: FigmaSnapshotDeps): Promise<FigmaSn
   }
 
   const outDir = join(deps.worktree, vf.snapshot_path);
-  deps.log(`exporting pages ${vf.figma_pages.join(', ')} → ${outDir}`);
 
   try {
     const client = deps.clientFactory ? deps.clientFactory() : new FigmaRestClient();
+    deps.log(`exporting pages ${vf.figma_pages.join(', ')} → ${outDir}`);
     const { nodesExported } = await emitSnapshot({
       fileKey: vf.figma_file_key,
       pages: vf.figma_pages,
@@ -77,8 +77,5 @@ export const figmaSnapshotCommand = new Command('figma-snapshot')
     if (result.reason) {
       console.log(pc.dim('→'), result.reason);
     }
-    console.log(
-      pc.green('✓'),
-      `figma-snapshot complete (${result.nodesExported ?? 0} nodes)`,
-    );
+    console.log(pc.green('✓'), `figma-snapshot complete (${result.nodesExported ?? 0} nodes)`);
   });

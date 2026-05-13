@@ -7,6 +7,8 @@ Format: see the user-level `~/.claude/CLAUDE.md` "Followup detection" section.
 ## Contents
 
 - [Active](#active)
+  - [2026-05-12 — Cap or filter `raw` subtree size in figma-snapshot per-component JSON](#2026-05-12--cap-or-filter-raw-subtree-size-in-figma-snapshot-per-component-json)
+  - [2026-05-12 — Move figma-snapshot `PAGE_DIR_MAP` into project config](#2026-05-12--move-figma-snapshot-page_dir_map-into-project-config)
   - [2026-05-12 — Rethink followup-tracking system (priority tier + Jira backlog sync)](#2026-05-12--rethink-followup-tracking-system-priority-tier--jira-backlog-sync)
   - [2026-05-12 — Pill needs trailing-icon support (Filters chevron-down)](#2026-05-12--pill-needs-trailing-icon-support-filters-chevron-down)
   - [2026-05-12 — CodeChip composite for mono-font URL/path display (docker URL, worktree path)](#2026-05-12--codechip-composite-for-mono-font-urlpath-display-docker-url-worktree-path)
@@ -76,6 +78,45 @@ Format: see the user-level `~/.claude/CLAUDE.md` "Followup detection" section.
 - [Abandoned](#abandoned)
 
 ## Active
+
+### 2026-05-12 — Cap or filter `raw` subtree size in figma-snapshot per-component JSON
+
+**What:** `emitSnapshot` writes `{ id, name, type, page, raw: t.node }` for every exported node — and `raw: t.node` is the entire Figma subtree, recursively. For a large component set like Pill (~192 variants) this could be megabytes per file. The agent's visual-fidelity-check skill probably only needs paint/text bindings + a shallow geometry summary; the deep subtree is dead weight.
+
+**Why noticed:** Self-review of CREW-139 flagged it as an Important issue. The plan literally specifies emitting `raw: t.node` and the consuming skill doesn't exist yet (Phase A), so the right shape isn't knowable today — but the cost is real once Pill-sized component sets land in `.crew/figma-snapshot/`.
+
+**Anchors:**
+
+- `packages/cli/src/lib/figma-snapshot/emit.ts` (the `raw` field)
+- `docs/superpowers/plans/2026-05-12-agent-visual-verification.md` (the "per-component JSON shape" example that hardcoded `raw`)
+- `docs/superpowers/specs/2026-05-12-agent-visual-verification-design.md` (the original spec)
+- Epic: [CREW-138](https://safturento.atlassian.net/browse/CREW-138) — gating Epic for visual-fidelity work
+- PR for the snapshot generator: CREW-139
+
+**Shape of work:** Small refactor in `emit.ts` once Phase A reveals what the skill actually consumes. Either depth-cap the `raw` tree, project a flat resolvedStyles + geometry summary, or move the heavy data behind an opt-in flag. Likely folds into the Plugin-API snapshot migration if that lands first (the Plugin API gives variable bindings, which makes most of `raw` redundant anyway).
+
+**Open questions:**
+
+- What does the skill actually need? Settle in Phase A.
+- Do we want a per-file size budget for `.crew/figma-snapshot/`? Currently unbounded.
+
+### 2026-05-12 — Move figma-snapshot `PAGE_DIR_MAP` into project config
+
+**What:** `emit.ts` hardcodes `Composites → composites/` and `Dashboard Screens → screens/` in a module-level map. Any other page name falls through to a sanitized slug. This is crew-dashboard-specific knowledge living in a generic CLI helper — violates CLAUDE.md's "Don't hardcode project-specific knowledge" rule (originally written for `Recipes-App`, same principle applies here).
+
+**Why noticed:** Self-review of CREW-139. The map matches the spec's example output structure exactly, but only because the spec was written for crew. A second project adopting the snapshot would either need to use one of these names or accept the kebab-cased fallback (e.g. "Components" → `components/`, fine; "Foundations" → `foundations/`, fine; but losing the hand-tuned mapping for nuanced layouts).
+
+**Anchors:**
+
+- `packages/cli/src/lib/figma-snapshot/emit.ts` (the `PAGE_DIR_MAP` const)
+- `packages/shared/src/config/schema.ts` (`visualFidelitySchema` — where the map could live)
+- CREW-139 PR / self-review notes
+
+**Shape of work:** Add an optional `page_dir_map = { "Composites" = "composites", … }` field to `visualFidelitySchema`; in `emit.ts`, look up `opts.pageDirMap?.[name]` first, fall back to slug. Either drop the in-code default (force projects to opt-in to non-slug naming) or leave the current map as a documented default for backwards compat. ~30 line change + tests.
+
+**Open questions:**
+
+- Worth doing before a second project adopts the snapshot, or is YAGNI?
 
 ### 2026-05-12 — Rethink followup-tracking system (priority tier + Jira backlog sync)
 
