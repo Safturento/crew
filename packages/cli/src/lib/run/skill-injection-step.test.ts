@@ -3,6 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
 import type { ProjectConfig } from 'crew-shared';
+import { discoverSkills } from '../prompts/skills.js';
 import { runSkillInjection } from './skill-injection-step.js';
 
 function makeSourceRoot(skillNames: string[]): string {
@@ -83,5 +84,38 @@ describe('runSkillInjection', () => {
     const result = await runSkillInjection({ worktree, config, sourceRoot, log, warn });
     expect(result.kind).toBe('warning');
     expect(warn).toHaveBeenCalledWith(expect.stringContaining('visual-fidelity-check'));
+  });
+});
+
+describe('runSkillInjection — end-to-end discovery', () => {
+  it('produces a worktree whose project-level skill discovery finds the injected skill', async () => {
+    const sourceRoot = makeSourceRoot([]);
+    mkdirSync(join(sourceRoot, 'visual-fidelity-check'), { recursive: true });
+    writeFileSync(
+      join(sourceRoot, 'visual-fidelity-check', 'SKILL.md'),
+      '---\nname: visual-fidelity-check\ndescription: real-looking description\n---\n# body\n',
+    );
+
+    const worktree = makeWorktree();
+    const config = {
+      ...baseConfig,
+      visual_fidelity: {
+        snapshot_path: '.crew/snap',
+        component_dir: 'packages/dashboard/src/components',
+      },
+    } as ProjectConfig;
+
+    await runSkillInjection({
+      worktree,
+      config,
+      sourceRoot,
+      log: () => {},
+      warn: () => {},
+    });
+
+    const skills = discoverSkills({ repoPath: worktree, home: '/nonexistent' });
+    expect(skills).toContainEqual(
+      expect.objectContaining({ name: 'visual-fidelity-check', source: 'project' }),
+    );
   });
 });
