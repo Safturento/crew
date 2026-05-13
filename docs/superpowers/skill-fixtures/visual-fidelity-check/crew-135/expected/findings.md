@@ -48,15 +48,29 @@ A "hit" means the skill produces a finding that names the same component + prope
   - Code: `WHITE_CLASSES.solidBg = 'bg-neutral-200'` (#E5E5E5) — visibly dimmer than zinc/50.
 - **Fix:** change `WHITE_CLASSES.solidBg` from `'bg-neutral-200'` to `'bg-zinc-50'`. Optionally also align `WHITE_CLASSES.text` from `'text-slate-950'` to `'text-zinc-950'` (Figma uses zinc/950, but slate/950 is visually indistinguishable — acceptable).
 
-### F5. View PR action uses Unicode `↗` instead of an SVG icon
+### F5. View PR / Open as page render the wrong icon — Unicode glyph instead of `lucide/arrow-up-right`
 
 - **Severity:** medium
-- **Kind:** caller
-- **Components:** `AgentRow.tsx` (line ~119-121), `AgentBody.tsx` (line ~85-90 for both "View PR ↗" and "↗ Open as page")
+- **Kind:** caller (icon mismatch)
+- **Components:** `AgentRow.tsx` (line ~119-121, View PR), `AgentBody.tsx` (line ~85-90 — both "View PR ↗" and "↗ Open as page")
 - **Evidence:**
-  - Figma reference: View PR pill instance on agent drawer / agent page shows `Has Icon=true, Icon=lucide/arrow-up-right`. The icon has consistent stroke and color matching the text.
-  - Code: `<a>View PR ↗</a>` — `↗` is a Unicode glyph, browser-font dependent.
-- **Fix:** use SVG: `import { ArrowUpRight } from 'lucide-react'; <Button><ArrowUpRight aria-hidden /> View PR</Button>`. Drop the Unicode character from the link text.
+  - Figma reference: View PR / Open as page pill instances declare `Has Icon=true, Icon=lucide/arrow-up-right` (the specific lucide glyph). The rendered icon has controlled stroke + matches the text color.
+  - Code renders `↗` (Unicode U+2197 NORTH EAST ARROW) inline in the link text. Two distinct problems:
+    - **Primitive mismatch** — text glyph rendered by browser font fallback, not an SVG; no stroke / size / color coordination with the button.
+    - **Visual mismatch** — the Unicode glyph's shape and weight do not match `lucide/arrow-up-right`. The arrow on screen looks visibly different from the Figma reference.
+- **Fix:** import the specific Figma icon: `import { ArrowUpRight } from 'lucide-react'; <Button><ArrowUpRight aria-hidden /> View PR</Button>`. Naming the *specific* lucide glyph is part of the fix; "use an SVG" is incomplete.
+
+### F7. State badge dot is a CSS-only span instead of an icon component
+
+- **Severity:** medium
+- **Kind:** caller (icon mismatch — visual identity)
+- **Components:** `badge.tsx` (line ~43-49, the `hasIcon` rendering path)
+- **Evidence:**
+  - Figma reference: the Pill set's `Has Icon=true` paths declare an `Icon` INSTANCE_SWAP property that plugs in an actual icon component. State-badge instances in the agent-row Figma reference (`snapshot/screens/1-756.png`) render their dot as a bound lucide icon, sharing stroke/anti-aliasing/circle-geometry with the rest of the DS's iconography.
+  - Code renders `<span data-testid="badge-dot" className="inline-block h-1.5 w-1.5 rounded-full bg-{color}">` — a 6×6 CSS shape. Visually close but a different primitive: no shared stroke/anti-aliasing with other icons, hard-coded size, breaks if Figma's badge icon ever becomes anything other than a filled circle.
+- **Fix:** rework Badge's `hasIcon` path to accept (or default to) a real icon component — e.g. `<Circle className="size-2 fill-current" />` from `lucide-react`, with the specific lucide variant matching Figma's set-level default for the Pill `Icon` property (`lucide/circle` filled, or whatever the Figma instance's `componentProperties.Icon` resolves to once the Plugin-API snapshot is wired up — see followups).
+
+**Iteration note:** F7 was originally noted as a "judgment call" in the calibration run's J1 section. User feedback flagged it as a real bug. The skill's workflow.md was updated to remove the "icon mismatches can be judgment calls" carve-out — icon-shape divergence is always a finding, severity ≥ medium.
 
 ---
 
@@ -77,11 +91,6 @@ A "hit" means the skill produces a finding that names the same component + prope
 ## Allowed but not required (judgment-call findings)
 
 These are observations the skill MAY surface but shouldn't be required for a passing run. Useful for "extra credit" calibration:
-
-### J1. State badge dot is a CSS-only span, not an SVG icon
-
-- **Components:** `badge.tsx:43-49` — `<span h-1.5 w-1.5 rounded-full bg-{color}>` (6×6 filled circle).
-- **Note:** Figma's Pill set has an `Icon` INSTANCE_SWAP property defaulting to `lucide/git-pull-request` (the SET-level default — not what state-badge instances actually use). Visual end-result is "a small colored dot" in both cases. Whether this counts as a finding depends on whether the skill is told to match component primitives exactly or just visual end-result. Both stances are defensible; we leave it to the skill author.
 
 ### J2. Button-sm rendered height: 32px (h-8) vs Figma 30px
 
