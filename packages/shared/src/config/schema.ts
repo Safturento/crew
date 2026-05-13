@@ -21,6 +21,16 @@ const playwrightSchema = z.object({
   authored: playwrightAuthoredSchema.optional(),
 });
 
+const visualFidelitySchema = z.object({
+  figma_file_key: z.string().min(1),
+  figma_pages: z.array(z.string()).min(1),
+  component_dir: z.string().min(1),
+  dashboard_url: z.string().min(1),
+  snapshot_path: z.string().min(1).default('.crew/figma-snapshot'),
+  code_connect_glob: z.string().min(1).default('**/*.figma.tsx'),
+  skip_snapshot: z.boolean().default(false),
+});
+
 const brunoSmokeSchema = z.object({
   enabled: z.literal(true),
   base_url: z.string().min(1),
@@ -70,6 +80,7 @@ export const projectConfigSchema = z
       .prefault({}),
     playwright: playwrightSchema.optional(),
     bruno_smoke: brunoSmokeSchema.optional(),
+    visual_fidelity: visualFidelitySchema.optional(),
   })
   .superRefine((cfg, ctx) => {
     const pw = cfg.playwright;

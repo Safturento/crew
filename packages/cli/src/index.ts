@@ -11,6 +11,7 @@ import { dockerEnvCommand } from './commands/docker-env.js';
 import { envCommand } from './commands/env.js';
 import { dbCloneCommand } from './commands/db-clone.js';
 import { daemonCommand } from './commands/daemon.js';
+import { figmaSnapshotCommand } from './commands/figma-snapshot.js';
 
 const program = new Command();
 
@@ -31,5 +32,6 @@ program.addCommand(dockerEnvCommand);
 program.addCommand(envCommand);
 program.addCommand(dbCloneCommand);
 program.addCommand(daemonCommand);
+program.addCommand(figmaSnapshotCommand);
 
 program.parse(process.argv);

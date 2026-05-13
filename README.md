@@ -223,6 +223,50 @@ Once these are in place, `crew run` against a backend ticket will do the rest.
 
 **The `bruno-collection-maintenance` skill.** The agent automatically picks up the user-scope `bruno-collection-maintenance` skill at `~/.claude/skills/bruno-collection-maintenance/`. The skill teaches the file-naming conventions, the `vars:post-response` chaining pattern, and the "update `.bru` when touching endpoints" rule.
 
+### Visual-fidelity verification (per project, optional)
+
+Crew can give the dispatched agent a structured Figma snapshot of the project's design source-of-truth so the agent can compare what it rendered to what the design system specifies. This is the host-side data producer for the agent's `visual-fidelity-check` skill — without it, the skill has nothing to compare against. Off by default. Opt in by adding a `[visual_fidelity]` section to `~/.config/crew/projects/<name>.toml`:
+
+```toml
+[visual_fidelity]
+figma_file_key    = "9FeJPriqdsdA4n9R5Xsrr8"
+figma_pages       = ["Composites", "Dashboard Screens"]
+component_dir     = "packages/dashboard/src/components"
+dashboard_url     = "${APP_URL}"
+snapshot_path     = ".crew/figma-snapshot"   # optional; default shown
+code_connect_glob = "**/*.figma.tsx"         # optional; default shown
+skip_snapshot     = false                    # optional; default shown
+```
+
+You also need a Figma personal access token with read scope, exported as `FIGMA_API_TOKEN`. Generate one at <https://www.figma.com/developers/api#access-tokens> and source it the same way as the Jira credentials (e.g. in `~/.secrets`).
+
+`crew figma-snapshot` is the standalone command that exports the file. From inside a worktree:
+
+```sh
+export FIGMA_API_TOKEN=...
+crew figma-snapshot
+ls .crew/figma-snapshot/composites/ | head
+```
+
+Output layout:
+
+```
+<worktree>/.crew/figma-snapshot/
+├── index.json                     # id → { name, type, page, screenshotPath, metadataPath }
+├── composites/                    # nodes from the "Composites" page
+│   ├── <node-id>.png              # 2× PNG render
+│   └── <node-id>.json             # raw Figma node tree
+└── screens/                       # nodes from the "Dashboard Screens" page
+    ├── <node-id>.png
+    └── <node-id>.json
+```
+
+Pages not in `figma_pages` are skipped. The page-name → directory mapping is a small whitelist (`Composites` → `composites/`, `Dashboard Screens` → `screens/`); any other configured page falls back to a kebab-cased slug.
+
+When `[visual_fidelity]` is absent, `crew figma-snapshot` is a no-op with a friendly message rather than an error. `skip_snapshot = true` is the same no-op while preserving the rest of the config — useful for temporarily silencing the snapshot in a worktree without removing the block.
+
+> Variable bindings (e.g. "this fill is bound to `tw/colors/slate/1050`") aren't fetchable via the Figma REST API, only the Plugin API. The skill side bridges hex values back to design tokens by reading the project's own token map (e.g. `packages/dashboard/src/data/state-meta.ts` for crew's dashboard). A near-term followup tracks moving to Plugin-API-based snapshotting for richer per-component metadata.
+
 ### GitHub token (once per project)
 
 `crew run` injects a GitHub token into the agent so it can push branches and open PRs. Each registered project needs one at `<repo>/.claude/secrets/gh-token`:
