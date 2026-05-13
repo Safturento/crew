@@ -760,17 +760,21 @@ Create `packages/cli/scripts/hooks/visual-fidelity-pr-gate.sh`:
 # AND the project has visual-fidelity wired up. Fail-closed: when the hook
 # can't tell, surface a warning rather than silently allowing.
 #
-# Hook input shape (stdin):
-#   { "tool_use": { "name": "Bash", "input": { "command": "..." } },
+# Hook input shape (stdin) — Claude Code PreToolUse payload, see
+# https://docs.claude.com/en/docs/claude-code/hooks:
+#   { "session_id": "...",
 #     "transcript_path": "/path/to/session.jsonl",
-#     "cwd": "/path/to/worktree" }
+#     "cwd": "/path/to/worktree",
+#     "hook_event_name": "PreToolUse",
+#     "tool_name": "Bash",
+#     "tool_input": { "command": "..." } }
 
 set -euo pipefail
 
 input=$(cat)
 
 # Only gate gh pr create — let everything else pass.
-command=$(printf '%s' "$input" | jq -r '.tool_use.input.command // empty')
+command=$(printf '%s' "$input" | jq -r '.tool_input.command // empty')
 case "$command" in
   "gh pr create"*) : ;;
   *) exit 0 ;;
@@ -878,6 +882,8 @@ git commit -m "feat: enable visual-fidelity-pr-gate hook in repo settings"
 - Create: `packages/cli/scripts/hooks/visual-fidelity-pr-gate.test.sh`
 
 A small shell test that feeds known transcript fixtures + hook inputs into the hook and asserts the exit code and stderr.
+
+> **Correction (post-implementation):** the embedded fixtures below use the legacy `{tool_use:{name,input:{command}}}` shape, but Claude Code's real PreToolUse payload is flat — `{tool_name, tool_input:{command}, transcript_path, cwd, session_id, hook_event_name}`. The shipped test file at `packages/cli/scripts/hooks/visual-fidelity-pr-gate.test.sh` is the source of truth; it uses the real shape via a `make_input` helper and adds three more fixtures (different-skill, malformed-JSONL, TOML-config) for 9 assertions total.
 
 - [ ] **Step 1: Create the test script**
 
