@@ -357,20 +357,20 @@ You are required to use these Superpowers skills as appropriate. Invoke each via
 
 
 
-8. **Verify.** Invoke \`superpowers:verification-before-completion\`. Run lint / format / typecheck / test:run.
+9. **Verify.** Invoke \`superpowers:verification-before-completion\`. Run lint / format / typecheck / test:run.
 
-9. **Self-review.** Invoke \`superpowers:requesting-code-review\`.
+10. **Self-review.** Invoke \`superpowers:requesting-code-review\`.
 
-10. **Push and PR.**
+11. **Push and PR.**
 
     \`\`\`
     git push -u origin KAN-23
     gh pr create --base main --head KAN-23 --title "<title>" --body "<Summary + Test Plan>"
     \`\`\`
 
-11. **Move KAN-23 to "In Review".**
+12. **Move KAN-23 to "In Review".**
 
-12. **Final report.** As your VERY LAST action, run a single Bash:
+13. **Final report.** As your VERY LAST action, run a single Bash:
 
     \`\`\`
     echo "→ PR $(gh pr view --head KAN-23 --json url --jq .url)"
@@ -433,20 +433,20 @@ The following user-level skills are equally required when their description matc
 
 
 
-8. **Verify.** Invoke \`superpowers:verification-before-completion\`. Run lint / format / typecheck / test:run.
+9. **Verify.** Invoke \`superpowers:verification-before-completion\`. Run lint / format / typecheck / test:run.
 
-9. **Self-review.** Invoke \`superpowers:requesting-code-review\`.
+10. **Self-review.** Invoke \`superpowers:requesting-code-review\`.
 
-10. **Push and PR.**
+11. **Push and PR.**
 
     \`\`\`
     git push -u origin KAN-23
     gh pr create --base main --head KAN-23 --title "<title>" --body "<Summary + Test Plan>"
     \`\`\`
 
-11. **Move KAN-23 to "In Review".**
+12. **Move KAN-23 to "In Review".**
 
-12. **Final report.** As your VERY LAST action, run a single Bash:
+13. **Final report.** As your VERY LAST action, run a single Bash:
 
     \`\`\`
     echo "→ PR $(gh pr view --head KAN-23 --json url --jq .url)"
@@ -505,20 +505,20 @@ You are required to use these Superpowers skills as appropriate. Invoke each via
 
 
 
-8. **Verify.** Invoke \`superpowers:verification-before-completion\`. Run lint / format / typecheck / test:run.
+9. **Verify.** Invoke \`superpowers:verification-before-completion\`. Run lint / format / typecheck / test:run.
 
-9. **Self-review.** Invoke \`superpowers:requesting-code-review\`.
+10. **Self-review.** Invoke \`superpowers:requesting-code-review\`.
 
-10. **Push and PR.**
+11. **Push and PR.**
 
     \`\`\`
     git push -u origin KAN-23
     gh pr create --base main --head KAN-23 --title "<title>" --body "<Summary + Test Plan>"
     \`\`\`
 
-11. **Move KAN-23 to "In Review".**
+12. **Move KAN-23 to "In Review".**
 
-12. **Final report.** As your VERY LAST action, run a single Bash:
+13. **Final report.** As your VERY LAST action, run a single Bash:
 
     \`\`\`
     echo "→ PR $(gh pr view --head KAN-23 --json url --jq .url)"
@@ -597,7 +597,6 @@ Two non-negotiable rules whenever this project's API is involved:
 The \`bruno-collection-maintenance\` skill (auto-discovered) covers naming conventions, the \`vars:post-response\` patterns, and the conventions for \`flows/\` vs \`endpoints/\`.
 
 
-
 ## Sandboxed-curl is misleading
 
 Your Bash tool runs in a sandbox with its own loopback, isolated from the host's. Direct \`curl\` / \`wget\` / Node \`fetch\` calls from your shell to **https://localhost:18443** will always return \`ECONNREFUSED\` — that is **not** evidence the stack is down. Crew has whitelisted \`npm run bruno:smoke\` to run un-sandboxed, and those are the only valid reachability tests for the docker stack.
@@ -617,20 +616,21 @@ To stay matched:
 
 A failed \`npm run test:e2e\` that produced \`ECONNREFUSED\` while the same flow worked via Playwright MCP is the signature of a wrapper-defeated match.
 
-8. **Verify.** Invoke \`superpowers:verification-before-completion\`. Run lint / format / typecheck / test:run.
 
-9. **Self-review.** Invoke \`superpowers:requesting-code-review\`.
+9. **Verify.** Invoke \`superpowers:verification-before-completion\`. Run lint / format / typecheck / test:run.
 
-10. **Push and PR.**
+10. **Self-review.** Invoke \`superpowers:requesting-code-review\`.
+
+11. **Push and PR.**
 
     \`\`\`
     git push -u origin KAN-23
     gh pr create --base main --head KAN-23 --title "<title>" --body "<Summary + Test Plan>"
     \`\`\`
 
-11. **Move KAN-23 to "In Review".**
+12. **Move KAN-23 to "In Review".**
 
-12. **Final report.** As your VERY LAST action, run a single Bash:
+13. **Final report.** As your VERY LAST action, run a single Bash:
 
     \`\`\`
     echo "→ PR $(gh pr view --head KAN-23 --json url --jq .url)"
@@ -714,7 +714,6 @@ If \`tests/e2e/\` doesn't exist or \`npm run test:e2e\` fails for any other reas
 
 
 
-
 ## Sandboxed-curl is misleading
 
 Your Bash tool runs in a sandbox with its own loopback, isolated from the host's. Direct \`curl\` / \`wget\` / Node \`fetch\` calls from your shell to **https://localhost:18443** will always return \`ECONNREFUSED\` — that is **not** evidence the stack is down. Crew has whitelisted \`npm run test:e2e\` to run un-sandboxed, and those are the only valid reachability tests for the docker stack.
@@ -734,20 +733,21 @@ To stay matched:
 
 A failed \`npm run test:e2e\` that produced \`ECONNREFUSED\` while the same flow worked via Playwright MCP is the signature of a wrapper-defeated match.
 
-8. **Verify.** Invoke \`superpowers:verification-before-completion\`. Run lint / format / typecheck / test:run.
 
-9. **Self-review.** Invoke \`superpowers:requesting-code-review\`.
+9. **Verify.** Invoke \`superpowers:verification-before-completion\`. Run lint / format / typecheck / test:run.
 
-10. **Push and PR.**
+10. **Self-review.** Invoke \`superpowers:requesting-code-review\`.
+
+11. **Push and PR.**
 
     \`\`\`
     git push -u origin KAN-23
     gh pr create --base main --head KAN-23 --title "<title>" --body "<Summary + Test Plan>"
     \`\`\`
 
-11. **Move KAN-23 to "In Review".**
+12. **Move KAN-23 to "In Review".**
 
-12. **Final report.** As your VERY LAST action, run a single Bash:
+13. **Final report.** As your VERY LAST action, run a single Bash:
 
     \`\`\`
     echo "→ PR $(gh pr view --head KAN-23 --json url --jq .url)"
@@ -816,7 +816,6 @@ Two non-negotiable rules whenever this project's API is involved:
 The \`bruno-collection-maintenance\` skill (auto-discovered) covers naming conventions, the \`vars:post-response\` patterns, and the conventions for \`flows/\` vs \`endpoints/\`.
 
 
-
 ## Sandboxed-curl is misleading
 
 Your Bash tool runs in a sandbox with its own loopback, isolated from the host's. Direct \`curl\` / \`wget\` / Node \`fetch\` calls from your shell to **https://localhost:18443** will always return \`ECONNREFUSED\` — that is **not** evidence the stack is down. Crew has whitelisted \`npm run bruno:smoke\` to run un-sandboxed, and those are the only valid reachability tests for the docker stack.
@@ -836,20 +835,21 @@ To stay matched:
 
 A failed \`npm run test:e2e\` that produced \`ECONNREFUSED\` while the same flow worked via Playwright MCP is the signature of a wrapper-defeated match.
 
-8. **Verify.** Invoke \`superpowers:verification-before-completion\`. Run lint / format / typecheck / test:run.
 
-9. **Self-review.** Invoke \`superpowers:requesting-code-review\`.
+9. **Verify.** Invoke \`superpowers:verification-before-completion\`. Run lint / format / typecheck / test:run.
 
-10. **Push and PR.**
+10. **Self-review.** Invoke \`superpowers:requesting-code-review\`.
+
+11. **Push and PR.**
 
     \`\`\`
     git push -u origin KAN-23
     gh pr create --base main --head KAN-23 --title "<title>" --body "<Summary + Test Plan>"
     \`\`\`
 
-11. **Move KAN-23 to "In Review".**
+12. **Move KAN-23 to "In Review".**
 
-12. **Final report.** As your VERY LAST action, run a single Bash:
+13. **Final report.** As your VERY LAST action, run a single Bash:
 
     \`\`\`
     echo "→ PR $(gh pr view --head KAN-23 --json url --jq .url)"
@@ -918,20 +918,20 @@ If your change is _clearly_ backend-only (no observable user effect), say so exp
 
 
 
-8. **Verify.** Invoke \`superpowers:verification-before-completion\`. Run lint / format / typecheck / test:run.
+9. **Verify.** Invoke \`superpowers:verification-before-completion\`. Run lint / format / typecheck / test:run.
 
-9. **Self-review.** Invoke \`superpowers:requesting-code-review\`.
+10. **Self-review.** Invoke \`superpowers:requesting-code-review\`.
 
-10. **Push and PR.**
+11. **Push and PR.**
 
     \`\`\`
     git push -u origin KAN-23
     gh pr create --base main --head KAN-23 --title "<title>" --body "<Summary + Test Plan>"
     \`\`\`
 
-11. **Move KAN-23 to "In Review".**
+12. **Move KAN-23 to "In Review".**
 
-12. **Final report.** As your VERY LAST action, run a single Bash:
+13. **Final report.** As your VERY LAST action, run a single Bash:
 
     \`\`\`
     echo "→ PR $(gh pr view --head KAN-23 --json url --jq .url)"
@@ -1000,20 +1000,20 @@ If your change is _clearly_ backend-only (no observable user effect), say so exp
 
 
 
-8. **Verify.** Invoke \`superpowers:verification-before-completion\`. Run lint / format / typecheck / test:run.
+9. **Verify.** Invoke \`superpowers:verification-before-completion\`. Run lint / format / typecheck / test:run.
 
-9. **Self-review.** Invoke \`superpowers:requesting-code-review\`.
+10. **Self-review.** Invoke \`superpowers:requesting-code-review\`.
 
-10. **Push and PR.**
+11. **Push and PR.**
 
     \`\`\`
     git push -u origin CREW-99
     gh pr create --base main --head CREW-99 --title "<title>" --body "<Summary + Test Plan>"
     \`\`\`
 
-11. **Move CREW-99 to "In Review".**
+12. **Move CREW-99 to "In Review".**
 
-12. **Final report.** As your VERY LAST action, run a single Bash:
+13. **Final report.** As your VERY LAST action, run a single Bash:
 
     \`\`\`
     echo "→ PR $(gh pr view --head CREW-99 --json url --jq .url)"
@@ -1082,7 +1082,6 @@ Two non-negotiable rules whenever this project's API is involved:
 The \`bruno-collection-maintenance\` skill (auto-discovered) covers naming conventions, the \`vars:post-response\` patterns, and the conventions for \`flows/\` vs \`endpoints/\`.
 
 
-
 ## Sandboxed-curl is misleading
 
 Your Bash tool runs in a sandbox with its own loopback, isolated from the host's. Direct \`curl\` / \`wget\` / Node \`fetch\` calls from your shell to **https://localhost:18443** will always return \`ECONNREFUSED\` — that is **not** evidence the stack is down. Crew has whitelisted \`npm run bruno:smoke\` to run un-sandboxed, and those are the only valid reachability tests for the docker stack.
@@ -1102,20 +1101,21 @@ To stay matched:
 
 A failed \`npm run test:e2e\` that produced \`ECONNREFUSED\` while the same flow worked via Playwright MCP is the signature of a wrapper-defeated match.
 
-8. **Verify.** Invoke \`superpowers:verification-before-completion\`. Run lint / format / typecheck / test:run.
 
-9. **Self-review.** Invoke \`superpowers:requesting-code-review\`.
+9. **Verify.** Invoke \`superpowers:verification-before-completion\`. Run lint / format / typecheck / test:run.
 
-10. **Push and PR.**
+10. **Self-review.** Invoke \`superpowers:requesting-code-review\`.
+
+11. **Push and PR.**
 
     \`\`\`
     git push -u origin KAN-23
     gh pr create --base main --head KAN-23 --title "<title>" --body "<Summary + Test Plan>"
     \`\`\`
 
-11. **Move KAN-23 to "In Review".**
+12. **Move KAN-23 to "In Review".**
 
-12. **Final report.** As your VERY LAST action, run a single Bash:
+13. **Final report.** As your VERY LAST action, run a single Bash:
 
     \`\`\`
     echo "→ PR $(gh pr view --head KAN-23 --json url --jq .url)"

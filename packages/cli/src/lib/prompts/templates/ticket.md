@@ -28,22 +28,22 @@ You are required to use these Superpowers skills as appropriate. Invoke each via
 7. **Execute, committing per step.** Use `superpowers:test-driven-development`. Frequent small commits referencing `{{key}}`.
 {{playwrightBlock}}
 {{brunoSmokeBlock}}
-{{visualFidelityBlock}}
 {{sandboxNetworkBlock}}
-8. **Verify.** Invoke `superpowers:verification-before-completion`. Run lint / format / typecheck / test:run.
+{{visualFidelityBlock}}
+9. **Verify.** Invoke `superpowers:verification-before-completion`. Run lint / format / typecheck / test:run.
 
-9. **Self-review.** Invoke `superpowers:requesting-code-review`.
+10. **Self-review.** Invoke `superpowers:requesting-code-review`.
 
-10. **Push and PR.**
+11. **Push and PR.**
 
     ```
     git push -u origin {{key}}
     gh pr create --base main --head {{key}} --title "<title>" --body "<Summary + Test Plan>"
     ```
 
-11. **Move {{key}} to "In Review".**
+12. **Move {{key}} to "In Review".**
 
-12. **Final report.** As your VERY LAST action, run a single Bash:
+13. **Final report.** As your VERY LAST action, run a single Bash:
 
     ```
     echo "→ PR $(gh pr view --head {{key}} --json url --jq .url)"
