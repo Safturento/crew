@@ -38,25 +38,50 @@ A "hit" means the skill produces a finding that names the same component + prope
   - Caller code: `<Badge color="waiting" intensity="loud">` — emits solid amber-400 bg with dark text.
 - **Fix:** change `intensity="loud"` to `intensity="mid"`.
 
-### F4. `pillSurfaceClasses('white', 'loud')` uses wrong Tailwind shade
+### F4. New Run button uses `color="white"` where Figma uses `color="idle"`
 
 - **Severity:** medium
-- **Kind:** structural (helper-level, not caller)
-- **Components:** `pill-variants.ts` (line ~9-13)
+- **Kind:** caller (wrong color enum)
+- **Components:** `TopNav.tsx` (line ~52-58, the `+ New Run` Button)
 - **Evidence:**
-  - Figma reference: `type=button-sm, color=white, intensity=loud` variant in `snapshot/composites/272-120.json` has `fills: [{ hex: "#FAFAFA", tokenAlias: "zinc/50" }]`.
-  - Code: `WHITE_CLASSES.solidBg = 'bg-neutral-200'` (#E5E5E5) — visibly dimmer than zinc/50.
-- **Fix:** change `WHITE_CLASSES.solidBg` from `'bg-neutral-200'` to `'bg-zinc-50'`. Optionally also align `WHITE_CLASSES.text` from `'text-slate-950'` to `'text-zinc-950'` (Figma uses zinc/950, but slate/950 is visually indistinguishable — acceptable).
+  - Figma reference: every New Run pill instance on the Dashboard Screens (verified via Plugin API query against the file) declares `color="idle", intensity="loud", Icon=lucide/plus`. The `idle/loud` Pill variant resolves to `fills: [{ hex: "#64748B", tokenAlias: "state/idle -> slate/500" }]` — a slate-500 mid-gray, not a near-white.
+  - Code: `TopNav.tsx` uses `<Button color="white" intensity="loud">` for the New Run button, which routes through `pillSurfaceClasses('white', 'loud')` and emits `bg-neutral-200` (#E5E5E5 near-white). The shipped button is therefore *the wrong color entirely*, not just the wrong shade of white.
+- **Fix:** change `TopNav.tsx`'s New Run Button from `color="white"` to `color="idle"`. The helper `pillSurfaceClasses('idle', 'loud')` already emits `bg-slate-500 text-slate-950`, matching Figma's idle/loud variant — no helper changes needed.
 
-### F5. View PR action uses Unicode `↗` instead of an SVG icon
+**Iteration note:** The original calibration run (and the original expected list) framed this as a helper-level "wrong Tailwind shade" bug — `neutral-200` vs `zinc/50` for the `white/loud` recipe. That framing was *wrong*: the real bug is caller-side (wrong color enum). The helper's `white/loud` recipe is currently unused once the caller switches to `idle`. If a future caller does use `white/loud`, the neutral-200 vs zinc/50 shade nit is real but secondary — file as a separate finding then.
+
+### F5. View PR + Open as page use Unicode arrows — each needs a DIFFERENT lucide icon
 
 - **Severity:** medium
-- **Kind:** caller
-- **Components:** `AgentRow.tsx` (line ~119-121), `AgentBody.tsx` (line ~85-90 for both "View PR ↗" and "↗ Open as page")
-- **Evidence:**
-  - Figma reference: View PR pill instance on agent drawer / agent page shows `Has Icon=true, Icon=lucide/arrow-up-right`. The icon has consistent stroke and color matching the text.
-  - Code: `<a>View PR ↗</a>` — `↗` is a Unicode glyph, browser-font dependent.
-- **Fix:** use SVG: `import { ArrowUpRight } from 'lucide-react'; <Button><ArrowUpRight aria-hidden /> View PR</Button>`. Drop the Unicode character from the link text.
+- **Kind:** caller (icon mismatch — two distinct specific icons)
+- **Components:**
+  - `AgentRow.tsx` (line ~119-121, View PR action for pr_open agents)
+  - `AgentBody.tsx` (line ~85-90, View PR)
+  - `AgentBody.tsx` (line ~94-99, Open as page link)
+- **Evidence (verified via Plugin API instance lookup):**
+  - **View PR** Figma instances (in the agent-list quick-actions, e.g. instance `I206:270;278:1544`) declare `Has Icon=true, Icon=lucide/git-pull-request`. NOT `lucide/arrow-up-right`.
+  - **Open as page** Figma instance (`384:2565` in the agent drawer) declares `Has Icon=true, Icon=lucide/arrow-up-right`.
+  - Code in both call sites renders Unicode `↗` (U+2197) inline in the link text. Two distinct problems compounding:
+    - **Primitive mismatch** — text glyph rendered by browser font fallback, not an SVG; no stroke/size/color coordination with the button.
+    - **Wrong-icon mismatch** — even if the Unicode were replaced with an arrow SVG, the View PR icon should be `lucide/git-pull-request` (a git-branch-with-circle glyph), not an arrow at all. The shipped button is therefore *the wrong icon entirely*.
+- **Fix:** two distinct lucide imports:
+  - View PR: `import { GitPullRequest } from 'lucide-react'; <Button><GitPullRequest aria-hidden /> View PR</Button>`
+  - Open as page: `import { ArrowUpRight } from 'lucide-react'; <Button><ArrowUpRight aria-hidden /> Open as page</Button>`
+- The specific Figma icon name must be part of the fix recommendation, not generic "use an SVG."
+
+**Iteration note:** The original calibration run flagged this as Unicode-vs-SVG and proposed `lucide/arrow-up-right` for both. That was wrong: View PR's Figma icon is `lucide/git-pull-request`. Caught via direct Figma instance-properties query — exactly the data the snapshot is missing without Plugin-API support. The skill could not have produced the correct fix from the REST snapshot alone; this is the structural limitation captured in `docs/followups.md` (PR #182).
+
+### F7. State badge dot renders as a solid filled circle; Figma uses an outlined ring (`lucide/circle`)
+
+- **Severity:** medium
+- **Kind:** caller (icon mismatch — visually distinct shapes)
+- **Components:** `badge.tsx` (line ~43-49, the `hasIcon` rendering path)
+- **Evidence (verified via Plugin API + user side-by-side screenshot):**
+  - Figma reference: the Waiting state pill instance on the agent drawer (`275:1355`) declares `Has Icon=true, Icon=lucide/circle`. The default lucide/circle is an *outlined ring* (1px stroke, hollow center) at the badge's icon size. The user provided a direct side-by-side comparison confirming: Figma's badge has a thin red ring; code's badge has a solid red filled dot.
+  - Code: `<span data-testid="badge-dot" className="inline-block h-1.5 w-1.5 rounded-full bg-{color}">` — a 6×6 CSS shape with solid background. Visually distinct from the outlined ring Figma renders. Not "visually similar" — visibly different shape.
+- **Fix:** import the specific Figma icon: `import { Circle } from 'lucide-react'; <Circle className="size-2" aria-hidden />`. Default lucide/Circle is outlined (1px stroke, no fill), matching Figma. Remove the CSS-only span path. Rework Badge's `hasIcon` to render the lucide icon (color comes from `currentColor` via Tailwind's `text-*` already on the badge).
+
+**Iteration note:** F7 was downgraded to a "judgment call" in calibration run-01 ("visually similar but different primitive"). Both run-01 AND run-02 made the same hedge despite the skill's iterated "icon findings are never judgment calls" rule. User feedback (with side-by-side screenshot) demonstrated this is a *visibly different shape*, not a primitive-purity concern. The dismissal pattern reflects an LLM tendency to under-flag visual differences in the absence of a screenshot — which the Plugin-API snapshot still won't directly provide. The skill's workflow.md was updated; the meta-pattern (skill needs to be MORE aggressive on icon findings until visual-diff is available) is captured in the followup.
 
 ---
 
@@ -77,11 +102,6 @@ A "hit" means the skill produces a finding that names the same component + prope
 ## Allowed but not required (judgment-call findings)
 
 These are observations the skill MAY surface but shouldn't be required for a passing run. Useful for "extra credit" calibration:
-
-### J1. State badge dot is a CSS-only span, not an SVG icon
-
-- **Components:** `badge.tsx:43-49` — `<span h-1.5 w-1.5 rounded-full bg-{color}>` (6×6 filled circle).
-- **Note:** Figma's Pill set has an `Icon` INSTANCE_SWAP property defaulting to `lucide/git-pull-request` (the SET-level default — not what state-badge instances actually use). Visual end-result is "a small colored dot" in both cases. Whether this counts as a finding depends on whether the skill is told to match component primitives exactly or just visual end-result. Both stances are defensible; we leave it to the skill author.
 
 ### J2. Button-sm rendered height: 32px (h-8) vs Figma 30px
 
