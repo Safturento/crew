@@ -223,11 +223,23 @@ Inside the skill, the agent runs through this loop:
 
 `SKILL.md` declares the skill's trigger criteria so the agent reaches for it correctly: "Use when about to claim any UI-touching task complete, before creating a PR. Triggers on file changes in a project's componentDir."
 
+### Authoring approach
+
+The skill is authored using the `superpowers:writing-skills` skill — its conventions drive the SKILL.md frontmatter shape, description-writing rules ("loophole-closing language", positive trigger phrases that match user intent, not jargon), example structure, and the discovery process for known-good vs known-bad invocation cases. The validation harness below is an *additional* step on top of standard skill-writing, not a replacement — `writing-skills` covers "is the skill discoverable and well-shaped"; the harness covers "does the skill actually detect the visual mismatches it claims to detect".
+
+In practice this means the implementation order is:
+
+1. Invoke `superpowers:writing-skills` to scaffold and iterate the skill normally.
+2. Once the skill is authored and passes the writing-skills self-checks, set up the validation harness fixtures.
+3. Use the harness for accuracy iteration (see "Validation loop" below) — this is the unique-to-this-skill calibration step.
+
 ## Piece 3: Skill validation harness
 
 ### Purpose
 
-A skill's prompt is its surface; like any prompt, it can be precise or vague. Without testing, "the skill exists" doesn't mean "the skill works". The harness lets us:
+The `superpowers:writing-skills` skill ensures the skill is well-shaped (clear trigger, good description, no loopholes that let agents skip it). What it can't tell us is whether the skill actually *works* — whether the workflow it codifies catches real visual mismatches. The harness covers that second question.
+
+A skill's prompt is its surface; like any prompt, it can be precise or vague. Without testing, "the skill exists" doesn't mean "the skill catches the failures it's meant to catch". The harness lets us:
 
 1. Seed known-bad fixtures (e.g., CREW-135's current PR state)
 2. Run the skill against each fixture
