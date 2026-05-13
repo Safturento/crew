@@ -14,7 +14,8 @@ export function ProjectsListPage({ projects }: ProjectsListPageProps) {
       <div className="mb-6 flex items-center justify-between gap-4">
         <h1 className="text-2xl font-semibold tracking-tight text-foreground">Projects</h1>
         <Button
-          variant="outline"
+          color="running"
+          intensity="mid"
           size="xs"
           onClick={() => {
             /* Register modal lands in Epic 4 (project ops) */

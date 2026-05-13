@@ -75,14 +75,14 @@ function AgentHeader({ detail, mode }: { detail: AgentDetail; mode: AgentBodyMod
       <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
         <WorktreePathLink path={detail.worktree_path} />
         {detail.pr_url && (
-          <Button variant="outline" size="xs" asChild>
+          <Button color="running" intensity="mid" size="xs" asChild>
             <a href={detail.pr_url} target="_blank" rel="noreferrer">
               View PR ↗
             </a>
           </Button>
         )}
         {mode === 'drawer' && (
-          <Button variant="outline" size="xs" asChild>
+          <Button color="running" intensity="mid" size="xs" asChild>
             <a href={`#/agent/${encodeURIComponent(detail.key)}/full`}>↗ Open as page</a>
           </Button>
         )}
@@ -105,7 +105,8 @@ function WorktreePathLink({ path }: { path: string }) {
     <span className="inline-flex items-center gap-1.5 rounded-md border border-white/10 px-2 py-1">
       <span className="font-mono text-xs text-muted-foreground">{path}</span>
       <Button
-        variant="ghost"
+        color="running"
+        intensity="ghost"
         size="xs"
         onClick={onCopy}
         aria-label="Copy worktree path"

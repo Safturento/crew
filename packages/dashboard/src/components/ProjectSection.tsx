@@ -58,7 +58,8 @@ export function ProjectSection({
           </span>
           {onOpenProject && (
             <Button
-              variant="ghost"
+              color="running"
+              intensity="ghost"
               size="icon-xs"
               aria-label="Open project page"
               title="Open project page"
