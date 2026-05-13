@@ -7,8 +7,9 @@ import {
   readFileSync,
 } from 'node:fs';
 import { homedir } from 'node:os';
-import { basename, join } from 'node:path';
+import { basename, dirname, join } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
+import { fileURLToPath } from 'node:url';
 import { Command } from 'commander';
 import { execa } from 'execa';
 import pc from 'picocolors';
@@ -48,6 +49,7 @@ import {
   requireWorktreeAvailable,
   runLogPathFor,
   runPreDispatchFigmaSnapshot,
+  runSkillInjection,
   runVerifyGate,
   streamTranscript,
   verifyGateLogPathFor,
@@ -347,6 +349,15 @@ export async function runRun(key: string, opts: RunOptions): Promise<never> {
       log: (msg) => console.log(pc.dim(`    ${msg}`)),
       warn: (msg) => console.warn(pc.yellow(`  ! ${msg}`)),
     });
+
+    console.log(pc.dim('→ injecting dispatcher-managed skills into the worktree…'));
+    await runSkillInjection({
+      worktree,
+      config,
+      sourceRoot: skillsSourceRoot(),
+      log: (msg) => console.log(pc.dim(`    ${msg}`)),
+      warn: (msg) => console.warn(pc.yellow(`  ! ${msg}`)),
+    });
   }
 
   const ghToken = readFileSync(ghTokenDest, 'utf8').trim();
@@ -560,6 +571,15 @@ export function resolveExitCode(result: ExecResult, signaled: boolean): number {
 function fail(message: string): never {
   console.error(pc.red(`error: ${message}`));
   process.exit(1);
+}
+
+/**
+ * Filesystem root where dispatcher-managed skill directories live. The crew
+ * CLI runs via tsx against the source tree (no compiled `dist/`), so we
+ * resolve relative to this module's source location at runtime.
+ */
+function skillsSourceRoot(): string {
+  return join(dirname(fileURLToPath(import.meta.url)), '..', 'lib', 'skills');
 }
 
 interface MaybeRunE2eGateOptions {

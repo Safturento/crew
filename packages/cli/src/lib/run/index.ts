@@ -6,6 +6,7 @@ export * from './cleanup-worktree.js';
 export * from './discover-transcript.js';
 export * from './figma-snapshot-step.js';
 export * from './paths.js';
+export * from './skill-injection-step.js';
 export * from './preconditions.js';
 export * from './preflight.js';
 export * from './stream-transcript.js';
