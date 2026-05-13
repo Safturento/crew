@@ -85,12 +85,7 @@ export function ProjectSection({
             </div>
           ) : (
             agents.map((a) => (
-              <AgentRow
-                key={a.key}
-                agent={a}
-                onSelect={onSelectAgent}
-                onAction={onAgentAction}
-              />
+              <AgentRow key={a.key} agent={a} onSelect={onSelectAgent} onAction={onAgentAction} />
             ))
           )}
         </div>

@@ -18,7 +18,9 @@ figma.connect(
     example: () => (
       <Dialog>
         <DialogTrigger asChild>
-          <Button color="running" intensity="mid">Open Dialog</Button>
+          <Button color="running" intensity="mid">
+            Open Dialog
+          </Button>
         </DialogTrigger>
         <DialogContent>
           <DialogHeader>
@@ -29,8 +31,12 @@ figma.connect(
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button color="running" intensity="mid">Cancel</Button>
-            <Button color="error" intensity="loud">Delete</Button>
+            <Button color="running" intensity="mid">
+              Cancel
+            </Button>
+            <Button color="error" intensity="loud">
+              Delete
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

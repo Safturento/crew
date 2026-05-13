@@ -64,13 +64,7 @@ export function AgentRow({ agent, onSelect, onAction }: AgentRowProps) {
           className={`absolute inset-y-1.5 left-0 w-1 rounded-full ${stateClasses.solidBg} animate-att-pulse`}
         />
       )}
-      <Badge
-        role="status"
-        aria-label={meta.label}
-        color={agent.state}
-        intensity="muted"
-        hasIcon
-      >
+      <Badge role="status" aria-label={meta.label} color={agent.state} intensity="muted" hasIcon>
         {meta.label}
       </Badge>
       <span className="font-mono text-xs text-muted-foreground">{agent.key}</span>
@@ -114,12 +108,7 @@ function QuickActions({
     case 'waiting':
       return (
         <SingleAction>
-          <Button
-            color="waiting"
-            intensity="loud"
-            size="xs"
-            onClick={fire('provide-input')}
-          >
+          <Button color="waiting" intensity="loud" size="xs" onClick={fire('provide-input')}>
             Provide input
           </Button>
         </SingleAction>
@@ -140,12 +129,7 @@ function QuickActions({
     case 'error':
       return (
         <SingleAction>
-          <Button
-            color="error"
-            intensity="loud"
-            size="xs"
-            onClick={fire('inspect')}
-          >
+          <Button color="error" intensity="loud" size="xs" onClick={fire('inspect')}>
             Inspect
           </Button>
         </SingleAction>
