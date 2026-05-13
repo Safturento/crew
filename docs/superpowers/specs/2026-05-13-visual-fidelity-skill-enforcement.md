@@ -61,17 +61,52 @@ The "UI-touching changes only" qualifier is necessary — not every dispatch tou
 
 The block's existing copy (snapshot path, "fail-closed" framing) moves into the new step's body. The renumbering of subsequent steps cascades through `ticket.md`.
 
-### Change B1.2 — Sharpen SKILL.md description
+### Change B1.2 — Skill source-of-truth in the repo, dispatcher injects into worktrees
 
-> **Project-specific:** edit lands in `~/.claude/skills/visual-fidelity-check/SKILL.md`. This is a user-level skill, not a repo file. Per the user's `CLAUDE.md` "Don't ticket — handle manually" rule, this change ships in-chat without a Jira ticket.
+The skill currently lives only at the user-level path `~/.claude/skills/visual-fidelity-check/`. That makes it invisible to:
 
-Current description ends with: *"Required when finishing UI work in a project that has a Figma source of truth wired up (`<repo>/.crew/visual-fidelity.json` or `[visual_fidelity]` in the project's crew TOML)."*
+- Anyone cloning the crew repo to a fresh machine (they won't have the skill).
+- Any dispatched agent that doesn't share the original developer's `~/.claude/skills/` (e.g., CI, a different machine, a teammate's box).
 
-Append:
+Moving it directly into `<repo>/.claude/skills/visual-fidelity-check/` would solve the cloning problem, but is blocked by the Claude Code sandbox — both that path and `~/.claude/skills/` are in the sandbox's `denyWithinAllow` list, so an agent cannot write skill files there. The dispatched implementation agent would hit the same block whenever the skill needs editing.
 
-> Required IN ADDITION TO `superpowers:verification-before-completion` — that skill covers tests, lint, and build correctness; this one covers visual fidelity. They are not interchangeable. Running one does not replace the other.
+The architectural fix: **the skill's source-of-truth moves to a path the crew CLI dispatcher controls, outside the sandbox-blocked `.claude/` tree.** The dispatcher (which runs as the user's own process, outside the agent sandbox) copies the skill files into each dispatched worktree's `.claude/skills/` before the agent boots — same mechanism settings.json injection uses today.
+
+> **Project-specific:** new source-of-truth path is `packages/cli/src/lib/skills/visual-fidelity-check/` (mirrors the layout pattern of `packages/cli/src/lib/figma-snapshot/`, `packages/cli/src/lib/bruno-smoke/`, etc.). Files:
+> ```
+> packages/cli/src/lib/skills/visual-fidelity-check/
+>   SKILL.md
+>   workflow.md
+>   examples/
+>     findings-report-example.md
+>     good-report-example.md
+> ```
+
+The skill files are committed at this path as part of this docs PR (they exist on the docs branch already; the implementation PR doesn't need to materialize them itself).
+
+The crew CLI dispatcher gains a new pre-spawn step (alongside the existing `excludedCommands` / `bruno/environments/` materialization) that:
+
+1. Discovers skill directories under `packages/cli/src/lib/skills/`.
+2. Filters to skills the project should receive (e.g., `visual-fidelity-check` only injects when the project has visual-fidelity config — `<repo>/.crew/visual-fidelity.json` or `[visual_fidelity]` TOML).
+3. Copies each selected skill directory into the worktree at `<worktree>/.claude/skills/<skill-name>/`.
+
+The dispatched agent then auto-discovers the skill via the existing project-level skill mechanism in `packages/cli/src/lib/prompts/skills.ts` (`readSkillsFromRoot(join(opts.repoPath, '.claude', 'skills'), 'project')`).
+
+The SKILL.md description sharpening — appending *"Required IN ADDITION TO `superpowers:verification-before-completion` — that skill covers tests, lint, and build correctness; this one covers visual fidelity. They are not interchangeable. Running one does not replace the other."* — applies to the source-of-truth at the new location.
 
 The phrasing is position-agnostic: if the workflow order ever flips (visual-fidelity after Verify instead of before), the wording remains correct. The point is purpose, not sequencing.
+
+#### Local developer access
+
+For developers working on the crew repo locally (not via a dispatched worktree), the skill needs to be discoverable. Three viable patterns:
+
+1. **Manual user-level copy** — developer keeps `~/.claude/skills/visual-fidelity-check/` as a developer-convenience copy, syncs it manually when the source-of-truth changes. Simple, no tooling, but drifts.
+2. **Repo-level symlink** — `.claude/skills/visual-fidelity-check` → `../../packages/cli/src/lib/skills/visual-fidelity-check`. Blocked by the same sandbox restriction during normal dev, but `npm run` scripts ride outside the sandbox and can create it via a postinstall step. The symlink itself stays out of git (`.claude/skills/` is already gitignored / device-masked).
+3. **Defer the local-dev question** — accept that local devs need a manual copy until the symlink/postinstall is wired. Worktree dispatches still work because the dispatcher does the injection. Followup spec covers the local-dev ergonomics if it becomes painful.
+
+Recommendation: **defer (option 3) for B1**. The injection path solves the load-bearing problem (autonomous dispatches getting the skill). Local-dev ergonomics is a separate concern with multiple reasonable answers — worth its own design pass rather than baking a choice into B1.
+
+The existing user-level copy at `~/.claude/skills/visual-fidelity-check/` stays during B1's transition. Once dispatcher injection is shipped and verified, the user-level copy can be deleted (or kept as a developer-convenience copy — see option 1 above).
 
 ### Change B1.3 — PreToolUse hook on `gh pr create`
 
@@ -98,7 +133,9 @@ The crew repo has no existing PreToolUse hooks in `packages/cli/src/`. The imple
 
 - Every UI-touching `crew run` dispatch in a project with `<repo>/.crew/visual-fidelity.json` renders the workflow with a numbered "Visual fidelity gate" step.
 - Backend-only dispatches (or dispatches in projects without visual-fidelity config) do not render that step.
-- `visual-fidelity-check` SKILL.md description includes the "IN ADDITION TO `verification-before-completion`" disambiguation, and the same phrasing appears in the dispatch step 8 body.
+- The `visual-fidelity-check` skill files live at `packages/cli/src/lib/skills/visual-fidelity-check/` in the crew repo. SKILL.md description includes the "IN ADDITION TO `verification-before-completion`" disambiguation, and the same phrasing appears in the dispatch step 8 body.
+- The crew CLI dispatcher injects `packages/cli/src/lib/skills/visual-fidelity-check/` into each dispatched worktree at `<worktree>/.claude/skills/visual-fidelity-check/` before the agent boots, but only when the project's visual-fidelity config is present.
+- The dispatched agent's session transcript (after a successful UI dispatch) shows a `Skill` tool_use entry with `input.skill == "visual-fidelity-check"`. Validated end-to-end by Thread A's re-dispatch (see Verification).
 - A new PreToolUse hook is installed into dispatched worktrees that have visual-fidelity config; the hook blocks `gh pr create` when the session transcript does not contain a `visual-fidelity-check` skill invocation.
 - The hook does *not* fire on backend-only dispatches (no visual-fidelity config → no hook → no blocking).
 - An end-to-end test exists: a fixture dispatch (manual or automated) that skips the skill is blocked by the hook with the correct message; a dispatch that runs the skill normally proceeds.
@@ -119,7 +156,8 @@ Verification step on the dispatch's session transcript: grep for `"skill": "visu
 
 - Autonomous rendered-screenshot capture for the skill's optional Step 5. B2.
 - Reorganizing the skill's content, examples, or workflow. The skill's body is in good shape — content edits are not part of this fix.
-- Generalizing the enforcement to other skills (`bruno-collection-maintenance`, etc.). Each skill's enforcement story is its own.
+- Local-dev ergonomics for the skill (symlinks, postinstall scripts, etc.). The dispatcher injection covers autonomous use; local devs work from `~/.claude/skills/` or manual repo copies during B1's transition. A follow-up spec handles ergonomics if it becomes painful.
+- Generalizing the dispatcher's skill-injection mechanism to other skills (`bruno-collection-maintenance`, etc.). The injection module should be written generically (it discovers skill directories under `packages/cli/src/lib/skills/` rather than hardcoding `visual-fidelity-check`), but adding additional skills to the bundle is its own decision per skill.
 - Adding hooks for other tool calls (`git push`, `Edit`, etc.). The PR-create boundary is sufficient; expanding the hook surface invites false positives.
 
 ## Forward path
