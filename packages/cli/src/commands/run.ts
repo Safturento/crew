@@ -47,6 +47,7 @@ import {
   requireGhToken,
   requireWorktreeAvailable,
   runLogPathFor,
+  runPreDispatchFigmaSnapshot,
   runVerifyGate,
   streamTranscript,
   verifyGateLogPathFor,
@@ -338,6 +339,16 @@ export async function runRun(key: string, opts: RunOptions): Promise<never> {
     }
   }
 
+  if (config.visual_fidelity) {
+    console.log(pc.dim('→ generating Figma snapshot for visual-fidelity verification…'));
+    await runPreDispatchFigmaSnapshot({
+      worktree,
+      config,
+      log: (msg) => console.log(pc.dim(`    ${msg}`)),
+      warn: (msg) => console.warn(pc.yellow(`  ! ${msg}`)),
+    });
+  }
+
   const ghToken = readFileSync(ghTokenDest, 'utf8').trim();
   const discoveredSkillsBlock = renderDiscoveredSkillsBlock(
     discoverSkills({ repoPath: config.repo_path }),
@@ -373,6 +384,12 @@ export async function runRun(key: string, opts: RunOptions): Promise<never> {
             hasSmokeUser: Boolean(config.bruno_smoke.smoke_user),
           }
         : undefined,
+    visualFidelity: config.visual_fidelity
+      ? {
+          snapshotPath: config.visual_fidelity.snapshot_path,
+          componentDir: config.visual_fidelity.component_dir,
+        }
+      : undefined,
     discoveredSkillsBlock,
   });
 
