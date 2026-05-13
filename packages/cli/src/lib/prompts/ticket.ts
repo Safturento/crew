@@ -23,12 +23,20 @@ export interface BrunoSmokePromptOptions {
   hasSmokeUser: boolean;
 }
 
+export interface VisualFidelityPromptOptions {
+  /** Worktree-relative path where `crew figma-snapshot` wrote the snapshot. */
+  snapshotPath: string;
+  /** Project-relative component directory the gate applies to. */
+  componentDir: string;
+}
+
 export interface BuildTicketPromptOptions {
   key: string;
   githubRepo: string;
   jiraSite: string;
   playwright?: PlaywrightPromptOptions;
   brunoSmoke?: BrunoSmokePromptOptions;
+  visualFidelity?: VisualFidelityPromptOptions;
   discoveredSkillsBlock?: string;
   userMessage?: string;
   /** When true, render a one-line disclosure telling the agent the docker
@@ -44,6 +52,7 @@ export function buildTicketPrompt(opts: BuildTicketPromptOptions): string {
     jiraSite: opts.jiraSite,
     playwrightBlock: buildPlaywrightBlock(opts.playwright),
     brunoSmokeBlock: buildBrunoSmokeBlock(opts.brunoSmoke),
+    visualFidelityBlock: buildVisualFidelityBlock(opts.visualFidelity),
     sandboxNetworkBlock: buildSandboxNetworkBlock({
       key: opts.key,
       appUrl: opts.playwright?.appUrl ?? opts.brunoSmoke?.baseUrl,
@@ -55,6 +64,14 @@ export function buildTicketPrompt(opts: BuildTicketPromptOptions): string {
     dockerUnavailableBlock: opts.dockerUnavailable
       ? '\n\n> **Docker stack is not available for this run.** The application is not reachable, so any verification that needs the running stack (e2e, bruno smoke, manual checks) cannot run. Surface this gap in the PR description as an uncompleted test item rather than silently shipping.'
       : '',
+  });
+}
+
+function buildVisualFidelityBlock(vf: VisualFidelityPromptOptions | undefined): string {
+  if (!vf) return '';
+  return render('ticket-visual-fidelity', {
+    snapshotPath: vf.snapshotPath,
+    componentDir: vf.componentDir,
   });
 }
 

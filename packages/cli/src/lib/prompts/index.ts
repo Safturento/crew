@@ -3,6 +3,7 @@ export {
   type BuildTicketPromptOptions,
   type BrunoSmokePromptOptions,
   type PlaywrightPromptOptions,
+  type VisualFidelityPromptOptions,
 } from './ticket.js';
 export {
   buildFixPrPrompt,
