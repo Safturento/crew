@@ -265,7 +265,12 @@ Pages not in `figma_pages` are skipped. The page-name → directory mapping is a
 
 When `[visual_fidelity]` is absent, `crew figma-snapshot` is a no-op with a friendly message rather than an error. `skip_snapshot = true` is the same no-op while preserving the rest of the config — useful for temporarily silencing the snapshot in a worktree without removing the block.
 
-> Variable bindings (e.g. "this fill is bound to `tw/colors/slate/1050`") aren't fetchable via the Figma REST API, only the Plugin API. The skill side bridges hex values back to design tokens by reading the project's own token map (e.g. `packages/dashboard/src/data/state-meta.ts` for crew's dashboard). A near-term followup tracks moving to Plugin-API-based snapshotting for richer per-component metadata.
+**Two passes.** `crew figma-snapshot` runs:
+
+1. **REST pass** (always-on) — fetches the file structure and per-node screenshots via the Figma REST API. Requires `FIGMA_API_TOKEN` in your shell.
+2. **Plugin-API enrichment pass** (default-on, optional) — when the `claude` CLI is on `PATH`, shells out to a one-shot subprocess that adds per-instance `componentProperties`, `mainComponent`, and paint-level variable bindings (with resolved alias chains + final hex) to the per-node JSONs. This is what lets the `visual-fidelity-check` skill produce specifically-correct fixes (e.g. naming the right lucide icon instead of pattern-matching). If `claude` isn't on `PATH` or the subprocess fails, the enrichment pass logs a warning and is skipped — the REST-only snapshot remains usable at pattern level.
+
+Both passes run automatically when `crew run` dispatches a ticket with `[visual_fidelity]` configured.
 
 ### GitHub token (once per project)
 
