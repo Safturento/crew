@@ -416,6 +416,94 @@ collection_dir = ""
   });
 });
 
+describe('parseProjectConfig — visual_fidelity', () => {
+  const baseToml = `
+name = "minimal"
+repo_path = "/x"
+
+[jira]
+project_key = "MIN"
+site = "https://x.atlassian.net"
+
+[github]
+repo = "owner/repo"
+`;
+
+  it('parses with no [visual_fidelity] section (backwards compatible)', () => {
+    const config = parseProjectConfig(baseToml);
+    expect(config.visual_fidelity).toBeUndefined();
+  });
+
+  it('parses a minimal [visual_fidelity] block and fills in defaults', () => {
+    const raw = `${baseToml}
+[visual_fidelity]
+figma_file_key = "9FeJPriqdsdA4n9R5Xsrr8"
+figma_pages = ["Composites", "Dashboard Screens"]
+component_dir = "packages/dashboard/src/components"
+dashboard_url = "http://localhost:3000"
+`;
+    const config = parseProjectConfig(raw);
+    expect(config.visual_fidelity).toEqual({
+      figma_file_key: '9FeJPriqdsdA4n9R5Xsrr8',
+      figma_pages: ['Composites', 'Dashboard Screens'],
+      component_dir: 'packages/dashboard/src/components',
+      dashboard_url: 'http://localhost:3000',
+      snapshot_path: '.crew/figma-snapshot',
+      code_connect_glob: '**/*.figma.tsx',
+      skip_snapshot: false,
+    });
+  });
+
+  it('parses overridden snapshot_path, code_connect_glob, and skip_snapshot', () => {
+    const raw = `${baseToml}
+[visual_fidelity]
+figma_file_key = "X"
+figma_pages = ["P1"]
+component_dir = "src"
+dashboard_url = "http://x"
+snapshot_path = ".cache/snap"
+code_connect_glob = "**/*.connect.tsx"
+skip_snapshot = true
+`;
+    const config = parseProjectConfig(raw);
+    expect(config.visual_fidelity?.snapshot_path).toBe('.cache/snap');
+    expect(config.visual_fidelity?.code_connect_glob).toBe('**/*.connect.tsx');
+    expect(config.visual_fidelity?.skip_snapshot).toBe(true);
+  });
+
+  it('rejects missing figma_file_key', () => {
+    const raw = `${baseToml}
+[visual_fidelity]
+figma_pages = ["P1"]
+component_dir = "src"
+dashboard_url = "http://x"
+`;
+    expect(() => parseProjectConfig(raw)).toThrow(/figma_file_key/);
+  });
+
+  it('rejects empty figma_pages array', () => {
+    const raw = `${baseToml}
+[visual_fidelity]
+figma_file_key = "X"
+figma_pages = []
+component_dir = "src"
+dashboard_url = "http://x"
+`;
+    expect(() => parseProjectConfig(raw)).toThrow(/figma_pages/);
+  });
+
+  it('rejects empty component_dir', () => {
+    const raw = `${baseToml}
+[visual_fidelity]
+figma_file_key = "X"
+figma_pages = ["P1"]
+component_dir = ""
+dashboard_url = "http://x"
+`;
+    expect(() => parseProjectConfig(raw)).toThrow();
+  });
+});
+
 describe('loadProjectConfigByName', () => {
   it('loads a config from a custom configDir when provided', () => {
     const dir = mkdtempSync(join(tmpdir(), 'crew-shared-config-'));
