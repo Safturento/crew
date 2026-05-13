@@ -399,13 +399,13 @@ describe('buildTicketPrompt — visual-fidelity gate', () => {
         componentDir: 'packages/dashboard/src/components',
       },
     });
-    expect(prompt).toContain('Visual-fidelity verification');
+    expect(prompt).toContain('Visual fidelity gate');
     expect(prompt).toContain('visual-fidelity-check');
     expect(prompt).toContain('.crew/figma-snapshot');
     expect(prompt).toContain('packages/dashboard/src/components');
   });
 
-  it('warns the agent not to claim done without invoking the skill', () => {
+  it('fails closed when the snapshot is missing or comparison cannot run', () => {
     const prompt = buildTicketPrompt({
       key: 'CREW-99',
       githubRepo: 'Safturento/crew',
@@ -415,7 +415,8 @@ describe('buildTicketPrompt — visual-fidelity gate', () => {
         componentDir: 'packages/dashboard/src/components',
       },
     });
-    expect(prompt).toMatch(/do not claim .* (done|complete)/i);
+    expect(prompt).toMatch(/Fail-closed/i);
+    expect(prompt).toMatch(/Do not treat "couldn't run" as "passed\."/);
   });
 
   it('omits the gate when visualFidelity is absent', () => {
@@ -424,7 +425,7 @@ describe('buildTicketPrompt — visual-fidelity gate', () => {
       githubRepo: 'Safturento/crew',
       jiraSite: 'https://safturento.atlassian.net',
     });
-    expect(prompt).not.toContain('Visual-fidelity verification');
+    expect(prompt).not.toContain('Visual fidelity gate');
     expect(prompt).not.toContain('visual-fidelity-check');
   });
 
@@ -460,9 +461,32 @@ describe('buildTicketPrompt — visual-fidelity gate', () => {
       },
     });
     const brunoIdx = prompt.indexOf('API smoke verification (Bruno)');
-    const vfIdx = prompt.indexOf('Visual-fidelity verification');
+    const vfIdx = prompt.indexOf('Visual fidelity gate');
     expect(brunoIdx).toBeGreaterThan(-1);
     expect(vfIdx).toBeGreaterThan(brunoIdx);
+  });
+
+  it('renders the visual-fidelity block as numbered step 8 body when visualFidelity is provided', () => {
+    const out = buildTicketPrompt({
+      key: 'CREW-999',
+      githubRepo: 'foo/bar',
+      jiraSite: 'https://x.atlassian.net',
+      visualFidelity: { snapshotPath: '.crew/snap', componentDir: 'packages/dashboard/src/components' },
+    });
+    expect(out).toMatch(/^8\. \*\*Visual fidelity gate\*\*/m);
+    expect(out).toMatch(/^9\. \*\*Verify\.\*\*/m);
+    expect(out).toMatch(/IN ADDITION TO step 9/);
+  });
+
+  it('omits step 8 entirely when visualFidelity is not provided', () => {
+    const out = buildTicketPrompt({
+      key: 'CREW-999',
+      githubRepo: 'foo/bar',
+      jiraSite: 'https://x.atlassian.net',
+    });
+    expect(out).not.toMatch(/Visual fidelity gate/);
+    // step 9 still exists at its renumbered position
+    expect(out).toMatch(/^9\. \*\*Verify\.\*\*/m);
   });
 });
 
