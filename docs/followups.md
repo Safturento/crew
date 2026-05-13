@@ -7,6 +7,7 @@ Format: see the user-level `~/.claude/CLAUDE.md` "Followup detection" section.
 ## Contents
 
 - [Active](#active)
+  - [2026-05-13 — figma-snapshot omits instance `componentProperties` (REST API limitation) — needed for caller-check accuracy](#2026-05-13--figma-snapshot-omits-instance-componentproperties-rest-api-limitation--needed-for-caller-check-accuracy)
   - [2026-05-12 — Cap or filter `raw` subtree size in figma-snapshot per-component JSON](#2026-05-12--cap-or-filter-raw-subtree-size-in-figma-snapshot-per-component-json)
   - [2026-05-12 — Move figma-snapshot `PAGE_DIR_MAP` into project config](#2026-05-12--move-figma-snapshot-page_dir_map-into-project-config)
   - [2026-05-12 — Rethink followup-tracking system (priority tier + Jira backlog sync)](#2026-05-12--rethink-followup-tracking-system-priority-tier--jira-backlog-sync)
@@ -78,6 +79,35 @@ Format: see the user-level `~/.claude/CLAUDE.md` "Followup detection" section.
 - [Abandoned](#abandoned)
 
 ## Active
+
+### 2026-05-13 — figma-snapshot omits instance `componentProperties` (REST API limitation) — needed for caller-check accuracy
+
+**What:** The `crew figma-snapshot` CLI shipped in CREW-139 (PR #180) uses the Figma REST API. The REST `/v1/files/{key}` endpoint returns the node tree but **does not expose `componentProperties` on `INSTANCE` nodes** (the props that tell you which variant of the parent component the instance is using — e.g. `intensity: "mid"` on a Pill instance, `color: "waiting"`). Variable bindings on paint properties are similarly absent. That data is only available via the Figma Plugin API. As a result, the per-screen `<id>.json` emitted by the snapshot tells you "there's a Pill instance here" but not "it's the `mid/waiting` variant" — the agent's caller-check step (per `visual-fidelity-check` workflow.md Step 4) has to fall back to text-narrative inference instead of mechanical comparison.
+
+**Why noticed:** During the first calibration of the `visual-fidelity-check` skill against the CREW-135 fixture (run: `docs/superpowers/skill-fixtures/visual-fidelity-check/crew-135/runs/2026-05-12-run-01.md`). The subagent surfaced "no screen-level JSON for the agent-drawer screen" as a verification gap. After CREW-139 merged with REST-based JSON emission, the JSON exists but lacks the field that would close the gap (`componentProperties` on instance nodes). Sample finding F1 (state badges should use `intensity=mid`, not `muted`) was provable only because the fixture's narrative description said so — the snapshot data alone couldn't confirm what intensity the Figma agent-drawer screen's badge instance is meant to use.
+
+**Anchors:**
+
+- `packages/cli/src/lib/figma-snapshot/emit.ts` — current REST-based emitter
+- `packages/cli/src/lib/figma-snapshot/client.ts` — REST client (file + images endpoints only)
+- [PR #180](https://github.com/Safturento/crew/pull/180) — CREW-139 merge
+- `docs/superpowers/specs/2026-05-12-agent-visual-verification-design.md` — "Dependency on Figma access" section already names this as a future need
+- `docs/superpowers/skill-fixtures/visual-fidelity-check/crew-135/runs/2026-05-12-run-01.md` — calibration run with the verification gap surfaced
+- Figma REST API docs: [files endpoint](https://www.figma.com/developers/api#get-files-endpoint) — `componentProperties` is documented as available only via Plugin API
+
+**What's been considered:**
+
+- **Plugin-API-based emitter via Claude Code MCP bridge.** Shell out from `crew figma-snapshot` to a one-shot `claude` invocation with a prompt that runs the Figma Plugin API (the user already has it set up locally; this session uses it). Adds a process-orchestration layer but gives full data fidelity — `componentProperties`, `boundVariables`, computed paint resolution.
+- **Hybrid: REST for screenshots + simple data, Plugin API for instance-level enrichment.** Two-stage: keep the current REST emitter for the bulk export, run a second pass via Plugin API just to populate `componentProperties` on instance nodes and `boundVariables` on key paint properties. Smaller blast radius but more code paths.
+- **Maintain instance properties manually.** Out — they change every time a Figma instance is reconfigured. Doesn't scale.
+
+**Shape of work:** ~1-day implementation. Decide between full-replacement vs. hybrid. Author the Plugin-API runner (probably a Node script invoked via Claude harness with the right MCP allowed). Wire into `crew figma-snapshot` behind a flag (REST-only by default; Plugin-API-augmented when flag present + Claude Code available on host). Update the per-component JSON shape: add `instanceProperties` to instance nodes, add `tokenAlias` to paint entries.
+
+**Open questions:**
+
+- Is the Plugin-API path reliable enough to make default, or should it remain opt-in? Reliability depends on Claude Code being available on the dispatching host.
+- Does the Figma Pro tier limit Plugin-API access in any way relevant to crew? (Pro supports plugins and the Plugin API in the editor, but programmatic-headless usage is via the `use_figma` MCP we already have.)
+- Could we cache Plugin-API enrichment data (file-version keyed) to avoid the Claude shell-out on every dispatch? Pairs with the "snapshot caching" long-tail followup in the spec.
 
 ### 2026-05-12 — Cap or filter `raw` subtree size in figma-snapshot per-component JSON
 
