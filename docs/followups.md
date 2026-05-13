@@ -7,6 +7,7 @@ Format: see the user-level `~/.claude/CLAUDE.md` "Followup detection" section.
 ## Contents
 
 - [Active](#active)
+  - [2026-05-12 — Rethink followup-tracking system (priority tier + Jira backlog sync)](#2026-05-12--rethink-followup-tracking-system-priority-tier--jira-backlog-sync)
   - [2026-05-12 — Pill needs trailing-icon support (Filters chevron-down)](#2026-05-12--pill-needs-trailing-icon-support-filters-chevron-down)
   - [2026-05-12 — CodeChip composite for mono-font URL/path display (docker URL, worktree path)](#2026-05-12--codechip-composite-for-mono-font-urlpath-display-docker-url-worktree-path)
   - [2026-05-12 — Re-link 8 detached AgentRow tiles in modal-overlay screen backgrounds](#2026-05-12--re-link-8-detached-agentrow-tiles-in-modal-overlay-screen-backgrounds)
@@ -75,6 +76,40 @@ Format: see the user-level `~/.claude/CLAUDE.md` "Followup detection" section.
 - [Abandoned](#abandoned)
 
 ## Active
+
+### 2026-05-12 — Rethink followup-tracking system (priority tier + Jira backlog sync)
+
+**What:** The current `docs/followups.md` convention captures items well at the "noticed it" moment but has two gaps. (a) **No priority tier** — entries are chronological within `## Active` with no signal for what's near-term vs long-tail. The user has to skim the whole list to figure out what matters next. (b) **Single surface** — followups live in a versioned markdown file, but Jira is where the rest of the user's work is prioritized, tracked, and resolved. The current "graduate the followup → file a Jira ticket → manually move to Resolved when the ticket ships" loop is manual and easy to forget; the Resolved/Active state can drift from reality.
+
+**Why noticed:** During the 2026-05-12 brainstorm for the agent visual-verification skill, two near-term followups were about to be filed (Playwright e2e chromium binary fix, superpowers-chrome eval). User asked whether priority tiering and Jira-backlog sync would solve the underlying visibility/management problem. The trigger was: "these need to be close follows — how do I express that in the existing convention?"
+
+**Anchors:**
+
+- `~/.claude/CLAUDE.md` — current convention lives in the "Followup detection" section
+- `docs/followups.md` — the file format under discussion
+- Memory: `feedback_autonomous_doc_prs.md` (autonomous PR-creation pattern for followups)
+- Jira project: `CREW` — but note the convention is user-level, not project-specific (Recipes has its own `docs/followups.md`)
+
+**What's been considered:**
+
+- **Add a `**Priority:** near-term | someday` line to the entry template.** Cheap. Doesn't solve the second concern (single surface), and "near-term" entries still bury in the chronological list without grouping.
+- **Sub-section split**: add `## Near-term` and `## Long-tail` under `## Active`. Avoids new fields. Still doesn't integrate with Jira's prioritization.
+- **One-way sync to Jira backlogs**: a `crew followups sync` CLI that reads `docs/followups.md`, creates Jira tickets for each `## Active` entry that doesn't already have a `**Ticket:**` link, parks them in the project's backlog. Followups still author in markdown (low friction); prioritization and resolution happen in Jira (high visibility). When a Jira ticket transitions to Done, the followup auto-moves to Resolved on next sync.
+- **Followup-first vs ticket-first capture**: the value of the markdown file is the *thin-bullet capture moment* — no auth, no project selection, no ADF authoring. Switching wholesale to "file a Jira ticket directly" loses that ergonomics. So the markdown stays as the capture surface; sync is what bridges to Jira.
+- **Multi-repo concern**: a Crew-side observation about Recipes shouldn't auto-create a Jira ticket in CREW. Sync needs a per-entry "target project" hint (default = the repo's primary project). Adds a small field to the entry template.
+
+**Shape of work:**
+
+- ~1-2 hour design pass: settle the sync semantics (one-way? two-way? what's authoritative when they conflict?), the entry-template additions (priority, target project), the CLI surface.
+- ~half-day implementation: `crew followups sync` command in `packages/cli/`, parser for `docs/followups.md`, Jira create/link via existing Rovo MCP path, dry-run mode, an update pass for `~/.claude/CLAUDE.md` to teach the new convention.
+- ~half-day rollout: backfill existing `## Active` entries with priority + target project, do a first sync, validate the loop works on a sample item.
+
+**Open questions:**
+
+- Does the sync run automatically (cron, pre-`crew run` hook) or stay manual (`crew followups sync` on demand)? Manual is simpler but easy to forget; auto is invisible but rigs the workflow.
+- When a Jira ticket is created from a followup, does the markdown entry stay in `## Active` (with a `**Ticket:**` line) until the Jira ticket resolves, or does it move to a new `## In Jira` section? The former matches current convention; the latter makes the sync state visible.
+- What about followups in repos without a Jira project (e.g., user-level `~/.claude/` work)? Sync skips them, keeps them markdown-only.
+- Should priority on the markdown side map directly to Jira priority field, or is it a separate "near-term-vs-not" signal that lives only in the followup convention?
 
 ### 2026-05-12 — Pill needs trailing-icon support (Filters chevron-down)
 
