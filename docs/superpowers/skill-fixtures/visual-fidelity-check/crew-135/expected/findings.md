@@ -60,6 +60,20 @@ A "hit" means the skill produces a finding that names the same component + prope
 
 ---
 
+### F6. WorktreePathLink Copy button has stale `text-muted-foreground` className override
+
+- **Severity:** low
+- **Kind:** caller (stale post-migration override)
+- **Components:** `AgentBody.tsx` (the `WorktreePathLink` inner Button — copy worktree path)
+- **Evidence:**
+  - PR #177 migrated this Button from `variant="ghost"` to `color="running" intensity="ghost"` but kept the existing `className="h-auto px-1 py-0 text-xs uppercase tracking-wide text-muted-foreground hover:text-foreground hover:bg-transparent"`.
+  - `pillSurfaceClasses('running', 'ghost')` already emits `text-slate-400` which `text-muted-foreground` aliases to. The `text-muted-foreground` portion is redundant.
+  - Layout overrides (`h-auto px-1 py-0 text-xs uppercase tracking-wide`) are real and intentional — the Copy button is a tiny inline affordance, not a standard xs Button.
+  - `hover:text-foreground` adds real behavior (hover state) not provided by the system.
+- **Fix:** drop the `text-muted-foreground` portion of the className. Keep the layout overrides + the hover variant. Low priority — visual impact is zero (system emits the same color).
+
+(Added 2026-05-12 after calibration run — the skill caught this; original author's expected list missed it. Fixture updated to reflect the real bug surface.)
+
 ## Allowed but not required (judgment-call findings)
 
 These are observations the skill MAY surface but shouldn't be required for a passing run. Useful for "extra credit" calibration:
