@@ -7,6 +7,7 @@ Format: see the user-level `~/.claude/CLAUDE.md` "Followup detection" section.
 ## Contents
 
 - [Active](#active)
+  - [2026-05-13 — visual-fidelity-check calibration: pattern accuracy ≠ specific accuracy + planned screenshot-vs-Figma ultimate test](#2026-05-13--visual-fidelity-check-calibration-pattern-accuracy--specific-accuracy--planned-screenshot-vs-figma-ultimate-test)
   - [2026-05-13 — figma-snapshot omits instance `componentProperties` (REST API limitation) — needed for caller-check accuracy](#2026-05-13--figma-snapshot-omits-instance-componentproperties-rest-api-limitation--needed-for-caller-check-accuracy)
   - [2026-05-12 — Cap or filter `raw` subtree size in figma-snapshot per-component JSON](#2026-05-12--cap-or-filter-raw-subtree-size-in-figma-snapshot-per-component-json)
   - [2026-05-12 — Move figma-snapshot `PAGE_DIR_MAP` into project config](#2026-05-12--move-figma-snapshot-page_dir_map-into-project-config)
@@ -79,6 +80,38 @@ Format: see the user-level `~/.claude/CLAUDE.md` "Followup detection" section.
 - [Abandoned](#abandoned)
 
 ## Active
+
+### 2026-05-13 — visual-fidelity-check calibration: pattern accuracy ≠ specific accuracy + planned screenshot-vs-Figma ultimate test
+
+**What:** Two calibration runs of the `visual-fidelity-check` skill against the CREW-135 fixture (`docs/superpowers/skill-fixtures/visual-fidelity-check/crew-135/runs/`) plus user-in-the-loop review revealed a consistent pattern: the skill catches the *type* of every visual regression (caller-side intensity choice, wrong helper shade, icon primitive mismatch) but produces *specifically wrong* fixes when the snapshot lacks per-instance `componentProperties`. Three concrete examples from CREW-135:
+
+- **View PR icon.** Skill recommended `lucide/arrow-up-right`. Real Figma instance: `lucide/git-pull-request`. (Open as page genuinely uses arrow-up-right — different icon per surface; skill couldn't distinguish without per-instance data.)
+- **New Run button color.** Skill flagged the New Run button as a helper-level "wrong shade" bug (`bg-neutral-200` vs `zinc/50`). Real bug: caller-side wrong color enum (`color="white"` where Figma uses `color="idle"`). The helper is fine; the caller picked the wrong color.
+- **State badge dot.** Skill twice downgraded the CSS-span-vs-lucide-circle mismatch to a "judgment call" despite the skill's iterated "icon findings are NEVER judgment calls" rule. User screenshot confirmed visually distinct shapes (filled dot vs outlined ring). LLM hedging on icon-similarity persists in the absence of an actual visual diff.
+
+The structural fix for the first two is the Plugin-API snapshot work captured in the sibling [followup](#2026-05-13--figma-snapshot-omits-instance-componentproperties-rest-api-limitation--needed-for-caller-check-accuracy). The third is a skill-prompt + visual-diff capability question — even with perfect snapshot data, an LLM reading "code uses CSS span, Figma uses lucide/circle" without seeing the rendered result will likely keep hedging.
+
+**Why noticed:** Today's user-in-the-loop visual review of the run-02 report. The user provided side-by-side Error-badge screenshots (`docs/superpowers/skill-fixtures/visual-fidelity-check/crew-135/runs/` referenced in conversation) and direct corrections on icon names + the New Run color. Pre-pause from active skill development.
+
+**Anchors:**
+
+- `~/.claude/skills/visual-fidelity-check/{SKILL.md,workflow.md,examples/}`
+- `docs/superpowers/skill-fixtures/visual-fidelity-check/crew-135/` — fixture with corrected ground truth
+- Sibling structural followup (#2026-05-13 entry below)
+- PR #182 (the structural-gap followup) — already merged
+- PR #183 (CREW-140 dispatch integration) — pending merge
+
+**Shape of work — three threads:**
+
+1. **Wait for Plugin-API snapshot.** Sibling structural followup must land first. Without per-instance `componentProperties`, no amount of skill-prompt tuning will produce specifically-correct fixes for icon/color findings.
+2. **Re-iterate the skill once Plugin-API snapshot lands.** Re-run calibration against the CREW-135 fixture (updated with ground truth). Verify the specifics now resolve correctly (lucide/git-pull-request for View PR, idle/loud for New Run). Update expected/findings.md if needed.
+3. **Planned: screenshot-vs-Figma ultimate test.** User requested a calibration where the skill receives **multiple screenshots of the CREW-135 rendered dashboard** + the corresponding Figma references and enumerates **every** visible difference. This exercises the skill's Step 5 (visual check), which is currently lightly-spec'd as "screenshot + eyeball." Probably requires sharpening the visual-check section to be a rigorous enumeration with vision-LLM-style observation listing. Worth doing as the final hardening pass after Plugin-API snapshot lands. May surface gaps the structural+caller checks can't catch (e.g., font-rendering, anti-aliasing, micro-spacing).
+
+**Open questions:**
+
+- How aggressive should the LLM-hedge counter be in the skill prompt? Today's iteration added "NEVER judgment calls" + "anti-loophole" callouts; run-02 hedged anyway. May need automated visual-diff backing rather than prompt-only enforcement.
+- Should the ultimate test fixture include rendered HTML/CSS in addition to screenshots, so structural assertions can be machine-verified alongside the visual enumeration?
+- Does Figma's `lucide/circle` set-level default actually render as "outlined ring" or "filled circle"? The screenshot confirmed outlined-ring in this case but the lucide library has multiple circle variants (`circle`, `circle-dot`, `circle-fill`?) — verify before recommending the import.
 
 ### 2026-05-13 — figma-snapshot omits instance `componentProperties` (REST API limitation) — needed for caller-check accuracy
 
