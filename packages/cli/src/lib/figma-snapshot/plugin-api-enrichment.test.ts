@@ -113,7 +113,7 @@ describe('enrichSnapshotWithPluginApi', () => {
 
   it('passes the built prompt to the runner via the -p flag pattern', async () => {
     const probe: ClaudeProbe = async () => '/usr/local/bin/claude';
-    const runner = vi.fn(async () => ({
+    const runner: ClaudeRunner = vi.fn(async () => ({
       exitCode: 0,
       stdout: '{"enrichedNodeCount":0,"errors":[]}',
       stderr: '',
@@ -123,8 +123,10 @@ describe('enrichSnapshotWithPluginApi', () => {
       probeClaude: probe,
       runClaude: runner,
     });
-    expect(runner).toHaveBeenCalledTimes(1);
-    const callArgs = runner.mock.calls[0][0];
+    const mock = vi.mocked(runner);
+    expect(mock).toHaveBeenCalledTimes(1);
+    const callArgs = mock.mock.calls[0]?.[0];
+    if (!callArgs) throw new Error('runner not invoked');
     expect(callArgs.prompt).toContain(baseOpts.snapshotDir);
     expect(callArgs.prompt).toContain(baseOpts.fileKey);
   });
