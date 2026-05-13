@@ -7,6 +7,12 @@ Format: see the user-level `~/.claude/CLAUDE.md` "Followup detection" section.
 ## Contents
 
 - [Active](#active)
+  - [2026-05-13 — Agent rows: code renders as table; Figma designs as cards (architectural layout drift, affects 3 screens)](#2026-05-13--agent-rows-code-renders-as-table-figma-designs-as-cards-architectural-layout-drift-affects-3-screens)
+  - [2026-05-13 — Agent drawer Close button uses Unicode "X" glyph instead of `lucide/x` SVG](#2026-05-13--agent-drawer-close-button-uses-unicode-x-glyph-instead-of-lucidex-svg)
+  - [2026-05-13 — Agent drawer / agent page search input missing leading magnifying-glass icon](#2026-05-13--agent-drawer--agent-page-search-input-missing-leading-magnifying-glass-icon)
+  - [2026-05-13 — TopNav BrandMark renders a different glyph than the Figma "crew" mark](#2026-05-13--topnav-brandmark-renders-a-different-glyph-than-the-figma-crew-mark)
+  - [2026-05-13 — Agent page "Token usage" section absent in rendered output (empty-state behavior or missing feature?)](#2026-05-13--agent-page-token-usage-section-absent-in-rendered-output-empty-state-behavior-or-missing-feature)
+  - [2026-05-13 — "Hide finished" toggle on Agents List has no Figma reference (scope drift either way — reconcile)](#2026-05-13--hide-finished-toggle-on-agents-list-has-no-figma-reference-scope-drift-either-way--reconcile)
   - [2026-05-13 — visual-fidelity-check calibration: pattern accuracy ≠ specific accuracy + planned screenshot-vs-Figma ultimate test](#2026-05-13--visual-fidelity-check-calibration-pattern-accuracy--specific-accuracy--planned-screenshot-vs-figma-ultimate-test)
   - [2026-05-13 — figma-snapshot omits instance `componentProperties` (REST API limitation) — needed for caller-check accuracy](#2026-05-13--figma-snapshot-omits-instance-componentproperties-rest-api-limitation--needed-for-caller-check-accuracy)
   - [2026-05-12 — Cap or filter `raw` subtree size in figma-snapshot per-component JSON](#2026-05-12--cap-or-filter-raw-subtree-size-in-figma-snapshot-per-component-json)
@@ -80,6 +86,145 @@ Format: see the user-level `~/.claude/CLAUDE.md` "Followup detection" section.
 - [Abandoned](#abandoned)
 
 ## Active
+
+### 2026-05-13 — Agent rows: code renders as table; Figma designs as cards (architectural layout drift, affects 3 screens)
+
+**What:** The agent rows on Agents List (`packages/dashboard/src/routes/AgentsListPage.tsx` + `components/AgentRow.tsx`), Agent full page (`AgentFullPage.tsx` agents sub-section), and Project detail (`ProjectDetailPage.tsx` agents sub-section) currently render as a **columnar table** (`STATE | ID | RUNTIME | TOKENS | TITLE | actions`). The Figma reference on every one of those screens uses a **card layout**: full-width row with a left-edge state-colored stroke, state pill top-left, title as the primary content, meta (`# KAN-31 · ⌚ 33m 04s · ✦ 38.1k`) inline below the title, action buttons right-aligned within the card. The table-vs-card mismatch is the single largest visual difference between code and Figma — bigger than any individual component-level bug.
+
+**Why noticed:** 2026-05-13 ultimate-test visual-comparison session. The visual-fidelity-check skill's structural+caller checks across three calibration runs (run-01 / run-02 / run-03) never flagged this because they operate per-component, not per-layout. The diff only surfaces when comparing rendered-page screenshots to Figma frame screenshots side-by-side.
+
+**Anchors:**
+
+- `packages/dashboard/src/routes/AgentsListPage.tsx` — table renderer
+- `packages/dashboard/src/components/AgentRow.tsx` — row composite (currently styled for table cells, would need substantial rewrite for card shape)
+- `packages/dashboard/src/routes/AgentFullPage.tsx` — uses AgentsListPage's table rendering for the "agents" tab
+- `packages/dashboard/src/routes/ProjectDetailPage.tsx` — uses the same row pattern under the project's TOML block
+- Figma references: `1:2` (Agents List), `1:1900` (Agent full page), `1:2443` (Project detail) — all three Figma frames render cards
+- Code Connect: `AgentRow.figma.tsx` — currently maps the table-row component to whatever Figma node was on the legacy DS file; needs updating to point at the card-shape Figma component if/when it exists in `9FeJPriqdsdA4n9R5Xsrr8`
+- Spec doc covering originally-shipped agents-list slice: `docs/superpowers/specs/2026-05-05-slice-1c-agent-drawer-and-push-updates-design.md` — predates the Figma card refresh
+
+**What's been considered:**
+
+- **Out-of-scope deferral:** the row layout shipped during the original agents-list slice (CREW-102 / CREW-103). The current Figma design represents a later DS iteration. The drift accumulated as Figma evolved and code didn't follow. This is a design-system catch-up effort, not a CREW-135 regression.
+- **Effort scope:** AgentRow.tsx is a substantial composite — would need rewriting to switch from table-cell layout to card-layout, including how the meta fields render (icons inline vs columnar), how quick-actions position within the card, how the left-edge state stroke gets applied (probably via a `border-l-4` color matching state). The supporting parent table (header row, column-width logic) goes away entirely.
+- **Verify the Figma is canonical:** before committing to the rewrite, confirm with the design owner that the card layout is actually the intended end-state (not an in-progress concept that got merged to main Figma by accident). Once confirmed, plan as its own ticket.
+
+**Shape of work:**
+
+- ~1-day brainstorm + spec covering the layout migration + reconciling the meta-row icon set (clock for runtime, diamond for tokens, etc. — Figma uses lucide icons there; code currently uses plain text columns).
+- ~2-3 days implementation: rewrite AgentRow.tsx as a card, drop the table header row, migrate three pages (Agents List, Agent full page, Project detail) to use the card-shape consumer.
+- Tests: existing `AgentRow.test.tsx` is column-oriented; needs rewrite to match card affordances.
+- Visual smoke + Plugin-API-snapshot-driven `visual-fidelity-check` to verify the result matches Figma. (Ironically, this would be a great fixture for the future "ultimate test" capability — known-bad input + known-good Figma reference + measurable progress.)
+
+**Open questions:**
+
+- Is the card layout actually the design intent, or did Figma drift? Confirm before scoping.
+- Does the table-row layout have any current usability advantage worth keeping? (e.g., sortable columns — Figma's card layout doesn't expose this affordance.)
+- What's the right ordering vs other DS catch-up work? This is likely the biggest single visual-fidelity win, but also the biggest implementation cost.
+
+### 2026-05-13 — Agent drawer Close button uses Unicode "X" glyph instead of `lucide/x` SVG
+
+**What:** The Close button at the top-right of the Agent Drawer (visible in `1:756` and on `1:378` agents-list-with-drawer-open Figma frames) declares `Icon=lucide/x` in its componentProperties — the polish-pass session on 2026-05-12 migrated the Figma side to use the proper SVG. The dashboard's drawer code (probably `AgentDrawer.tsx`'s header) still renders a font-glyph "X" / "✕" character inline, not the lucide SVG. Same class of bug as the View PR / Open as page Unicode-arrow issue caught in CREW-135 (visual-fidelity-check F5), but on a different button.
+
+**Why noticed:** 2026-05-13 ultimate-test visual comparison (screen 2 — agent drawer header). The skill's calibration runs never surfaced this because the drawer Close button isn't in CREW-135's diff (CREW-135 was the Pill primitives migration; the Close button is a caller of Button that wasn't touched).
+
+**Anchors:**
+
+- `packages/dashboard/src/components/AgentDrawer.tsx` (or wherever the drawer header lives) — the Close button JSX. Grep `aria-label="Close"` or similar.
+- Figma instance: `387:2566` on the agent-drawer screen (and equivalent on other screens) — `componentProperties: { type: "button-icon-sm", color: "running", intensity: "ghost", Icon: { name: "lucide/x" } }`
+- Polish-pass conversion: occurred during the 2026-05-12 Figma DS polish session — the raw `Button - Close` FRAME was converted to a Pill instance with `Icon=lucide/x`.
+
+**Shape of work:** Small — one or two file edits. Replace the inline `<span>✕</span>` (or similar) with `<X aria-hidden />` from `lucide-react`. The Button base class already sizes child SVGs to `size-4` for normal buttons / `size-3` for xs sizes via `[&_svg:not([class*='size-'])]`.
+
+**Open questions:** None. Drop-in fix.
+
+### 2026-05-13 — Agent drawer / agent page search input missing leading magnifying-glass icon
+
+**What:** The search input above the event timeline on Agent Drawer (`1:756`) + Agent full page (`1:1900`) Figma frames has a `Has Icon=true, Icon=lucide/search` leading-icon configuration. The dashboard code renders the same input as a plain `<Input placeholder="Search events..." />` with no leading icon. Once CREW-136 (T2 Form composites) lands the `leadingIcon` prop on `Input`, the caller needs to be updated to pass `leadingIcon={<Search />}`.
+
+**Why noticed:** 2026-05-13 ultimate-test visual comparison (screen 2 + screen 3). The skill's run-03 didn't surface this because the search-input wasn't on CREW-135's touched-files list.
+
+**Anchors:**
+
+- `packages/dashboard/src/components/Timeline/EventFilters.tsx` (or wherever the timeline filter row + search input live) — caller of Input
+- CREW-136 (T2 Form composites) — adds the `leadingIcon` prop to `Input`. This followup is the **caller-side change** that consumes the new prop.
+- Figma instance: search input field on agent drawer + agent page screens.
+
+**Shape of work:** Small — one or two file edits. Blocked on CREW-136 landing.
+
+**Open questions:**
+
+- Anywhere else in the dashboard with a search input that should also use the leading icon? (Worth a grep when the leadingIcon prop ships.)
+
+### 2026-05-13 — TopNav BrandMark renders a different glyph than the Figma "crew" mark
+
+**What:** The `BrandMark` component at the top-left of the TopNav (visible on every page) renders what looks like a dark checkbox-styled glyph in code, while the Figma reference shows a squarish-dotted "crew" mark (looks like a small grid / four-dot logo). The Figma BrandMark component is at `220:211` in the Composites page (referenced in [[project_crew_ds_consolidated_into_dashboard_file]]). The code's BrandMark.tsx renders an SVG that doesn't match.
+
+**Why noticed:** 2026-05-13 ultimate-test visual comparison. Visible on all 5 captured screens — the dark-checkbox glyph appears identically rendered in code, the squarish-dot mark appears identically in Figma.
+
+**Anchors:**
+
+- `packages/dashboard/src/components/BrandMark.tsx` — current implementation
+- `packages/dashboard/src/components/BrandMark.figma.tsx` — Code Connect mapping
+- Figma component: `220:211` (BrandMark on Composites page)
+- Note: this is a pre-existing drift, not a CREW-135 regression. The brand mark may have been redesigned in Figma after the initial dashboard implementation.
+
+**Shape of work:** Small — refresh BrandMark.tsx's SVG path to match the Figma reference. Compare the Figma node's SVG content to the code's SVG, update path data accordingly.
+
+**Open questions:**
+
+- Is the Figma BrandMark the canonical brand intent, or did Figma drift from a previously-agreed mark? Confirm with design owner before changing.
+
+### 2026-05-13 — Agent page "Token usage" section absent in rendered output (empty-state behavior or missing feature?)
+
+**What:** The Figma `1:1900` Agent full page reference shows a `Token usage` section between the page header and the event timeline — a table listing per-tool token consumption (Read 22.4k, Bash 5.1k, etc.). The rendered agent page does not display this section at all (verified during 2026-05-13 ultimate test against an agent with `3.5k` token usage). Two possibilities: (a) the section is hidden when the agent has no events / no token data, but isn't reappearing when data is present — this would be a bug; (b) the section is a planned-but-not-yet-built feature.
+
+**Why noticed:** 2026-05-13 ultimate-test visual comparison (screen 3 — agent full page). The rendered screenshot shows the agent header → filter chips → "No timeline events yet." Nothing about token usage breakdown.
+
+**Anchors:**
+
+- `packages/dashboard/src/components/TokenTable.tsx` exists — built during CREW-104. So the component exists; the question is whether it's wired into AgentFullPage.tsx + AgentDrawer.tsx and what governs its visibility.
+- `packages/dashboard/src/routes/AgentFullPage.tsx` — check whether TokenTable is rendered + under what conditions
+- Figma reference: `1:1900` — Token usage section between header + event stream
+- Related followup: 2026-05-08 "Wire StateHistoryBar and TokenTable into AgentBody alongside the timeline" — covers this gap; this entry is the duplicate-visibility / supersedes-pointer for it.
+
+**Shape of work:**
+
+- ~30min investigation: open AgentFullPage.tsx, find whether TokenTable is rendered, identify the visibility gate. Probably `if (tokens.length > 0)` or similar.
+- If the gate is too restrictive → small fix.
+- If TokenTable isn't wired in at all → small feature add + tests.
+- **Likely a duplicate / overlapping concern with the existing 2026-05-08 followup.** Resolve by merging the two entries on next triage.
+
+**Open questions:**
+
+- Is the empty-state-hides-section behavior intentional UX, or accidental?
+- Same question for AgentDrawer (drawer also lacks the section in the rendered output).
+
+### 2026-05-13 — "Hide finished" toggle on Agents List has no Figma reference (scope drift either way — reconcile)
+
+**What:** The Agents List rendered output shows a `Hide finished` toggle (outlined pill, top-right of the agent list area). No Figma frame captured during the 2026-05-13 ultimate test surfaces this control — the Figma `1:2` Agents List reference has no equivalent toggle. Either the Figma is stale (control was added in code post-Figma-design) or the code over-shipped (control is unnecessary). Reconcile.
+
+**Why noticed:** 2026-05-13 ultimate-test visual comparison (screen 1 — Agents List).
+
+**Anchors:**
+
+- `packages/dashboard/src/routes/AgentsListPage.tsx` — toggle implementation
+- Source of the feature: CREW-107 (PR #142, "Hide finished toggle on AgentsList"). So it's a code-side feature that shipped without Figma alignment.
+- Figma reference: `1:2` — no Hide finished toggle visible
+
+**What's been considered:**
+
+- **Code-first feature:** the toggle was a real UX request that shipped without going through Figma first. Solution: add it to the Figma design retroactively.
+- **Over-shipped feature:** the toggle isn't actually wanted; remove from code.
+- **Design owner unilaterally chose not to include it in Figma:** also requires reconciliation.
+
+**Shape of work:**
+
+- ~15min: confirm with design owner whether the toggle stays in code (add to Figma) or comes out of code (remove). Easy decision once asked.
+
+**Open questions:**
+
+- Which way does the user want to reconcile?
 
 ### 2026-05-13 — visual-fidelity-check calibration: pattern accuracy ≠ specific accuracy + planned screenshot-vs-Figma ultimate test
 
