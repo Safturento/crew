@@ -4,6 +4,7 @@ export * from './app-lifecycle.js';
 export * from './baseline.js';
 export * from './cleanup-worktree.js';
 export * from './discover-transcript.js';
+export * from './figma-snapshot-step.js';
 export * from './paths.js';
 export * from './preconditions.js';
 export * from './preflight.js';

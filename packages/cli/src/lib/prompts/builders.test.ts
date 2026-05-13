@@ -388,6 +388,84 @@ describe('buildTicketPrompt', () => {
   });
 });
 
+describe('buildTicketPrompt — visual-fidelity gate', () => {
+  it('renders the visual-fidelity-check gate section when visualFidelity is provided', () => {
+    const prompt = buildTicketPrompt({
+      key: 'CREW-99',
+      githubRepo: 'Safturento/crew',
+      jiraSite: 'https://safturento.atlassian.net',
+      visualFidelity: {
+        snapshotPath: '.crew/figma-snapshot',
+        componentDir: 'packages/dashboard/src/components',
+      },
+    });
+    expect(prompt).toContain('Visual-fidelity verification');
+    expect(prompt).toContain('visual-fidelity-check');
+    expect(prompt).toContain('.crew/figma-snapshot');
+    expect(prompt).toContain('packages/dashboard/src/components');
+  });
+
+  it('warns the agent not to claim done without invoking the skill', () => {
+    const prompt = buildTicketPrompt({
+      key: 'CREW-99',
+      githubRepo: 'Safturento/crew',
+      jiraSite: 'https://safturento.atlassian.net',
+      visualFidelity: {
+        snapshotPath: '.crew/figma-snapshot',
+        componentDir: 'packages/dashboard/src/components',
+      },
+    });
+    expect(prompt).toMatch(/do not claim .* (done|complete)/i);
+  });
+
+  it('omits the gate when visualFidelity is absent', () => {
+    const prompt = buildTicketPrompt({
+      key: 'CREW-99',
+      githubRepo: 'Safturento/crew',
+      jiraSite: 'https://safturento.atlassian.net',
+    });
+    expect(prompt).not.toContain('Visual-fidelity verification');
+    expect(prompt).not.toContain('visual-fidelity-check');
+  });
+
+  it('renders identically when visualFidelity is undefined as when omitted', () => {
+    const a = buildTicketPrompt({
+      key: 'CREW-99',
+      githubRepo: 'Safturento/crew',
+      jiraSite: 'https://safturento.atlassian.net',
+    });
+    const b = buildTicketPrompt({
+      key: 'CREW-99',
+      githubRepo: 'Safturento/crew',
+      jiraSite: 'https://safturento.atlassian.net',
+      visualFidelity: undefined,
+    });
+    expect(a).toBe(b);
+  });
+
+  it('renders the visual-fidelity block after the bruno-smoke block when both configured', () => {
+    const prompt = buildTicketPrompt({
+      key: 'CREW-99',
+      githubRepo: 'Safturento/crew',
+      jiraSite: 'https://safturento.atlassian.net',
+      brunoSmoke: {
+        baseUrl: 'http://localhost:19383',
+        envName: 'crew-99',
+        collectionDir: 'bruno',
+        hasSmokeUser: false,
+      },
+      visualFidelity: {
+        snapshotPath: '.crew/figma-snapshot',
+        componentDir: 'packages/dashboard/src/components',
+      },
+    });
+    const brunoIdx = prompt.indexOf('API smoke verification (Bruno)');
+    const vfIdx = prompt.indexOf('Visual-fidelity verification');
+    expect(brunoIdx).toBeGreaterThan(-1);
+    expect(vfIdx).toBeGreaterThan(brunoIdx);
+  });
+});
+
 describe('buildTicketPrompt — sandbox-network-note', () => {
   it('renders the sandbox-network-note when playwright is configured', () => {
     const out = buildTicketPrompt({
