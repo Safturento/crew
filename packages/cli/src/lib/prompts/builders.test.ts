@@ -471,7 +471,10 @@ describe('buildTicketPrompt — visual-fidelity gate', () => {
       key: 'CREW-999',
       githubRepo: 'foo/bar',
       jiraSite: 'https://x.atlassian.net',
-      visualFidelity: { snapshotPath: '.crew/snap', componentDir: 'packages/dashboard/src/components' },
+      visualFidelity: {
+        snapshotPath: '.crew/snap',
+        componentDir: 'packages/dashboard/src/components',
+      },
     });
     expect(out).toMatch(/^8\. \*\*Visual fidelity gate\*\*/m);
     expect(out).toMatch(/^9\. \*\*Verify\.\*\*/m);
