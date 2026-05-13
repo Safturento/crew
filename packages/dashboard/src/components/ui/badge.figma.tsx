@@ -4,20 +4,33 @@ import { Badge } from '@/components/ui/badge';
 
 figma.connect(
   Badge,
-  'https://www.figma.com/design/UkPJj6vd7HMKcey7M0XF4N/Core-Design-System?node-id=665-2024',
+  'https://www.figma.com/design/9FeJPriqdsdA4n9R5Xsrr8/Crew?node-id=272-120',
   {
+    variant: { type: 'pill' },
     props: {
-      variant: figma.enum('Type', {
-        default: 'default',
-        secondary: 'secondary',
-        destructive: 'destructive',
-        outline: 'outline',
-        secondary_icon: 'secondary',
-        default_number: 'default',
-        secondary_number: 'secondary',
-        destructive_number: 'destructive',
+      label: figma.string('Label'),
+      hasIcon: figma.boolean('Has Icon'),
+      color: figma.enum('color', {
+        idle: 'idle',
+        initializing: 'initializing',
+        running: 'running',
+        waiting: 'waiting',
+        'pr-open': 'pr_open',
+        error: 'error',
+        finished: 'finished',
+        white: 'white',
+      }),
+      intensity: figma.enum('intensity', {
+        ghost: 'ghost',
+        muted: 'muted',
+        mid: 'mid',
+        loud: 'loud',
       }),
     },
-    example: ({ variant }) => <Badge variant={variant}>Badge</Badge>,
+    example: ({ label, color, intensity, hasIcon }) => (
+      <Badge color={color} intensity={intensity} hasIcon={hasIcon}>
+        {label}
+      </Badge>
+    ),
   },
 );

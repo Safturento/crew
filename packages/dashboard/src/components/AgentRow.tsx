@@ -4,7 +4,7 @@ import { cva } from 'class-variance-authority';
 
 import type { Agent, AgentState } from '../data/types.js';
 import { STATE_CLASSES, STATE_META } from '../data/state-meta.js';
-import { StateBadge } from './StateBadge.js';
+import { Badge } from './ui/badge.js';
 import { Button } from './ui/button.js';
 import { formatDuration } from '../format/duration.js';
 import { formatTokens } from '../format/tokens.js';
@@ -64,7 +64,15 @@ export function AgentRow({ agent, onSelect, onAction }: AgentRowProps) {
           className={`absolute inset-y-1.5 left-0 w-1 rounded-full ${stateClasses.solidBg} animate-att-pulse`}
         />
       )}
-      <StateBadge state={agent.state} />
+      <Badge
+        role="status"
+        aria-label={meta.label}
+        color={agent.state}
+        intensity="muted"
+        hasIcon
+      >
+        {meta.label}
+      </Badge>
       <span className="font-mono text-xs text-muted-foreground">{agent.key}</span>
       <span className="text-right font-mono text-xs tabular-nums text-muted-foreground">
         {runtime}
