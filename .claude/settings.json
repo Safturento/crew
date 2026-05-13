@@ -36,5 +36,18 @@
         "127.0.0.1"
       ]
     }
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "./packages/cli/scripts/hooks/visual-fidelity-pr-gate.sh"
+          }
+        ]
+      }
+    ]
   }
 }
