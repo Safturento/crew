@@ -18,6 +18,13 @@ interface ToolUseItem {
   input?: { command?: string };
 }
 interface TranscriptEvent {
+  type?: string;
+  subtype?: string;
+  compactMetadata?: {
+    trigger?: 'manual' | 'auto';
+    preTokens?: number;
+    durationMs?: number;
+  };
   message?: {
     content?: ToolUseItem[];
     usage?: {
@@ -94,6 +101,31 @@ function countToolCalls(events: TranscriptEvent[]): number {
   return n;
 }
 
+interface CompactionStats {
+  total: number;
+  auto: number;
+  maxPreTokens: number;
+}
+
+function compactionStats(events: TranscriptEvent[]): CompactionStats {
+  // compact_boundary events carry compactMetadata.trigger ("manual" / "auto")
+  // and preTokens (context size right before compaction). Auto compactions are
+  // the "filled the window" signal — ideal post-progressive-disclosure runs
+  // never hit one. Manual compactions are user/agent grooming and worth
+  // tracking separately.
+  let total = 0;
+  let auto = 0;
+  let maxPreTokens = 0;
+  for (const ev of events) {
+    if (ev.type !== 'system' || ev.subtype !== 'compact_boundary') continue;
+    total++;
+    if (ev.compactMetadata?.trigger === 'auto') auto++;
+    const pre = ev.compactMetadata?.preTokens ?? 0;
+    if (pre > maxPreTokens) maxPreTokens = pre;
+  }
+  return { total, auto, maxPreTokens };
+}
+
 interface RunRow {
   id: number;
   session_id: string;
@@ -141,6 +173,9 @@ async function main(): Promise<void> {
     cleanliness_pass_count INTEGER,
     turn_count INTEGER,
     tool_call_count INTEGER,
+    compaction_count INTEGER,
+    auto_compaction_count INTEGER,
+    max_pre_compact_tokens INTEGER,
     pr_claim_input_tokens INTEGER,
     pr_claim_uncached_tokens INTEGER,
     pr_claim_cache_read_tokens INTEGER,
@@ -178,27 +213,36 @@ async function main(): Promise<void> {
     const cleanlinessCount = countCleanlinessChecks(commands);
     const turns = countTurns(events);
     const toolCalls = countToolCalls(events);
+    const compactions = compactionStats(events);
     const tokens = lastPrClaimTokens(events);
     db.prepare(
       `INSERT INTO baseline_metrics (
          run_id, cleanliness_pass_count, turn_count, tool_call_count,
+         compaction_count, auto_compaction_count, max_pre_compact_tokens,
          pr_claim_input_tokens, pr_claim_uncached_tokens,
          pr_claim_cache_read_tokens, pr_claim_cache_creation_tokens,
          captured_at
-       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     ).run(
       row.id,
       cleanlinessCount,
       turns,
       toolCalls,
+      compactions.total,
+      compactions.auto,
+      compactions.maxPreTokens,
       tokens.total,
       tokens.uncached,
       tokens.cacheRead,
       tokens.cacheCreate,
       new Date().toISOString(),
     );
+    const compactSuffix =
+      compactions.total > 0
+        ? `, compact=${compactions.total}(${compactions.auto} auto, peak=${compactions.maxPreTokens})`
+        : '';
     console.log(
-      `run ${row.id}: cleanliness=${cleanlinessCount}/${CLEANLINESS_COMMANDS.length}, turns=${turns}, tools=${toolCalls}, tokens=${tokens.total} (cached=${tokens.cacheRead})`,
+      `run ${row.id}: cleanliness=${cleanlinessCount}/${CLEANLINESS_COMMANDS.length}, turns=${turns}, tools=${toolCalls}, tokens=${tokens.total} (cached=${tokens.cacheRead})${compactSuffix}`,
     );
   }
   console.log('baseline capture complete');
