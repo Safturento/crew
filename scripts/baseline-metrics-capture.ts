@@ -20,7 +20,11 @@ interface ToolUseItem {
 interface TranscriptEvent {
   message?: {
     content?: ToolUseItem[];
-    usage?: { input_tokens?: number };
+    usage?: {
+      input_tokens?: number;
+      cache_read_input_tokens?: number;
+      cache_creation_input_tokens?: number;
+    };
   };
 }
 
@@ -49,10 +53,19 @@ function countCleanlinessChecks(commands: string[]): number {
   return CLEANLINESS_COMMANDS.filter((c) => commands.some((b) => b.includes(c))).length;
 }
 
-function lastInputTokens(events: TranscriptEvent[]): number {
+function lastContextTokens(events: TranscriptEvent[]): number {
+  // Claude API splits prompt cost into input_tokens (uncached delta),
+  // cache_read_input_tokens, and cache_creation_input_tokens. The actual
+  // context size at that turn is the sum of all three — uncached input alone
+  // is ~1 for cached conversations and a useless signal.
   for (let i = events.length - 1; i >= 0; i--) {
     const usage = events[i].message?.usage;
-    if (usage?.input_tokens) return usage.input_tokens;
+    if (!usage) continue;
+    const input = usage.input_tokens ?? 0;
+    const cacheRead = usage.cache_read_input_tokens ?? 0;
+    const cacheCreate = usage.cache_creation_input_tokens ?? 0;
+    const total = input + cacheRead + cacheCreate;
+    if (total > 0) return total;
   }
   return 0;
 }
@@ -131,7 +144,7 @@ async function main(): Promise<void> {
     const events = await readTranscript(transcriptPath);
     const commands = extractBashCommands(events);
     const cleanlinessCount = countCleanlinessChecks(commands);
-    const tokens = lastInputTokens(events);
+    const tokens = lastContextTokens(events);
     db.prepare(
       `INSERT OR REPLACE INTO baseline_metrics (run_id, cleanliness_pass_count, pr_claim_input_tokens, captured_at)
        VALUES (?, ?, ?, ?)`,
