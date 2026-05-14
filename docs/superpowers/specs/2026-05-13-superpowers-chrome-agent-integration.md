@@ -262,10 +262,10 @@ Cross-project verification against `Recipes-App` is also valuable but secondary.
 
 Two sibling tickets, no Epic (per the "Epic adds value only with ≥2 children running in coordinated tracks" preference; here the two are independent and either can be the first to merge):
 
-- **CREW-XXX — Wire chrome MCP + browsing skill + live-DOM Step 5** (covers B2.1–B2.4). Touches `packages/cli/src/lib/{playwright→mcp-config}/`, `packages/cli/src/lib/run/skill-injection.ts`, `packages/cli/src/lib/skills/{visual-fidelity-check,browsing}/`.
-- **CREW-XXX — Wire `[visual_fidelity]` into crew's own project** (covers B2.5). Touches `.crew/visual-fidelity.json` (new), Code Connect files under `packages/dashboard/src/`, and includes a paste-ready TOML snippet in the ticket description for the user's local `crew.toml` edit.
+- **[CREW-146](https://safturento.atlassian.net/browse/CREW-146) — Wire chrome MCP + browsing skill + live-DOM Step 5** (covers B2.1–B2.4). Touches `packages/cli/src/lib/{playwright→mcp-config}/`, `packages/cli/src/lib/run/skill-injection.ts`, `packages/cli/src/lib/skills/{visual-fidelity-check,browsing}/`.
+- **[CREW-147](https://safturento.atlassian.net/browse/CREW-147) — Wire `[visual_fidelity]` into crew's own project** (covers B2.5). Touches `docs/visual-fidelity-setup.md` (new), `README.md`, Code Connect files under `packages/dashboard/src/`, and includes a paste-ready TOML snippet in the ticket description for the user's local `crew.toml` edit.
 
-No `blocks` / `is blocked by` Jira links between the two — they're independent. Parallel-friendly. The verification step assumes both have merged so dogfooding can happen on crew itself, but either can stand alone.
+Linked with `Relates to` only — no `blocks` / `is blocked by`. Parallel-friendly. The verification step assumes both have merged so dogfooding can happen on crew itself, but either can stand alone.
 
 ## Out of scope follow-ups
 
