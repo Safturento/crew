@@ -98,22 +98,76 @@ Also check for **content-level mismatches**:
 
 > **Anti-loophole:** If a finding maps to "the rendered visual doesn't match the Figma icon", do NOT downgrade it to a judgment-call / "visually similar enough" note. Icon mismatches are real bugs even when small. The user notices.
 
-## Step 5: Visual check (optional, requires dashboardUrl)
+## Step 5: Live DOM check (required when `dashboardUrl` is set and chrome MCP is wired)
 
-If `dashboardUrl` is set in project config AND the dashboard is reachable:
+This step uses the `browsing` skill's `mcp__chrome__use_browser` tool to inspect the rendered DOM directly — reading computed CSS, the rendered `<svg>` for icons, and a viewport screenshot via auto-capture. Step 5 catches drift the static Step 3 cannot (Tailwind purging, specificity wars, theme overrides, conditional rendering bugs).
 
-1. Open the dashboard via Playwright MCP (or whatever browser-control MCP is wired up).
-2. For each touched component, navigate to a screen that exercises it (agent drawer, projects page, etc. — use the component's known usage sites).
-3. Screenshot the relevant region.
-4. Compare to Figma's screen-level screenshot from `<snapshotPath>/screens/`. Describe what you see in both, side-by-side. Look for:
-   - Missing borders or fills
-   - Wrong icon glyphs
-   - Padding / spacing differences
-   - Text size or weight differences
-   - Color shift (even small ones)
-5. For each visual mismatch, flag as a finding. If the structural / caller checks already caught it, link them in the visual finding instead of duplicating.
+**Required when:** `dashboardUrl` is set in project config AND the worktree's `.mcp.json` includes a `chrome` server entry. (The dispatcher writes the chrome entry when the user has `superpowers-chrome` installed; missing chrome means the step degrades to a verification gap, not "passed".)
 
-If the dashboard is unreachable: skip step 5, note the gap in the report, proceed (visual check is optional, structural + caller are required).
+### Step 5.1 — Open the dashboard
+
+Use `mcp__chrome__use_browser` with `action: "navigate"`, payload set to the resolved `dashboardUrl` from project config. Then `action: "await_element"` on a known landing-page selector (the dashboard's root layout element) with a generous timeout.
+
+If chrome is unreachable or the navigate fails: log "verification gap: chrome unreachable at `<url>`" and skip 5.2–5.5. **Do not** mark Step 5 as passed.
+
+### Step 5.2 — Identify the live element for each touched (component, variant)
+
+For each (component, variant) the code can produce, identify the dashboard route or in-app navigation that surfaces an instance. Reuse the caller-map work from Step 4 — it already enumerates call sites. Pick a screen that exercises the variant.
+
+Selector identification is the agent's responsibility per dispatch:
+
+1. **Prefer `data-*` attributes** if the project's components expose them (`[data-component="agent-row"]`, etc.).
+2. **Fall back to class signatures** that uniquely identify the variant (`.bg-state-running.border-state-running\/30`).
+3. **Last resort: structural selectors** (`main > section > .first-row`). If you use a structural selector, log a verification-gap note in the report — the selector is fragile.
+
+### Step 5.3 — Color-property check
+
+For each touched (component, variant) instance:
+
+1. Query the live element via the selector identified in 5.2.
+2. Use `use_browser` `action: "eval"` with a small payload:
+   ```js
+   const el = document.querySelector('<selector>');
+   const cs = getComputedStyle(el);
+   return { bg: cs.backgroundColor, border: cs.borderColor, color: cs.color };
+   ```
+3. CDP returns each value in `rgb(R, G, B)` or `rgba(R, G, B, A)` form. Convert to `#RRGGBB` (and note alpha separately if present).
+4. Look up the same paint role in the Figma snapshot's `enrichment.boundVariables` for this node. Compare `resolvedHex` to the computed value.
+5. On mismatch: finding. Severity follows the existing rules (large hex delta = high; near-identical = low). Cite the live element's selector, the computed CSS value, and the Figma `resolvedAlias` + `resolvedHex`.
+
+### Step 5.4 — Icon check
+
+For each touched component whose Figma reference has an `Icon` INSTANCE_SWAP property (read from `enrichment.componentProperties.Icon`):
+
+1. Query the icon slot via selector (`[data-icon-slot]`, the first child, etc.).
+2. Use `use_browser` `action: "eval"` to inspect the rendered child:
+   ```js
+   const slot = document.querySelector('<selector>');
+   const svg = slot.querySelector('svg');
+   const span = slot.querySelector('span:not(:has(svg))');
+   return {
+     hasSvg: !!svg,
+     svgOuter: svg?.outerHTML?.slice(0, 500),
+     svgLucide: svg?.getAttribute('data-lucide') || [...(svg?.classList || [])].find(c => c.startsWith('lucide-')),
+     spanText: span?.textContent,
+     slotText: slot.textContent,
+   };
+   ```
+3. Cases:
+   - **`hasSvg` true, `svgLucide` matches `enrichment.componentProperties.Icon.name`** (e.g. both `lucide/circle`) → no finding.
+   - **`hasSvg` true, `svgLucide` mismatches** → finding, severity ≥ medium. Name the expected lucide glyph in the fix.
+   - **`hasSvg` false, `spanText` is a Unicode glyph** (↗, ✓, ×, etc.) → finding, severity ≥ medium. Name the expected lucide glyph.
+   - **`hasSvg` false, `slot` is a styled `<span>`** (CSS-only icon) → finding, severity ≥ medium. Name the expected lucide glyph and call out the CSS-only-approximation pattern.
+
+Step 5.4 is the *runtime* counterpart to Step 4's caller-side icon check. Step 4 catches the source pattern; Step 5.4 catches cases where the source looks right but the rendered DOM disagrees (className override, conditional rendering, prop-forwarding bug).
+
+### Step 5.5 — Screenshot capture and cross-reference
+
+`use_browser`'s auto-capture saves a viewport PNG on every action — by the time you've completed 5.1–5.4, you have a stack of screenshots. Cite the most recent one (after navigation to the relevant screen) in the report. Cross-reference it with `<snapshotPath>/screens/<screen-node>.png` from the Figma snapshot.
+
+If 5.1–5.4 already surfaced findings, link the screenshot pair as supporting evidence rather than redundantly describing the same diff in prose.
+
+**Failure mode (dashboard unreachable mid-run):** if Step 5.1 succeeded but a subsequent action fails because docker stopped / port mismatch / etc., fail closed — log "verification gap: dashboard became unreachable at <action>" and surface in the report. Do not treat as "Step 5 passed."
 
 ## Step 6: Compile findings report
 
