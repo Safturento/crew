@@ -1,10 +1,20 @@
 import { useEffect, useState } from 'react';
 import type { MouseEvent, ReactNode } from 'react';
 import { cva } from 'class-variance-authority';
+import {
+  AlertCircle,
+  AlertOctagon,
+  ArrowRight,
+  Check,
+  Circle,
+  GitPullRequest,
+  Loader2,
+  Play,
+} from 'lucide-react';
 
 import type { Agent, AgentState } from '../data/types.js';
 import { STATE_CLASSES, STATE_META } from '../data/state-meta.js';
-import { StateBadge } from './StateBadge.js';
+import { Badge } from './ui/badge.js';
 import { Button } from './ui/button.js';
 import { formatDuration } from '../format/duration.js';
 import { formatTokens } from '../format/tokens.js';
@@ -64,7 +74,15 @@ export function AgentRow({ agent, onSelect, onAction }: AgentRowProps) {
           className={`absolute inset-y-1.5 left-0 w-1 rounded-full ${stateClasses.solidBg} animate-att-pulse`}
         />
       )}
-      <StateBadge state={agent.state} />
+      <Badge
+        role="status"
+        aria-label={meta.label}
+        color={agent.state}
+        intensity="mid"
+        icon={<StateIcon state={agent.state} />}
+      >
+        {meta.label}
+      </Badge>
       <span className="font-mono text-xs text-muted-foreground">{agent.key}</span>
       <span className="text-right font-mono text-xs tabular-nums text-muted-foreground">
         {runtime}
@@ -76,6 +94,25 @@ export function AgentRow({ agent, onSelect, onAction }: AgentRowProps) {
       <QuickActions agent={agent} onAction={onAction} />
     </div>
   );
+}
+
+function StateIcon({ state }: { state: AgentState }) {
+  switch (state) {
+    case 'running':
+    case 'initializing':
+      return <Loader2 className="animate-spin" aria-hidden />;
+    case 'waiting':
+      return <AlertCircle aria-hidden />;
+    case 'pr_open':
+      return <GitPullRequest aria-hidden />;
+    case 'error':
+      return <AlertOctagon aria-hidden />;
+    case 'finished':
+      return <Check aria-hidden />;
+    case 'idle':
+    default:
+      return <Circle className="fill-current" aria-hidden />;
+  }
 }
 
 function QuickActions({
@@ -95,10 +132,16 @@ function QuickActions({
     case 'idle':
       return (
         <QaGroup>
-          <Button variant="outline" size="xs" onClick={fire('resume')}>
+          <Button
+            color="running"
+            intensity="mid"
+            size="xs"
+            icon={<Play aria-hidden />}
+            onClick={fire('resume')}
+          >
             Resume
           </Button>
-          <Button variant="ghost" size="xs" onClick={fire('finish')}>
+          <Button color="running" intensity="ghost" size="xs" onClick={fire('finish')}>
             Finish
           </Button>
         </QaGroup>
@@ -107,10 +150,11 @@ function QuickActions({
       return (
         <SingleAction>
           <Button
-            variant="default"
+            color="waiting"
+            intensity="loud"
             size="xs"
+            icon={<ArrowRight aria-hidden />}
             onClick={fire('provide-input')}
-            className="bg-amber-400 text-slate-950 hover:bg-amber-400/90"
           >
             Provide input
           </Button>
@@ -119,12 +163,18 @@ function QuickActions({
     case 'pr_open':
       return (
         <QaGroup>
-          <Button variant="outline" size="xs" asChild>
+          <Button
+            color="running"
+            intensity="mid"
+            size="xs"
+            icon={<GitPullRequest aria-hidden />}
+            asChild
+          >
             <a href={agent.prUrl ?? '#'} target="_blank" rel="noreferrer" onClick={stop}>
-              View PR ↗
+              View PR
             </a>
           </Button>
-          <Button variant="ghost" size="xs" onClick={fire('finish')}>
+          <Button color="running" intensity="ghost" size="xs" onClick={fire('finish')}>
             Finish
           </Button>
         </QaGroup>
@@ -133,10 +183,11 @@ function QuickActions({
       return (
         <SingleAction>
           <Button
-            variant="default"
+            color="error"
+            intensity="loud"
             size="xs"
+            icon={<AlertCircle aria-hidden />}
             onClick={fire('inspect')}
-            className="bg-red-400 text-slate-950 hover:bg-red-400/90"
           >
             Inspect
           </Button>
