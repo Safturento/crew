@@ -23,10 +23,12 @@ Produces: `lib/pill-variants.ts`, rewritten `ui/button.tsx` + `ui/badge.tsx`, ne
 ### Task 1.1: Add `lib/pill-variants.ts` helper
 
 **Files:**
+
 - Create: `packages/dashboard/src/lib/pill-variants.ts`
 - Create: `packages/dashboard/src/lib/pill-variants.test.ts`
 
 The helper exposes two pieces:
+
 - `PillColor` / `PillIntensity` types — the union types used by Button/Badge/Tag prop signatures
 - `pillSurfaceClasses(color, intensity)` — returns the bg + border + text class fragment as a single string
 
@@ -167,6 +169,7 @@ git commit -m "feat(dashboard): add pill-variants helper for shared color × int
 ### Task 1.2: Rewrite `ui/button.tsx` + update call sites
 
 **Files:**
+
 - Modify: `packages/dashboard/src/components/ui/button.tsx`
 - Modify: `packages/dashboard/src/components/AgentRow.tsx` (lines 98, 101, 122, 127)
 - Modify: `packages/dashboard/src/components/AgentBody.tsx` (lines 78, 85)
@@ -186,7 +189,11 @@ import { Button } from './button.js';
 
 describe('Button', () => {
   it('renders with color + intensity classes from pill-variants', () => {
-    render(<Button color="running" intensity="mid">Resume</Button>);
+    render(
+      <Button color="running" intensity="mid">
+        Resume
+      </Button>,
+    );
     const btn = screen.getByRole('button', { name: 'Resume' });
     expect(btn.className).toContain('bg-slate-1050');
     expect(btn.className).toContain('text-slate-400');
@@ -234,11 +241,7 @@ import { cva, type VariantProps } from 'class-variance-authority';
 import { Slot } from 'radix-ui';
 
 import { cn } from '@/lib/utils';
-import {
-  pillSurfaceClasses,
-  type PillColor,
-  type PillIntensity,
-} from '@/lib/pill-variants';
+import { pillSurfaceClasses, type PillColor, type PillIntensity } from '@/lib/pill-variants';
 
 const buttonBase =
   "inline-flex shrink-0 items-center justify-center gap-2 rounded-md font-medium whitespace-nowrap transition-all outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4";
@@ -281,7 +284,12 @@ function Button({
       data-color={color}
       data-intensity={intensity}
       data-size={size}
-      className={cn(buttonBase, buttonSizes({ size }), pillSurfaceClasses(color, intensity), className)}
+      className={cn(
+        buttonBase,
+        buttonSizes({ size }),
+        pillSurfaceClasses(color, intensity),
+        className,
+      )}
       {...props}
     />
   );
@@ -319,7 +327,9 @@ In `packages/dashboard/src/components/AgentBody.tsx`, lines 78 + 85 — both are
 
 ```tsx
 // Was: <Button variant="outline">Close</Button>
-<Button color="running" intensity="mid">Close</Button>
+<Button color="running" intensity="mid">
+  Close
+</Button>
 ```
 
 - [ ] **Step 7: Run typecheck + tests**
@@ -346,6 +356,7 @@ git commit -m "feat(dashboard): button → color × intensity contract, drop leg
 ### Task 1.3: Rewrite `ui/badge.tsx` + delete StateBadge & CountBadge + update callers
 
 **Files:**
+
 - Modify: `packages/dashboard/src/components/ui/badge.tsx`
 - Create: `packages/dashboard/src/components/ui/badge.test.tsx`
 - Delete: `packages/dashboard/src/components/StateBadge.tsx`
@@ -369,19 +380,31 @@ import { Badge } from './badge.js';
 
 describe('Badge', () => {
   it('renders children + applies color/intensity classes', () => {
-    render(<Badge color="running" intensity="mid">Running</Badge>);
+    render(
+      <Badge color="running" intensity="mid">
+        Running
+      </Badge>,
+    );
     const b = screen.getByText('Running');
     expect(b.className).toContain('bg-slate-1050');
     expect(b.className).toContain('text-slate-400');
   });
 
   it('renders a dot when hasIcon is true', () => {
-    render(<Badge color="waiting" intensity="muted" hasIcon>Waiting</Badge>);
+    render(
+      <Badge color="waiting" intensity="muted" hasIcon>
+        Waiting
+      </Badge>,
+    );
     expect(screen.getByTestId('badge-dot')).toBeInTheDocument();
   });
 
   it('exposes color/intensity as data attributes', () => {
-    render(<Badge color="error" intensity="loud">Err</Badge>);
+    render(
+      <Badge color="error" intensity="loud">
+        Err
+      </Badge>,
+    );
     const b = screen.getByText('Err');
     expect(b).toHaveAttribute('data-color', 'error');
     expect(b).toHaveAttribute('data-intensity', 'loud');
@@ -404,11 +427,7 @@ import * as React from 'react';
 import { Slot } from 'radix-ui';
 
 import { cn } from '@/lib/utils';
-import {
-  pillSurfaceClasses,
-  type PillColor,
-  type PillIntensity,
-} from '@/lib/pill-variants';
+import { pillSurfaceClasses, type PillColor, type PillIntensity } from '@/lib/pill-variants';
 import { STATE_CLASSES } from '@/data/state-meta';
 import type { AgentState } from '@/data/types';
 
@@ -470,9 +489,14 @@ Find usages of `<StateBadge state={...} />` and replace with `<Badge color={stat
 ProjectRow uses CountBadge — replace `<CountBadge count={n} state={s} />` with:
 
 ```tsx
-{count === 0
-  ? <span className="font-mono text-xs text-muted-foreground">0</span>
-  : <Badge color={state} intensity="mid">{count}</Badge>
+{
+  count === 0 ? (
+    <span className="font-mono text-xs text-muted-foreground">0</span>
+  ) : (
+    <Badge color={state} intensity="mid">
+      {count}
+    </Badge>
+  );
 }
 ```
 
@@ -516,6 +540,7 @@ git commit -m "feat(dashboard): badge → color × intensity contract, retire St
 ### Task 1.4: New `ui/tag.tsx`
 
 **Files:**
+
 - Create: `packages/dashboard/src/components/ui/tag.tsx`
 - Create: `packages/dashboard/src/components/ui/tag.test.tsx`
 
@@ -532,14 +557,22 @@ import { Tag } from './tag.js';
 
 describe('Tag', () => {
   it('renders children with mono font + small height', () => {
-    render(<Tag color="finished" intensity="mid">Edit</Tag>);
+    render(
+      <Tag color="finished" intensity="mid">
+        Edit
+      </Tag>,
+    );
     const t = screen.getByText('Edit');
     expect(t.className).toContain('font-mono');
     expect(t.className).toContain('h-[17px]');
   });
 
   it('exposes color/intensity as data attributes', () => {
-    render(<Tag color="waiting" intensity="muted">Bash</Tag>);
+    render(
+      <Tag color="waiting" intensity="muted">
+        Bash
+      </Tag>,
+    );
     const t = screen.getByText('Bash');
     expect(t).toHaveAttribute('data-color', 'waiting');
     expect(t).toHaveAttribute('data-intensity', 'muted');
@@ -554,24 +587,14 @@ describe('Tag', () => {
 import * as React from 'react';
 
 import { cn } from '@/lib/utils';
-import {
-  pillSurfaceClasses,
-  type PillColor,
-  type PillIntensity,
-} from '@/lib/pill-variants';
+import { pillSurfaceClasses, type PillColor, type PillIntensity } from '@/lib/pill-variants';
 
 type TagProps = React.ComponentProps<'span'> & {
   color?: PillColor;
   intensity?: PillIntensity;
 };
 
-function Tag({
-  className,
-  color = 'running',
-  intensity = 'mid',
-  children,
-  ...props
-}: TagProps) {
+function Tag({ className, color = 'running', intensity = 'mid', children, ...props }: TagProps) {
   return (
     <span
       data-slot="tag"
@@ -610,6 +633,7 @@ git commit -m "feat(dashboard): add Tag primitive (Fira Code chip for tool-call 
 ### Task 1.5: Code Connect updates for Button + Badge + new Tag; delete StateBadge/CountBadge figma files
 
 **Files:**
+
 - Modify: `packages/dashboard/src/components/ui/button.figma.tsx`
 - Modify: `packages/dashboard/src/components/ui/badge.figma.tsx`
 - Create: `packages/dashboard/src/components/ui/tag.figma.tsx`
@@ -626,52 +650,56 @@ import { figma } from '@figma/code-connect';
 
 import { Button } from '@/components/ui/button';
 
-figma.connect(
-  Button,
-  'https://www.figma.com/design/9FeJPriqdsdA4n9R5Xsrr8/Crew?node-id=272-120',
-  {
-    variant: {
-      type: ['button-xs', 'button-sm', 'button-default', 'button-lg',
-             'button-icon-xs', 'button-icon-sm', 'button-icon-default', 'button-icon-lg'],
-    },
-    props: {
-      label: figma.string('Label'),
-      hasIcon: figma.boolean('Has Icon'),
-      icon: figma.instance('Icon'),
-      color: figma.enum('color', {
-        idle: 'idle',
-        initializing: 'initializing',
-        running: 'running',
-        waiting: 'waiting',
-        'pr-open': 'pr_open',
-        error: 'error',
-        finished: 'finished',
-        white: 'white',
-      }),
-      intensity: figma.enum('intensity', {
-        ghost: 'ghost',
-        muted: 'muted',
-        mid: 'mid',
-        loud: 'loud',
-      }),
-      size: figma.enum('type', {
-        'button-xs': 'xs',
-        'button-sm': 'sm',
-        'button-default': 'default',
-        'button-lg': 'lg',
-        'button-icon-xs': 'icon-xs',
-        'button-icon-sm': 'icon-sm',
-        'button-icon-default': 'icon-default',
-        'button-icon-lg': 'icon-lg',
-      }),
-    },
-    example: ({ label, color, intensity, size }) => (
-      <Button color={color} intensity={intensity} size={size}>
-        {label}
-      </Button>
-    ),
+figma.connect(Button, 'https://www.figma.com/design/9FeJPriqdsdA4n9R5Xsrr8/Crew?node-id=272-120', {
+  variant: {
+    type: [
+      'button-xs',
+      'button-sm',
+      'button-default',
+      'button-lg',
+      'button-icon-xs',
+      'button-icon-sm',
+      'button-icon-default',
+      'button-icon-lg',
+    ],
   },
-);
+  props: {
+    label: figma.string('Label'),
+    hasIcon: figma.boolean('Has Icon'),
+    icon: figma.instance('Icon'),
+    color: figma.enum('color', {
+      idle: 'idle',
+      initializing: 'initializing',
+      running: 'running',
+      waiting: 'waiting',
+      'pr-open': 'pr_open',
+      error: 'error',
+      finished: 'finished',
+      white: 'white',
+    }),
+    intensity: figma.enum('intensity', {
+      ghost: 'ghost',
+      muted: 'muted',
+      mid: 'mid',
+      loud: 'loud',
+    }),
+    size: figma.enum('type', {
+      'button-xs': 'xs',
+      'button-sm': 'sm',
+      'button-default': 'default',
+      'button-lg': 'lg',
+      'button-icon-xs': 'icon-xs',
+      'button-icon-sm': 'icon-sm',
+      'button-icon-default': 'icon-default',
+      'button-icon-lg': 'icon-lg',
+    }),
+  },
+  example: ({ label, color, intensity, size }) => (
+    <Button color={color} intensity={intensity} size={size}>
+      {label}
+    </Button>
+  ),
+});
 ```
 
 - [ ] **Step 2: Rewrite `badge.figma.tsx`**
@@ -682,38 +710,34 @@ import { figma } from '@figma/code-connect';
 
 import { Badge } from '@/components/ui/badge';
 
-figma.connect(
-  Badge,
-  'https://www.figma.com/design/9FeJPriqdsdA4n9R5Xsrr8/Crew?node-id=272-120',
-  {
-    variant: { type: 'pill' },
-    props: {
-      label: figma.string('Label'),
-      hasIcon: figma.boolean('Has Icon'),
-      color: figma.enum('color', {
-        idle: 'idle',
-        initializing: 'initializing',
-        running: 'running',
-        waiting: 'waiting',
-        'pr-open': 'pr_open',
-        error: 'error',
-        finished: 'finished',
-        white: 'white',
-      }),
-      intensity: figma.enum('intensity', {
-        ghost: 'ghost',
-        muted: 'muted',
-        mid: 'mid',
-        loud: 'loud',
-      }),
-    },
-    example: ({ label, color, intensity, hasIcon }) => (
-      <Badge color={color} intensity={intensity} hasIcon={hasIcon}>
-        {label}
-      </Badge>
-    ),
+figma.connect(Badge, 'https://www.figma.com/design/9FeJPriqdsdA4n9R5Xsrr8/Crew?node-id=272-120', {
+  variant: { type: 'pill' },
+  props: {
+    label: figma.string('Label'),
+    hasIcon: figma.boolean('Has Icon'),
+    color: figma.enum('color', {
+      idle: 'idle',
+      initializing: 'initializing',
+      running: 'running',
+      waiting: 'waiting',
+      'pr-open': 'pr_open',
+      error: 'error',
+      finished: 'finished',
+      white: 'white',
+    }),
+    intensity: figma.enum('intensity', {
+      ghost: 'ghost',
+      muted: 'muted',
+      mid: 'mid',
+      loud: 'loud',
+    }),
   },
-);
+  example: ({ label, color, intensity, hasIcon }) => (
+    <Badge color={color} intensity={intensity} hasIcon={hasIcon}>
+      {label}
+    </Badge>
+  ),
+});
 ```
 
 - [ ] **Step 3: Create `tag.figma.tsx`**
@@ -724,37 +748,33 @@ import { figma } from '@figma/code-connect';
 
 import { Tag } from '@/components/ui/tag';
 
-figma.connect(
-  Tag,
-  'https://www.figma.com/design/9FeJPriqdsdA4n9R5Xsrr8/Crew?node-id=272-120',
-  {
-    variant: { type: 'tag' },
-    props: {
-      label: figma.string('Label'),
-      color: figma.enum('color', {
-        idle: 'idle',
-        initializing: 'initializing',
-        running: 'running',
-        waiting: 'waiting',
-        'pr-open': 'pr_open',
-        error: 'error',
-        finished: 'finished',
-        white: 'white',
-      }),
-      intensity: figma.enum('intensity', {
-        ghost: 'ghost',
-        muted: 'muted',
-        mid: 'mid',
-        loud: 'loud',
-      }),
-    },
-    example: ({ label, color, intensity }) => (
-      <Tag color={color} intensity={intensity}>
-        {label}
-      </Tag>
-    ),
+figma.connect(Tag, 'https://www.figma.com/design/9FeJPriqdsdA4n9R5Xsrr8/Crew?node-id=272-120', {
+  variant: { type: 'tag' },
+  props: {
+    label: figma.string('Label'),
+    color: figma.enum('color', {
+      idle: 'idle',
+      initializing: 'initializing',
+      running: 'running',
+      waiting: 'waiting',
+      'pr-open': 'pr_open',
+      error: 'error',
+      finished: 'finished',
+      white: 'white',
+    }),
+    intensity: figma.enum('intensity', {
+      ghost: 'ghost',
+      muted: 'muted',
+      mid: 'mid',
+      loud: 'loud',
+    }),
   },
-);
+  example: ({ label, color, intensity }) => (
+    <Tag color={color} intensity={intensity}>
+      {label}
+    </Tag>
+  ),
+});
 ```
 
 - [ ] **Step 4: Delete obsolete figma files**
@@ -800,6 +820,7 @@ Expected: all clean. Then spin up the dashboard locally (or via worktree docker 
 ### Task 2.1: Install shadcn switch + author Code Connect
 
 **Files:**
+
 - Create: `packages/dashboard/src/components/ui/switch.tsx` (via shadcn cli)
 - Create: `packages/dashboard/src/components/ui/switch.figma.tsx`
 - Create: `packages/dashboard/src/components/ui/switch.test.tsx`
@@ -849,16 +870,12 @@ import { figma } from '@figma/code-connect';
 
 import { Switch } from '@/components/ui/switch';
 
-figma.connect(
-  Switch,
-  'https://www.figma.com/design/9FeJPriqdsdA4n9R5Xsrr8/Crew?node-id=335-242',
-  {
-    props: {
-      checked: figma.enum('state', { on: true, off: false }),
-    },
-    example: ({ checked }) => <Switch checked={checked} onCheckedChange={() => {}} />,
+figma.connect(Switch, 'https://www.figma.com/design/9FeJPriqdsdA4n9R5Xsrr8/Crew?node-id=335-242', {
+  props: {
+    checked: figma.enum('state', { on: true, off: false }),
   },
-);
+  example: ({ checked }) => <Switch checked={checked} onCheckedChange={() => {}} />,
+});
 ```
 
 - [ ] **Step 5: Commit**
@@ -876,6 +893,7 @@ git commit -m "feat(dashboard): add shadcn Switch primitive + Code Connect mappi
 ### Task 2.2: Add `leadingIcon` prop to `ui/input.tsx`
 
 **Files:**
+
 - Modify: `packages/dashboard/src/components/ui/input.tsx`
 - Modify: `packages/dashboard/src/components/ui/input.figma.tsx`
 - Create: `packages/dashboard/src/components/ui/input.test.tsx`
@@ -972,22 +990,15 @@ import { Search } from 'lucide-react';
 
 import { Input } from '@/components/ui/input';
 
-figma.connect(
-  Input,
-  'https://www.figma.com/design/9FeJPriqdsdA4n9R5Xsrr8/Crew?node-id=318-230',
-  {
-    props: {
-      placeholder: figma.string('Placeholder'),
-      hasIcon: figma.boolean('Has Icon'),
-    },
-    example: ({ placeholder, hasIcon }) => (
-      <Input
-        placeholder={placeholder}
-        {...(hasIcon ? { leadingIcon: <Search /> } : {})}
-      />
-    ),
+figma.connect(Input, 'https://www.figma.com/design/9FeJPriqdsdA4n9R5Xsrr8/Crew?node-id=318-230', {
+  props: {
+    placeholder: figma.string('Placeholder'),
+    hasIcon: figma.boolean('Has Icon'),
   },
-);
+  example: ({ placeholder, hasIcon }) => (
+    <Input placeholder={placeholder} {...(hasIcon ? { leadingIcon: <Search /> } : {})} />
+  ),
+});
 ```
 
 - [ ] **Step 5: Commit**
@@ -1004,6 +1015,7 @@ git commit -m "feat(dashboard): input gains optional leadingIcon prop (for searc
 ### Task 2.3: New `FormField` composite
 
 **Files:**
+
 - Create: `packages/dashboard/src/components/FormField.tsx`
 - Create: `packages/dashboard/src/components/FormField.test.tsx`
 - Create: `packages/dashboard/src/components/FormField.figma.tsx`
@@ -1113,6 +1125,7 @@ git commit -m "feat(dashboard): add FormField composite (Label + Input vertical 
 ### Task 3.1: Install shadcn alert-dialog
 
 **Files:**
+
 - Create: `packages/dashboard/src/components/ui/alert-dialog.tsx` (via shadcn cli)
 
 - [ ] **Step 1: Run shadcn install**
@@ -1150,6 +1163,7 @@ git commit -m "feat(dashboard): add shadcn AlertDialog primitive"
 ### Task 3.2: Build `Modal` composite
 
 **Files:**
+
 - Create: `packages/dashboard/src/components/Modal.tsx`
 - Create: `packages/dashboard/src/components/Modal.test.tsx`
 - Create: `packages/dashboard/src/components/Modal.figma.tsx`
@@ -1206,12 +1220,7 @@ import * as React from 'react';
 import { X } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 type ModalProps = {
   title: string;
@@ -1269,23 +1278,19 @@ import { figma } from '@figma/code-connect';
 
 import { Modal } from '@/components/Modal';
 
-figma.connect(
-  Modal,
-  'https://www.figma.com/design/9FeJPriqdsdA4n9R5Xsrr8/Crew?node-id=355-238',
-  {
-    props: {
-      title: figma.string('Title'),
-      showClose: figma.boolean('Show Close'),
-      // Content is INSTANCE_SWAP in Figma; in code we pass arbitrary children
-      content: figma.instance('Content'),
-    },
-    example: ({ title, showClose, content }) => (
-      <Modal title={title} showClose={showClose} open onOpenChange={() => {}}>
-        {content}
-      </Modal>
-    ),
+figma.connect(Modal, 'https://www.figma.com/design/9FeJPriqdsdA4n9R5Xsrr8/Crew?node-id=355-238', {
+  props: {
+    title: figma.string('Title'),
+    showClose: figma.boolean('Show Close'),
+    // Content is INSTANCE_SWAP in Figma; in code we pass arbitrary children
+    content: figma.instance('Content'),
   },
-);
+  example: ({ title, showClose, content }) => (
+    <Modal title={title} showClose={showClose} open onOpenChange={() => {}}>
+      {content}
+    </Modal>
+  ),
+});
 ```
 
 - [ ] **Step 5: Commit**
@@ -1302,6 +1307,7 @@ git commit -m "feat(dashboard): add Modal composite (Crew dark styling over shad
 ### Task 3.3: Build `AlertModal` composite
 
 **Files:**
+
 - Create: `packages/dashboard/src/components/AlertModal.tsx`
 - Create: `packages/dashboard/src/components/AlertModal.test.tsx`
 - Create: `packages/dashboard/src/components/AlertModal.figma.tsx`
@@ -1336,9 +1342,12 @@ describe('AlertModal', () => {
     const handler = vi.fn();
     render(
       <AlertModal
-        title="X" description="Y"
+        title="X"
+        description="Y"
         actionLabel="Remove project"
-        open onOpenChange={() => {}} onAction={handler}
+        open
+        onOpenChange={() => {}}
+        onAction={handler}
       />,
     );
     fireEvent.click(screen.getByRole('button', { name: 'Remove project' }));
@@ -1441,12 +1450,7 @@ figma.connect(
       description: figma.string('Description'),
     },
     example: ({ title, description }) => (
-      <AlertModal
-        title={title}
-        description={description}
-        open
-        onOpenChange={() => {}}
-      />
+      <AlertModal title={title} description={description} open onOpenChange={() => {}} />
     ),
   },
 );
@@ -1466,6 +1470,7 @@ git commit -m "feat(dashboard): add AlertModal composite (shadcn AlertDialog wit
 ### Task 3.4: Build `ModalSelectionRow`
 
 **Files:**
+
 - Create: `packages/dashboard/src/components/ModalSelectionRow.tsx`
 - Create: `packages/dashboard/src/components/ModalSelectionRow.test.tsx`
 - Create: `packages/dashboard/src/components/ModalSelectionRow.figma.tsx`
@@ -1494,7 +1499,11 @@ describe('ModalSelectionRow', () => {
     render(
       <ModalSelectionRow
         primary="x"
-        badge={<Badge color="running" intensity="muted">KAN</Badge>}
+        badge={
+          <Badge color="running" intensity="muted">
+            KAN
+          </Badge>
+        }
       />,
     );
     expect(screen.getByText('KAN')).toBeInTheDocument();
@@ -1546,9 +1555,7 @@ function ModalSelectionRow({
     >
       <div className="flex items-baseline gap-2">
         <span className="text-sm font-medium text-foreground">{primary}</span>
-        {secondary && (
-          <span className="font-mono text-xs text-muted-foreground">{secondary}</span>
-        )}
+        {secondary && <span className="font-mono text-xs text-muted-foreground">{secondary}</span>}
       </div>
       <div className="flex items-center gap-2">
         {meta && <span className="font-mono text-xs text-muted-foreground">{meta}</span>}
@@ -1591,7 +1598,13 @@ figma.connect(
         primary={primary}
         secondary={secondary}
         meta={meta}
-        badge={showBadge ? <Badge color="running" intensity="muted">Badge</Badge> : undefined}
+        badge={
+          showBadge ? (
+            <Badge color="running" intensity="muted">
+              Badge
+            </Badge>
+          ) : undefined
+        }
       />
     ),
   },
@@ -1612,6 +1625,7 @@ git commit -m "feat(dashboard): add ModalSelectionRow composite (picker rows for
 ### Task 3.5: Build `Stepper`
 
 **Files:**
+
 - Create: `packages/dashboard/src/components/Stepper.tsx`
 - Create: `packages/dashboard/src/components/Stepper.test.tsx`
 - Create: `packages/dashboard/src/components/Stepper.figma.tsx`
@@ -1698,15 +1712,9 @@ import { figma } from '@figma/code-connect';
 
 import { Stepper } from '@/components/Stepper';
 
-figma.connect(
-  Stepper,
-  'https://www.figma.com/design/9FeJPriqdsdA4n9R5Xsrr8/Crew?node-id=378-462',
-  {
-    example: () => (
-      <Stepper steps={['Project', 'Ticket', 'Confirm']} current={1} />
-    ),
-  },
-);
+figma.connect(Stepper, 'https://www.figma.com/design/9FeJPriqdsdA4n9R5Xsrr8/Crew?node-id=378-462', {
+  example: () => <Stepper steps={['Project', 'Ticket', 'Confirm']} current={1} />,
+});
 ```
 
 - [ ] **Step 5: Commit**
@@ -1738,17 +1746,17 @@ Expected: all clean. Smoke-test the live dashboard: dispatch via worktree docker
 
 ## Spec coverage check
 
-| Spec section | Plan tasks |
-|---|---|
-| T1 → Pill primitives | Tasks 1.1, 1.2, 1.3, 1.4, 1.5 |
-| T2 → Form composites | Tasks 2.1, 2.2, 2.3 |
-| T3 → Modal infrastructure | Tasks 3.1, 3.2, 3.3, 3.4, 3.5 |
-| Architecture → shared variants helper at `lib/pill-variants.ts` | Task 1.1 |
-| Hard break on Button `variant` axis | Task 1.2 (rewrite, no shim) |
-| Delete StateBadge + CountBadge | Tasks 1.3 (tsx + tests) + 1.5 (figma files) |
-| Caller updates for Button/Badge | Tasks 1.2 + 1.3 |
-| Code Connect file URL + node ID updates | Tasks 1.5, 2.1, 2.2, 2.3, 3.2, 3.3, 3.4, 3.5 |
-| Per-component tests | Each task includes `*.test.tsx` |
-| No new e2e | Plan does not introduce Playwright specs |
-| Visual smoke after T1 | "T1 verification step" + "Final verification" |
-| Out-of-scope items deferred | No tasks touch modal screen wiring, trailing-icon Pill, CodeChip composite |
+| Spec section                                                    | Plan tasks                                                                 |
+| --------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| T1 → Pill primitives                                            | Tasks 1.1, 1.2, 1.3, 1.4, 1.5                                              |
+| T2 → Form composites                                            | Tasks 2.1, 2.2, 2.3                                                        |
+| T3 → Modal infrastructure                                       | Tasks 3.1, 3.2, 3.3, 3.4, 3.5                                              |
+| Architecture → shared variants helper at `lib/pill-variants.ts` | Task 1.1                                                                   |
+| Hard break on Button `variant` axis                             | Task 1.2 (rewrite, no shim)                                                |
+| Delete StateBadge + CountBadge                                  | Tasks 1.3 (tsx + tests) + 1.5 (figma files)                                |
+| Caller updates for Button/Badge                                 | Tasks 1.2 + 1.3                                                            |
+| Code Connect file URL + node ID updates                         | Tasks 1.5, 2.1, 2.2, 2.3, 3.2, 3.3, 3.4, 3.5                               |
+| Per-component tests                                             | Each task includes `*.test.tsx`                                            |
+| No new e2e                                                      | Plan does not introduce Playwright specs                                   |
+| Visual smoke after T1                                           | "T1 verification step" + "Final verification"                              |
+| Out-of-scope items deferred                                     | No tasks touch modal screen wiring, trailing-icon Pill, CodeChip composite |

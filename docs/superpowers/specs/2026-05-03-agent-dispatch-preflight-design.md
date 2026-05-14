@@ -137,7 +137,7 @@ If `[docker]` isn't configured at all, blocking is a no-op (nothing to wait on) 
 
 `[playwright].smoke` does **not** need a separate `excludedCommands` entry. It's a prompt-rendered verification the agent performs itself (`packages/cli/src/lib/prompts/ticket.ts:58`), not a separate command invocation — whatever browser-driving command the agent ends up running flows through Playwright's own runner, which is already covered by the agent's MCP / authored-test paths.
 
-**Match semantics.** Exact string match against array entries. The Claude Code sandbox's actual matching behavior (prefix vs exact) is empirical-but-uncertain — for the *check*, we require an exact match of the configured command string, since that's what we know will work. If the user's `excludedCommands` uses a stricter prefix the agent's actual run will still succeed; we just don't trust looser prefixes for the verification. Code carries a one-line comment explaining the conservative-match rationale.
+**Match semantics.** Exact string match against array entries. The Claude Code sandbox's actual matching behavior (prefix vs exact) is empirical-but-uncertain — for the _check_, we require an exact match of the configured command string, since that's what we know will work. If the user's `excludedCommands` uses a stricter prefix the agent's actual run will still succeed; we just don't trust looser prefixes for the verification. Code carries a one-line comment explaining the conservative-match rationale.
 
 **File-missing handling.** If `<repo>/.claude/settings.json` doesn't exist at all, fail with the same shape but `path: <expected> (file not found)` and a hint pointing at the Option B Epic for context. Today the file is hand-authored; missing means the user hasn't set it up yet.
 

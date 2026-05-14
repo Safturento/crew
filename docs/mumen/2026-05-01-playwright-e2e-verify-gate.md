@@ -12,7 +12,7 @@ Close the verification gap on authored-Playwright projects: today the agent's ba
 
 ## Approach
 
-After the agent's transcript stream resolves in `run.ts` (and in `resume.ts` / `restart.ts`), and only when the project has authored Playwright wired up *and* the agent's branch produced commits worth testing *and* the docker stack is verified up:
+After the agent's transcript stream resolves in `run.ts` (and in `resume.ts` / `restart.ts`), and only when the project has authored Playwright wired up _and_ the agent's branch produced commits worth testing _and_ the docker stack is verified up:
 
 1. From the host (sharing host netns, full reachability to Caddy on the worktree's port), shell out to `config.playwright.authored.test_command` from the worktree directory. Capture stdout + stderr + exit code.
 2. **Pass** → continue current post-run cleanup. Done.

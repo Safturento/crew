@@ -45,10 +45,10 @@ A "hit" means the skill produces a finding that names the same component + prope
 - **Components:** `TopNav.tsx` (line ~52-58, the `+ New Run` Button)
 - **Evidence:**
   - Figma reference: every New Run pill instance on the Dashboard Screens (verified via Plugin API query against the file) declares `color="idle", intensity="loud", Icon=lucide/plus`. The `idle/loud` Pill variant resolves to `fills: [{ hex: "#64748B", tokenAlias: "state/idle -> slate/500" }]` — a slate-500 mid-gray, not a near-white.
-  - Code: `TopNav.tsx` uses `<Button color="white" intensity="loud">` for the New Run button, which routes through `pillSurfaceClasses('white', 'loud')` and emits `bg-neutral-200` (#E5E5E5 near-white). The shipped button is therefore *the wrong color entirely*, not just the wrong shade of white.
+  - Code: `TopNav.tsx` uses `<Button color="white" intensity="loud">` for the New Run button, which routes through `pillSurfaceClasses('white', 'loud')` and emits `bg-neutral-200` (#E5E5E5 near-white). The shipped button is therefore _the wrong color entirely_, not just the wrong shade of white.
 - **Fix:** change `TopNav.tsx`'s New Run Button from `color="white"` to `color="idle"`. The helper `pillSurfaceClasses('idle', 'loud')` already emits `bg-slate-500 text-slate-950`, matching Figma's idle/loud variant — no helper changes needed.
 
-**Iteration note:** The original calibration run (and the original expected list) framed this as a helper-level "wrong Tailwind shade" bug — `neutral-200` vs `zinc/50` for the `white/loud` recipe. That framing was *wrong*: the real bug is caller-side (wrong color enum). The helper's `white/loud` recipe is currently unused once the caller switches to `idle`. If a future caller does use `white/loud`, the neutral-200 vs zinc/50 shade nit is real but secondary — file as a separate finding then.
+**Iteration note:** The original calibration run (and the original expected list) framed this as a helper-level "wrong Tailwind shade" bug — `neutral-200` vs `zinc/50` for the `white/loud` recipe. That framing was _wrong_: the real bug is caller-side (wrong color enum). The helper's `white/loud` recipe is currently unused once the caller switches to `idle`. If a future caller does use `white/loud`, the neutral-200 vs zinc/50 shade nit is real but secondary — file as a separate finding then.
 
 ### F5. View PR + Open as page use Unicode arrows — each needs a DIFFERENT lucide icon
 
@@ -63,7 +63,7 @@ A "hit" means the skill produces a finding that names the same component + prope
   - **Open as page** Figma instance (`384:2565` in the agent drawer) declares `Has Icon=true, Icon=lucide/arrow-up-right`.
   - Code in both call sites renders Unicode `↗` (U+2197) inline in the link text. Two distinct problems compounding:
     - **Primitive mismatch** — text glyph rendered by browser font fallback, not an SVG; no stroke/size/color coordination with the button.
-    - **Wrong-icon mismatch** — even if the Unicode were replaced with an arrow SVG, the View PR icon should be `lucide/git-pull-request` (a git-branch-with-circle glyph), not an arrow at all. The shipped button is therefore *the wrong icon entirely*.
+    - **Wrong-icon mismatch** — even if the Unicode were replaced with an arrow SVG, the View PR icon should be `lucide/git-pull-request` (a git-branch-with-circle glyph), not an arrow at all. The shipped button is therefore _the wrong icon entirely_.
 - **Fix:** two distinct lucide imports:
   - View PR: `import { GitPullRequest } from 'lucide-react'; <Button><GitPullRequest aria-hidden /> View PR</Button>`
   - Open as page: `import { ArrowUpRight } from 'lucide-react'; <Button><ArrowUpRight aria-hidden /> Open as page</Button>`
@@ -77,11 +77,11 @@ A "hit" means the skill produces a finding that names the same component + prope
 - **Kind:** caller (icon mismatch — visually distinct shapes)
 - **Components:** `badge.tsx` (line ~43-49, the `hasIcon` rendering path)
 - **Evidence (verified via Plugin API + user side-by-side screenshot):**
-  - Figma reference: the Waiting state pill instance on the agent drawer (`275:1355`) declares `Has Icon=true, Icon=lucide/circle`. The default lucide/circle is an *outlined ring* (1px stroke, hollow center) at the badge's icon size. The user provided a direct side-by-side comparison confirming: Figma's badge has a thin red ring; code's badge has a solid red filled dot.
+  - Figma reference: the Waiting state pill instance on the agent drawer (`275:1355`) declares `Has Icon=true, Icon=lucide/circle`. The default lucide/circle is an _outlined ring_ (1px stroke, hollow center) at the badge's icon size. The user provided a direct side-by-side comparison confirming: Figma's badge has a thin red ring; code's badge has a solid red filled dot.
   - Code: `<span data-testid="badge-dot" className="inline-block h-1.5 w-1.5 rounded-full bg-{color}">` — a 6×6 CSS shape with solid background. Visually distinct from the outlined ring Figma renders. Not "visually similar" — visibly different shape.
 - **Fix:** import the specific Figma icon: `import { Circle } from 'lucide-react'; <Circle className="size-2" aria-hidden />`. Default lucide/Circle is outlined (1px stroke, no fill), matching Figma. Remove the CSS-only span path. Rework Badge's `hasIcon` to render the lucide icon (color comes from `currentColor` via Tailwind's `text-*` already on the badge).
 
-**Iteration note:** F7 was downgraded to a "judgment call" in calibration run-01 ("visually similar but different primitive"). Both run-01 AND run-02 made the same hedge despite the skill's iterated "icon findings are never judgment calls" rule. User feedback (with side-by-side screenshot) demonstrated this is a *visibly different shape*, not a primitive-purity concern. The dismissal pattern reflects an LLM tendency to under-flag visual differences in the absence of a screenshot — which the Plugin-API snapshot still won't directly provide. The skill's workflow.md was updated; the meta-pattern (skill needs to be MORE aggressive on icon findings until visual-diff is available) is captured in the followup.
+**Iteration note:** F7 was downgraded to a "judgment call" in calibration run-01 ("visually similar but different primitive"). Both run-01 AND run-02 made the same hedge despite the skill's iterated "icon findings are never judgment calls" rule. User feedback (with side-by-side screenshot) demonstrated this is a _visibly different shape_, not a primitive-purity concern. The dismissal pattern reflects an LLM tendency to under-flag visual differences in the absence of a screenshot — which the Plugin-API snapshot still won't directly provide. The skill's workflow.md was updated; the meta-pattern (skill needs to be MORE aggressive on icon findings until visual-diff is available) is captured in the followup.
 
 ---
 

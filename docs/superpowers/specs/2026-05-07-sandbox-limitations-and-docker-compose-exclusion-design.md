@@ -44,7 +44,7 @@ The doc also captures **hard limits** — restrictions Claude Code enforces rega
 - **Other crew-managed projects.** None today besides Recipes; future projects will pick up the entry via the `verify-excluded-commands` check at first dispatch.
 - **Generalizing the limitations doc to Confluence / external docs.** Stays in-repo, versioned with the code that depends on it.
 - **Auditing whether existing `excludedCommands` entries are still needed.** Out of scope; if a future cleanup wants to prune unused entries, that's a separate followup.
-- **Per-project override of which `docker` subcommands are excluded.** YAGNI — `"docker compose"` as a prefix covers everything we currently use. If a project ever wants to *forbid* a specific subcommand, that's a different design problem.
+- **Per-project override of which `docker` subcommands are excluded.** YAGNI — `"docker compose"` as a prefix covers everything we currently use. If a project ever wants to _forbid_ a specific subcommand, that's a different design problem.
 
 ## 3. Design
 
@@ -135,13 +135,13 @@ These restrictions can be loosened per-project via `<repo>/.claude/settings.json
 Each row names the operation that fails sandboxed, the setting that loosens it,
 and the entry shape.
 
-| Operation | Setting | Entry | Why required |
-| --- | --- | --- | --- |
-| Host loopback HTTP from `npm run bruno:smoke` | `excludedCommands` | `"npm run bruno:smoke"` | bruno hits worktree app port; sandboxed `bwrap --unshare-net` isolates loopback |
-| Host loopback HTTP from `npm run test:e2e` | `excludedCommands` | `"npm run test:e2e"` | playwright e2e hits worktree app port; same isolation issue |
-| Docker socket (`/var/run/docker.sock`) | `excludedCommands` | `"docker compose"` (prefix) | agent's Step 0.5 brings up the stack; sandbox blocks the socket |
-| Anthropic / GitHub / Atlassian / npm registry HTTPS | `network.allowedDomains` | hostname | sandboxed agents need these for their own tooling |
-| Writes under `~/.npm`, `~/.cache`, `/tmp` | `filesystem.allowWrite` | path | npm install + Claude Code internals write here |
+| Operation                                           | Setting                  | Entry                       | Why required                                                                    |
+| --------------------------------------------------- | ------------------------ | --------------------------- | ------------------------------------------------------------------------------- |
+| Host loopback HTTP from `npm run bruno:smoke`       | `excludedCommands`       | `"npm run bruno:smoke"`     | bruno hits worktree app port; sandboxed `bwrap --unshare-net` isolates loopback |
+| Host loopback HTTP from `npm run test:e2e`          | `excludedCommands`       | `"npm run test:e2e"`        | playwright e2e hits worktree app port; same isolation issue                     |
+| Docker socket (`/var/run/docker.sock`)              | `excludedCommands`       | `"docker compose"` (prefix) | agent's Step 0.5 brings up the stack; sandbox blocks the socket                 |
+| Anthropic / GitHub / Atlassian / npm registry HTTPS | `network.allowedDomains` | hostname                    | sandboxed agents need these for their own tooling                               |
+| Writes under `~/.npm`, `~/.cache`, `/tmp`           | `filesystem.allowWrite`  | path                        | npm install + Claude Code internals write here                                  |
 
 ## Hard limits
 
@@ -160,7 +160,7 @@ If the prompt asks the agent to run a host-level operation:
 1. Check the workaround-able table — is there already an entry for this class of operation? If yes, ensure the project has it (the `verify-excluded-commands` preflight should require it).
 2. If no entry exists, add one to the table. Then add the corresponding clause to `verify-excluded-commands.ts:requiredEntries(config)`.
 3. If the operation is in the hard-limits list, the agent **cannot** do it. Route the operation through the wrapper instead.
-4. If the operation is none of the above and the agent is hitting permission errors — first run, document it here, *then* design the fix.
+4. If the operation is none of the above and the agent is hitting permission errors — first run, document it here, _then_ design the fix.
 
 ## When you discover a new restriction
 

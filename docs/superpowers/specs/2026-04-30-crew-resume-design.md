@@ -66,15 +66,15 @@ This is pure TypeScript work inside the existing CLI workspace. No new runtime d
 
 ### 4.1 Command surface
 
-| Command | Internal composition | Spawns agent? |
-|---|---|---|
-| `crew run KAN-X [-m "msg"]` | (standalone) | yes — `claude` (no `--resume`) |
-| `crew resume KAN-X [-m "msg"]` | (standalone) | yes — `claude --resume <id>` if session exists, else fresh `claude` |
-| `crew restart KAN-X [-m "msg"]` | `reset` + `resume` (no-session branch) | yes — fresh `claude` |
-| `crew restart KAN-X --hard [-m "msg"]` | `reset --hard` + `run` | yes — fresh `claude` |
-| `crew reset KAN-X` | (standalone) | no |
-| `crew reset KAN-X --hard` | (standalone) | no |
-| `crew fix-pr KAN-X [-m "msg"] [--file path]` | (standalone, modified) | yes — `claude --resume <id>` |
+| Command                                      | Internal composition                   | Spawns agent?                                                       |
+| -------------------------------------------- | -------------------------------------- | ------------------------------------------------------------------- |
+| `crew run KAN-X [-m "msg"]`                  | (standalone)                           | yes — `claude` (no `--resume`)                                      |
+| `crew resume KAN-X [-m "msg"]`               | (standalone)                           | yes — `claude --resume <id>` if session exists, else fresh `claude` |
+| `crew restart KAN-X [-m "msg"]`              | `reset` + `resume` (no-session branch) | yes — fresh `claude`                                                |
+| `crew restart KAN-X --hard [-m "msg"]`       | `reset --hard` + `run`                 | yes — fresh `claude`                                                |
+| `crew reset KAN-X`                           | (standalone)                           | no                                                                  |
+| `crew reset KAN-X --hard`                    | (standalone)                           | no                                                                  |
+| `crew fix-pr KAN-X [-m "msg"] [--file path]` | (standalone, modified)                 | yes — `claude --resume <id>`                                        |
 
 ### 4.2 State handling — `crew resume`
 

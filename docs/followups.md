@@ -228,7 +228,7 @@ Format: see the user-level `~/.claude/CLAUDE.md` "Followup detection" section.
 
 ### 2026-05-13 — visual-fidelity-check calibration: pattern accuracy ≠ specific accuracy + planned screenshot-vs-Figma ultimate test
 
-**What:** Two calibration runs of the `visual-fidelity-check` skill against the CREW-135 fixture (`docs/superpowers/skill-fixtures/visual-fidelity-check/crew-135/runs/`) plus user-in-the-loop review revealed a consistent pattern: the skill catches the *type* of every visual regression (caller-side intensity choice, wrong helper shade, icon primitive mismatch) but produces *specifically wrong* fixes when the snapshot lacks per-instance `componentProperties`. Three concrete examples from CREW-135:
+**What:** Two calibration runs of the `visual-fidelity-check` skill against the CREW-135 fixture (`docs/superpowers/skill-fixtures/visual-fidelity-check/crew-135/runs/`) plus user-in-the-loop review revealed a consistent pattern: the skill catches the _type_ of every visual regression (caller-side intensity choice, wrong helper shade, icon primitive mismatch) but produces _specifically wrong_ fixes when the snapshot lacks per-instance `componentProperties`. Three concrete examples from CREW-135:
 
 - **View PR icon.** Skill recommended `lucide/arrow-up-right`. Real Figma instance: `lucide/git-pull-request`. (Open as page genuinely uses arrow-up-right — different icon per surface; skill couldn't distinguish without per-instance data.)
 - **New Run button color.** Skill flagged the New Run button as a helper-level "wrong shade" bug (`bg-neutral-200` vs `zinc/50`). Real bug: caller-side wrong color enum (`color="white"` where Figma uses `color="idle"`). The helper is fine; the caller picked the wrong color.
@@ -344,7 +344,7 @@ The structural fix for the first two is the Plugin-API snapshot work captured in
 - **Add a `**Priority:** near-term | someday` line to the entry template.** Cheap. Doesn't solve the second concern (single surface), and "near-term" entries still bury in the chronological list without grouping.
 - **Sub-section split**: add `## Near-term` and `## Long-tail` under `## Active`. Avoids new fields. Still doesn't integrate with Jira's prioritization.
 - **One-way sync to Jira backlogs**: a `crew followups sync` CLI that reads `docs/followups.md`, creates Jira tickets for each `## Active` entry that doesn't already have a `**Ticket:**` link, parks them in the project's backlog. Followups still author in markdown (low friction); prioritization and resolution happen in Jira (high visibility). When a Jira ticket transitions to Done, the followup auto-moves to Resolved on next sync.
-- **Followup-first vs ticket-first capture**: the value of the markdown file is the *thin-bullet capture moment* — no auth, no project selection, no ADF authoring. Switching wholesale to "file a Jira ticket directly" loses that ergonomics. So the markdown stays as the capture surface; sync is what bridges to Jira.
+- **Followup-first vs ticket-first capture**: the value of the markdown file is the _thin-bullet capture moment_ — no auth, no project selection, no ADF authoring. Switching wholesale to "file a Jira ticket directly" loses that ergonomics. So the markdown stays as the capture surface; sync is what bridges to Jira.
 - **Multi-repo concern**: a Crew-side observation about Recipes shouldn't auto-create a Jira ticket in CREW. Sync needs a per-entry "target project" hint (default = the repo's primary project). Adds a small field to the entry template.
 
 **Shape of work:**
@@ -369,6 +369,7 @@ The structural fix for the first two is the Plugin-API snapshot work captured in
 **Anchors:** Pill set node ID `272:120` in Figma file `9FeJPriqdsdA4n9R5Xsrr8`. Affected raw frames: `1:944` / `1:2115` (Filters), `1:807` / `1:1978` (docker URL — also blocked on mono font, see sibling followup).
 
 **What's been considered:**
+
 - Adding `Has Trailing Icon` (BOOLEAN) + `Trailing Icon` (INSTANCE_SWAP) to all 320 Pill variants. Cheap-ish but doubles the icon-related property surface.
 - Building a separate `DropdownButton` composite that wraps Pill with a fixed trailing chevron. Cleaner role-based composite, but adds DS surface.
 
@@ -385,6 +386,7 @@ The structural fix for the first two is the Plugin-API snapshot work captured in
 **Anchors:** Frames `1:807`, `1:1978` in Figma file `9FeJPriqdsdA4n9R5Xsrr8`.
 
 **What's been considered:**
+
 - Add a `type=code-chip` variant to Pill with Fira Code Medium. Inconsistent — Pill is otherwise Hanken Grotesk.
 - Build separate `CodeChip` composite with Fira Code + leading icon (Has Icon) + trailing icon (Has Trailing Icon). Mirrors the trailing-icon problem from the sibling followup.
 
@@ -466,10 +468,12 @@ The structural fix for the first two is the Plugin-API snapshot work captured in
 **Why noticed:** During the 2026-05-11 state-color migration cleanup, after publishing Crew DS updates and re-checking Screens. Specifically caught comparing DS `AgentRow` (`21:9` — 6 plain text columns) against the richer agent rows in Screens — they don't match in structure.
 
 **Anchors:**
+
 - Crew DS: `DsA7QuEa2WthDATkksd1Bq` — AgentRow `21:9`, TopNav `21:2`, ProjectRow `79:14`, AgentBody `24:2`, ProjectHeader `82:15`
 - Crew Dashboard Screens: `9FeJPriqdsdA4n9R5Xsrr8` Page 1 — freehand compositions of the above
 
 **What's been considered:** Two paths surfaced:
+
 - **(a) DS as source of truth** — upgrade each partial DS component to match the rich Screens version, then replace each Screens hand-built composition with an instance. Cleanest long-term; bigger lift.
 - **(b) Per-slice migration** — leave Screens freehand for now, convert specific compositions to DS instances when they're about to ship. Cheaper short-term, DS stays partial.
 
@@ -478,6 +482,7 @@ User picked **(a)**, to be tackled as a two-step process: phase 1 brings DS up t
 **Shape of work:** Per component: inspect freehand Screens version → update DS component to match (auto-layout adjustments + child structure + new variant axes where the DS doesn't yet cover them) → republish DS → swap Screens content to instances. Start with the most-diverged component (AgentRow) and work down. Likely 4–6 separate component passes.
 
 **Open questions:**
+
 - Variant axes that don't yet exist in DS (e.g. AgentRow expanded vs collapsed) — decide as we encounter them.
 
 ### 2026-05-11 — Agent activity timeline + Bash event-tag components missing from Crew DS
@@ -489,6 +494,7 @@ User picked **(a)**, to be tackled as a two-step process: phase 1 brings DS up t
 **Why noticed:** During the 2026-05-11 state-color migration audit, after deleting the `state/*` aliases. A grep for remaining references found the timeline's event-tag pills (e.g. `Bash` tag at nodes `1:982`/`1:996` in Screens) still bind to `state/waiting`. The `StateBadge` instance in the same section was already migrated; the inline tags were not. Points at a structural absence: the tags should be a DS component but aren't.
 
 **Anchors:**
+
 - Crew Dashboard Screens: `9FeJPriqdsdA4n9R5Xsrr8` — `VerticalBorder` timeline at `1:964`; event-tag rects at `1:982`/`1:983` and `1:996`/`1:997`
 - Related: the 2026-05-10 followup "Build a `TimelineTag` component in Crew DS for tool-name pills" already flagged the leaf tag; this entry adds the container
 
@@ -497,6 +503,7 @@ User picked **(a)**, to be tackled as a two-step process: phase 1 brings DS up t
 **Shape of work:** Design pass on timeline composition + leaf tag → add both to Crew DS (with tool-name variants on the tag) → migrate orphaned `state/waiting` bindings in Screens to the new tag's appropriate variant. Pairs with the partials-of-Screens followup above.
 
 **Open questions:**
+
 - Is the tag's color tied to "tool category" (Bash = warning amber, Read = neutral, Edit = info) or some other axis?
 - Does the timeline container have intensity tiers (e.g. compact vs expanded)?
 
@@ -507,12 +514,14 @@ User picked **(a)**, to be tackled as a two-step process: phase 1 brings DS up t
 **Why noticed:** During the 2026-05-11 state-color migration verification, after extending `packages/daemon/seeds/dev.ts` to cover all daemon-producible states. The dashboard renders 5 states cleanly; the migration's correctness for `idle`/`waiting` is verified only via code paths, not visually.
 
 **Anchors:**
+
 - `packages/daemon/src/services/AgentsService.ts:328-336` — `deriveState` function returning the 5-state union
 - `packages/daemon/src/services/AgentsService.ts:45-52` — `StateTransitionState` union that types all 7
 - `packages/dashboard/src/data/state-meta.ts` — `STATE_CLASSES` covers all 7
 - `packages/dashboard/src/components/StateBadge.tsx` — renders all 7
 
 **What's been considered:** Two paths:
+
 - **Showcase route** — `#/dev/badges` (or similar) renders all 21 StateBadge variants × intensities + CountBadge × 7 + AgentRow attention-tint examples statically. Independent of daemon state, gives fast visual QA. ~30 min.
 - **Seed-level fix** — extend `dev.ts` to insert agents whose state arrives via `state_transitions` rows instead of being derived. Needs daemon-side understanding of when `idle`/`waiting` are emitted in prod. Larger scope.
 
@@ -521,7 +530,8 @@ Showcase route is the smaller, more honest scope; the seed path requires daemon-
 **Shape of work:** Either ~30 lines for the showcase route + a small `BadgeShowcase.tsx`, OR a daemon-side investigation + seed extension.
 
 **Open questions:**
-- Are `idle` and `waiting` ever expected to be the *current* state of an agent (visible in the agents list) or only intermediate transitions visible in `StateHistoryBar`? If only transitions, the showcase route is sufficient.
+
+- Are `idle` and `waiting` ever expected to be the _current_ state of an agent (visible in the agents list) or only intermediate transitions visible in `StateHistoryBar`? If only transitions, the showcase route is sufficient.
 
 ### 2026-05-10 — Wire dashboard QuickAction buttons (Resume / Finish / Inspect / Provide input) to daemon endpoints
 
@@ -588,7 +598,7 @@ Showcase route is the smaller, more honest scope; the seed path requires daemon-
 
 **What's been considered:**
 
-- **Heuristic auto-binding** by OKLCH lightness + hue. Rejected for an autonomous run — the dashboard's dark theme uses many close shades of slate (slate-900, slate-950, slate-800, etc.) that map to *different* semantic tokens (`background` vs `card` vs `popover`), and a heuristic can't tell them apart from the hex alone.
+- **Heuristic auto-binding** by OKLCH lightness + hue. Rejected for an autonomous run — the dashboard's dark theme uses many close shades of slate (slate-900, slate-950, slate-800, etc.) that map to _different_ semantic tokens (`background` vs `card` vs `popover`), and a heuristic can't tell them apart from the hex alone.
 - **Per-frame designer pass.** Open each frame in Figma desktop, walk the layer tree, manually bind each fill via the picker. Slow but correct. Likely 1-2h per frame × 11 frames.
 - **Hybrid: agent-prepared candidate map + designer review.** Agent reports unique hex values per frame and proposes a binding for each (high-confidence ones get auto-applied, ambiguous ones flagged for human review). Cuts manual work but still needs a human in the loop.
 
@@ -606,7 +616,7 @@ Showcase route is the smaller, more honest scope; the seed path requires daemon-
 
 **What:** The 3 ad-hoc modals (`New Run modal - 3. Confirm`, `Project Page - Edit project modal`, `Project Page - Delete confirmation modal`) plus all detached primitive structures across the other 8 imported frames (e.g. `Background+Border+Shadow` frames acting as buttons, `Container+Border` frames acting as cards) need to be replaced with real component instances. The CREW-126 plan called for "Crew DS Modal/Dialog/Form" instances, but Crew DS currently has zero composite components — Phase 4 of the design system epic adds those incrementally.
 
-**Why noticed:** CREW-126 autonomous run on 2026-05-09. The plan assumed Crew DS composites existed by Phase 3, but `docs/plans/design-system.md` confirms Crew DS is a "thin override layer over Core … one variable collection and zero components." Core's shadcn-kit components (Button, Dialog, Alert dialog) are searchable from the screens file but Core is not formally added as a library to the screens file — only Crew DS is — so Core component instantiation may not work even if attempted, and even if it did, the Phase 4 plan calls for *Crew DS* composites (with Crew branding) not raw Core primitives.
+**Why noticed:** CREW-126 autonomous run on 2026-05-09. The plan assumed Crew DS composites existed by Phase 3, but `docs/plans/design-system.md` confirms Crew DS is a "thin override layer over Core … one variable collection and zero components." Core's shadcn-kit components (Button, Dialog, Alert dialog) are searchable from the screens file but Core is not formally added as a library to the screens file — only Crew DS is — so Core component instantiation may not work even if attempted, and even if it did, the Phase 4 plan calls for _Crew DS_ composites (with Crew branding) not raw Core primitives.
 
 **Anchors:**
 
@@ -644,7 +654,7 @@ Showcase route is the smaller, more honest scope; the seed path requires daemon-
 
 ### 2026-05-08 — Tool-name filtering in the timeline Filters dropdown
 
-**What:** Today's drawer timeline lets users filter by event *type* (Tool calls / Assistant prose / Thinking / System / Hooks & skills / Other). It doesn't let them filter by *tool name* (Bash / Read / Grep / Edit / etc.). Once a long-running agent racks up 800+ tool calls, "show me only the Bash invocations" becomes a useful triage gesture. Add a tool-name section inside the Filters dropdown built by CREW-118.
+**What:** Today's drawer timeline lets users filter by event _type_ (Tool calls / Assistant prose / Thinking / System / Hooks & skills / Other). It doesn't let them filter by _tool name_ (Bash / Read / Grep / Edit / etc.). Once a long-running agent racks up 800+ tool calls, "show me only the Bash invocations" becomes a useful triage gesture. Add a tool-name section inside the Filters dropdown built by CREW-118.
 
 **Why noticed:** 2026-05-08 triage of the chip→dropdown redesign. We agreed to keep the initial dropdown scoped to event-type filtering only — tool-name filtering has its own UX problems (long, dynamic list of tools per agent; needs ordering / search inside the popover; user might want to filter by "fewest" vs "most" used) that deserve a designer pass of their own. Captured here so it doesn't evaporate.
 
@@ -673,7 +683,7 @@ Lean toward search-inside-popover when this iteration ships. Worth re-asking the
 
 ### 2026-05-08 — Slice 1c shipped without citing the design hand-off (visual drift)
 
-**What:** Slice 1c (CREW-94) shipped without citing the visual hand-off at `docs/designs/design_handoff_crew_dashboard/`. The dashboard *foundation* plan (CREW-15-era) had correctly established the convention — README.md is the visual contract, `source/*.jsx` is reference-only and not for verbatim copy — but the slice-1c spec, plan, and per-component tickets (CREW-104, CREW-105, CREW-106, CREW-109) made no reference to either. Result: TokenTable + StateHistoryBar built but unmounted, Timeline rendered as a flat tool-call list rather than the state-segment-grouped event cards the hand-off specifies, and the drawer header used a different information layout than the design. CREW-117 is the fidelity-sweep ticket closing the gap; this followup preserves the lesson so the next planner sees it before authoring the next slice.
+**What:** Slice 1c (CREW-94) shipped without citing the visual hand-off at `docs/designs/design_handoff_crew_dashboard/`. The dashboard _foundation_ plan (CREW-15-era) had correctly established the convention — README.md is the visual contract, `source/*.jsx` is reference-only and not for verbatim copy — but the slice-1c spec, plan, and per-component tickets (CREW-104, CREW-105, CREW-106, CREW-109) made no reference to either. Result: TokenTable + StateHistoryBar built but unmounted, Timeline rendered as a flat tool-call list rather than the state-segment-grouped event cards the hand-off specifies, and the drawer header used a different information layout than the design. CREW-117 is the fidelity-sweep ticket closing the gap; this followup preserves the lesson so the next planner sees it before authoring the next slice.
 
 **Why noticed:** 2026-05-08 conversation comparing live dashboard screenshots against the claude.ai/design output that informed the hand-off folder. User's framing: "the implementation is way off from the design spec visually... maybe we didn't include the design spec as a part of the planning in a rigorous enough way." A grep across the slice-1c spec/plan/tickets confirmed zero references to `design_handoff_crew_dashboard/` — the visual contract was never in scope.
 
@@ -697,13 +707,13 @@ Lean toward search-inside-popover when this iteration ships. Worth re-asking the
 **Open questions:**
 
 - Does the design hand-off itself need a refresh? The README is dated 2026-04-26; data-model details (e.g. state names, runs schema, attention semantics) may have drifted relative to the dashboard's current shape. Worth a quick audit when CREW-117 starts so the implementer doesn't faithfully replicate something stale.
-- Should the convention also require generic spec→plan→ticket citation chains? Probably overkill — the hand-off case is specific because it's a *visual contract* that's easy to silently miss in textual specs; other cross-doc citations are already covered by existing planning skills.
+- Should the convention also require generic spec→plan→ticket citation chains? Probably overkill — the hand-off case is specific because it's a _visual contract_ that's easy to silently miss in textual specs; other cross-doc citations are already covered by existing planning skills.
 
 ### 2026-05-08 — Surface `crew finish` step results in the dashboard
 
 **What:** `crew finish` from the CLI prints a structured checklist as it runs — `step()` (`packages/cli/src/commands/finish.ts:120-132`) wraps each cleanup operation (docker compose down, worktree remove, branch delete, fetch prune, jira transition, /tmp log cleanup) and emits a green ✓ on success or yellow ! on skip/warn. None of this flows to the daemon. Once finish lands, the dashboard's only signal is the agent's terminal state — there's no record of which steps succeeded, which were skipped (e.g. "worktree not registered"), or what failed and why. The drawer should expose a per-step checklist with the same success/skip/error semantics, so the dashboard is sufficient for reviewing a finish run end-to-end without falling back to terminal scrollback.
 
-**Why noticed:** 2026-05-08 conversation triaging finish-related bugs in CREW-94. While walking through the comment "finish runs have no transcript by design" (see CREW-116's root cause #3), the user pointed out that finish *does* have an observable surface — the CLI's structured output — it just isn't piped through the daemon. Pairs with CREW-116: that ticket fixes "the finished state shows up correctly," this followup is "the finish step *results* show up correctly, including any errors."
+**Why noticed:** 2026-05-08 conversation triaging finish-related bugs in CREW-94. While walking through the comment "finish runs have no transcript by design" (see CREW-116's root cause #3), the user pointed out that finish _does_ have an observable surface — the CLI's structured output — it just isn't piped through the daemon. Pairs with CREW-116: that ticket fixes "the finished state shows up correctly," this followup is "the finish step _results_ show up correctly, including any errors."
 
 **Anchors:**
 
@@ -720,7 +730,7 @@ Lean toward search-inside-popover when this iteration ships. Worth re-asking the
 - **Per-step rows in a new `finish_steps` table.** CLI POSTs each step result to a new endpoint; daemon writes a row; drawer queries at open time. Simpler — no new event type, no SSE work. Doesn't stream live, but finish completes in tens of seconds so this is probably acceptable.
 - **Bundled completion payload.** CLI accumulates results, sends all at once when calling `completeRun`. Cheapest. Live-progress experience is lost; if finish hangs mid-step (e.g. `git push origin --delete` waits on auth), the dashboard sees nothing until completion or timeout.
 
-The SSE shape feels right — it matches slice 1c's "live updates" feel and gives the user real-time visibility into a process that *can* fail mid-way (auth hangs, jira 403s, docker daemon errors).
+The SSE shape feels right — it matches slice 1c's "live updates" feel and gives the user real-time visibility into a process that _can_ fail mid-way (auth hangs, jira 403s, docker daemon errors).
 
 **Shape of work:** One ticket, depends on CREW-116 so finish runs are correctly modeled before adding more surface. Author the new event type in `crew-shared`, add a daemon endpoint for per-step submission (or extend the existing run-update endpoint), emit from `finish.ts`'s `step()` helper, render in the drawer alongside (or above) the timeline. Producer/consumer are tightly coupled, so single ticket.
 

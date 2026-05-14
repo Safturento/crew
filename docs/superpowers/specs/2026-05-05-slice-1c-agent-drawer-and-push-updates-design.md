@@ -35,22 +35,22 @@ Explicitly out of scope (deferred to future slices):
 
 ## 2. Empirical schema basis
 
-> **Project-specific:** The schema in §3 is grounded in a corpus walk of every JSONL transcript under `~/.claude/projects/` at design time (247 files). Counts below come from that walk; absolute numbers are illustrative — the *set* of variants is the contract.
+> **Project-specific:** The schema in §3 is grounded in a corpus walk of every JSONL transcript under `~/.claude/projects/` at design time (247 files). Counts below come from that walk; absolute numbers are illustrative — the _set_ of variants is the contract.
 
-| Top-level `type` | Count | Notes |
-| --- | ---: | --- |
-| `assistant` | 27,690 | `message.content[]`: `tool_use` (17,019), `thinking` (5,568), `text` (5,120) |
-| `user` | 18,877 | `message.content[]`: `tool_result` (17,016), bare-string (1,573), `text` (302) |
-| `queue-operation` | 11,703 | `enqueue` / `dequeue` of input prompts |
-| `attachment` | 6,946 | 20 `attachment.type` sub-variants |
-| `last-prompt` | 4,434 | (already modeled in slice 1b) |
-| `permission-mode` | 1,368 | `default` / `acceptEdits` / etc. |
-| `file-history-snapshot` | 1,295 | CC's internal undo bookkeeping |
-| `system` | 1,250 | 7 `system.subtype` sub-variants |
-| `pr-link` | 851 | (already modeled in slice 1b) |
-| `ai-title` | 656 | AI-generated session title |
-| `custom-title` | 88 | user-set session title |
-| `agent-name` | 41 | session/agent label |
+| Top-level `type`        |  Count | Notes                                                                          |
+| ----------------------- | -----: | ------------------------------------------------------------------------------ |
+| `assistant`             | 27,690 | `message.content[]`: `tool_use` (17,019), `thinking` (5,568), `text` (5,120)   |
+| `user`                  | 18,877 | `message.content[]`: `tool_result` (17,016), bare-string (1,573), `text` (302) |
+| `queue-operation`       | 11,703 | `enqueue` / `dequeue` of input prompts                                         |
+| `attachment`            |  6,946 | 20 `attachment.type` sub-variants                                              |
+| `last-prompt`           |  4,434 | (already modeled in slice 1b)                                                  |
+| `permission-mode`       |  1,368 | `default` / `acceptEdits` / etc.                                               |
+| `file-history-snapshot` |  1,295 | CC's internal undo bookkeeping                                                 |
+| `system`                |  1,250 | 7 `system.subtype` sub-variants                                                |
+| `pr-link`               |    851 | (already modeled in slice 1b)                                                  |
+| `ai-title`              |    656 | AI-generated session title                                                     |
+| `custom-title`          |     88 | user-set session title                                                         |
+| `agent-name`            |     41 | session/agent label                                                            |
 
 `system.subtype` (7): `turn_duration`, `stop_hook_summary`, `local_command`, `compact_boundary`, `bridge_status`, `api_error`, `away_summary`.
 
@@ -70,7 +70,7 @@ Every event the parser returns carries a base envelope (intersected onto each va
 interface BaseEnvelope {
   uuid?: string;
   parentUuid?: string | null;
-  timestamp?: string;       // ISO 8601
+  timestamp?: string; // ISO 8601
   sessionId?: string;
   cwd?: string;
   gitBranch?: string;
@@ -112,7 +112,7 @@ export type TranscriptEvent =
 ```ts
 interface UnknownEvent extends BaseEnvelope {
   type: 'unknown';
-  raw: unknown;             // the decoded JSON before schema rejection
+  raw: unknown; // the decoded JSON before schema rejection
   reason: 'unknown_top_level' | 'unknown_subtype' | 'zod_failure';
 }
 ```
@@ -188,15 +188,19 @@ New service `packages/daemon/src/services/EventBus.ts`. In-process pub/sub, one 
 
 ```ts
 class EventBus {
-  publish(event: SseEvent): void;                   // assigns id, appends to ring buffer
+  publish(event: SseEvent): void; // assigns id, appends to ring buffer
   subscribe(opts: { lastEventId?: string; onEvent: (e: SseEvent) => void }): Unsubscribe;
 }
 
 type SseEvent =
-  | { type: 'agent.state_changed'; data: { key: string; from: string|null; to: string; ts: number }; id: string }
-  | { type: 'tool_calls.changed';  data: { key: string }; id: string }
-  | { type: 'run.completed';       data: { key: string; ts: number }; id: string }
-  | { type: 'cache.miss';          data: {}; id: string };           // synthetic — see §5.4
+  | {
+      type: 'agent.state_changed';
+      data: { key: string; from: string | null; to: string; ts: number };
+      id: string;
+    }
+  | { type: 'tool_calls.changed'; data: { key: string }; id: string }
+  | { type: 'run.completed'; data: { key: string; ts: number }; id: string }
+  | { type: 'cache.miss'; data: {}; id: string }; // synthetic — see §5.4
 ```
 
 Ring buffer holds the last ~1000 events (configurable via env, but fine to leave hardcoded for slice 1c). Older events are evicted; `subscribe({ lastEventId: <evicted-id> })` immediately yields a synthetic `cache.miss` event before any new live events.
@@ -216,8 +220,19 @@ type AgentDetail = {
   state: AgentState;
   worktree_path: string;
   pr_url: string | null;
-  runs: Array<{ id: string; command: 'run'|'fix-pr'|'finish'; started_at: number; completed_at: number | null }>;
-  tokens: { total: number; input: number; output: number; cache_read: number; cache_creation: number };
+  runs: Array<{
+    id: string;
+    command: 'run' | 'fix-pr' | 'finish';
+    started_at: number;
+    completed_at: number | null;
+  }>;
+  tokens: {
+    total: number;
+    input: number;
+    output: number;
+    cache_read: number;
+    cache_creation: number;
+  };
   tool_call_count: number;
 };
 ```
@@ -247,6 +262,7 @@ class TimelineService {
 Resolves the JSONL path via the existing slice 1b helper (`claudeProjectDirFor`), streams the file line-by-line, calls `parseTranscriptLine` on each, returns the array.
 
 Failure modes:
+
 - File missing → 200 with `events: []` and the response carries `X-Crew-Warning: transcript-missing`. Don't 404 — the agent record is still real.
 - Malformed JSON line → skipped silently in the event array; counter logged on the daemon side.
 - Zod failure → an `unknown` variant lands in the array. The dashboard renders it.
@@ -344,20 +360,20 @@ Each renderer outputs the §5c card anatomy: line 1 = type-specific one-liner, l
 
 Six chips above the timeline. Defaults are curated for "tell the story without noise":
 
-| Chip | Default | Variants |
-| --- | --- | --- |
-| Tool calls | ON | `assistant.tool_use`, `user.tool_result` |
-| Assistant prose | ON | `assistant.text` |
-| Thinking | OFF | `assistant.thinking` |
-| System | OFF | `system.*` (all 7 subtypes) |
-| Hooks & skills | OFF | `attachment.{hook_success, hook_additional_context, hook_system_message, hook_non_blocking_error, skill_listing, invoked_skills, command_permissions, deferred_tools_delta}` |
-| Other | OFF | `attachment.{plan_mode*, todo_reminder, task_reminder, file, edited_text_file, ultrathink_effort, date_change, nested_memory, queued_command, compact_file_reference}`, `queue-operation`, `permission-mode`, `file-history-snapshot`, `ai-title`, `custom-title`, `agent-name`, `pr-link`, `last-prompt`, `unknown` |
+| Chip            | Default | Variants                                                                                                                                                                                                                                                                                                             |
+| --------------- | ------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Tool calls      | ON      | `assistant.tool_use`, `user.tool_result`                                                                                                                                                                                                                                                                             |
+| Assistant prose | ON      | `assistant.text`                                                                                                                                                                                                                                                                                                     |
+| Thinking        | OFF     | `assistant.thinking`                                                                                                                                                                                                                                                                                                 |
+| System          | OFF     | `system.*` (all 7 subtypes)                                                                                                                                                                                                                                                                                          |
+| Hooks & skills  | OFF     | `attachment.{hook_success, hook_additional_context, hook_system_message, hook_non_blocking_error, skill_listing, invoked_skills, command_permissions, deferred_tools_delta}`                                                                                                                                         |
+| Other           | OFF     | `attachment.{plan_mode*, todo_reminder, task_reminder, file, edited_text_file, ultrathink_effort, date_change, nested_memory, queued_command, compact_file_reference}`, `queue-operation`, `permission-mode`, `file-history-snapshot`, `ai-title`, `custom-title`, `agent-name`, `pr-link`, `last-prompt`, `unknown` |
 
 All-off state shows an empty timeline body with copy "No events match your filters" and a "Show all" link that resets to the default-on set.
 
 ### 7.5 Search
 
-Search input above the chips. Filters the *currently visible* event set by substring against the type-specific one-liner content (tool name + input summary, assistant text, system message, etc.). Doesn't reach into expanded full content — that's a §5c future enhancement.
+Search input above the chips. Filters the _currently visible_ event set by substring against the type-specific one-liner content (tool name + input summary, assistant text, system message, etc.). Doesn't reach into expanded full content — that's a §5c future enhancement.
 
 ### 7.6 Live-mode toggle
 
@@ -418,6 +434,7 @@ Slice 1c does not paginate. The timeline endpoint returns the full event array; 
 Fixture-driven. One `fixtures/<variant>.jsonl` per discriminated variant — the ~38 sub-variants. Each fixture is a real (sanitized) line lifted from the corpus. Per-variant test asserts `parseTranscriptLine(fixture)` returns the expected shape with all envelope fields preserved.
 
 Negative tests:
+
 - Malformed JSON → returns `null`.
 - Valid JSON with unknown `type` → returns `{ type: 'unknown', raw, reason: 'unknown_top_level' }`.
 - Valid JSON with known `type` but invalid sub-shape → returns the appropriate `unknown` variant.
@@ -458,7 +475,7 @@ Golden test: parses a full real transcript end-to-end and asserts the histogram 
 
 1. **Drawer opens.** Navigate to dashboard with a fixture-seeded agent, click the row, assert drawer mounts at `/agent/:key`, assert TokenTable + StateHistoryBar + Timeline all render with content.
 2. **Filter chip behavior.** Toggle each chip in turn, assert event-type cards appear/disappear from the DOM (not just visibility).
-3. **Empty filter state.** Click each chip until all are off. Assert: timeline body shows empty-state copy, "Show all" link is visible, *no* event cards in the DOM. Click "Show all"; assert chips reset to defaults, cards reappear, search input is unchanged.
+3. **Empty filter state.** Click each chip until all are off. Assert: timeline body shows empty-state copy, "Show all" link is visible, _no_ event cards in the DOM. Click "Show all"; assert chips reset to defaults, cards reappear, search input is unchanged.
 4. **Full-page route.** Navigate to `/agent/:key/full`; assert the same data renders with the page (not drawer) layout.
 5. **State flip without refresh.** Use a test hook to publish a synthetic `agent.state_changed` event; assert the badge color in the drawer header flips without a page refresh.
 
@@ -486,6 +503,7 @@ Suggested logical groupings (writing-plans will refine):
 12. **E2E + Bruno coverage.** Playwright spec, `.bru` files, main-smoke flow extension.
 
 Dependency edges that matter:
+
 - 1 blocks 5 (timeline endpoint imports the schema).
 - 2 blocks 4 (state-history endpoint reads the new table).
 - 3 blocks 8 (no SSE consumer without an SSE endpoint).

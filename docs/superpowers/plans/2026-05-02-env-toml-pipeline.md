@@ -10,13 +10,14 @@
 
 **Spec:** [`Recipes-App/docs/superpowers/specs/2026-05-02-cross-project-env-setup-design.md`](https://github.com/Safturento/Recipes/blob/spec/cross-project-env-setup/docs/superpowers/specs/2026-05-02-cross-project-env-setup-design.md) (lives in the Recipes repo because that's where the brainstorm originated; `cat` it once before starting if you don't have it open).
 
-**Recipes counterpart:** Recipes ships `env.toml`, a bundled `scripts/setup.mjs` (no-crew canonical-only path), and the docker-compose / backend-config rewires in a sibling plan that runs *after* this PR is merged and a new crew version is released.
+**Recipes counterpart:** Recipes ships `env.toml`, a bundled `scripts/setup.mjs` (no-crew canonical-only path), and the docker-compose / backend-config rewires in a sibling plan that runs _after_ this PR is merged and a new crew version is released.
 
 ---
 
 ## File Structure
 
 **Created:**
+
 - `packages/cli/src/lib/env-spec/types.ts` — Zod schemas + TS types for `env.toml`.
 - `packages/cli/src/lib/env-spec/parse.ts` — read TOML file, validate via Zod, return typed spec.
 - `packages/cli/src/lib/env-spec/resolve.ts` — extract `${...}` refs, build DAG, topologically sort, substitute.
@@ -31,6 +32,7 @@
 - `packages/cli/src/commands/env.test.ts` — integration tests for the three subcommands.
 
 **Modified:**
+
 - `packages/cli/src/lib/docker/port-hash.ts` — keep the legacy fixed-shape function, add a generic per-key allocator alongside (or refactor `portHash` to delegate). Decided in Task 3.
 - `packages/cli/src/lib/index.ts` — re-export the new `env-spec` module so commands can import from `../lib/index.js`.
 - `packages/cli/src/index.ts` — register `envCommand`.
@@ -39,6 +41,7 @@
 - `docs/followups.md` — amend the `2026-04-30 — Unified crew init / crew doctor onboarding helper` entry to include `env.toml` scaffolding.
 
 **Untouched (legacy path stays intact):**
+
 - `packages/cli/src/lib/docker/env.ts` (`writeDockerEnv`, `GENERATED_ENV_HEADER`)
 - `packages/cli/src/commands/docker-env.ts` (`crew docker-env` command)
 - All `crew docker-env` callers
@@ -48,6 +51,7 @@
 ## Task 1: Schema types + parser
 
 **Files:**
+
 - Create: `packages/cli/src/lib/env-spec/types.ts`
 - Create: `packages/cli/src/lib/env-spec/parse.ts`
 - Create: `packages/cli/src/lib/env-spec/parse.test.ts`
@@ -204,14 +208,16 @@ const appGenerate = z.object({
   share: z.boolean().optional(),
 });
 
-const appEntry = z.discriminatedUnion('source', [appLiteral, appGenerate]).superRefine((entry, ctx) => {
-  if (entry.source === 'literal' && 'share' in entry) {
-    ctx.addIssue({
-      code: 'custom',
-      message: 'share is only valid on entries with source = "generate"',
-    });
-  }
-});
+const appEntry = z
+  .discriminatedUnion('source', [appLiteral, appGenerate])
+  .superRefine((entry, ctx) => {
+    if (entry.source === 'literal' && 'share' in entry) {
+      ctx.addIssue({
+        code: 'custom',
+        message: 'share is only valid on entries with source = "generate"',
+      });
+    }
+  });
 
 const fileEntry = z.object({
   path: z.string().min(1),
@@ -272,7 +278,9 @@ export function parseEnvSpec(raw: string): EnvSpec {
 
   const result = envSpecSchema.safeParse(parsed);
   if (!result.success) {
-    const issues = result.error.issues.map((i) => `  - ${i.path.join('.') || '<root>'}: ${i.message}`).join('\n');
+    const issues = result.error.issues
+      .map((i) => `  - ${i.path.join('.') || '<root>'}: ${i.message}`)
+      .join('\n');
     throw new Error(`env.toml validation failed:\n${issues}`);
   }
   return result.data;
@@ -304,10 +312,11 @@ git commit -m "feat(env-spec): TOML schema + parser with version gate"
 ## Task 2: DAG resolver for `${...}` substitution
 
 **Files:**
+
 - Create: `packages/cli/src/lib/env-spec/resolve.ts`
 - Create: `packages/cli/src/lib/env-spec/resolve.test.ts`
 
-This task implements substitution semantics §"Resolution semantics" of the spec. Pure functions — no I/O, no port allocation, no shell-out. Operates on the parsed spec + a *value map* the materializer fills as it goes.
+This task implements substitution semantics §"Resolution semantics" of the spec. Pure functions — no I/O, no port allocation, no shell-out. Operates on the parsed spec + a _value map_ the materializer fills as it goes.
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -624,6 +633,7 @@ git commit -m "feat(env-spec): DAG resolver for \${...} substitution"
 ## Task 3: Generic per-key port allocator
 
 **Files:**
+
 - Create: `packages/cli/src/lib/env-spec/allocate-port.ts`
 - Create: `packages/cli/src/lib/env-spec/allocate-port.test.ts`
 
@@ -724,6 +734,7 @@ git commit -m "feat(env-spec): generic per-key port allocator"
 ## Task 4: Source + file generators
 
 **Files:**
+
 - Create: `packages/cli/src/lib/env-spec/generate.ts`
 - Create: `packages/cli/src/lib/env-spec/generate.test.ts`
 
@@ -877,10 +888,11 @@ git commit -m "feat(env-spec): shell-out generators for sources and files"
 ## Task 5: Materialization pipeline
 
 **Files:**
+
 - Create: `packages/cli/src/lib/env-spec/materialize.ts`
 - Create: `packages/cli/src/lib/env-spec/materialize.test.ts`
 
-The integration point. Reads the existing `.env` (cache for idempotency), resolves orchestration, then app, then runs file generators, then assembles the per-context override maps. Returns the resolved values + override maps; the *emitter* in Task 6 writes them to disk. Splitting these concerns means materialize is testable without touching the filesystem-as-output (only the cache read), and emit is a thin printer.
+The integration point. Reads the existing `.env` (cache for idempotency), resolves orchestration, then app, then runs file generators, then assembles the per-context override maps. Returns the resolved values + override maps; the _emitter_ in Task 6 writes them to disk. Splitting these concerns means materialize is testable without touching the filesystem-as-output (only the cache read), and emit is a thin printer.
 
 The "is this the canonical worktree?" decision lives outside this module — passed in via options. That keeps materialize free of cwd / config-file lookups, which the CLI command does.
 
@@ -1175,6 +1187,7 @@ git commit -m "feat(env-spec): materialization pipeline (resolve + cache + share
 ## Task 6: Env-file emitter
 
 **Files:**
+
 - Create: `packages/cli/src/lib/env-spec/emit.ts`
 - Create: `packages/cli/src/lib/env-spec/emit.test.ts`
 - Create: `packages/cli/src/lib/env-spec/parse-env-file.ts`
@@ -1297,9 +1310,9 @@ describe('emit', () => {
 
   it('refuses to overwrite a .env without the generated header', () => {
     writeFileSync(join(dir, '.env'), 'HAND_EDITED=1\n');
-    expect(() =>
-      emit({ worktreeRoot: dir, base: { X: 'x' }, contexts: {} }),
-    ).toThrow(/not generated by crew/i);
+    expect(() => emit({ worktreeRoot: dir, base: { X: 'x' }, contexts: {} })).toThrow(
+      /not generated by crew/i,
+    );
     expect(readFileSync(join(dir, '.env'), 'utf8')).toBe('HAND_EDITED=1\n');
   });
 
@@ -1416,6 +1429,7 @@ git commit -m "feat(env-spec): emitter + .env parser + module barrel"
 ## Task 7: `crew env` command surface (init / refresh / validate)
 
 **Files:**
+
 - Create: `packages/cli/src/commands/env.ts`
 - Create: `packages/cli/src/commands/env.test.ts`
 - Modify: `packages/cli/src/index.ts` (register the new command)
@@ -1666,7 +1680,8 @@ async function runMaterialize(deps: EnvDeps, isCanonical: boolean): Promise<EnvR
     const canonicalName = deps.config.docker.canonical_worktree;
     const result = materialize(spec, {
       baseName: deps.config.name,
-      worktreeId: wtBasename === canonicalName ? 'main' : wtBasename.replace(`${canonicalName}-`, ''),
+      worktreeId:
+        wtBasename === canonicalName ? 'main' : wtBasename.replace(`${canonicalName}-`, ''),
       worktreeBasename: wtBasename,
       isCanonical,
       cacheEnv: readCacheEnv(join(deps.worktree, '.env')),
@@ -1713,7 +1728,9 @@ export const envCommand = new Command('env')
   .description('manage env.toml-driven .env materialization for the current worktree')
   .addCommand(
     new Command('init')
-      .description('materialize .env from env.toml in the current worktree (use on canonical or fresh worktrees)')
+      .description(
+        'materialize .env from env.toml in the current worktree (use on canonical or fresh worktrees)',
+      )
       .action(async () => {
         const cwd = process.cwd();
         const config = await discoverProjectConfig(cwd);
@@ -1820,6 +1837,7 @@ git commit -m "feat(env): crew env init/refresh/validate subcommands"
 ## Task 8: Wire `env.toml` detection into `crew run`
 
 **Files:**
+
 - Modify: `packages/cli/src/commands/run.ts` (the worktree-bringup path)
 - Modify: `packages/cli/src/commands/run.test.ts`
 
@@ -1918,13 +1936,7 @@ Locate the existing `writeDockerEnv` call in `packages/cli/src/commands/run.ts`.
 ```ts
 import { existsSync } from 'node:fs';
 import { join, basename } from 'node:path';
-import {
-  loadEnvSpec,
-  materialize,
-  emit,
-  parseEnvFile,
-  writeDockerEnv,
-} from '../lib/index.js';
+import { loadEnvSpec, materialize, emit, parseEnvFile, writeDockerEnv } from '../lib/index.js';
 
 export interface BringUpWorktreeEnvOpts {
   worktree: string;
@@ -1932,9 +1944,7 @@ export interface BringUpWorktreeEnvOpts {
   projectName: string;
 }
 
-export type BringUpWorktreeEnvResult =
-  | { kind: 'env-spec' }
-  | { kind: 'legacy' };
+export type BringUpWorktreeEnvResult = { kind: 'env-spec' } | { kind: 'legacy' };
 
 /**
  * Materialize per-worktree env files. Uses env.toml when present at the
@@ -1976,13 +1986,7 @@ Replace the existing `writeDockerEnv` call site in `runCommand` with `await brin
 ```ts
 import { existsSync, readFileSync } from 'node:fs';
 import { join, basename } from 'node:path';
-import {
-  loadEnvSpec,
-  materialize,
-  emit,
-  parseEnvFile,
-  writeDockerEnv,
-} from '../lib/index.js';
+import { loadEnvSpec, materialize, emit, parseEnvFile, writeDockerEnv } from '../lib/index.js';
 ```
 
 - [ ] **Step 5: Run, expect pass**
@@ -2013,6 +2017,7 @@ git commit -m "feat(run): use env.toml pipeline when present, else legacy writeD
 ## Task 9: Documentation
 
 **Files:**
+
 - Modify: `README.md`
 - Modify: `docs/followups.md`
 

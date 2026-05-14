@@ -25,16 +25,16 @@ Bootstrap shadcn/ui's CLI infrastructure in `packages/dashboard` (Tailwind v4 mo
 
 ## Migration map
 
-| Old utility class           | New utility class       |
-| --------------------------- | ----------------------- |
-| `bg-canvas`, `bg-bg`        | `bg-background`         |
-| `bg-surface`                | `bg-card`               |
-| `bg-surface-2`              | `bg-popover`            |
-| `bg-text`                   | `bg-foreground`         |
-| `bg-text-3`                 | `bg-muted-foreground`   |
-| `text-text`, `text-text-1`  | `text-foreground`       |
-| `text-text-2`, `text-text-3`| `text-muted-foreground` |
-| `text-canvas`               | `text-background`       |
+| Old utility class            | New utility class       |
+| ---------------------------- | ----------------------- |
+| `bg-canvas`, `bg-bg`         | `bg-background`         |
+| `bg-surface`                 | `bg-card`               |
+| `bg-surface-2`               | `bg-popover`            |
+| `bg-text`                    | `bg-foreground`         |
+| `bg-text-3`                  | `bg-muted-foreground`   |
+| `text-text`, `text-text-1`   | `text-foreground`       |
+| `text-text-2`, `text-text-3` | `text-muted-foreground` |
+| `text-canvas`                | `text-background`       |
 
 State color utilities (`bg-state-*`, `text-state-*`, `border-state-*`) are unchanged.
 

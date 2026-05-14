@@ -8,12 +8,12 @@ The skill is not firing in autonomous `crew run` dispatches.
 
 The CREW-135 re-dispatch (PR #188, May 12 2026) shipped with three confirmed regressions a working gate would have caught — Badge `intensity="muted"` instead of `mid` in `AgentRow`, CSS dot where Figma defines a lucide `Icon` INSTANCE_SWAP, literal `↗` Unicode glyph where Figma uses a leading lucide icon. The session transcript shows three skill invocations (`executing-plans`, `verification-before-completion`, `requesting-code-review`) and zero invocations of `visual-fidelity-check`.
 
-The skill *is* referenced in the dispatch run-prompt, in two places:
+The skill _is_ referenced in the dispatch run-prompt, in two places:
 
 1. Auto-rendered into the user-level skills list (alongside `mumen`, `reaching-for-backend-patterns`, etc.) by `packages/cli/src/lib/prompts/skills.ts`.
 2. As `{{visualFidelityBlock}}`, rendered between numbered workflow steps 7 (Execute) and 8 (Verify) in the dispatch template `ticket.md`.
 
-Neither location is a *numbered workflow step*. The agent reliably worked through numbered steps 1 → 10. The visual-fidelity guidance sat in the gap between Execute and Verify as advisory prose and got skipped, while the adjacent numbered step 8 (Verify, which names `verification-before-completion`) fired normally.
+Neither location is a _numbered workflow step_. The agent reliably worked through numbered steps 1 → 10. The visual-fidelity guidance sat in the gap between Execute and Verify as advisory prose and got skipped, while the adjacent numbered step 8 (Verify, which names `verification-before-completion`) fired normally.
 
 The pattern: dispatched agents treat numbered workflow steps as a sequence to execute and treat prose between them as background information.
 
@@ -73,6 +73,7 @@ Moving it directly into `<repo>/.claude/skills/visual-fidelity-check/` would sol
 The architectural fix: **the skill's source-of-truth moves to a path the crew CLI dispatcher controls, outside the sandbox-blocked `.claude/` tree.** The dispatcher (which runs as the user's own process, outside the agent sandbox) copies the skill files into each dispatched worktree's `.claude/skills/` before the agent boots — same mechanism settings.json injection uses today.
 
 > **Project-specific:** new source-of-truth path is `packages/cli/src/lib/skills/visual-fidelity-check/` (mirrors the layout pattern of `packages/cli/src/lib/figma-snapshot/`, `packages/cli/src/lib/bruno-smoke/`, etc.). Files:
+>
 > ```
 > packages/cli/src/lib/skills/visual-fidelity-check/
 >   SKILL.md
@@ -92,7 +93,7 @@ The crew CLI dispatcher gains a new pre-spawn step (alongside the existing `excl
 
 The dispatched agent then auto-discovers the skill via the existing project-level skill mechanism in `packages/cli/src/lib/prompts/skills.ts` (`readSkillsFromRoot(join(opts.repoPath, '.claude', 'skills'), 'project')`).
 
-The SKILL.md description sharpening — appending *"Required IN ADDITION TO `superpowers:verification-before-completion` — that skill covers tests, lint, and build correctness; this one covers visual fidelity. They are not interchangeable. Running one does not replace the other."* — applies to the source-of-truth at the new location.
+The SKILL.md description sharpening — appending _"Required IN ADDITION TO `superpowers:verification-before-completion` — that skill covers tests, lint, and build correctness; this one covers visual fidelity. They are not interchangeable. Running one does not replace the other."_ — applies to the source-of-truth at the new location.
 
 The phrasing is position-agnostic: if the workflow order ever flips (visual-fidelity after Verify instead of before), the wording remains correct. The point is purpose, not sequencing.
 
@@ -117,7 +118,7 @@ A `PreToolUse` hook intercepts `Bash` tool calls whose command matches `gh pr cr
 1. **Detect whether this project uses visual-fidelity.** Read `<repo>/.crew/visual-fidelity.json` or the `[visual_fidelity]` block from the project's crew TOML. If absent, no-op (exit 0, allow the PR).
 2. **Read the active session transcript** (path passed in as a hook-input field — see Claude Code's hooks docs for the schema). Scan for an assistant `tool_use` entry whose `name == "Skill"` and `input.skill == "visual-fidelity-check"`.
 3. **If found,** exit 0, allow the PR.
-4. **If absent,** exit non-zero with a blocking system message: *"visual-fidelity-check skill has not been invoked this session. Per the dispatch workflow, that gate must run before opening a PR. Invoke the skill, address findings, then retry `gh pr create`."*
+4. **If absent,** exit non-zero with a blocking system message: _"visual-fidelity-check skill has not been invoked this session. Per the dispatch workflow, that gate must run before opening a PR. Invoke the skill, address findings, then retry `gh pr create`."_
 
 The hook is fail-closed in the strict sense — if it can't read the transcript or can't determine project config, it surfaces a warning to the agent rather than silently allowing the PR. (Soft-fail to "allow" would re-introduce the same silent-skip pattern we're fixing.)
 
@@ -137,7 +138,7 @@ The crew repo has no existing PreToolUse hooks in `packages/cli/src/`. The imple
 - The crew CLI dispatcher injects `packages/cli/src/lib/skills/visual-fidelity-check/` into each dispatched worktree at `<worktree>/.claude/skills/visual-fidelity-check/` before the agent boots, but only when the project's visual-fidelity config is present.
 - The dispatched agent's session transcript (after a successful UI dispatch) shows a `Skill` tool_use entry with `input.skill == "visual-fidelity-check"`. Validated end-to-end by Thread A's re-dispatch (see Verification).
 - A new PreToolUse hook is installed into dispatched worktrees that have visual-fidelity config; the hook blocks `gh pr create` when the session transcript does not contain a `visual-fidelity-check` skill invocation.
-- The hook does *not* fire on backend-only dispatches (no visual-fidelity config → no hook → no blocking).
+- The hook does _not_ fire on backend-only dispatches (no visual-fidelity config → no hook → no blocking).
 - An end-to-end test exists: a fixture dispatch (manual or automated) that skips the skill is blocked by the hook with the correct message; a dispatch that runs the skill normally proceeds.
 
 ## Verification

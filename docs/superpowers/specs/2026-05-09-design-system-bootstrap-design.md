@@ -1,4 +1,4 @@
- Can you # Design System Bootstrap — Design Spec
+Can you # Design System Bootstrap — Design Spec
 
 **Status:** Draft, awaiting user review
 **Date:** 2026-05-09
@@ -24,11 +24,11 @@ The recent session built three modals directly into a Figma file via the officia
 
 Three layers, in dependency order:
 
-| Layer | Lives in | Owner | Purpose |
-|---|---|---|---|
-| **Core Library** | Forked from community kit `UkPJj6vd7HMKcey7M0XF4N`, saved to user's Figma team in `Design Systems` project, renamed `Core Design System`, published. | safturento (project-agnostic) | Tailwind primitives (multiple `tw/*` collections), shadcn-aligned semantic tokens with Light + Dark modes (`mode` collection: `background`, `foreground`, `primary`, `destructive`, `card`, `border`, etc.), all shadcn primitive components (Button, Input, Dialog, Form, etc. — 60+ component pages), full lucide icon set (1,469 icons), Radix color alternative (`rdx/colors`). Plus our additions: explicit variable scopes (retrofit), layout primitives (Stack, Cluster, Container). Reusable across any project. |
-| **Crew Design System** | New published Figma file in same team, `Crew Design System`. Depends on (consumes) Core. | crew project | Thin layer of Crew-specific overrides on Core's semantic tokens where Crew differs from shadcn defaults; Crew composites matching `packages/dashboard/src/components/` that aren't covered by Core's primitives; Code Connect mappings (1:1 to shadcn primitives + 1:1 to crew composites). |
-| **Crew Screens** | The current "Untitled" file (`9FeJPriqdsdA4n9R5Xsrr8`) renamed to `Crew Dashboard Screens`, plus future per-feature files. Consumes Crew DS. | per design effort | Screen compositions, prototype flows, design fidelity references for tickets. |
+| Layer                  | Lives in                                                                                                                                             | Owner                         | Purpose                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Core Library**       | Forked from community kit `UkPJj6vd7HMKcey7M0XF4N`, saved to user's Figma team in `Design Systems` project, renamed `Core Design System`, published. | safturento (project-agnostic) | Tailwind primitives (multiple `tw/*` collections), shadcn-aligned semantic tokens with Light + Dark modes (`mode` collection: `background`, `foreground`, `primary`, `destructive`, `card`, `border`, etc.), all shadcn primitive components (Button, Input, Dialog, Form, etc. — 60+ component pages), full lucide icon set (1,469 icons), Radix color alternative (`rdx/colors`). Plus our additions: explicit variable scopes (retrofit), layout primitives (Stack, Cluster, Container). Reusable across any project. |
+| **Crew Design System** | New published Figma file in same team, `Crew Design System`. Depends on (consumes) Core.                                                             | crew project                  | Thin layer of Crew-specific overrides on Core's semantic tokens where Crew differs from shadcn defaults; Crew composites matching `packages/dashboard/src/components/` that aren't covered by Core's primitives; Code Connect mappings (1:1 to shadcn primitives + 1:1 to crew composites).                                                                                                                                                                                                                              |
+| **Crew Screens**       | The current "Untitled" file (`9FeJPriqdsdA4n9R5Xsrr8`) renamed to `Crew Dashboard Screens`, plus future per-feature files. Consumes Crew DS.         | per design effort             | Screen compositions, prototype flows, design fidelity references for tickets.                                                                                                                                                                                                                                                                                                                                                                                                                                            |
 
 Both libraries are **published** so Figma's library system handles versioning, deprecation flags, and consumer-side update prompts. Updates flow library → consumers via Figma's "Updates available" prompt.
 
@@ -47,6 +47,7 @@ Five phases. Sequential through phase 3, incremental thereafter.
 ### Phase 1 — Core Library v1
 
 **Deliverables:**
+
 - Forked community kit moved into user's Figma team, renamed `Core Design System`, published
 - All ~1,800 variables in the kit's collections retrofitted with **explicit scopes** per Figma's variable-scope semantics. Mapping by collection:
   - `tw/colors` (244) → `["FRAME_FILL", "SHAPE_FILL", "STROKE_COLOR", "TEXT_FILL", "EFFECT_COLOR"]`
@@ -72,6 +73,7 @@ Five phases. Sequential through phase 3, incremental thereafter.
 ### Phase 2 — Crew DS v1 + Skill v0 skeleton + shadcn install
 
 **Deliverables:**
+
 - `npx shadcn@latest init` run in `packages/dashboard` configured for Tailwind v4 (pin a CLI version known to work with v4)
 - Initial shadcn primitives installed: Button, Input, Dialog, Form, Badge, Label, Separator
 - Figma file `Crew Design System` published, depending on Core (which now includes the kit's shadcn primitives + lucide + variables)
@@ -88,6 +90,7 @@ Five phases. Sequential through phase 3, incremental thereafter.
 ### Phase 3 — Migrate current screens to Crew DS
 
 **Deliverables:**
+
 - Current "Untitled" Figma file (`9FeJPriqdsdA4n9R5Xsrr8`) renamed to `Crew Dashboard Screens`
 - All existing imported frames (Agents List, Agent Drawer Open, Agent Page, Projects List, Project Page, Register Modal, New Run Modals 1-3, Edit Project Modal, Delete Confirm Modal) refactored to:
   - Use Crew DS variables for all colors, spacing, radii (replace hardcoded values from html.to.design import)
@@ -99,6 +102,7 @@ Five phases. Sequential through phase 3, incremental thereafter.
 ### Phase 4 — Crew DS v2 — full coverage
 
 **Deliverables (incremental, opportunistic during fidelity tickets):**
+
 - Build remaining Crew DS components matching dashboard composites: TopNav, AgentRow, AgentBody, AgentsList, ProjectSection, StateBadge, StateHistoryBar, TokenTable, ViewportFrame, ErrorFallback, BrandMark
 - Each component gets 1:1 Code Connect mapping to its dashboard counterpart
 - During each fidelity ticket, refactor the touched composites to consume shadcn primitives (Button, Input, Dialog, etc.) instead of inline `div + Tailwind`. Opportunistic — no separate big refactor sprint.
@@ -108,6 +112,7 @@ Five phases. Sequential through phase 3, incremental thereafter.
 ### Phase 5 — Skill v1 + reconciliation tooling
 
 **Deliverables:**
+
 - `crew design-sync` CLI command at `packages/cli/src/commands/design-sync.ts`
   - Diff logic in `packages/shared/src/design-sync/`
   - Reads Tailwind `@theme` block from `packages/dashboard/src/index.css`
@@ -138,43 +143,43 @@ Components bind to semantic tokens, never primitives directly. Toggling Figma's 
 
 Kit ships with 16 collections; we add scopes and a small `Core / Layout` collection for our additions:
 
-| Collection | Modes | Variables | Purpose |
-|---|---|---|---|
-| `tw/colors` | single | 244 | Tailwind palette — 22 families × 11 shades, plus white/black/transparent |
-| `tw/padding` | single | 245 | Padding step values for Tailwind p-* classes |
-| `tw/space` | single | 68 | space-y/space-x utility step values |
-| `tw/border-radius` | single | 149 | rounded-* values incl. responsive variants (rounded-s-sm, etc.) |
-| `tw/margin` | single | 245 | m-* step values |
-| `tw/gap` | single | 102 | gap-* step values |
-| `tw/border-width` | single | 45 | border-{1,2,4,8} etc. |
-| `tw/stroke-width` | single | 11 | SVG stroke widths |
-| `tw/font` | single | 47 | Font-family/size/weight/line-height/letter-spacing |
-| `tw/height` | single | 24 | h-* step values |
-| `tw/max-height` | single | 35 | max-h-* values |
-| `tw/max-width` | single | 51 | max-w-* values incl. max-w-{sm,md,lg,xl,2xl,...} |
-| `tw/opacity` | single | 21 | opacity step values |
-| `mode` | **Light + Dark** | 47 | Semantic colors (shadcn-aligned) + `radius-*` + stroke/border-width semantic aliases |
-| `tokens` | single | 89 | Internal kit helpers — *raw numeric values like `0,5`, `1,25`, `640`. Document as "ignore in design work; used by kit's components."* |
-| `rdx/colors` | Light + Dark | 396 | Radix-style color palette (alternate to Tailwind). Available but Crew chooses Tailwind. |
-| **NEW** `Core / Layout` | single | ~3 | Stack, Cluster, Container layout primitive components (Phase 1 addition) |
+| Collection              | Modes            | Variables | Purpose                                                                                                                               |
+| ----------------------- | ---------------- | --------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| `tw/colors`             | single           | 244       | Tailwind palette — 22 families × 11 shades, plus white/black/transparent                                                              |
+| `tw/padding`            | single           | 245       | Padding step values for Tailwind p-\* classes                                                                                         |
+| `tw/space`              | single           | 68        | space-y/space-x utility step values                                                                                                   |
+| `tw/border-radius`      | single           | 149       | rounded-\* values incl. responsive variants (rounded-s-sm, etc.)                                                                      |
+| `tw/margin`             | single           | 245       | m-\* step values                                                                                                                      |
+| `tw/gap`                | single           | 102       | gap-\* step values                                                                                                                    |
+| `tw/border-width`       | single           | 45        | border-{1,2,4,8} etc.                                                                                                                 |
+| `tw/stroke-width`       | single           | 11        | SVG stroke widths                                                                                                                     |
+| `tw/font`               | single           | 47        | Font-family/size/weight/line-height/letter-spacing                                                                                    |
+| `tw/height`             | single           | 24        | h-\* step values                                                                                                                      |
+| `tw/max-height`         | single           | 35        | max-h-\* values                                                                                                                       |
+| `tw/max-width`          | single           | 51        | max-w-\* values incl. max-w-{sm,md,lg,xl,2xl,...}                                                                                     |
+| `tw/opacity`            | single           | 21        | opacity step values                                                                                                                   |
+| `mode`                  | **Light + Dark** | 47        | Semantic colors (shadcn-aligned) + `radius-*` + stroke/border-width semantic aliases                                                  |
+| `tokens`                | single           | 89        | Internal kit helpers — _raw numeric values like `0,5`, `1,25`, `640`. Document as "ignore in design work; used by kit's components."_ |
+| `rdx/colors`            | Light + Dark     | 396       | Radix-style color palette (alternate to Tailwind). Available but Crew chooses Tailwind.                                               |
+| **NEW** `Core / Layout` | single           | ~3        | Stack, Cluster, Container layout primitive components (Phase 1 addition)                                                              |
 
 ### Variable scopes
 
 The kit defaults every variable to `ALL_SCOPES`, which floods every property picker. **Mandatory Phase 1 retrofit:** walk every variable and set explicit scopes per type. Mapping:
 
-| Variable category | Scopes |
-|---|---|
-| Color (in `tw/colors`, `mode`, `rdx/colors`) | `FRAME_FILL`, `SHAPE_FILL`, `STROKE_COLOR`, `TEXT_FILL`, `EFFECT_COLOR` |
-| Spacing (`tw/padding`, `tw/margin`, `tw/space`, `tw/gap`) | `GAP`, `WIDTH_HEIGHT` (with appropriate subset per type) |
-| Radius (`tw/border-radius`) | `CORNER_RADIUS` |
-| Border / stroke widths | `STROKE_FLOAT` |
-| Font family | `FONT_FAMILY` |
-| Font size | `FONT_SIZE` |
-| Font weight | `FONT_WEIGHT` |
-| Line height | `LINE_HEIGHT` |
-| Letter spacing | `LETTER_SPACING` |
-| Width / max-width / height / max-height | `WIDTH_HEIGHT` |
-| Opacity | `OPACITY` |
+| Variable category                                         | Scopes                                                                  |
+| --------------------------------------------------------- | ----------------------------------------------------------------------- |
+| Color (in `tw/colors`, `mode`, `rdx/colors`)              | `FRAME_FILL`, `SHAPE_FILL`, `STROKE_COLOR`, `TEXT_FILL`, `EFFECT_COLOR` |
+| Spacing (`tw/padding`, `tw/margin`, `tw/space`, `tw/gap`) | `GAP`, `WIDTH_HEIGHT` (with appropriate subset per type)                |
+| Radius (`tw/border-radius`)                               | `CORNER_RADIUS`                                                         |
+| Border / stroke widths                                    | `STROKE_FLOAT`                                                          |
+| Font family                                               | `FONT_FAMILY`                                                           |
+| Font size                                                 | `FONT_SIZE`                                                             |
+| Font weight                                               | `FONT_WEIGHT`                                                           |
+| Line height                                               | `LINE_HEIGHT`                                                           |
+| Letter spacing                                            | `LETTER_SPACING`                                                        |
+| Width / max-width / height / max-height                   | `WIDTH_HEIGHT`                                                          |
+| Opacity                                                   | `OPACITY`                                                               |
 
 The retrofit is a single use_figma script that walks `getLocalVariableCollectionsAsync()` and rewrites scopes per a switch on collection name + variable type. Idempotent and reversible.
 
@@ -208,6 +213,7 @@ mode collection:
 shadcn/ui is canonical Tailwind + CVA + Radix accessibility, with a copy-into-repo CLI (no NPM dependency). Recent versions support Tailwind v4 — pin a known-working CLI version when running `init` in Phase 2.
 
 Adopting shadcn means:
+
 - We don't hand-roll Button / Input / Dialog / Form / Badge / etc.
 - The shadcn semantic token vocabulary (`background`, `primary`, `destructive`, etc.) IS the Crew DS semantic vocabulary — no translation layer
 - Code Connect maps Crew DS Figma primitives 1:1 to shadcn-installed components in `packages/dashboard/src/components/ui/*`
@@ -215,12 +221,12 @@ Adopting shadcn means:
 
 ### What gets a Code Connect mapping
 
-| Component class | Source of code | Code Connect mapping |
-|---|---|---|
-| **Primitives** (Button, Input, Dialog, Form, Badge, Label, Separator, etc.) | `packages/dashboard/src/components/ui/*` (shadcn-installed) | 1:1. Variant Figma properties (`variant=primary\|secondary\|destructive\|ghost`, `size=sm\|md\|lg`) map to shadcn's CVA variant props directly. |
-| **Crew composites** (AgentRow, ProjectSection, AgentBody, AgentsList, TopNav, StateBadge, StateHistoryBar, TokenTable, ViewportFrame, ErrorFallback, BrandMark) | `packages/dashboard/src/components/*` (custom) | 1:1. These don't have Figma variants beyond data — rendered with concrete props. |
-| **Layout primitives** (Stack, Cluster, Container, Grid) | shadcn's layout primitives if shipped, or custom utilities in `packages/dashboard/src/lib/layout.ts` | Templated Code Connect (Tailwind utility patterns, not extractable components) |
-| **Icons** | `lucide-react` (already in `package.json`) | Lucide icons live inside Core (1,469 icon components in the `Lucide Icons` page from the forked kit, all 24×24, named `lucide/<icon-name>`). Code Connect maps each used icon to its `lucide-react` counterpart. NOT Heroicons. |
+| Component class                                                                                                                                                 | Source of code                                                                                       | Code Connect mapping                                                                                                                                                                                                            |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Primitives** (Button, Input, Dialog, Form, Badge, Label, Separator, etc.)                                                                                     | `packages/dashboard/src/components/ui/*` (shadcn-installed)                                          | 1:1. Variant Figma properties (`variant=primary\|secondary\|destructive\|ghost`, `size=sm\|md\|lg`) map to shadcn's CVA variant props directly.                                                                                 |
+| **Crew composites** (AgentRow, ProjectSection, AgentBody, AgentsList, TopNav, StateBadge, StateHistoryBar, TokenTable, ViewportFrame, ErrorFallback, BrandMark) | `packages/dashboard/src/components/*` (custom)                                                       | 1:1. These don't have Figma variants beyond data — rendered with concrete props.                                                                                                                                                |
+| **Layout primitives** (Stack, Cluster, Container, Grid)                                                                                                         | shadcn's layout primitives if shipped, or custom utilities in `packages/dashboard/src/lib/layout.ts` | Templated Code Connect (Tailwind utility patterns, not extractable components)                                                                                                                                                  |
+| **Icons**                                                                                                                                                       | `lucide-react` (already in `package.json`)                                                           | Lucide icons live inside Core (1,469 icon components in the `Lucide Icons` page from the forked kit, all 24×24, named `lucide/<icon-name>`). Code Connect maps each used icon to its `lucide-react` counterpart. NOT Heroicons. |
 
 ### Code Connect file locations
 
@@ -231,21 +237,23 @@ Adopting shadcn means:
 Figma component variant property names + values match the shadcn component's CVA variant config exactly. Drift becomes a Code Connect lint failure. Example for Button:
 
 ```tsx
-import { figma } from "@figma/code-connect";
-import { Button } from "@/components/ui/button";
+import { figma } from '@figma/code-connect';
+import { Button } from '@/components/ui/button';
 
-figma.connect(Button, "<crew-ds-figma-url>", {
+figma.connect(Button, '<crew-ds-figma-url>', {
   props: {
-    variant: figma.enum("variant", {
-      "default": "default",
-      "destructive": "destructive",
-      "ghost": "ghost",
+    variant: figma.enum('variant', {
+      default: 'default',
+      destructive: 'destructive',
+      ghost: 'ghost',
     }),
-    size: figma.enum("size", { "sm": "sm", "default": "default", "lg": "lg" }),
-    label: figma.children("Label"),
+    size: figma.enum('size', { sm: 'sm', default: 'default', lg: 'lg' }),
+    label: figma.children('Label'),
   },
   example: ({ variant, size, label }) => (
-    <Button variant={variant} size={size}>{label}</Button>
+    <Button variant={variant} size={size}>
+      {label}
+    </Button>
   ),
 });
 ```
@@ -293,12 +301,12 @@ Or fix manually (recommended) and re-run.
 
 ### When it runs
 
-| Trigger | Behavior |
-|---|---|
-| Manual: `crew design-sync` | Prints drift report. Exits 0 if clean, 1 if drift. |
-| Optional pre-commit hook (off by default per crew's no-pre-commit-hooks policy) | Same as manual; blocks commit if drift. Opt-in per-developer. |
-| Optional CI step on PRs touching design tokens or shadcn primitives | Posts drift report as PR comment; doesn't block merge unless drift is in a "frozen" file. |
-| Inside the `design-with-figma` skill | Skill calls `crew design-sync` as precheck before any Figma work begins. Surfaces drift to user/Claude so resolution happens before iteration. |
+| Trigger                                                                         | Behavior                                                                                                                                       |
+| ------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| Manual: `crew design-sync`                                                      | Prints drift report. Exits 0 if clean, 1 if drift.                                                                                             |
+| Optional pre-commit hook (off by default per crew's no-pre-commit-hooks policy) | Same as manual; blocks commit if drift. Opt-in per-developer.                                                                                  |
+| Optional CI step on PRs touching design tokens or shadcn primitives             | Posts drift report as PR comment; doesn't block merge unless drift is in a "frozen" file.                                                      |
+| Inside the `design-with-figma` skill                                            | Skill calls `crew design-sync` as precheck before any Figma work begins. Surfaces drift to user/Claude so resolution happens before iteration. |
 
 ### Out of scope for the tool
 
@@ -328,21 +336,25 @@ Each project adopting the workflow maintains `docs/plans/design-system.md` with 
 
 ```yaml
 ---
-core_library_url: "https://www.figma.com/design/<core-key>/Core-Design-System"
-project_library_url: "https://www.figma.com/design/<project-key>/<Project>-Design-System"
-screens_file_url: "https://www.figma.com/design/<screens-key>/<Project>-Screens"
-handoff_doc_root: "docs/designs"
-sync_command: "crew design-sync"   # the project's own reconciliation CLI
+core_library_url: 'https://www.figma.com/design/<core-key>/Core-Design-System'
+project_library_url: 'https://www.figma.com/design/<project-key>/<Project>-Design-System'
+screens_file_url: 'https://www.figma.com/design/<screens-key>/<Project>-Screens'
+handoff_doc_root: 'docs/designs'
+sync_command: 'crew design-sync' # the project's own reconciliation CLI
 sample_data:
-  project: "kanban-api"
-  ticket: "KAN-23"
-  user: "kanban-api operator"
+  project: 'kanban-api'
+  ticket: 'KAN-23'
+  user: 'kanban-api operator'
 ---
-
 # <Project> Design System
 
-[Prose: component inventory with Figma node IDs, project-specific design
-conventions, naming patterns, things unique to this project's design language.]
+[
+  Prose: component inventory with Figma node IDs,
+  project-specific design
+  conventions,
+  naming patterns,
+  things unique to this project's design language.,
+]
 ```
 
 For Recipes (queued next), the file at `recipes/docs/plans/design-system.md` has its own frontmatter values. Same skill, different config.
@@ -457,13 +469,13 @@ The following are intentionally NOT in v1:
 
 ## Phasing summary
 
-| Phase | Sequential? | Effort | Key deliverable |
-|---|---|---|---|
-| 1 — Core Library v1 | Sequential, blocks 2 | ~half day | Published Core library: forked kit with retrofitted scopes + layout primitives + breakpoint aliases |
-| 2 — Crew DS v1 + skill skeleton + shadcn install | Sequential (Crew DS Figma) + parallel (code work) | ~1 day Figma + 3-4 days code | Published Crew DS (theme overrides on Core); shadcn primitives in dashboard; skill skeleton |
-| 3 — Migrate current screens | Sequential, blocks 4 | 1-2 days | "Untitled" file refactored to consume Crew DS instead of detached imports |
-| 4 — Crew DS v2 full coverage | Incremental, opportunistic with fidelity tickets | ~5-8 small tickets | Remaining dashboard composites in Crew DS; primitive consumption in code via opportunistic refactor |
-| 5 — Skill v1 + reconciliation tooling | Starts after 3 | 2-3 days | `crew design-sync` CLI; refined skill from real Phase 3+4 experience |
+| Phase                                            | Sequential?                                       | Effort                       | Key deliverable                                                                                     |
+| ------------------------------------------------ | ------------------------------------------------- | ---------------------------- | --------------------------------------------------------------------------------------------------- |
+| 1 — Core Library v1                              | Sequential, blocks 2                              | ~half day                    | Published Core library: forked kit with retrofitted scopes + layout primitives + breakpoint aliases |
+| 2 — Crew DS v1 + skill skeleton + shadcn install | Sequential (Crew DS Figma) + parallel (code work) | ~1 day Figma + 3-4 days code | Published Crew DS (theme overrides on Core); shadcn primitives in dashboard; skill skeleton         |
+| 3 — Migrate current screens                      | Sequential, blocks 4                              | 1-2 days                     | "Untitled" file refactored to consume Crew DS instead of detached imports                           |
+| 4 — Crew DS v2 full coverage                     | Incremental, opportunistic with fidelity tickets  | ~5-8 small tickets           | Remaining dashboard composites in Crew DS; primitive consumption in code via opportunistic refactor |
+| 5 — Skill v1 + reconciliation tooling            | Starts after 3                                    | 2-3 days                     | `crew design-sync` CLI; refined skill from real Phase 3+4 experience                                |
 
 Phases 1-3 should run as a single Epic (sequential dependencies). Phase 4 is its own Epic with N child tickets. Phase 5 is its own Epic.
 

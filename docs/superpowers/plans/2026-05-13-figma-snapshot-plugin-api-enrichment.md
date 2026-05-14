@@ -17,6 +17,7 @@
 ## Task 1: Add prompt builder
 
 **Files:**
+
 - Create: `packages/cli/src/lib/figma-snapshot/enrichment-prompt.ts`
 - Create: `packages/cli/src/lib/figma-snapshot/enrichment-prompt.test.ts`
 
@@ -262,6 +263,7 @@ git commit -m "feat(cli): figma-snapshot enrichment-prompt builder"
 ## Task 2: Add `enrichSnapshotWithPluginApi` orchestrator
 
 **Files:**
+
 - Create: `packages/cli/src/lib/figma-snapshot/plugin-api-enrichment.ts`
 - Create: `packages/cli/src/lib/figma-snapshot/plugin-api-enrichment.test.ts`
 - Modify: `packages/cli/src/lib/figma-snapshot/index.ts`
@@ -644,6 +646,7 @@ git commit -m "feat(cli): enrichSnapshotWithPluginApi orchestrator (subprocess +
 ## Task 3: Wire enrichment into `runFigmaSnapshot`
 
 **Files:**
+
 - Modify: `packages/cli/src/commands/figma-snapshot.ts`
 - Modify: `packages/cli/src/commands/figma-snapshot.test.ts`
 
@@ -676,10 +679,16 @@ describe('runFigmaSnapshot — enrichment pass', () => {
     const mockClient = {
       getFile: async () => ({
         document: {
-          id: '0:0', name: 'Document', type: 'DOCUMENT',
+          id: '0:0',
+          name: 'Document',
+          type: 'DOCUMENT',
           children: [
-            { id: '212:630', name: 'Composites', type: 'CANVAS',
-              children: [{ id: '272:120', name: 'Pill', type: 'COMPONENT_SET', children: [] }] },
+            {
+              id: '212:630',
+              name: 'Composites',
+              type: 'CANVAS',
+              children: [{ id: '272:120', name: 'Pill', type: 'COMPONENT_SET', children: [] }],
+            },
           ],
         },
       }),
@@ -713,7 +722,9 @@ describe('runFigmaSnapshot — enrichment pass', () => {
   it('completes with REST-only snapshot when enrichment skips', async () => {
     const worktree = mkdtempSync(join(tmpdir(), 'crew-fig-snap-enr-'));
     const mockClient = {
-      getFile: async () => ({ document: { id: '0:0', name: 'Doc', type: 'DOCUMENT', children: [] } }),
+      getFile: async () => ({
+        document: { id: '0:0', name: 'Doc', type: 'DOCUMENT', children: [] },
+      }),
       getImages: async () => ({ images: {} }),
     };
     const enrichSpy = vi.fn().mockResolvedValue({ kind: 'skipped', reason: 'claude not on PATH' });
@@ -775,14 +786,12 @@ export interface FigmaSnapshotDeps {
   clientFactory?: () => FigmaRestClient;
   fetchImage?: (url: string) => Promise<Buffer>;
   /** Test seam — defaults to `enrichSnapshotWithPluginApi`. */
-  enrich?: (
-    opts: {
-      snapshotDir: string;
-      fileKey: string;
-      log: (msg: string) => void;
-      warn: (msg: string) => void;
-    },
-  ) => Promise<EnrichSnapshotResult>;
+  enrich?: (opts: {
+    snapshotDir: string;
+    fileKey: string;
+    log: (msg: string) => void;
+    warn: (msg: string) => void;
+  }) => Promise<EnrichSnapshotResult>;
 }
 ```
 
@@ -842,6 +851,7 @@ git commit -m "feat(cli): runFigmaSnapshot invokes Plugin-API enrichment after R
 ## Task 4: README update
 
 **Files:**
+
 - Modify: `README.md`
 
 Document the new dependency on `claude` for full-fidelity snapshots, the fallback behavior, and the `FIGMA_API_TOKEN` env requirement (still REST-side).
@@ -944,6 +954,7 @@ jq '.enrichment' .crew/figma-snapshot/screens/<some-id>.json
 ```
 
 Expected: an object with `componentProperties`, `mainComponent`, and `boundVariables` populated. Verify:
+
 - `componentProperties.intensity` matches the Figma instance's variant (e.g. `"mid"`)
 - `componentProperties.color` matches (`"waiting"`)
 - `boundVariables` contains paint-level entries with `resolvedAlias` strings + `resolvedHex` values
@@ -992,24 +1003,24 @@ Expected: all clean. Plus Task 5's manual smoke if `FIGMA_API_TOKEN` is availabl
 
 ## Spec coverage check
 
-| Spec section | Plan tasks |
-|---|---|
-| Architecture (hybrid; enrichment runs after REST emit) | Task 3 |
-| Bridge protocol (`claude -p` subprocess) | Task 2 (orchestrator) + Task 1 (prompt builder) |
-| Failure modes (skip, timeout, non-zero, malformed, missing fields) | Task 2 (each tested) |
-| Enriched data shape (`componentProperties`, `mainComponent`, `boundVariables`) | Task 1 (JS payload produces this shape) |
-| `componentProperties` shape (INSTANCE_SWAP refs resolved) | Task 1 (JS payload) |
-| `boundVariables` shape (flattened, alias chain, resolved hex) | Task 1 (JS payload) |
-| Default-on with graceful fallback | Task 2 + Task 3 (enrichment result threads through but doesn't fail the parent) |
-| No caching for v1 | Plan does not introduce any cache; runs every dispatch |
-| Unit tests for skip/success/error paths | Task 2 (7 cases) |
-| Integration test (subprocess writes enriched JSON) | Plan deviates — see "Plan deviations" |
-| Manual end-to-end smoke | Task 5 |
-| Skill re-calibration after this lands | Out of scope (follow-up activity, per spec) |
+| Spec section                                                                   | Plan tasks                                                                      |
+| ------------------------------------------------------------------------------ | ------------------------------------------------------------------------------- |
+| Architecture (hybrid; enrichment runs after REST emit)                         | Task 3                                                                          |
+| Bridge protocol (`claude -p` subprocess)                                       | Task 2 (orchestrator) + Task 1 (prompt builder)                                 |
+| Failure modes (skip, timeout, non-zero, malformed, missing fields)             | Task 2 (each tested)                                                            |
+| Enriched data shape (`componentProperties`, `mainComponent`, `boundVariables`) | Task 1 (JS payload produces this shape)                                         |
+| `componentProperties` shape (INSTANCE_SWAP refs resolved)                      | Task 1 (JS payload)                                                             |
+| `boundVariables` shape (flattened, alias chain, resolved hex)                  | Task 1 (JS payload)                                                             |
+| Default-on with graceful fallback                                              | Task 2 + Task 3 (enrichment result threads through but doesn't fail the parent) |
+| No caching for v1                                                              | Plan does not introduce any cache; runs every dispatch                          |
+| Unit tests for skip/success/error paths                                        | Task 2 (7 cases)                                                                |
+| Integration test (subprocess writes enriched JSON)                             | Plan deviates — see "Plan deviations"                                           |
+| Manual end-to-end smoke                                                        | Task 5                                                                          |
+| Skill re-calibration after this lands                                          | Out of scope (follow-up activity, per spec)                                     |
 
 ## Plan deviations from spec
 
-- **Integration test deferred.** The spec called for an integration test where a stubbed subprocess writes enriched JSON to disk and the parent reads it back. The plan's Task 2 covers the orchestrator's behavior unit-test-style; the *file mutation* is performed by Claude inside the subprocess, not by our code. Writing a meaningful integration test would require simulating Claude's filesystem writes — which is the same as just trusting the prompt. Task 5's manual smoke covers the real end-to-end path. If the manual smoke flakes, file an integration test as a followup.
+- **Integration test deferred.** The spec called for an integration test where a stubbed subprocess writes enriched JSON to disk and the parent reads it back. The plan's Task 2 covers the orchestrator's behavior unit-test-style; the _file mutation_ is performed by Claude inside the subprocess, not by our code. Writing a meaningful integration test would require simulating Claude's filesystem writes — which is the same as just trusting the prompt. Task 5's manual smoke covers the real end-to-end path. If the manual smoke flakes, file an integration test as a followup.
 - **Plan-phase decision on `skip_plugin_api_enrichment` config flag:** **deferred to a followup, not included in v1.** Rationale: the existing `skip_snapshot` flag already disables the whole snapshot. CI environments that don't want Plugin-API enrichment can suppress the warn line via stderr filtering. A dedicated flag is YAGNI until someone files an issue.
 - **The `which` helper might already exist.** Plan instructs the implementer to inspect the codebase first and reuse if found. If not, a small new file at `packages/cli/src/lib/which.ts`.
 

@@ -4,13 +4,13 @@
 
 CREW-135 has shipped a visible regression three times in a row (PR #177, PR #188, PR #193), each time against a different "fix":
 
-| PR | Fix that failed | Specific regression that slipped through |
-|---|---|---|
-| #177 | Original Pill primitives plan | State badges shipped with `intensity="muted"` (CSS dot) instead of `intensity="mid"` (lucide icon, mid stroke). |
-| #188 | None (faithful re-run of the same plan) | Same `intensity="muted"` regression, plus icon mismatches and trailing Unicode glyphs. |
+| PR   | Fix that failed                                                      | Specific regression that slipped through                                                                                                                                                                                                                                                                                                                                                     |
+| ---- | -------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| #177 | Original Pill primitives plan                                        | State badges shipped with `intensity="muted"` (CSS dot) instead of `intensity="mid"` (lucide icon, mid stroke).                                                                                                                                                                                                                                                                              |
+| #188 | None (faithful re-run of the same plan)                              | Same `intensity="muted"` regression, plus icon mismatches and trailing Unicode glyphs.                                                                                                                                                                                                                                                                                                       |
 | #193 | Thread A spec/plan correction + B1 visual-fidelity-check enforcement | `intensity="muted"` fix landed correctly; new regression: "New Run" button uses `color="white" intensity="loud" size="xs"` when Figma actually renders `color="idle" intensity="loud" size="sm"`. Per-state badge icons (`AlertCircle`, `AlertOctagon`, `Loader2`, `GitPullRequest`, `Check`) invented semantically — Figma's design uses a single `lucide/circle` across every state badge. |
 
-PR #193 is the most informative failure: B1's enforcement worked (the skill fired, the report appeared in the PR description), Thread A's spec correction landed (`intensity="muted"` → `intensity="mid"`, CSS dot → lucide icon slot). The skill produced a clean-looking report with 6 low-severity findings. And the user still saw broken output, because every layer compared code against the **Pill component set** (`272:120`) — its variants, its default property values, its sample fills — when the actual question was *"what variant does the rendered call-site at this specific Figma node use?"*
+PR #193 is the most informative failure: B1's enforcement worked (the skill fired, the report appeared in the PR description), Thread A's spec correction landed (`intensity="muted"` → `intensity="mid"`, CSS dot → lucide icon slot). The skill produced a clean-looking report with 6 low-severity findings. And the user still saw broken output, because every layer compared code against the **Pill component set** (`272:120`) — its variants, its default property values, its sample fills — when the actual question was _"what variant does the rendered call-site at this specific Figma node use?"_
 
 The component **set** defines what's possible. A render **composite** (TopNav at `245:133`, AgentRow per-state at `212:911…212:1031`, etc.) defines what's actually used at a specific call-site. The set says white-loud has fill `zinc/50`. The composite says TopNav's New Run is `color=idle, intensity=loud, size=sm` with fill `state/idle` (#64748B). Different question, different answer, different bug.
 
@@ -45,7 +45,7 @@ This spec also folds in a placement correction for the skill itself, surfaced du
 
 > **Project-specific:** changes land in `packages/cli/src/lib/figma-snapshot/plugin-api-enrichment.ts` and the associated `enrichment-prompt.ts`. Tests in `plugin-api-enrichment.test.ts`. Snapshot output dir convention unchanged (`<fixture-root>/snapshot/composites/<node-id>.json`).
 
-The figma-snapshot module today emits a JSON file per top-level child of the `Composites` page. Component sets (e.g., `272-120.json` = Pill set) carry a `capturedVariants` array — sample variants with their geometry, fills, strokes, and text styles. Composites that *contain* instances of other components (e.g., TopNav at `245:133` contains a Pill instance for the New Run button) get a top-level JSON but with no walked-tree of nested instances. The skill therefore can't ask "what variant does this Pill instance render as?" without going back to the live Figma file.
+The figma-snapshot module today emits a JSON file per top-level child of the `Composites` page. Component sets (e.g., `272-120.json` = Pill set) carry a `capturedVariants` array — sample variants with their geometry, fills, strokes, and text styles. Composites that _contain_ instances of other components (e.g., TopNav at `245:133` contains a Pill instance for the New Run button) get a top-level JSON but with no walked-tree of nested instances. The skill therefore can't ask "what variant does this Pill instance render as?" without going back to the live Figma file.
 
 The enrichment pass walks each composite's tree and, for every node that is an instance of another component, emits a `componentInstances` entry:
 
@@ -59,13 +59,13 @@ The enrichment pass walks each composite's tree and, for every node that is an i
   "componentPropertyOverrides": {
     "Has Icon": true,
     "Icon": "lucide/plus",
-    "Label": "New Run"
+    "Label": "New Run",
   },
   "resolvedStyles": {
-    "fills":  [{ "hex": "#64748B", "tokenAlias": "state/idle", "opacity": 1 }],
+    "fills": [{ "hex": "#64748B", "tokenAlias": "state/idle", "opacity": 1 }],
     "strokes": [],
-    "textColor": { "hex": "#020617", "tokenAlias": "state/foreground" }
-  }
+    "textColor": { "hex": "#020617", "tokenAlias": "state/foreground" },
+  },
 }
 ```
 
@@ -94,14 +94,14 @@ Output stays under `<fixture-root>/snapshot/composites/<node-id>.json` — same 
 
 > **Project-specific:** edits land in `packages/cli/src/lib/skills/visual-fidelity-check/workflow.md` (current path; moves under §8). No code-level tests — the workflow is markdown, not code; behavioral verification rides on §7's re-run against PR #193's codebase.
 
-Step 4 (Caller check) today reads, in effect: *"For each caller, look at its props. Look up the matching component-set variant. Diff against the variant's `resolvedStyles`."* This is what the agent followed on PR #193 — and produced an internally-consistent, render-blind report.
+Step 4 (Caller check) today reads, in effect: _"For each caller, look at its props. Look up the matching component-set variant. Diff against the variant's `resolvedStyles`."_ This is what the agent followed on PR #193 — and produced an internally-consistent, render-blind report.
 
-New Step 4: *"For each caller, identify its render-composite Figma node (via the caller's `.figma.tsx` Code Connect mapping, or via the nearest documented render frame). Find the relevant nested instance(s) inside the composite — match by `Label` first, then by `path`, then by position. Read `variantOverrides` and `componentPropertyOverrides`. Diff caller's props against the render's variant + property values, not against the set's general definitions."*
+New Step 4: _"For each caller, identify its render-composite Figma node (via the caller's `.figma.tsx` Code Connect mapping, or via the nearest documented render frame). Find the relevant nested instance(s) inside the composite — match by `Label` first, then by `path`, then by position. Read `variantOverrides` and `componentPropertyOverrides`. Diff caller's props against the render's variant + property values, not against the set's general definitions."_
 
 New severity rules (anti-loophole):
 
 - **HIGH (encoding error):** caller passes a `color`, `intensity`, `size`, or any other variant-axis prop that doesn't match the render composite's `variantOverrides` for that call-site. Example: caller has `<Button color="white" intensity="loud" size="xs">` but the render composite shows `variantOverrides: "type=button-sm, color=idle, intensity=loud"`. Wrong variant entirely — not a token delta. Flag as encoding error; the bug is either in the code or the upstream spec.
-- **HIGH (missing data, blocking):** caller has no matching render composite in the fixture. Surface as *"cannot verify call-site X — render composite Y not in fixture; run figma-snapshot to capture before proceeding"*. Do **not** silently fall back to set-only diffing. Falling back is the regression mode we're closing.
+- **HIGH (missing data, blocking):** caller has no matching render composite in the fixture. Surface as _"cannot verify call-site X — render composite Y not in fixture; run figma-snapshot to capture before proceeding"_. Do **not** silently fall back to set-only diffing. Falling back is the regression mode we're closing.
 - **MEDIUM (instance-level override):** caller's props match the render composite's `variantOverrides` BUT the composite carries a `resolvedStyles` override that the caller's surface classes don't reproduce (e.g., a custom fill on top of an `idle, loud` instance). Flag with the specific hex + token alias from `resolvedStyles`.
 
 Step 4 sub-flow:
@@ -136,7 +136,7 @@ This sub-flow is mechanical enough that the agent can follow it as a checklist �
 
 The existing Finding 4 codifies the wrong pattern. Replace it with the New Run case as concrete material — the bug is recent and the contrast against the right pattern is sharp:
 
-```markdown
+````markdown
 ### Finding: "New Run" button uses wrong Pill variant entirely
 
 - **Kind:** caller (encoding error)
@@ -148,6 +148,8 @@ The existing Finding 4 codifies the wrong pattern. Replace it with the New Run c
     New Run
   </Button>
   ```
+````
+
 - **Render composite:** `composites/245-133.json` variant `"Active Tab=agents"`
   → `componentInstances` entry matching `Label == "New Run"`:
   `variantOverrides: "type=button-sm, color=idle, intensity=loud"`,
@@ -164,6 +166,7 @@ The existing Finding 4 codifies the wrong pattern. Replace it with the New Run c
   ```
   Drop the `font-semibold` className override — `font-medium` is the Button default and matches Figma's Hanken Grotesk Medium.
 - **Why high-severity:** caller chose a variant Figma doesn't use at this call-site. Not a token delta — wrong variant entirely. Per SKILL.md "set vs composite" anti-loophole: never reach this conclusion by diffing against the Pill set's white-loud variant.
+
 ```
 
 Also rewrite Finding 1 (state-badge `intensity` mismatch) to reference the per-state render composite instead of the Pill set's `intensity=mid` general definition. Same data; correct anchor.
@@ -271,3 +274,4 @@ If this spec works, every layer in the visual-fidelity pipeline anchors on rende
 If even one regression slips through after this spec ships, it surfaces either (a) a data gap (composite JSON missing or malformed), (b) a workflow gap (Step 4 sub-flow doesn't cover the case), or (c) a discipline gap (agent skipped a sub-flow step). Each maps to a concrete next-spec input rather than another round of "make the skill better."
 
 B2 (chrome integration) extends the same anchor philosophy with rendered-screenshot capture: the screenshot becomes a third axis of comparison (against the composite's resolvedStyles, plus the composite's screenshot, plus the live browser render). This spec ships independently.
+```

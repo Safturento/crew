@@ -99,6 +99,7 @@ Each task below produces a self-contained, committable change.
 ## Task 1: Extract `config/` to `crew-shared`
 
 **Files:**
+
 - Create: `packages/shared/tsconfig.json`
 - Create: `packages/shared/src/index.ts`
 - Create: `packages/shared/src/config/index.ts`
@@ -193,7 +194,10 @@ export function parseProjectConfig(raw: string): ProjectConfig {
 /**
  * Load a named project config from a directory (defaults to ~/.config/crew/projects/).
  */
-export function loadProjectConfigByName(name: string, configDir = DEFAULT_CONFIG_DIR): ProjectConfig {
+export function loadProjectConfigByName(
+  name: string,
+  configDir = DEFAULT_CONFIG_DIR,
+): ProjectConfig {
   const path = join(configDir, `${name}.toml`);
   if (!existsSync(path)) {
     throw new Error(`no project config at ${path}`);
@@ -359,6 +363,7 @@ git commit -m "refactor: extract project-config loader from cli to crew-shared (
 ## Task 2: Daemon bootstrap (Fastify + Awilix + pino + Zod env + Kysely scaffolding)
 
 **Files:**
+
 - Modify: `packages/daemon/package.json`
 - Create: `packages/daemon/tsconfig.json`
 - Create: `packages/daemon/vitest.config.ts`
@@ -517,7 +522,9 @@ export type DaemonConfig = {
   projectsDir: string;
 };
 
-export function parseDaemonConfig(env: NodeJS.ProcessEnv | Record<string, string | undefined>): DaemonConfig {
+export function parseDaemonConfig(
+  env: NodeJS.ProcessEnv | Record<string, string | undefined>,
+): DaemonConfig {
   const raw = RawSchema.parse(env);
   const configDir = raw.CREW_CONFIG_DIR ?? join(homedir(), '.config', 'crew');
   return {
@@ -557,7 +564,10 @@ export function createLogger(opts: LoggerOptions = {}): Logger {
   if (process.stdout.isTTY) {
     return pino({
       level,
-      transport: { target: 'pino-pretty', options: { colorize: true, translateTime: 'SYS:HH:MM:ss' } },
+      transport: {
+        target: 'pino-pretty',
+        options: { colorize: true, translateTime: 'SYS:HH:MM:ss' },
+      },
     });
   }
   return pino({ level });
@@ -735,7 +745,9 @@ import type { AwilixContainer } from 'awilix';
 import type { Cradle } from './container.js';
 import { ConfigDirNotFoundError, NotFoundError } from './errors.js';
 
-export async function buildApp(opts: { container: AwilixContainer<Cradle> }): Promise<FastifyInstance> {
+export async function buildApp(opts: {
+  container: AwilixContainer<Cradle>;
+}): Promise<FastifyInstance> {
   const logger = opts.container.cradle.logger;
   const app = Fastify({ loggerInstance: logger }).withTypeProvider<ZodTypeProvider>();
 
@@ -884,6 +896,7 @@ git commit -m "feat(daemon): bootstrap fastify app with awilix, pino, zod env, k
 ## Task 3: `ProjectsService` + `GET /api/projects`
 
 **Files:**
+
 - Create: `packages/daemon/src/services/ProjectsService.ts`
 - Create: `packages/daemon/src/services/ProjectsService.test.ts`
 - Create: `packages/daemon/src/routes/projects.ts`
@@ -1180,7 +1193,7 @@ import { registerProjectsRoutes } from './routes/projects.js';
 Then inside `buildApp`, after the `setErrorHandler` block and before the `app.get('/health', ...)` line, add:
 
 ```typescript
-  await registerProjectsRoutes(app);
+await registerProjectsRoutes(app);
 ```
 
 - [ ] **Step 10: Run route tests to verify they pass**
@@ -1235,6 +1248,7 @@ git commit -m "feat(daemon): GET /api/projects via ProjectsService (CREW-XX)"
 ## Task 4: `crew daemon serve|start|stop|status` lifecycle commands
 
 **Files:**
+
 - Create: `packages/cli/src/commands/daemon.ts`
 - Create: `packages/cli/src/commands/daemon.test.ts`
 - Modify: `packages/cli/src/index.ts`
@@ -1319,7 +1333,7 @@ Expected: FAIL — module/exports do not exist.
 
 - [ ] **Step 4: Implement `packages/cli/src/commands/daemon.ts`**
 
-The `start` subcommand has to spawn a *detached* child running `crew daemon serve`. The CLI itself runs via tsx through the bash shim at `packages/cli/bin/crew`, so `process.argv[1]` points at `src/index.ts` (not the bash entry) and `process.execPath` is plain `node` — spawning those directly would feed a `.ts` file to a non-tsx node. The fix is to resolve `bin/crew` from `import.meta.url` and spawn the bash shim, which handles its own tsx invocation.
+The `start` subcommand has to spawn a _detached_ child running `crew daemon serve`. The CLI itself runs via tsx through the bash shim at `packages/cli/bin/crew`, so `process.argv[1]` points at `src/index.ts` (not the bash entry) and `process.execPath` is plain `node` — spawning those directly would feed a `.ts` file to a non-tsx node. The fix is to resolve `bin/crew` from `import.meta.url` and spawn the bash shim, which handles its own tsx invocation.
 
 ```typescript
 import { Command } from 'commander';
@@ -1433,8 +1447,9 @@ function runStatus(): void {
   console.log(`crew daemon: running (pid ${pid}, port ${DEFAULT_PORT})`);
 }
 
-export const daemonCommand = new Command('daemon')
-  .description('start, stop, or inspect the crew daemon');
+export const daemonCommand = new Command('daemon').description(
+  'start, stop, or inspect the crew daemon',
+);
 
 daemonCommand
   .command('serve')
@@ -1545,6 +1560,7 @@ git commit -m "feat(cli): crew daemon serve|start|stop|status (CREW-XX)"
 ## Task 5: Dashboard wiring — `HttpProjectsClient`, `HybridDaemonClient`, Vite proxy
 
 **Files:**
+
 - Create: `packages/dashboard/src/data/HttpProjectsClient.ts`
 - Create: `packages/dashboard/src/data/HttpProjectsClient.test.ts`
 - Create: `packages/dashboard/src/data/HybridDaemonClient.ts`
@@ -1567,21 +1583,22 @@ afterEach(() => {
 
 describe('HttpProjectsClient.listProjects', () => {
   it('GETs /api/projects and returns the projects array', async () => {
-    const fetchSpy = vi
-      .spyOn(globalThis, 'fetch')
-      .mockResolvedValue(
-        new Response(
-          JSON.stringify({
-            projects: [{ name: 'demo', repoPath: '/code/demo' }],
-          }),
-          { status: 200, headers: { 'content-type': 'application/json' } },
-        ),
-      );
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          projects: [{ name: 'demo', repoPath: '/code/demo' }],
+        }),
+        { status: 200, headers: { 'content-type': 'application/json' } },
+      ),
+    );
 
     const client = new HttpProjectsClient();
     const projects = await client.listProjects();
 
-    expect(fetchSpy).toHaveBeenCalledWith('/api/projects', expect.objectContaining({ method: 'GET' }));
+    expect(fetchSpy).toHaveBeenCalledWith(
+      '/api/projects',
+      expect.objectContaining({ method: 'GET' }),
+    );
     expect(projects).toEqual([{ name: 'demo', repoPath: '/code/demo' }]);
   });
 
@@ -1850,6 +1867,7 @@ git commit -m "feat(dashboard): wire project sections to /api/projects via Hybri
 ## Task 6: Production static serve (`@fastify/static` + SPA fallback)
 
 **Files:**
+
 - Modify: `packages/daemon/src/app.ts`
 - Modify: `packages/daemon/src/app.test.ts`
 
@@ -2146,6 +2164,7 @@ git commit -m "feat(daemon): serve dashboard build at / with SPA fallback (CREW-
 ## Task 7: Architecture-doc supersession note
 
 **Files:**
+
 - Modify: `docs/plans/architecture.md`
 
 - [ ] **Step 1: Update the architecture doc's Phase 2 stack picks**

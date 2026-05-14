@@ -3,6 +3,7 @@
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 >
 > **REQUIRED COMPANION SKILLS:**
+>
 > - `figma-use` (the official Figma plugin's MCP skill) — every `use_figma` call MUST invoke this skill first
 > - `figma-design-system-propagation` — for the publish lifecycle, verification, override stickiness, and mode-chain trap addenda baked into Phase C/D
 > - `figma-screen-migration` — for context on how the existing 3 migrated frames were built (re-verification in Phase C reads against this skill's mental model)
@@ -19,16 +20,16 @@
 
 ## File structure
 
-| File | Responsibility | Phase |
-|---|---|---|
-| Crew DS Figma file (`DsA7QuEa2WthDATkksd1Bq`) | Re-alias 27 variables in `Crew / Semantic Colors` to `tw/colors` directly. Fix AgentBody composite (node `24:2`) to embed a real `StateBadge` instance instead of a hand-rolled pill. | A, C |
-| `packages/dashboard/src/index.css` | Dashboard color tokens. Replace custom hex / OKLCH values in `.dark`, `:root`, and `@theme` blocks with `var(--color-*)` references to stock Tailwind slate / red / amber / blue / violet / emerald shades. | B |
-| Crew Dashboard Screens Figma file (`9FeJPriqdsdA4n9R5Xsrr8`) | Re-screenshot migrated frames (`1:2`, `1:378`, `1:1900`) for visual verification. Fix Inspect button styling on frame `1:2` per the canonical tinted-pill pattern. | C |
-| `docs/plans/design-system.md` | Replace "v1 overrides — None" claim with the new direct-alias strategy. Document slate mapping table, deferred groups (chart/sidebar/kit-extras), and the three future-extensibility patterns. Update Mode resolution subsection. | D |
-| `~/.claude/skills/figma-design-system-propagation/SKILL.md` | Add "exception when override aliases to mode-invariant primitives" note to Trap 2. | D |
-| `~/.claude/skills/figma-screen-migration/SKILL.md` | Add corresponding exception note to Phase 2 (set modes). | D |
-| `~/.claude/projects/-home-safturento-Repos-crew/memory/project_crew_ds_palette_strategy.md` (NEW) | Project memory entry capturing the direct-alias strategy + when each future-extension pattern applies. | D |
-| `~/.claude/projects/-home-safturento-Repos-crew/memory/MEMORY.md` | Add line to index pointing at the new memory file. | D |
+| File                                                                                              | Responsibility                                                                                                                                                                                                                    | Phase |
+| ------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----- |
+| Crew DS Figma file (`DsA7QuEa2WthDATkksd1Bq`)                                                     | Re-alias 27 variables in `Crew / Semantic Colors` to `tw/colors` directly. Fix AgentBody composite (node `24:2`) to embed a real `StateBadge` instance instead of a hand-rolled pill.                                             | A, C  |
+| `packages/dashboard/src/index.css`                                                                | Dashboard color tokens. Replace custom hex / OKLCH values in `.dark`, `:root`, and `@theme` blocks with `var(--color-*)` references to stock Tailwind slate / red / amber / blue / violet / emerald shades.                       | B     |
+| Crew Dashboard Screens Figma file (`9FeJPriqdsdA4n9R5Xsrr8`)                                      | Re-screenshot migrated frames (`1:2`, `1:378`, `1:1900`) for visual verification. Fix Inspect button styling on frame `1:2` per the canonical tinted-pill pattern.                                                                | C     |
+| `docs/plans/design-system.md`                                                                     | Replace "v1 overrides — None" claim with the new direct-alias strategy. Document slate mapping table, deferred groups (chart/sidebar/kit-extras), and the three future-extensibility patterns. Update Mode resolution subsection. | D     |
+| `~/.claude/skills/figma-design-system-propagation/SKILL.md`                                       | Add "exception when override aliases to mode-invariant primitives" note to Trap 2.                                                                                                                                                | D     |
+| `~/.claude/skills/figma-screen-migration/SKILL.md`                                                | Add corresponding exception note to Phase 2 (set modes).                                                                                                                                                                          | D     |
+| `~/.claude/projects/-home-safturento-Repos-crew/memory/project_crew_ds_palette_strategy.md` (NEW) | Project memory entry capturing the direct-alias strategy + when each future-extension pattern applies.                                                                                                                            | D     |
+| `~/.claude/projects/-home-safturento-Repos-crew/memory/MEMORY.md`                                 | Add line to index pointing at the new memory file.                                                                                                                                                                                | D     |
 
 ---
 
@@ -39,6 +40,7 @@ Mutates the Crew DS Figma file (`DsA7QuEa2WthDATkksd1Bq`). All steps run via `us
 ### Task A1: Capture baseline of Crew Semantic Colors
 
 **Files:**
+
 - Modify: Crew DS Figma file (`DsA7QuEa2WthDATkksd1Bq`) — pure read, no mutations
 
 - [ ] **Step 1: Read all 44 color variables + their current alias targets in both modes**
@@ -46,26 +48,29 @@ Mutates the Crew DS Figma file (`DsA7QuEa2WthDATkksd1Bq`). All steps run via `us
 ```js
 // use_figma against DsA7QuEa2WthDATkksd1Bq, skillNames: "figma-use"
 const cols = await figma.variables.getLocalVariableCollectionsAsync();
-const semantic = cols.find(c => c.name === "Crew / Semantic Colors");
-const allVars = await Promise.all(semantic.variableIds.map(id => figma.variables.getVariableByIdAsync(id)));
-const colorVars = allVars.filter(v => v.resolvedType === "COLOR");
+const semantic = cols.find((c) => c.name === 'Crew / Semantic Colors');
+const allVars = await Promise.all(
+  semantic.variableIds.map((id) => figma.variables.getVariableByIdAsync(id)),
+);
+const colorVars = allVars.filter((v) => v.resolvedType === 'COLOR');
 
-const lightModeId = semantic.modes.find(m => /light/i.test(m.name)).modeId;
-const darkModeId = semantic.modes.find(m => /dark/i.test(m.name)).modeId;
+const lightModeId = semantic.modes.find((m) => /light/i.test(m.name)).modeId;
+const darkModeId = semantic.modes.find((m) => /dark/i.test(m.name)).modeId;
 
 const baseline = [];
 for (const v of colorVars) {
   const light = v.valuesByMode[lightModeId];
   const dark = v.valuesByMode[darkModeId];
-  let lightTarget = "(direct)", darkTarget = "(direct)";
-  if (light?.type === "VARIABLE_ALIAS") {
+  let lightTarget = '(direct)',
+    darkTarget = '(direct)';
+  if (light?.type === 'VARIABLE_ALIAS') {
     const t = await figma.variables.getVariableByIdAsync(light.id);
     if (t) {
       const tc = await figma.variables.getVariableCollectionByIdAsync(t.variableCollectionId);
       lightTarget = `${tc?.name}/${t.name}`;
     }
   }
-  if (dark?.type === "VARIABLE_ALIAS") {
+  if (dark?.type === 'VARIABLE_ALIAS') {
     const t = await figma.variables.getVariableByIdAsync(dark.id);
     if (t) {
       const tc = await figma.variables.getVariableCollectionByIdAsync(t.variableCollectionId);
@@ -83,10 +88,11 @@ Expected: `{ totalColorVars: 44, baseline: [...] }`. Confirms the 19 + 8 + 5 + 8
 - [ ] **Step 2: Verify the 5 groups are present**
 
 Visually scan the baseline output for:
+
 - 19 standard shadcn semantics (background, foreground, card, …, ring, destructive, destructive-foreground)
-- 8 state/* tokens (state/initializing through state/foreground)
-- 5 chart-* tokens
-- 8 sidebar-* tokens
+- 8 state/\* tokens (state/initializing through state/foreground)
+- 5 chart-\* tokens
+- 8 sidebar-\* tokens
 - 4 kit-extras (background-color, semantic-background, semantic-border, semantic-foreground)
 
 If any are missing or named differently, STOP and confirm with the user before proceeding — the spec's mapping tables assume these exact names.
@@ -94,6 +100,7 @@ If any are missing or named differently, STOP and confirm with the user before p
 ### Task A2: Re-alias the 19 standard shadcn semantics (group 1a)
 
 **Files:**
+
 - Modify: Crew DS Figma file (`DsA7QuEa2WthDATkksd1Bq`) — Crew Semantic Colors group 1a
 
 - [ ] **Step 1: Import the 8 needed `tw/colors` library variables**
@@ -101,18 +108,37 @@ If any are missing or named differently, STOP and confirm with the user before p
 ```js
 // use_figma against DsA7QuEa2WthDATkksd1Bq, skillNames: "figma-use"
 const libCols = await figma.teamLibrary.getAvailableLibraryVariableCollectionsAsync();
-const twColors = libCols.find(c => c.libraryName === "Core Design System" && c.name === "tw/colors");
-if (!twColors) return { error: "no tw/colors in linked libs", libs: libCols.map(c => `${c.libraryName}::${c.name}`) };
+const twColors = libCols.find(
+  (c) => c.libraryName === 'Core Design System' && c.name === 'tw/colors',
+);
+if (!twColors)
+  return {
+    error: 'no tw/colors in linked libs',
+    libs: libCols.map((c) => `${c.libraryName}::${c.name}`),
+  };
 
 const refs = await figma.teamLibrary.getVariablesInLibraryCollectionAsync(twColors.key);
 
 // Names needed for group 1a
-const NEEDED = ["slate/50", "slate/200", "slate/400", "slate/500", "slate/800", "slate/900", "slate/950", "red/400", "white"];
+const NEEDED = [
+  'slate/50',
+  'slate/200',
+  'slate/400',
+  'slate/500',
+  'slate/800',
+  'slate/900',
+  'slate/950',
+  'red/400',
+  'white',
+];
 const imported = {};
 const missing = [];
 for (const name of NEEDED) {
-  const ref = refs.find(r => r.name === name);
-  if (!ref) { missing.push(name); continue; }
+  const ref = refs.find((r) => r.name === name);
+  if (!ref) {
+    missing.push(name);
+    continue;
+  }
   imported[name] = await figma.variables.importVariableByKeyAsync(ref.key);
 }
 
@@ -130,55 +156,75 @@ Expected: `{ importedCount: 9, missing: [] }`. If `missing` is non-empty, the va
 ```js
 // use_figma against DsA7QuEa2WthDATkksd1Bq, skillNames: "figma-use"
 const cols = await figma.variables.getLocalVariableCollectionsAsync();
-const semantic = cols.find(c => c.name === "Crew / Semantic Colors");
-const allVars = await Promise.all(semantic.variableIds.map(id => figma.variables.getVariableByIdAsync(id)));
-const byName = new Map(allVars.map(v => [v.name, v]));
+const semantic = cols.find((c) => c.name === 'Crew / Semantic Colors');
+const allVars = await Promise.all(
+  semantic.variableIds.map((id) => figma.variables.getVariableByIdAsync(id)),
+);
+const byName = new Map(allVars.map((v) => [v.name, v]));
 
-const lightModeId = semantic.modes.find(m => /light/i.test(m.name)).modeId;
-const darkModeId = semantic.modes.find(m => /dark/i.test(m.name)).modeId;
+const lightModeId = semantic.modes.find((m) => /light/i.test(m.name)).modeId;
+const darkModeId = semantic.modes.find((m) => /dark/i.test(m.name)).modeId;
 
 // Re-import the tw/colors variables (cheap — just retrieves from cache)
 const libCols = await figma.teamLibrary.getAvailableLibraryVariableCollectionsAsync();
-const twColors = libCols.find(c => c.libraryName === "Core Design System" && c.name === "tw/colors");
+const twColors = libCols.find(
+  (c) => c.libraryName === 'Core Design System' && c.name === 'tw/colors',
+);
 const refs = await figma.teamLibrary.getVariablesInLibraryCollectionAsync(twColors.key);
 const tw = {};
-for (const name of ["slate/50", "slate/200", "slate/400", "slate/500", "slate/800", "slate/900", "slate/950", "red/400", "white"]) {
-  tw[name] = await figma.variables.importVariableByKeyAsync(refs.find(r => r.name === name).key);
+for (const name of [
+  'slate/50',
+  'slate/200',
+  'slate/400',
+  'slate/500',
+  'slate/800',
+  'slate/900',
+  'slate/950',
+  'red/400',
+  'white',
+]) {
+  tw[name] = await figma.variables.importVariableByKeyAsync(refs.find((r) => r.name === name).key);
 }
 
 // Group 1a mapping (semantic → tw/colors target). Both modes alias to the SAME tw/colors variable
 // (slate is mode-invariant in tw/colors — single-mode collection).
 const MAP_1A = {
-  "background":             "slate/950",
-  "foreground":             "slate/200",
-  "card":                   "slate/900",
-  "card-foreground":        "slate/200",
-  "popover":                "slate/900",
-  "popover-foreground":     "slate/200",
-  "primary":                "slate/200",
-  "primary-foreground":     "slate/900",
-  "secondary":              "slate/800",
-  "secondary-foreground":   "slate/200",
-  "muted":                  "slate/800",
-  "muted-foreground":       "slate/400",
-  "accent":                 "slate/800",
-  "accent-foreground":      "slate/200",
-  "destructive":            "red/400",
-  "destructive-foreground": "slate/50",
-  "border":                 "white",
-  "input":                  "white",
-  "ring":                   "slate/500",
+  background: 'slate/950',
+  foreground: 'slate/200',
+  card: 'slate/900',
+  'card-foreground': 'slate/200',
+  popover: 'slate/900',
+  'popover-foreground': 'slate/200',
+  primary: 'slate/200',
+  'primary-foreground': 'slate/900',
+  secondary: 'slate/800',
+  'secondary-foreground': 'slate/200',
+  muted: 'slate/800',
+  'muted-foreground': 'slate/400',
+  accent: 'slate/800',
+  'accent-foreground': 'slate/200',
+  destructive: 'red/400',
+  'destructive-foreground': 'slate/50',
+  border: 'white',
+  input: 'white',
+  ring: 'slate/500',
 };
 
 const updates = [];
 const skipped = [];
 for (const [semanticName, twName] of Object.entries(MAP_1A)) {
   const v = byName.get(semanticName);
-  if (!v) { skipped.push({ semanticName, reason: "not found" }); continue; }
+  if (!v) {
+    skipped.push({ semanticName, reason: 'not found' });
+    continue;
+  }
   const target = tw[twName];
-  if (!target) { skipped.push({ semanticName, twName, reason: "tw target not imported" }); continue; }
-  v.setValueForMode(lightModeId, { type: "VARIABLE_ALIAS", id: target.id });
-  v.setValueForMode(darkModeId, { type: "VARIABLE_ALIAS", id: target.id });
+  if (!target) {
+    skipped.push({ semanticName, twName, reason: 'tw target not imported' });
+    continue;
+  }
+  v.setValueForMode(lightModeId, { type: 'VARIABLE_ALIAS', id: target.id });
+  v.setValueForMode(darkModeId, { type: 'VARIABLE_ALIAS', id: target.id });
   updates.push({ semanticName, twName });
 }
 
@@ -186,7 +232,7 @@ return {
   updatedCount: updates.length,
   updates,
   skipped,
-  mutatedNodeIds: updates.map(u => byName.get(u.semanticName).id),
+  mutatedNodeIds: updates.map((u) => byName.get(u.semanticName).id),
 };
 ```
 
@@ -197,31 +243,49 @@ Expected: `{ updatedCount: 19, skipped: [] }`. If anything is skipped, STOP and 
 ```js
 // use_figma against DsA7QuEa2WthDATkksd1Bq, skillNames: "figma-use"
 const cols = await figma.variables.getLocalVariableCollectionsAsync();
-const semantic = cols.find(c => c.name === "Crew / Semantic Colors");
-const allVars = await Promise.all(semantic.variableIds.map(id => figma.variables.getVariableByIdAsync(id)));
+const semantic = cols.find((c) => c.name === 'Crew / Semantic Colors');
+const allVars = await Promise.all(
+  semantic.variableIds.map((id) => figma.variables.getVariableByIdAsync(id)),
+);
 
 const EXPECTED = {
-  "background": "slate/950", "foreground": "slate/200",
-  "card": "slate/900", "card-foreground": "slate/200",
-  "popover": "slate/900", "popover-foreground": "slate/200",
-  "primary": "slate/200", "primary-foreground": "slate/900",
-  "secondary": "slate/800", "secondary-foreground": "slate/200",
-  "muted": "slate/800", "muted-foreground": "slate/400",
-  "accent": "slate/800", "accent-foreground": "slate/200",
-  "destructive": "red/400", "destructive-foreground": "slate/50",
-  "border": "white", "input": "white", "ring": "slate/500",
+  background: 'slate/950',
+  foreground: 'slate/200',
+  card: 'slate/900',
+  'card-foreground': 'slate/200',
+  popover: 'slate/900',
+  'popover-foreground': 'slate/200',
+  primary: 'slate/200',
+  'primary-foreground': 'slate/900',
+  secondary: 'slate/800',
+  'secondary-foreground': 'slate/200',
+  muted: 'slate/800',
+  'muted-foreground': 'slate/400',
+  accent: 'slate/800',
+  'accent-foreground': 'slate/200',
+  destructive: 'red/400',
+  'destructive-foreground': 'slate/50',
+  border: 'white',
+  input: 'white',
+  ring: 'slate/500',
 };
-const lightModeId = semantic.modes.find(m => /light/i.test(m.name)).modeId;
-const darkModeId = semantic.modes.find(m => /dark/i.test(m.name)).modeId;
+const lightModeId = semantic.modes.find((m) => /light/i.test(m.name)).modeId;
+const darkModeId = semantic.modes.find((m) => /dark/i.test(m.name)).modeId;
 
 const mismatches = [];
 for (const [name, expected] of Object.entries(EXPECTED)) {
-  const v = allVars.find(av => av.name === name);
-  if (!v) { mismatches.push({ name, reason: "missing" }); continue; }
-  for (const [modeId, modeName] of [[lightModeId, "light"], [darkModeId, "dark"]]) {
+  const v = allVars.find((av) => av.name === name);
+  if (!v) {
+    mismatches.push({ name, reason: 'missing' });
+    continue;
+  }
+  for (const [modeId, modeName] of [
+    [lightModeId, 'light'],
+    [darkModeId, 'dark'],
+  ]) {
     const value = v.valuesByMode[modeId];
-    if (value?.type !== "VARIABLE_ALIAS") {
-      mismatches.push({ name, mode: modeName, reason: "not an alias" });
+    if (value?.type !== 'VARIABLE_ALIAS') {
+      mismatches.push({ name, mode: modeName, reason: 'not an alias' });
       continue;
     }
     const target = await figma.variables.getVariableByIdAsync(value.id);
@@ -239,6 +303,7 @@ Expected: `{ passed: true, mismatches: [] }`. Each variable in both modes points
 ### Task A3: Re-alias the 8 state tokens (group 1b)
 
 **Files:**
+
 - Modify: Crew DS Figma file (`DsA7QuEa2WthDATkksd1Bq`) — Crew Semantic Colors group 1b
 
 - [ ] **Step 1: Re-alias state tokens**
@@ -246,35 +311,48 @@ Expected: `{ passed: true, mismatches: [] }`. Each variable in both modes points
 ```js
 // use_figma against DsA7QuEa2WthDATkksd1Bq, skillNames: "figma-use"
 const cols = await figma.variables.getLocalVariableCollectionsAsync();
-const semantic = cols.find(c => c.name === "Crew / Semantic Colors");
-const allVars = await Promise.all(semantic.variableIds.map(id => figma.variables.getVariableByIdAsync(id)));
-const byName = new Map(allVars.map(v => [v.name, v]));
+const semantic = cols.find((c) => c.name === 'Crew / Semantic Colors');
+const allVars = await Promise.all(
+  semantic.variableIds.map((id) => figma.variables.getVariableByIdAsync(id)),
+);
+const byName = new Map(allVars.map((v) => [v.name, v]));
 
-const lightModeId = semantic.modes.find(m => /light/i.test(m.name)).modeId;
-const darkModeId = semantic.modes.find(m => /dark/i.test(m.name)).modeId;
+const lightModeId = semantic.modes.find((m) => /light/i.test(m.name)).modeId;
+const darkModeId = semantic.modes.find((m) => /dark/i.test(m.name)).modeId;
 
 const libCols = await figma.teamLibrary.getAvailableLibraryVariableCollectionsAsync();
-const twColors = libCols.find(c => c.libraryName === "Core Design System" && c.name === "tw/colors");
+const twColors = libCols.find(
+  (c) => c.libraryName === 'Core Design System' && c.name === 'tw/colors',
+);
 const refs = await figma.teamLibrary.getVariablesInLibraryCollectionAsync(twColors.key);
 
-const NEEDED = ["blue/400", "slate/400", "slate/500", "amber/400", "violet/400", "red/400", "emerald/500", "slate/950"];
+const NEEDED = [
+  'blue/400',
+  'slate/400',
+  'slate/500',
+  'amber/400',
+  'violet/400',
+  'red/400',
+  'emerald/500',
+  'slate/950',
+];
 const tw = {};
 for (const name of NEEDED) {
-  const r = refs.find(rr => rr.name === name);
+  const r = refs.find((rr) => rr.name === name);
   if (!r) return { error: `tw/colors / ${name} not found` };
   tw[name] = await figma.variables.importVariableByKeyAsync(r.key);
 }
 
 // Group 1b: state tokens. Mode-invariant — both modes alias to the same primitive.
 const MAP_1B = {
-  "state/initializing": "blue/400",   // was blue/500
-  "state/running":      "slate/400",  // unchanged
-  "state/idle":         "slate/500",  // unchanged
-  "state/waiting":      "amber/400",  // unchanged
-  "state/pr-open":      "violet/400", // was violet/500
-  "state/error":        "red/400",    // was red/500
-  "state/finished":     "emerald/500",// unchanged
-  "state/foreground":   "slate/950",  // unchanged
+  'state/initializing': 'blue/400', // was blue/500
+  'state/running': 'slate/400', // unchanged
+  'state/idle': 'slate/500', // unchanged
+  'state/waiting': 'amber/400', // unchanged
+  'state/pr-open': 'violet/400', // was violet/500
+  'state/error': 'red/400', // was red/500
+  'state/finished': 'emerald/500', // unchanged
+  'state/foreground': 'slate/950', // unchanged
 };
 
 const updates = [];
@@ -282,12 +360,16 @@ for (const [name, twName] of Object.entries(MAP_1B)) {
   const v = byName.get(name);
   if (!v) return { error: `${name} not found` };
   const target = tw[twName];
-  v.setValueForMode(lightModeId, { type: "VARIABLE_ALIAS", id: target.id });
-  v.setValueForMode(darkModeId, { type: "VARIABLE_ALIAS", id: target.id });
+  v.setValueForMode(lightModeId, { type: 'VARIABLE_ALIAS', id: target.id });
+  v.setValueForMode(darkModeId, { type: 'VARIABLE_ALIAS', id: target.id });
   updates.push({ name, twName });
 }
 
-return { updatedCount: updates.length, updates, mutatedNodeIds: updates.map(u => byName.get(u.name).id) };
+return {
+  updatedCount: updates.length,
+  updates,
+  mutatedNodeIds: updates.map((u) => byName.get(u.name).id),
+};
 ```
 
 Expected: `{ updatedCount: 8 }`.
@@ -297,27 +379,43 @@ Expected: `{ updatedCount: 8 }`.
 ```js
 // use_figma against DsA7QuEa2WthDATkksd1Bq, skillNames: "figma-use"
 const cols = await figma.variables.getLocalVariableCollectionsAsync();
-const semantic = cols.find(c => c.name === "Crew / Semantic Colors");
-const allVars = await Promise.all(semantic.variableIds.map(id => figma.variables.getVariableByIdAsync(id)));
+const semantic = cols.find((c) => c.name === 'Crew / Semantic Colors');
+const allVars = await Promise.all(
+  semantic.variableIds.map((id) => figma.variables.getVariableByIdAsync(id)),
+);
 
 const EXPECTED = {
-  "state/initializing": "blue/400", "state/running": "slate/400",
-  "state/idle": "slate/500", "state/waiting": "amber/400",
-  "state/pr-open": "violet/400", "state/error": "red/400",
-  "state/finished": "emerald/500", "state/foreground": "slate/950",
+  'state/initializing': 'blue/400',
+  'state/running': 'slate/400',
+  'state/idle': 'slate/500',
+  'state/waiting': 'amber/400',
+  'state/pr-open': 'violet/400',
+  'state/error': 'red/400',
+  'state/finished': 'emerald/500',
+  'state/foreground': 'slate/950',
 };
-const lightModeId = semantic.modes.find(m => /light/i.test(m.name)).modeId;
-const darkModeId = semantic.modes.find(m => /dark/i.test(m.name)).modeId;
+const lightModeId = semantic.modes.find((m) => /light/i.test(m.name)).modeId;
+const darkModeId = semantic.modes.find((m) => /dark/i.test(m.name)).modeId;
 
 const mismatches = [];
 for (const [name, expected] of Object.entries(EXPECTED)) {
-  const v = allVars.find(av => av.name === name);
-  if (!v) { mismatches.push({ name, reason: "missing" }); continue; }
-  for (const [modeId, modeName] of [[lightModeId, "light"], [darkModeId, "dark"]]) {
+  const v = allVars.find((av) => av.name === name);
+  if (!v) {
+    mismatches.push({ name, reason: 'missing' });
+    continue;
+  }
+  for (const [modeId, modeName] of [
+    [lightModeId, 'light'],
+    [darkModeId, 'dark'],
+  ]) {
     const value = v.valuesByMode[modeId];
-    if (value?.type !== "VARIABLE_ALIAS") { mismatches.push({ name, mode: modeName, reason: "not alias" }); continue; }
+    if (value?.type !== 'VARIABLE_ALIAS') {
+      mismatches.push({ name, mode: modeName, reason: 'not alias' });
+      continue;
+    }
     const target = await figma.variables.getVariableByIdAsync(value.id);
-    if (target?.name !== expected) mismatches.push({ name, mode: modeName, expected, actual: target?.name });
+    if (target?.name !== expected)
+      mismatches.push({ name, mode: modeName, expected, actual: target?.name });
   }
 }
 return { passed: mismatches.length === 0, mismatches };
@@ -329,11 +427,12 @@ Expected: `{ passed: true }`.
 
 ```js
 // use_figma against DsA7QuEa2WthDATkksd1Bq, skillNames: "figma-use"
-const setNode = await figma.getNodeByIdAsync("20:23"); // StateBadge component set
+const setNode = await figma.getNodeByIdAsync('20:23'); // StateBadge component set
 return { shot: await setNode.screenshot({ scale: 2 }) };
 ```
 
 Visually verify:
+
 - `state=initializing` pill is now slightly lighter blue (was 500, now 400)
 - `state=pr-open` pill is now slightly lighter purple
 - `state=error` pill is now slightly lighter red
@@ -344,11 +443,13 @@ The pill structure (tinted bg + matching border/text/dot) stays correct — only
 ### Task A4: Prompt user to publish Crew DS in Figma desktop
 
 **Files:**
+
 - N/A (manual user step)
 
 - [ ] **Step 1: Tell the user to publish**
 
 Message to user verbatim: "Crew Semantic Colors re-aliased (27 variables across groups 1a + 1b). Please **republish Crew Design System** in Figma desktop:
+
 1. Open `Crew Design System` (`DsA7QuEa2WthDATkksd1Bq`) in the Figma desktop app
 2. Open the Assets panel → click Publish library
 3. Confirm the publish review (should show 27 variable updates)
@@ -365,6 +466,7 @@ Code-only changes in `packages/dashboard/src/index.css`. Parallel-safe with Phas
 ### Task B1: Update `.dark` block (group 1a, 19 tokens)
 
 **Files:**
+
 - Modify: `packages/dashboard/src/index.css:70-89`
 
 - [ ] **Step 1: Read the current `.dark` block to confirm line numbers**
@@ -403,11 +505,12 @@ Use Edit tool. Replace the entire `.dark { ... }` block. The new content (matche
 }
 ```
 
-(Note: any chart-*, sidebar-*, or other dashboard-specific tokens within the `.dark` block — if present — stay untouched. The grep in Step 1 will surface them; only replace the 19 standard shadcn semantics.)
+(Note: any chart-_, sidebar-_, or other dashboard-specific tokens within the `.dark` block — if present — stay untouched. The grep in Step 1 will surface them; only replace the 19 standard shadcn semantics.)
 
 ### Task B2: Update `:root` light-mode block (19 tokens)
 
 **Files:**
+
 - Modify: `packages/dashboard/src/index.css:46-65`
 
 - [ ] **Step 1: Read the current `:root` block**
@@ -450,6 +553,7 @@ Use Edit tool. New content:
 ### Task B3: Update `@theme` state colors (7 tokens)
 
 **Files:**
+
 - Modify: `packages/dashboard/src/index.css:26-32`
 
 - [ ] **Step 1: Replace the 7 `--color-state-*` declarations in `@theme`**
@@ -457,13 +561,13 @@ Use Edit tool. New content:
 Use Edit tool. Find lines 26-32 currently containing the OKLCH state values, replace with:
 
 ```css
-  --color-state-initializing: var(--color-blue-400);
-  --color-state-running: var(--color-slate-400);
-  --color-state-idle: var(--color-slate-500);
-  --color-state-waiting: var(--color-amber-400);
-  --color-state-pr-open: var(--color-violet-400);
-  --color-state-error: var(--color-red-400);
-  --color-state-finished: var(--color-emerald-500);
+--color-state-initializing: var(--color-blue-400);
+--color-state-running: var(--color-slate-400);
+--color-state-idle: var(--color-slate-500);
+--color-state-waiting: var(--color-amber-400);
+--color-state-pr-open: var(--color-violet-400);
+--color-state-error: var(--color-red-400);
+--color-state-finished: var(--color-emerald-500);
 ```
 
 Preserve surrounding `@theme` content (font, radius, animate declarations).
@@ -471,6 +575,7 @@ Preserve surrounding `@theme` content (font, radius, animate declarations).
 ### Task B4: Lint + format + typecheck
 
 **Files:**
+
 - Modify: (none — verification step)
 
 - [ ] **Step 1: Run dashboard lint**
@@ -500,6 +605,7 @@ Expected: passes (CSS changes don't affect TS types).
 ### Task B5: Browser smoke test (dark mode)
 
 **Files:**
+
 - N/A (manual visual verification)
 
 - [ ] **Step 1: Start the dashboard dev server**
@@ -513,6 +619,7 @@ Wait for the dashboard to come up at the worktree's dashboard URL (resolve via `
 - [ ] **Step 2: Open the Agents page in dark mode and check for visual regressions**
 
 Open the dashboard URL in a browser. The page should:
+
 - Show in dark mode by default (per `<html class="dark">` in `main.tsx`)
 - Have a slate-tinted dark background (slightly different from before — slate-950 `#020617` instead of custom `#05060a`)
 - Cards, popovers, borders, state pills all render visibly
@@ -523,13 +630,15 @@ If any element renders with a wrong color or appears unstyled, STOP and inspect.
 - [ ] **Step 3: Open agent drawer + agent page full route, smoke test**
 
 Click into an agent row → drawer opens. Then expand to full page (button in drawer header). Verify:
+
 - Drawer surface uses card background (slate-900)
 - Timeline event tags (Bash, Read, Edit, Question) show with state-color tints
-- State pills in agent header show new *-400 colors where applicable
+- State pills in agent header show new \*-400 colors where applicable
 
 ### Task B6: Commit Phase B
 
 **Files:**
+
 - Modify: `packages/dashboard/src/index.css`
 
 - [ ] **Step 1: Stage + commit**
@@ -567,6 +676,7 @@ Mutates the Crew Dashboard Screens Figma file (`9FeJPriqdsdA4n9R5Xsrr8`) and the
 ### Task C1: Verify cache propagation in screens file
 
 **Files:**
+
 - Read: Crew Dashboard Screens (`9FeJPriqdsdA4n9R5Xsrr8`) — pure read
 
 - [ ] **Step 1: Re-import 3 sample tokens and confirm new alias chain ends at `tw/colors/slate`**
@@ -574,30 +684,37 @@ Mutates the Crew Dashboard Screens Figma file (`9FeJPriqdsdA4n9R5Xsrr8`) and the
 ```js
 // use_figma against 9FeJPriqdsdA4n9R5Xsrr8, skillNames: "figma-use"
 const libCols = await figma.teamLibrary.getAvailableLibraryVariableCollectionsAsync();
-const crewSemantic = libCols.find(c => c.libraryName === "Crew Design System" && c.name === "Crew / Semantic Colors");
-if (!crewSemantic) return { error: "Crew Semantic Colors not in linked libs", libs: libCols.map(c => `${c.libraryName}::${c.name}`) };
+const crewSemantic = libCols.find(
+  (c) => c.libraryName === 'Crew Design System' && c.name === 'Crew / Semantic Colors',
+);
+if (!crewSemantic)
+  return {
+    error: 'Crew Semantic Colors not in linked libs',
+    libs: libCols.map((c) => `${c.libraryName}::${c.name}`),
+  };
 
 const refs = await figma.teamLibrary.getVariablesInLibraryCollectionAsync(crewSemantic.key);
 
 const SAMPLES = [
-  { name: "background", expectedTarget: "slate/950" },
-  { name: "state/error", expectedTarget: "red/400" },
-  { name: "border", expectedTarget: "white" },
+  { name: 'background', expectedTarget: 'slate/950' },
+  { name: 'state/error', expectedTarget: 'red/400' },
+  { name: 'border', expectedTarget: 'white' },
 ];
 
 const semantic = await figma.variables.getVariableCollectionByIdAsync(
-  (await figma.variables.importVariableByKeyAsync(refs.find(r => r.name === "background").key)).variableCollectionId
+  (await figma.variables.importVariableByKeyAsync(refs.find((r) => r.name === 'background').key))
+    .variableCollectionId,
 );
-const lightModeId = semantic.modes.find(m => /light/i.test(m.name)).modeId;
-const darkModeId = semantic.modes.find(m => /dark/i.test(m.name)).modeId;
+const lightModeId = semantic.modes.find((m) => /light/i.test(m.name)).modeId;
+const darkModeId = semantic.modes.find((m) => /dark/i.test(m.name)).modeId;
 
 const results = [];
 for (const sample of SAMPLES) {
-  const ref = refs.find(r => r.name === sample.name);
+  const ref = refs.find((r) => r.name === sample.name);
   const v = await figma.variables.importVariableByKeyAsync(ref.key);
   const dark = v.valuesByMode[darkModeId];
-  if (dark?.type !== "VARIABLE_ALIAS") {
-    results.push({ name: sample.name, fail: "dark not alias" });
+  if (dark?.type !== 'VARIABLE_ALIAS') {
+    results.push({ name: sample.name, fail: 'dark not alias' });
     continue;
   }
   const target = await figma.variables.getVariableByIdAsync(dark.id);
@@ -609,7 +726,7 @@ for (const sample of SAMPLES) {
   });
 }
 
-return { allPassed: results.every(r => r.pass), results };
+return { allPassed: results.every((r) => r.pass), results };
 ```
 
 Expected: `{ allPassed: true, results: [...] }`.
@@ -619,11 +736,13 @@ If any sample shows the OLD alias target (e.g. `background → neutral/950` inst
 ### Task C2: Re-screenshot + visually verify the 3 migrated frames
 
 **Files:**
+
 - Read: Crew Dashboard Screens (`9FeJPriqdsdA4n9R5Xsrr8`) — pure read via MCP `get_screenshot`
 
 - [ ] **Step 1: Screenshot all 3 migrated frames via MCP `get_screenshot`**
 
 Call MCP `get_screenshot` for each:
+
 - fileKey `9FeJPriqdsdA4n9R5Xsrr8`, nodeId `1:2` (Agents List)
 - fileKey `9FeJPriqdsdA4n9R5Xsrr8`, nodeId `1:378` (Drawer Open)
 - fileKey `9FeJPriqdsdA4n9R5Xsrr8`, nodeId `1:1900` (Agent Page)
@@ -633,6 +752,7 @@ Download each PNG via curl to `$TMPDIR/frame-X-after-palette.png`.
 - [ ] **Step 2: Read each screenshot and verify rendering**
 
 For each screenshot, confirm:
+
 - Page bg is the new slate-950 (slightly bluer than the previous neutral-950 dark)
 - Card surfaces are slate-900
 - Borders show as a subtle white tint (now visible — previously rendered as solid mid-gray which was barely distinguishable from card)
@@ -645,6 +765,7 @@ If user reports a visual issue, STOP and triage before continuing to C3/C4/C5.
 ### Task C3: Fix Inspect button styling on frame `1:2`
 
 **Files:**
+
 - Modify: Crew Dashboard Screens (`9FeJPriqdsdA4n9R5Xsrr8`) — Inspect button text + bg in frame `1:2`
 
 The current Inspect button has solid red bg + dark text (rebound to `state/foreground` during the prior migration as a one-off fix). Should follow the canonical tinted-pill pattern: bg at opacity 0.18, stroke + text at opacity 1.0, all bound to `state/error`.
@@ -653,26 +774,36 @@ The current Inspect button has solid red bg + dark text (rebound to `state/foreg
 
 ```js
 // use_figma against 9FeJPriqdsdA4n9R5Xsrr8, skillNames: "figma-use"
-const page = figma.root.children.find(p => p.children.some(c => c.id === "1:2"));
+const page = figma.root.children.find((p) => p.children.some((c) => c.id === '1:2'));
 await figma.setCurrentPageAsync(page);
 
-const frame = await figma.getNodeByIdAsync("1:2");
-const inspectTexts = frame.findAll(n => n.type === "TEXT" && n.characters.trim().toLowerCase() === "inspect");
+const frame = await figma.getNodeByIdAsync('1:2');
+const inspectTexts = frame.findAll(
+  (n) => n.type === 'TEXT' && n.characters.trim().toLowerCase() === 'inspect',
+);
 
 const results = [];
 for (const t of inspectTexts) {
   // Walk up to find the enclosing button frame (typically named "Button")
   let cur = t.parent;
   while (cur && cur.id !== frame.id) {
-    if (cur.name === "Button") break;
+    if (cur.name === 'Button') break;
     cur = cur.parent;
   }
   results.push({
     textId: t.id,
     textCharacters: t.characters,
-    buttonFrameId: cur?.name === "Button" ? cur.id : null,
-    buttonFrameFills: cur?.fills?.map(f => ({ color: f.color, opacity: f.opacity, boundColorId: f.boundVariables?.color?.id })),
-    textFills: t.fills?.map(f => ({ color: f.color, opacity: f.opacity, boundColorId: f.boundVariables?.color?.id })),
+    buttonFrameId: cur?.name === 'Button' ? cur.id : null,
+    buttonFrameFills: cur?.fills?.map((f) => ({
+      color: f.color,
+      opacity: f.opacity,
+      boundColorId: f.boundVariables?.color?.id,
+    })),
+    textFills: t.fills?.map((f) => ({
+      color: f.color,
+      opacity: f.opacity,
+      boundColorId: f.boundVariables?.color?.id,
+    })),
   });
 }
 
@@ -686,44 +817,48 @@ Expected: 1 result with the Inspect text node and its enclosing Button frame. If
 ```js
 // use_figma against 9FeJPriqdsdA4n9R5Xsrr8, skillNames: "figma-use"
 // Replace TEXT_ID and BUTTON_FRAME_ID with the IDs from Step 1
-const TEXT_ID = "<from step 1>";
-const BUTTON_FRAME_ID = "<from step 1>";
+const TEXT_ID = '<from step 1>';
+const BUTTON_FRAME_ID = '<from step 1>';
 
 // Preload fonts
-for (const t of figma.currentPage.findAll(n => n.type === "TEXT")) {
+for (const t of figma.currentPage.findAll((n) => n.type === 'TEXT')) {
   for (let i = 0; i < t.characters.length; i++) {
     const f = t.getRangeFontName(i, i + 1);
-    if (typeof f === "object" && f.family) await figma.loadFontAsync(f);
+    if (typeof f === 'object' && f.family) await figma.loadFontAsync(f);
   }
 }
 
 // Import state/error from Crew DS team library
 const libCols = await figma.teamLibrary.getAvailableLibraryVariableCollectionsAsync();
-const crewSemantic = libCols.find(c => c.libraryName === "Crew Design System" && c.name === "Crew / Semantic Colors");
+const crewSemantic = libCols.find(
+  (c) => c.libraryName === 'Crew Design System' && c.name === 'Crew / Semantic Colors',
+);
 const refs = await figma.teamLibrary.getVariablesInLibraryCollectionAsync(crewSemantic.key);
-const stateError = await figma.variables.importVariableByKeyAsync(refs.find(r => r.name === "state/error").key);
+const stateError = await figma.variables.importVariableByKeyAsync(
+  refs.find((r) => r.name === 'state/error').key,
+);
 
 const button = await figma.getNodeByIdAsync(BUTTON_FRAME_ID);
 const text = await figma.getNodeByIdAsync(TEXT_ID);
 
 // Bg fill: state/error at opacity 0.18
-button.fills = button.fills.map(f => {
-  if (f.type !== "SOLID") return f;
-  const bound = figma.variables.setBoundVariableForPaint(f, "color", stateError);
+button.fills = button.fills.map((f) => {
+  if (f.type !== 'SOLID') return f;
+  const bound = figma.variables.setBoundVariableForPaint(f, 'color', stateError);
   return { ...bound, opacity: 0.18 };
 });
 // Stroke (if present): state/error at opacity 1.0
 if (Array.isArray(button.strokes) && button.strokes.length > 0) {
-  button.strokes = button.strokes.map(s => {
-    if (s.type !== "SOLID") return s;
-    const bound = figma.variables.setBoundVariableForPaint(s, "color", stateError);
+  button.strokes = button.strokes.map((s) => {
+    if (s.type !== 'SOLID') return s;
+    const bound = figma.variables.setBoundVariableForPaint(s, 'color', stateError);
     return { ...bound, opacity: 1 };
   });
 }
 // Text fill: state/error at opacity 1.0
-text.fills = text.fills.map(f => {
-  if (f.type !== "SOLID") return f;
-  const bound = figma.variables.setBoundVariableForPaint(f, "color", stateError);
+text.fills = text.fills.map((f) => {
+  if (f.type !== 'SOLID') return f;
+  const bound = figma.variables.setBoundVariableForPaint(f, 'color', stateError);
   return { ...bound, opacity: 1 };
 });
 
@@ -737,6 +872,7 @@ Use MCP `get_screenshot` against the latency row's parent frame (or the entire `
 ### Task C4: Fix AgentBody composite (Crew DS node `24:2`)
 
 **Files:**
+
 - Modify: Crew DS Figma file (`DsA7QuEa2WthDATkksd1Bq`) — `AgentBody` composite (node `24:2`)
 
 The `AgentBody` composite was built with a hand-rolled ellipse + text rather than composing a real `StateBadge` instance. Doesn't pick up StateBadge updates. Fix by deleting the hand-built pill and inserting a real instance.
@@ -745,26 +881,28 @@ The `AgentBody` composite was built with a hand-rolled ellipse + text rather tha
 
 ```js
 // use_figma against DsA7QuEa2WthDATkksd1Bq, skillNames: "figma-use"
-const agentBody = await figma.getNodeByIdAsync("24:2");
-if (!agentBody) return { error: "AgentBody not found at 24:2" };
+const agentBody = await figma.getNodeByIdAsync('24:2');
+if (!agentBody) return { error: 'AgentBody not found at 24:2' };
 
 // Find the hand-rolled pill: typically a frame with an ellipse + text inside, NOT an instance
-const candidates = agentBody.findAll(n =>
-  (n.type === "FRAME" || n.type === "RECTANGLE") &&
-  /pill|state|badge|status/i.test(n.name) &&
-  n.findAll(c => c.type === "TEXT").length > 0
+const candidates = agentBody.findAll(
+  (n) =>
+    (n.type === 'FRAME' || n.type === 'RECTANGLE') &&
+    /pill|state|badge|status/i.test(n.name) &&
+    n.findAll((c) => c.type === 'TEXT').length > 0,
 );
 
-const inspect = candidates.map(c => ({
+const inspect = candidates.map((c) => ({
   id: c.id,
   type: c.type,
   name: c.name,
   parentId: c.parent?.id,
   parentName: c.parent?.name,
   parentLayoutMode: c.parent?.layoutMode,
-  x: c.x, y: c.y,
-  textChild: c.findAll(t => t.type === "TEXT")[0]?.characters,
-  isInstance: c.type === "INSTANCE",
+  x: c.x,
+  y: c.y,
+  textChild: c.findAll((t) => t.type === 'TEXT')[0]?.characters,
+  isInstance: c.type === 'INSTANCE',
 }));
 
 return { candidateCount: candidates.length, candidates: inspect };
@@ -777,24 +915,26 @@ Expected: at least 1 candidate. The first hand-rolled pill is the target. Note i
 ```js
 // use_figma against DsA7QuEa2WthDATkksd1Bq, skillNames: "figma-use"
 // Replace PILL_ID, PARENT_ID, PARENT_LAYOUT_MODE, PILL_X, PILL_Y, STATE_NAME from Step 1
-const PILL_ID = "<from step 1>";
-const PARENT_ID = "<from step 1>";
-const PARENT_LAYOUT_MODE = "<from step 1, e.g. NONE or VERTICAL>";
-const PILL_X = 0;  // from step 1
-const PILL_Y = 0;  // from step 1
-const STATE_NAME = "waiting";  // derive from textChild (e.g. "Waiting" → "waiting")
+const PILL_ID = '<from step 1>';
+const PARENT_ID = '<from step 1>';
+const PARENT_LAYOUT_MODE = '<from step 1, e.g. NONE or VERTICAL>';
+const PILL_X = 0; // from step 1
+const PILL_Y = 0; // from step 1
+const STATE_NAME = 'waiting'; // derive from textChild (e.g. "Waiting" → "waiting")
 
 // Preload fonts
-for (const t of figma.currentPage.findAll(n => n.type === "TEXT")) {
+for (const t of figma.currentPage.findAll((n) => n.type === 'TEXT')) {
   for (let i = 0; i < t.characters.length; i++) {
     const f = t.getRangeFontName(i, i + 1);
-    if (typeof f === "object" && f.family) await figma.loadFontAsync(f);
+    if (typeof f === 'object' && f.family) await figma.loadFontAsync(f);
   }
 }
 
 // Get the StateBadge component set (local in Crew DS)
-const stateBadgeSet = await figma.getNodeByIdAsync("20:23");
-const variant = stateBadgeSet.children.find(v => v.type === "COMPONENT" && v.name === `state=${STATE_NAME}`);
+const stateBadgeSet = await figma.getNodeByIdAsync('20:23');
+const variant = stateBadgeSet.children.find(
+  (v) => v.type === 'COMPONENT' && v.name === `state=${STATE_NAME}`,
+);
 if (!variant) return { error: `state=${STATE_NAME} variant not found` };
 
 const pill = await figma.getNodeByIdAsync(PILL_ID);
@@ -803,7 +943,7 @@ const parent = await figma.getNodeByIdAsync(PARENT_ID);
 const inst = variant.createInstance();
 const idx = parent.children.indexOf(pill);
 parent.insertChild(idx >= 0 ? idx : parent.children.length, inst);
-if (!PARENT_LAYOUT_MODE || PARENT_LAYOUT_MODE === "NONE") {
+if (!PARENT_LAYOUT_MODE || PARENT_LAYOUT_MODE === 'NONE') {
   inst.x = PILL_X;
   inst.y = PILL_Y;
 }
@@ -816,7 +956,7 @@ return { newInstanceId: inst.id, mutatedNodeIds: [PARENT_ID, inst.id] };
 
 ```js
 // use_figma against DsA7QuEa2WthDATkksd1Bq, skillNames: "figma-use"
-const agentBody = await figma.getNodeByIdAsync("24:2");
+const agentBody = await figma.getNodeByIdAsync('24:2');
 return { shot: await agentBody.screenshot({ scale: 2 }) };
 ```
 
@@ -837,12 +977,14 @@ If still solid: per `figma-design-system-propagation` skill Trap 1, the AgentBod
 ### Task C5: Visual audit pass
 
 **Files:**
+
 - Read: Crew DS (`DsA7QuEa2WthDATkksd1Bq`) and Crew Dashboard Screens (`9FeJPriqdsdA4n9R5Xsrr8`) — screenshots
 - Modify: depends on findings
 
 - [ ] **Step 1: Screenshot all 10 Crew DS composites + 3 migrated frames**
 
 Via MCP `get_screenshot`:
+
 - Crew DS composites (file `DsA7QuEa2WthDATkksd1Bq`): `19:3` (BrandMark), `20:23` (StateBadge set), `21:2` (TopNav), `21:9` (AgentRow), `21:21` (ProjectSection), `21:25` (AgentsList), `24:2` (AgentBody), `25:4` (StateHistoryBar), `26:4` (TokenTable), `27:4` (ViewportFrame)
 - Migrated frames (file `9FeJPriqdsdA4n9R5Xsrr8`): `1:2`, `1:378`, `1:1900`
 
@@ -853,6 +995,7 @@ Download all 13 to `$TMPDIR/audit-<id>.png`.
 Surface each to the user: "Audit screenshot N of 13: [composite name / frame name]. Anything off here?"
 
 Capture user feedback per screenshot. For each issue raised:
+
 - Triage: fix-now (within scope of Phase C) vs defer (add to followup)
 - For fix-now items: write a use_figma script targeting the issue, verify with re-screenshot
 - For defer items: append to `docs/followups.md` per the followup-detection convention in user-level CLAUDE.md
@@ -864,6 +1007,7 @@ For any issue triaged as "defer" — append a structured entry to `docs/followup
 ### Task C6: Commit Phase C work
 
 **Files:**
+
 - Modify: `docs/followups.md` (if any defers were captured)
 
 Most of Phase C is Figma file mutations (no git diff). Commit only the `docs/followups.md` updates if any were made.
@@ -896,6 +1040,7 @@ If `docs/followups.md` is unchanged, skip the commit.
 ### Task D1: Update `docs/plans/design-system.md`
 
 **Files:**
+
 - Modify: `docs/plans/design-system.md`
 
 - [ ] **Step 1: Replace the "v1 overrides — None for v1" section**
@@ -903,6 +1048,7 @@ If `docs/followups.md` is unchanged, skip the commit.
 Currently the section starts with "None for v1. The dashboard's existing dark slate aesthetic matches Core's shadcn-default `mode/dark mode` values closely enough that a delta layer isn't needed yet."
 
 Replace with a new "v1 overrides — direct alias to slate" subsection that:
+
 - States Crew DS aliases all standard shadcn semantics (group 1a, 19 vars) and state tokens (group 1b, 8 vars) directly to `Core / tw/colors / slate-XXX` (or `red-400`, `white`, etc.) — bypassing Core's `mode` collection
 - Includes the full mapping table from Section 1a + 1b of the spec
 - Notes the architectural side-effect: Crew DS becomes the single source of mode resolution; Trap 2 from the propagation skill no longer applies to Crew consumers
@@ -917,6 +1063,7 @@ Replace with: "Mode resolution chains `Crew / Semantic Colors → Core / tw/colo
 - [ ] **Step 3: Add an "Extending the palette" subsection**
 
 After the v1 overrides section, add a new "Extending the palette" subsection documenting the three patterns from the spec's "Future-extensibility patterns":
+
 - **Pattern 1**: color already in Tailwind (use directly, no infrastructure)
 - **Pattern 2**: brand-new custom color (extend `@theme` in CSS, create `Crew / Primitives` collection in Figma JIT)
 - **Pattern 3**: custom semantic on existing Tailwind value (alias in both CSS `@theme` and Crew Semantic Colors)
@@ -926,6 +1073,7 @@ Use the same wording as the spec for each pattern's "CSS" + "Figma" + "conventio
 ### Task D2: Update `figma-design-system-propagation` skill
 
 **Files:**
+
 - Modify: `~/.claude/skills/figma-design-system-propagation/SKILL.md`
 
 - [ ] **Step 1: Add exception note to Trap 2**
@@ -941,6 +1089,7 @@ How to tell which pattern your project uses: pick a known override variable (e.g
 ### Task D3: Update `figma-screen-migration` skill
 
 **Files:**
+
 - Modify: `~/.claude/skills/figma-screen-migration/SKILL.md`
 
 - [ ] **Step 1: Add exception note to Phase 2 (Set modes)**
@@ -954,6 +1103,7 @@ Find the "Phase 2 — Set modes (cross-collection)" section. Append:
 ### Task D4: Add project memory entry
 
 **Files:**
+
 - Create: `~/.claude/projects/-home-safturento-Repos-crew/memory/project_crew_ds_palette_strategy.md`
 - Modify: `~/.claude/projects/-home-safturento-Repos-crew/memory/MEMORY.md`
 
@@ -962,6 +1112,7 @@ Find the "Phase 2 — Set modes (cross-collection)" section. Append:
 Path: `~/.claude/projects/-home-safturento-Repos-crew/memory/project_crew_ds_palette_strategy.md`
 
 Content:
+
 ```markdown
 ---
 name: Crew DS uses direct-alias-to-tw/colors-slate strategy (since 2026-05-10)
@@ -974,15 +1125,17 @@ Crew DS palette correction (2026-05-10) re-aliased 27 Crew Semantic Colors varia
 **Why:** the dashboard's `.dark` block in `packages/dashboard/src/index.css` was custom blue-tinted slate hex values; Crew DS via Core's mode collection resolved to `neutral` (pure grayscale). Palette mismatch. The CREW-122 assumption "shadcn defaults match closely enough" was invalidated by the actual values.
 
 **How to apply:**
+
 - **Mode resolution is single-collection.** Setting explicit dark mode on a frame in the screens file only requires `setExplicitVariableModeForCollection(crewSemantic, darkModeId)`. Don't try to walk the alias chain to also set Core's mode — Crew aliases bypass it. The propagation skill's Trap 2 has an exception note for this case.
 - **Both code and design reference identical Tailwind shade names** (e.g. `slate-950`, `red-400`). Designer says "I used `bg-warning`" → developer ships `bg-warning` → no translation step. Convention: Tailwind class name in code matches variable name in Figma.
 - **Three patterns for future palette extensions** (documented in design-system.md "Extending the palette" subsection):
   1. Color already in Tailwind (`blue-500` etc.) — use directly, no new infrastructure
   2. Brand-new custom color (e.g. `brand-purple = #5b21b6`) — extend `@theme` block in CSS, create `Crew / Primitives` collection in Figma JIT
   3. Custom semantic on existing Tailwind value (e.g. `warning = blue-500`) — alias in both CSS `@theme` and Crew Semantic Colors
-- **Deferred groups stay aliased through Core's mode collection** (chart-1..5, sidebar-*, kit-extras). They're unused at runtime; address when first usage appears.
+- **Deferred groups stay aliased through Core's mode collection** (chart-1..5, sidebar-\*, kit-extras). They're unused at runtime; address when first usage appears.
 
 **Reference:**
+
 - Spec: `docs/superpowers/specs/2026-05-10-crew-ds-palette-correction-design.md`
 - Plan: `docs/superpowers/plans/2026-05-10-crew-ds-palette-correction.md`
 - Updated `docs/plans/design-system.md` "v1 overrides" + "Mode resolution" + "Extending the palette" subsections
@@ -999,6 +1152,7 @@ Append to `~/.claude/projects/-home-safturento-Repos-crew/memory/MEMORY.md` (und
 ### Task D5: Commit Phase D
 
 **Files:**
+
 - Modify: `docs/plans/design-system.md`
 - Modify: `~/.claude/skills/figma-design-system-propagation/SKILL.md`
 - Modify: `~/.claude/skills/figma-screen-migration/SKILL.md`

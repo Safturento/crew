@@ -15,6 +15,7 @@
 **Root cause:** Caller-side intensity choice. `AgentRow.tsx:67-69` and `AgentBody.tsx:65-72` both pass `<Badge intensity="muted">`. The Pill set's `type=pill, color=X, intensity=muted` variant has `strokes: []` (no border) — verified in `snapshot/composites/272-120.json`. The Figma agent-drawer screenshot uses `intensity=mid`, which adds the 1px state-colored stroke. Should be `intensity="mid"`.
 
 **Affected files:**
+
 - `packages/dashboard/src/components/AgentRow.tsx:67-69`
 - `packages/dashboard/src/components/AgentBody.tsx:65-72`
 
@@ -31,6 +32,7 @@ a. **Caller passes the wrong intensity.** `TopNav.tsx:38-39` uses `<Button color
 b. **Legacy className override still present.** `TopNav.tsx:42` keeps `className="border-white/10 text-muted-foreground hover:bg-popover disabled:opacity-40"`. The `border-white/10` overrides the system's border treatment. After fixing (a), this className override is also stale and should be dropped.
 
 **Affected files:**
+
 - `packages/dashboard/src/components/TopNav.tsx:37-43` — intensity + className cleanup
 
 ### 3. Clear attention count pill uses loud (solid) instead of mid (hollow) intensity
@@ -40,6 +42,7 @@ b. **Legacy className override still present.** `TopNav.tsx:42` keeps `className
 **Root cause:** Caller-side intensity choice. `TopNav.tsx:48` uses `<Badge color="waiting" intensity="loud">`. Figma's count-pill instance at node `332:230` (child of Clear attention frame) is `type=pill, color=waiting, intensity=mid` — verified in `snapshot/composites/243-120.json`. Should be `intensity="mid"`.
 
 **Affected files:**
+
 - `packages/dashboard/src/components/TopNav.tsx:47-49`
 
 ### 4. `pillSurfaceClasses('white', 'loud')` uses wrong shade
@@ -49,6 +52,7 @@ b. **Legacy className override still present.** `TopNav.tsx:42` keeps `className
 **Root cause:** Helper bug — wrong Tailwind shade mapping for the `white` PillColor. `WHITE_CLASSES` constant at `packages/dashboard/src/lib/pill-variants.ts:9-13` should use `bg-zinc-50` not `bg-neutral-200`. The Figma intent matches zinc/50; this was an assumption error in the original spec that the agent followed literally.
 
 **Affected files:**
+
 - `packages/dashboard/src/lib/pill-variants.ts:9-13` — change `solidBg: 'bg-neutral-200'` to `solidBg: 'bg-zinc-50'`. Also reconsider `text: 'text-slate-950'` — Figma uses `zinc/950` (#09090B), but slate-950 (#020617) is nearly identical and a defensible substitution. Flag as a low-severity finding.
 
 ### 5. View PR button uses Unicode arrow instead of an SVG icon
@@ -66,6 +70,7 @@ b. **Legacy className override still present.** `TopNav.tsx:42` keeps `className
 Should use SVG: `<Button><ArrowUpRight /> View PR</Button>` (or post-T2: a `leadingIcon` prop).
 
 **Affected files:**
+
 - `packages/dashboard/src/components/AgentRow.tsx:117-122`
 - `packages/dashboard/src/components/AgentBody.tsx:85-90` (same pattern for "↗ Open as page")
 

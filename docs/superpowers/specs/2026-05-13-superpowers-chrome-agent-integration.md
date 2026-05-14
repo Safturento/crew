@@ -7,6 +7,7 @@ The `visual-fidelity-check` skill is now firing reliably on every UI-touching `c
 Step 5 (visual check) is currently a degraded placeholder. It reads:
 
 > If `dashboardUrl` is set in project config AND the dashboard is reachable:
+>
 > 1. Open the dashboard via Playwright MCP (or whatever browser-control MCP is wired up).
 > 2. For each touched component, navigate to a screen that exercises it…
 > 3. Screenshot the relevant region.
@@ -16,12 +17,12 @@ The step is optional, the comparison is screenshot-vs-screenshot eyeballing, and
 
 The lived experience from the CREW-135 calibration runs and the ultimate test (May 12) is that **the structural Step 3 catches most things, but a non-trivial set of bugs only surface at runtime**:
 
-- Tailwind classes the cva *would* emit get purged because no caller uses them at compile time.
+- Tailwind classes the cva _would_ emit get purged because no caller uses them at compile time.
 - CSS specificity wars where a parent's `bg-*` wins over the component's intended `bg-*`.
 - Dark-mode / theme overrides applying when the design expects the light variant.
-- Rendered icons: code passes the right *prop*, but the `<svg>` actually rendered is the wrong lucide glyph (or a CSS-only `<span>` standing in for an icon, surviving Step 4 because Step 4 only reads source).
+- Rendered icons: code passes the right _prop_, but the `<svg>` actually rendered is the wrong lucide glyph (or a CSS-only `<span>` standing in for an icon, surviving Step 4 because Step 4 only reads source).
 
-Step 3 reads code; Step 4 reads callers. Neither reads the *rendered* DOM. The screenshot-eyeball loop in the current Step 5 catches some of this when it runs, but it's brittle (pixel diffs degrade fast under DPR/font/rendering variance) and slow (the agent has to describe two screenshots in prose and compare).
+Step 3 reads code; Step 4 reads callers. Neither reads the _rendered_ DOM. The screenshot-eyeball loop in the current Step 5 catches some of this when it runs, but it's brittle (pixel diffs degrade fast under DPR/font/rendering variance) and slow (the agent has to describe two screenshots in prose and compare).
 
 The right primitive for this is Chrome DevTools Protocol: open the dashboard, navigate to the screen that exercises the touched component, query the live element via CSS selector, read computed styles directly, inspect the rendered `<svg>`, and compare each value to the Figma snapshot's `enrichment.boundVariables.resolvedHex` and `enrichment.componentProperties.Icon.name`. Programmatic, deterministic, and catches the runtime-only failures Step 3 cannot.
 
@@ -97,12 +98,14 @@ New `resolveChromeMcpPath(homeDir?)`:
 `run.ts` currently gates writing `.mcp.json` on `playwrightEnabled(config) && config.playwright && smokeEnabled(config)`. Extend the gate so the file is also written when `config.visual_fidelity` is set (with playwright off / smoke off), since chrome-only is a valid configuration. The exact predicate:
 
 ```ts
-const wantsMcp = (playwrightEnabled(config) && smokeEnabled(config)) || Boolean(config.visual_fidelity);
+const wantsMcp =
+  (playwrightEnabled(config) && smokeEnabled(config)) || Boolean(config.visual_fidelity);
 if (wantsMcp) {
   await writeMcpFile(worktree, {
-    playwright: playwrightEnabled(config) && smokeEnabled(config)
-      ? { appUrl, resolverCwd: config.repo_path }
-      : undefined,
+    playwright:
+      playwrightEnabled(config) && smokeEnabled(config)
+        ? { appUrl, resolverCwd: config.repo_path }
+        : undefined,
     chrome: Boolean(config.visual_fidelity),
   });
 }
@@ -137,7 +140,7 @@ const SKILL_APPLICABILITY: ReadonlyArray<{
   applicable: (config: ProjectConfig) => boolean;
 }> = [
   { name: 'visual-fidelity-check', applicable: (config) => Boolean(config.visual_fidelity) },
-  { name: 'browsing',              applicable: (config) => Boolean(config.visual_fidelity) },
+  { name: 'browsing', applicable: (config) => Boolean(config.visual_fidelity) },
 ];
 ```
 
@@ -169,7 +172,7 @@ The current Step 5 is optional, screenshot-only, and effectively never fires. Re
 4. If it's a `<span>` standing in for an icon, finding, severity ≥ medium. Name the expected lucide glyph in the fix.
 5. If it's Unicode text, finding, severity ≥ medium. Name the expected lucide glyph in the fix.
 
-Step 5.4 is the *runtime* counterpart to Step 4's caller-side icon check. Step 4 catches the source pattern; Step 5.4 catches cases where the source looks right but the rendered DOM disagrees (className override, conditional rendering, prop forwarding bug).
+Step 5.4 is the _runtime_ counterpart to Step 4's caller-side icon check. Step 4 catches the source pattern; Step 5.4 catches cases where the source looks right but the rendered DOM disagrees (className override, conditional rendering, prop forwarding bug).
 
 **Step 5.5 — Screenshot capture.** `use_browser`'s auto-capture already saves a viewport PNG on every action. Cite the most recent capture path in the report. Cross-reference it with `<snapshotPath>/screens/<screen-node>.png` from the Figma snapshot. If 5.1–5.4 already surfaced findings, link the screenshot pair as supporting evidence rather than redundantly describing it in prose.
 
@@ -213,6 +216,7 @@ The wiring needs:
 4. **First snapshot run.** Execute `crew figma-snapshot` from a fresh worktree against the Crew Figma file to populate `.crew/figma-snapshot/`. Sanity-check that `index.json` lists the expected nodes and that the per-node JSON includes the `enrichment` field. The snapshot artifacts are gitignored — they regenerate on every `crew run` dispatch via the existing pre-dispatch step.
 
 This change is independent of B2.1–B2.4 (the agent-side work) and can ship in parallel. Dependency-wise:
+
 - Neither blocks the other.
 - B2.5 alone gives crew a working static gate (Steps 1–4 from B1 — already shipped).
 - B2.1–B2.4 alone gives any vis-fid-configured project access to live-DOM inspection.
@@ -245,15 +249,15 @@ The workflow.md file owns the detailed sub-steps; SKILL.md only carries the over
 - [ ] `.figma.tsx` Code Connect files exist for the Timeline-family components (Timeline, EventCard, FilterChips, LiveModeToggle, SearchBar) — each pointing at the canonical Figma node in the Crew file.
 - [ ] `ColumnHeaderRow` and `ProjectsTable` get `.figma.tsx` files if a Figma counterpart exists. If no counterpart, leave them as-is and note the absence in the PR description. `ErrorFallback` is acknowledged as a generic primitive with no Figma counterpart.
 - [ ] After the user pastes the TOML snippet into `~/.config/crew/projects/crew.toml`, `crew figma-snapshot` runs successfully from `/home/safturento/Repos/crew` and produces `.crew/figma-snapshot/index.json` plus per-node JSON with non-empty `enrichment` fields.
-- [ ] `crew run` on a small CREW-* test ticket against the wired-up crew project produces a dispatch where `visual-fidelity-check` fires, finds Code Connect mappings for the touched components, and reports findings (or no findings) based on the dispatched work.
+- [ ] `crew run` on a small CREW-\* test ticket against the wired-up crew project produces a dispatch where `visual-fidelity-check` fires, finds Code Connect mappings for the touched components, and reports findings (or no findings) based on the dispatched work.
 - [ ] Move this spec's followup entry (if filed in `docs/followups.md` during prior planning) to Resolved as part of the implementing PR for whichever ticket closes the spec.
 
 ## Verification — dogfooding against crew itself
 
 The implementation PRs verify against crew's own dashboard once B2.5 lands. Order matters:
 
-1. **B2.5 lands first (or independently)** — crew's `[visual_fidelity]` is wired, `.figma.tsx` files exist, snapshot generates. The static gate (Steps 1–4 from B1) runs against any CREW-* dispatch. This proves the wiring works in isolation, independent of chrome.
-2. **B2.1–B2.4 lands** — chrome MCP + browsing skill + Step 5 rewrite. Now a fresh CREW-* dispatch exercises the full Steps 1–5 pipeline.
+1. **B2.5 lands first (or independently)** — crew's `[visual_fidelity]` is wired, `.figma.tsx` files exist, snapshot generates. The static gate (Steps 1–4 from B1) runs against any CREW-\* dispatch. This proves the wiring works in isolation, independent of chrome.
+2. **B2.1–B2.4 lands** — chrome MCP + browsing skill + Step 5 rewrite. Now a fresh CREW-\* dispatch exercises the full Steps 1–5 pipeline.
 3. **Calibration: re-introduce a known regression** — in a throwaway worktree, set `intensity="muted"` on a dashboard `AgentRow` Badge (or equivalent CREW-135-style regression). Confirm Step 5.3 catches the color mismatch at runtime via computed-style read, even when Step 3's static check would not (e.g. when a `safelist` change in Tailwind config would have prevented purging but the actual CSS specificity wins differently). The fixture writes itself into `docs/superpowers/skill-fixtures/visual-fidelity-check/crew-self/runs/<date>.md` for the historical record.
 
 Cross-project verification against `Recipes-App` is also valuable but secondary. The principle is: crew dogfoods its own gate.
@@ -271,5 +275,5 @@ Linked with `Relates to` only — no `blocks` / `is blocked by`. Parallel-friend
 
 - **Auto-refresh of vendored `browsing` skill.** Today the implementer copies the latest skill content from their plugin cache during the ticket. A script (`npm run refresh-vendored-skills`) that copies from the user's installed cache would keep the vendored copy in sync without manual effort. Worth filing as a followup if drift becomes a recurring problem.
 - **Live-DOM inspection of E2E test artifacts.** Step 5.5 captures a viewport screenshot via `use_browser` auto-capture. A future enhancement: also reach into the `test-results/` directory after authored E2E runs and pull the screenshots from failed assertions for cross-reference. Not in scope here.
-- **Data-attribute conventions for selector reliability.** Step 5.3's CSS selectors will be fragile in projects that don't expose `data-component` / `data-variant` attributes on their components. Worth filing a project-level followup ("expose data-* attributes on Crew DS pill primitives for visual-fidelity selectors") if the implementing PR finds the selectors too brittle.
+- **Data-attribute conventions for selector reliability.** Step 5.3's CSS selectors will be fragile in projects that don't expose `data-component` / `data-variant` attributes on their components. Worth filing a project-level followup ("expose data-\* attributes on Crew DS pill primitives for visual-fidelity selectors") if the implementing PR finds the selectors too brittle.
 - **Cross-project visual-fidelity wiring for Recipes-App.** B2.5 covers crew. `Recipes-App` already has its own setup via prior work; a future audit could ensure both projects' configs are consistent (especially the `dashboardUrl` env-var interpolation convention).

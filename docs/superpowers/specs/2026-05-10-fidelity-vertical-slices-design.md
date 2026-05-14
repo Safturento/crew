@@ -14,7 +14,7 @@ The design system bootstrap Epic (CREW-120) closed with Phases 1-3 done modulo C
 
 1. **Color binding** — bind hardcoded fills in 11 frames to Crew DS semantic variables (~2,400 fill-bearing nodes; needs designer judgment per element)
 2. **Composite rebuild** — replace ad-hoc modals + detached primitive structures across 8 frames with real Crew DS component instances (blocked because Crew DS had zero composite components at CREW-126 time)
-3. **Manual rename** — Figma file from "Untitled" → "Crew Dashboard Screens" *(done 2026-05-10)*
+3. **Manual rename** — Figma file from "Untitled" → "Crew Dashboard Screens" _(done 2026-05-10)_
 
 Followup #2 is the largest, and it's effectively Phase 4 (build the Crew DS composites that didn't exist yet). Followup #1 is per-frame work that pairs naturally with #2. Followup #3 was a one-minute action.
 
@@ -42,24 +42,24 @@ Both tickets follow the same five-step bundle:
 
 ### CREW-119 — Agents list visual fidelity sweep to design hand-off v2
 
-| Aspect | Details |
-|---|---|
-| **Figma frame** | `Agents List (/)` (id `1:2` per CREW-126's frame inventory) |
-| **Code surface** | Dashboard's `AgentsList` route + `AgentRow`, `ProjectSection`, `StateBadge`, `TopNav`, `BrandMark` components |
-| **Crew DS composites built** | `TopNav`, `BrandMark`, `AgentRow`, `AgentsList`, `StateBadge`, `ProjectSection` |
-| **Notable refactors** | `AgentRow`'s inline `<button>` → `<Button variant="ghost" size="sm">`; `StateBadge` becomes a thin wrapper around the new state-color tokens (see next section) |
-| **First-time additions to Crew DS** | State-color semantic tokens (`state/running`, `state/error`, `state/waiting`, etc. — see Section "State colors") |
-| **Visual scope** | Per the original CREW-119 ticket: Agents list page matches the design hand-off v2 Agents List frame |
+| Aspect                              | Details                                                                                                                                                         |
+| ----------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Figma frame**                     | `Agents List (/)` (id `1:2` per CREW-126's frame inventory)                                                                                                     |
+| **Code surface**                    | Dashboard's `AgentsList` route + `AgentRow`, `ProjectSection`, `StateBadge`, `TopNav`, `BrandMark` components                                                   |
+| **Crew DS composites built**        | `TopNav`, `BrandMark`, `AgentRow`, `AgentsList`, `StateBadge`, `ProjectSection`                                                                                 |
+| **Notable refactors**               | `AgentRow`'s inline `<button>` → `<Button variant="ghost" size="sm">`; `StateBadge` becomes a thin wrapper around the new state-color tokens (see next section) |
+| **First-time additions to Crew DS** | State-color semantic tokens (`state/running`, `state/error`, `state/waiting`, etc. — see Section "State colors")                                                |
+| **Visual scope**                    | Per the original CREW-119 ticket: Agents list page matches the design hand-off v2 Agents List frame                                                             |
 
 ### CREW-117 — Agent drawer visual fidelity sweep
 
-| Aspect | Details |
-|---|---|
-| **Figma frames** | `Agents List (/) - Agent Drawer Open` + `Agent Page (/agent/XXX-123/full)` |
-| **Code surface** | Dashboard's `AgentBody`, `StateHistoryBar`, `TokenTable`, `ViewportFrame` components |
-| **Crew DS composites built** | `AgentBody`, `StateHistoryBar`, `TokenTable`, `ViewportFrame`, `StateBadge` (shared — only built if CREW-119 hasn't landed first) |
-| **Notable refactors** | Drawer Close icon-button → shadcn pattern if a clean shadcn `IconButton` exists; otherwise template inline. `TokenTable` row borders should bind to `border` semantic token. |
-| **Visual scope** | Per the original CREW-117 ticket: drawer composes `TokenTable` + `StateHistoryBar` + grouped Timeline matching the hand-off |
+| Aspect                       | Details                                                                                                                                                                      |
+| ---------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Figma frames**             | `Agents List (/) - Agent Drawer Open` + `Agent Page (/agent/XXX-123/full)`                                                                                                   |
+| **Code surface**             | Dashboard's `AgentBody`, `StateHistoryBar`, `TokenTable`, `ViewportFrame` components                                                                                         |
+| **Crew DS composites built** | `AgentBody`, `StateHistoryBar`, `TokenTable`, `ViewportFrame`, `StateBadge` (shared — only built if CREW-119 hasn't landed first)                                            |
+| **Notable refactors**        | Drawer Close icon-button → shadcn pattern if a clean shadcn `IconButton` exists; otherwise template inline. `TokenTable` row borders should bind to `border` semantic token. |
+| **Visual scope**             | Per the original CREW-117 ticket: drawer composes `TokenTable` + `StateHistoryBar` + grouped Timeline matching the hand-off                                                  |
 
 ### Component overlap + ordering
 

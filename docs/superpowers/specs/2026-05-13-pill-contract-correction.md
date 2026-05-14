@@ -16,7 +16,11 @@ The plan doc that drove both attempts (`docs/superpowers/plans/2026-05-12-ds-to-
 And the plan's example unit test for Badge uses `intensity="muted"` for an AgentRow-shaped instance:
 
 ```tsx
-render(<Badge color="waiting" intensity="muted" hasIcon>Waiting</Badge>);
+render(
+  <Badge color="waiting" intensity="muted" hasIcon>
+    Waiting
+  </Badge>,
+);
 ```
 
 Both attempts implemented the plan faithfully. The regressions are in the plan, not the implementation.
@@ -70,11 +74,11 @@ lib/pill-variants.ts ← Keep. `pillSurfaceClasses(color, intensity)` returns
 
 ```tsx
 type PillBaseProps = {
-  color?: PillColor;            // 8 values, default 'running'
-  intensity?: PillIntensity;    // 4 values, default 'mid'
-  icon?: React.ReactNode;       // leading slot only
-  shape: string;                // wrapper-supplied: height/radius/padding/font/size-tied classes
-  as?: 'button' | 'span';       // wrapper-supplied
+  color?: PillColor; // 8 values, default 'running'
+  intensity?: PillIntensity; // 4 values, default 'mid'
+  icon?: React.ReactNode; // leading slot only
+  shape: string; // wrapper-supplied: height/radius/padding/font/size-tied classes
+  as?: 'button' | 'span'; // wrapper-supplied
   className?: string;
   children?: React.ReactNode;
 } & React.HTMLAttributes<HTMLElement>;
@@ -88,9 +92,9 @@ PillBase renders:
   data-color={color}
   data-intensity={intensity}
   className={cn(
-    'inline-flex w-fit items-center whitespace-nowrap',  // shared layout
-    shape,                                                // wrapper-supplied
-    pillSurfaceClasses(color, intensity),                 // shared surface
+    'inline-flex w-fit items-center whitespace-nowrap', // shared layout
+    shape, // wrapper-supplied
+    pillSurfaceClasses(color, intensity), // shared surface
     className,
   )}
 >
@@ -103,13 +107,13 @@ Each wrapper supplies its own `shape` constant. Button's lives inside the file a
 
 ### Contract changes vs PR #188
 
-| PR #188 | Corrected |
-|---|---|
-| `Badge.hasIcon: boolean` → renders a CSS dot via `<span class="rounded-full bg-... h-1.5 w-1.5" />` | **Drop `hasIcon`.** Replace with `icon?: React.ReactNode`. No fallback dot. |
-| Button has no icon slot in its prop type | Add `icon?: React.ReactNode` (leading position). |
-| Tag has no icon slot | Add `icon?: React.ReactNode` (leading position). |
-| Button sizes: `xs \| sm \| default \| lg \| icon-xs \| icon-sm \| icon-default \| icon-lg` (8 sizes) | Button sizes: `xs \| sm \| md \| lg` (4 sizes). `default` → renamed `md`. All `icon-*` square variants removed. |
-| Button/Badge/Tag each have their own base class string | All three wrap `PillBase`. Base layout classes live in PillBase; only the shape (height/radius/padding/font) lives in each wrapper. |
+| PR #188                                                                                              | Corrected                                                                                                                           |
+| ---------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| `Badge.hasIcon: boolean` → renders a CSS dot via `<span class="rounded-full bg-... h-1.5 w-1.5" />`  | **Drop `hasIcon`.** Replace with `icon?: React.ReactNode`. No fallback dot.                                                         |
+| Button has no icon slot in its prop type                                                             | Add `icon?: React.ReactNode` (leading position).                                                                                    |
+| Tag has no icon slot                                                                                 | Add `icon?: React.ReactNode` (leading position).                                                                                    |
+| Button sizes: `xs \| sm \| default \| lg \| icon-xs \| icon-sm \| icon-default \| icon-lg` (8 sizes) | Button sizes: `xs \| sm \| md \| lg` (4 sizes). `default` → renamed `md`. All `icon-*` square variants removed.                     |
+| Button/Badge/Tag each have their own base class string                                               | All three wrap `PillBase`. Base layout classes live in PillBase; only the shape (height/radius/padding/font) lives in each wrapper. |
 
 ### Code Connect updates
 
@@ -173,6 +177,7 @@ The CREW-135 ticket description in Jira is updated to point at the new plan inst
 End-to-end verification is the re-dispatch itself: `crew run CREW-135` after B1 has shipped, with a fresh `~/Repos/crew-CREW-135` worktree and the closed PR #188 superseded.
 
 Confirmation signals on the resulting PR:
+
 - The dispatched agent invoked `visual-fidelity-check` (session transcript shows the `Skill` tool_use).
 - AgentRow state badge renders with `intensity="mid"` and a real lucide icon.
 - "View PR" buttons show a leading lucide icon, no `↗`.

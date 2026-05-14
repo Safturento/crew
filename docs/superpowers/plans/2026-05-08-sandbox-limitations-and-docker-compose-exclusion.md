@@ -16,14 +16,14 @@
 
 **File changes summary:**
 
-| File | Change |
-| --- | --- |
-| `<repo>/.claude/settings.json` | Add `"docker compose"` to `sandbox.excludedCommands`. |
-| `docs/plans/sandbox-limitations.md` | New: structured reference doc (workaround-able table + hard limits list + design-time workflow). |
-| `docs/plans/architecture.md` | One-line cross-link near the existing "Sandbox config drift" bullet. |
-| `packages/cli/src/lib/preflight/verify-excluded-commands.ts` | Add `config.docker`-gated clause to `requiredEntries`; JSDoc cross-link to the doc. |
-| `packages/cli/src/lib/preflight/verify-excluded-commands.test.ts` | New test cases for the docker clause. |
-| `packages/cli/src/lib/prompts/templates/rebase-preamble.md` | (Optional) one-line cross-link below Step 0.5 to the limitations doc. |
+| File                                                              | Change                                                                                           |
+| ----------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| `<repo>/.claude/settings.json`                                    | Add `"docker compose"` to `sandbox.excludedCommands`.                                            |
+| `docs/plans/sandbox-limitations.md`                               | New: structured reference doc (workaround-able table + hard limits list + design-time workflow). |
+| `docs/plans/architecture.md`                                      | One-line cross-link near the existing "Sandbox config drift" bullet.                             |
+| `packages/cli/src/lib/preflight/verify-excluded-commands.ts`      | Add `config.docker`-gated clause to `requiredEntries`; JSDoc cross-link to the doc.              |
+| `packages/cli/src/lib/preflight/verify-excluded-commands.test.ts` | New test cases for the docker clause.                                                            |
+| `packages/cli/src/lib/prompts/templates/rebase-preamble.md`       | (Optional) one-line cross-link below Step 0.5 to the limitations doc.                            |
 
 ---
 
@@ -95,22 +95,22 @@ The wrapper itself runs un-sandboxed. Anything the wrapper does — port allocat
 
 These can be loosened per-project via entries in `<repo>/.claude/settings.json`. Each row names the operation that fails sandboxed, the setting that loosens it, and the entry shape.
 
-| Operation | Setting | Entry | Why required |
-| --- | --- | --- | --- |
-| Host loopback HTTP from `npm run bruno:smoke` | `sandbox.excludedCommands` | `"npm run bruno:smoke"` | Bruno hits the worktree app port; sandboxed `bwrap --unshare-net` isolates loopback. |
-| Host loopback HTTP from `npm run test:e2e` | `sandbox.excludedCommands` | `"npm run test:e2e"` | Playwright e2e hits the worktree app port; same isolation issue. |
-| Docker socket (`/var/run/docker.sock`) | `sandbox.excludedCommands` | `"docker compose"` (prefix) | Agent's Step 0.5 (CREW-113) brings up the stack; sandbox blocks the socket. Prefix entry covers `up`, `down`, `logs`, `ps`, etc. |
-| Anthropic / GitHub / Atlassian / npm registry HTTPS | `sandbox.network.allowedDomains` | hostname per call site | Sandboxed agents need these for their own tooling (Claude API, MCP servers, gh CLI, npm install). |
-| Writes under `~/.npm`, `~/.cache/node`, `~/.cache/claude*`, `/tmp` | `sandbox.filesystem.allowWrite` | path | npm install + Claude Code internals write here. |
+| Operation                                                          | Setting                          | Entry                       | Why required                                                                                                                     |
+| ------------------------------------------------------------------ | -------------------------------- | --------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| Host loopback HTTP from `npm run bruno:smoke`                      | `sandbox.excludedCommands`       | `"npm run bruno:smoke"`     | Bruno hits the worktree app port; sandboxed `bwrap --unshare-net` isolates loopback.                                             |
+| Host loopback HTTP from `npm run test:e2e`                         | `sandbox.excludedCommands`       | `"npm run test:e2e"`        | Playwright e2e hits the worktree app port; same isolation issue.                                                                 |
+| Docker socket (`/var/run/docker.sock`)                             | `sandbox.excludedCommands`       | `"docker compose"` (prefix) | Agent's Step 0.5 (CREW-113) brings up the stack; sandbox blocks the socket. Prefix entry covers `up`, `down`, `logs`, `ps`, etc. |
+| Anthropic / GitHub / Atlassian / npm registry HTTPS                | `sandbox.network.allowedDomains` | hostname per call site      | Sandboxed agents need these for their own tooling (Claude API, MCP servers, gh CLI, npm install).                                |
+| Writes under `~/.npm`, `~/.cache/node`, `~/.cache/claude*`, `/tmp` | `sandbox.filesystem.allowWrite`  | path                        | npm install + Claude Code internals write here.                                                                                  |
 
-`excludedCommands` accepts prefix-style entries at runtime — a list entry of `"docker compose"` matches `docker compose up --build --wait`, `docker compose down`, etc. The wrapper-side `verify-excluded-commands` check in `packages/cli/src/lib/preflight/verify-excluded-commands.ts` enforces an *exact-string* match against the canonical entries it requires; if a project commits a stricter (longer) entry, the runtime works but the preflight check fails until the canonical entry is used.
+`excludedCommands` accepts prefix-style entries at runtime — a list entry of `"docker compose"` matches `docker compose up --build --wait`, `docker compose down`, etc. The wrapper-side `verify-excluded-commands` check in `packages/cli/src/lib/preflight/verify-excluded-commands.ts` enforces an _exact-string_ match against the canonical entries it requires; if a project commits a stricter (longer) entry, the runtime works but the preflight check fails until the canonical entry is used.
 
 ## Hard limits
 
 These are enforced by Claude Code's hardcoded checks regardless of `settings.json`. They cannot be loosened per-project; if the agent needs the operation, the design has to route around it (typically by having the un-sandboxed wrapper do the work and pass the result through, or by skipping the operation entirely and surfacing the gap to the user).
 
 - **Writes to `~/.claude/**`.** Blocked even with `--dangerously-skip-permissions`. User-level skill / global CLAUDE.md edits / global settings.json tweaks must be authored manually, not via `crew run`. Source: user-level `CLAUDE.md` "Don't ticket — handle manually" section.
-- **Writes to in-worktree `.claude/settings.json`.** Same protection extends to repo-level `.claude/`. The agent likely cannot fix a missing `excludedCommands` entry from inside its own session — that's why `verify-excluded-commands` lives wrapper-side and runs *before* spawn (in `runResumePreflight` for fix-pr and `runPreflight` for crew run).
+- **Writes to in-worktree `.claude/settings.json`.** Same protection extends to repo-level `.claude/`. The agent likely cannot fix a missing `excludedCommands` entry from inside its own session — that's why `verify-excluded-commands` lives wrapper-side and runs _before_ spawn (in `runResumePreflight` for fix-pr and `runPreflight` for crew run).
 
 ## When you're designing a new agent prompt
 
@@ -119,7 +119,7 @@ If the prompt asks the agent to run a host-level operation (anything that touche
 1. Check the workaround-able table — is there already an entry for this class of operation? If yes, ensure the project has it (the `verify-excluded-commands` preflight should require it).
 2. If no entry exists, add one to the table. Then add the corresponding clause to `requiredEntries(config)` in `packages/cli/src/lib/preflight/verify-excluded-commands.ts` so the preflight enforces it.
 3. If the operation is in the hard-limits list, the agent **cannot** do it. Route the operation through the wrapper instead, or design the prompt to abort + document.
-4. If the operation is none of the above and the agent is hitting permission errors at runtime — that's the signal to first document the new restriction here, *then* design the fix.
+4. If the operation is none of the above and the agent is hitting permission errors at runtime — that's the signal to first document the new restriction here, _then_ design the fix.
 
 ## When you discover a new restriction
 
@@ -196,7 +196,47 @@ git commit -m "docs(architecture): cross-link to sandbox-limitations.md from the
 Append to `packages/cli/src/lib/preflight/verify-excluded-commands.test.ts`, after the existing `it('skips when neither block is enabled', ...)` (around line 149, inside the `describe('verifyExcludedCommandsCheck', ...)` block — keep its trailing `})`):
 
 ```ts
-  const cfgWithDocker = {
+const cfgWithDocker = {
+  canonical_worktree: 'main',
+  db_clone: {
+    postgres_service: 'postgres',
+    postgres_user: 'postgres',
+    postgres_database: 'postgres',
+    required_tables: [],
+    exclude_tables: [],
+  },
+  docker: {
+    canonical_worktree: 'main',
+  },
+} as unknown as ProjectConfig;
+
+it('throws when [docker] is present but "docker compose" is missing', async () => {
+  await writeSettings({
+    sandbox: { excludedCommands: ['npm run bruno:smoke', 'npm run test:e2e'] },
+  });
+  const check = verifyExcludedCommandsCheck();
+  try {
+    await check.run({ config: cfgWithDocker, worktree });
+    expect.fail('expected throw');
+  } catch (err) {
+    expect(err).toBeInstanceOf(PreflightError);
+    const pe = err as PreflightError;
+    expect(pe.details.missing).toBe('"docker compose"');
+    expect(String(pe.details.reason)).toContain('[docker] block present');
+  }
+});
+
+it('passes when [docker] is present and "docker compose" is in excludedCommands', async () => {
+  await writeSettings({
+    sandbox: { excludedCommands: ['docker compose'] },
+  });
+  const check = verifyExcludedCommandsCheck();
+  await expect(check.run({ config: cfgWithDocker, worktree })).resolves.toBeUndefined();
+});
+
+it('does not require "docker compose" when no [docker] block is present', async () => {
+  await writeSettings({ sandbox: { excludedCommands: [] } });
+  const cfgNoDocker = {
     canonical_worktree: 'main',
     db_clone: {
       postgres_service: 'postgres',
@@ -205,50 +245,10 @@ Append to `packages/cli/src/lib/preflight/verify-excluded-commands.test.ts`, aft
       required_tables: [],
       exclude_tables: [],
     },
-    docker: {
-      canonical_worktree: 'main',
-    },
   } as unknown as ProjectConfig;
-
-  it('throws when [docker] is present but "docker compose" is missing', async () => {
-    await writeSettings({
-      sandbox: { excludedCommands: ['npm run bruno:smoke', 'npm run test:e2e'] },
-    });
-    const check = verifyExcludedCommandsCheck();
-    try {
-      await check.run({ config: cfgWithDocker, worktree });
-      expect.fail('expected throw');
-    } catch (err) {
-      expect(err).toBeInstanceOf(PreflightError);
-      const pe = err as PreflightError;
-      expect(pe.details.missing).toBe('"docker compose"');
-      expect(String(pe.details.reason)).toContain('[docker] block present');
-    }
-  });
-
-  it('passes when [docker] is present and "docker compose" is in excludedCommands', async () => {
-    await writeSettings({
-      sandbox: { excludedCommands: ['docker compose'] },
-    });
-    const check = verifyExcludedCommandsCheck();
-    await expect(check.run({ config: cfgWithDocker, worktree })).resolves.toBeUndefined();
-  });
-
-  it('does not require "docker compose" when no [docker] block is present', async () => {
-    await writeSettings({ sandbox: { excludedCommands: [] } });
-    const cfgNoDocker = {
-      canonical_worktree: 'main',
-      db_clone: {
-        postgres_service: 'postgres',
-        postgres_user: 'postgres',
-        postgres_database: 'postgres',
-        required_tables: [],
-        exclude_tables: [],
-      },
-    } as unknown as ProjectConfig;
-    const check = verifyExcludedCommandsCheck();
-    await expect(check.run({ config: cfgNoDocker, worktree })).resolves.toBeUndefined();
-  });
+  const check = verifyExcludedCommandsCheck();
+  await expect(check.run({ config: cfgNoDocker, worktree })).resolves.toBeUndefined();
+});
 ```
 
 - [ ] **Step 4.2: Run tests; expect three failures**

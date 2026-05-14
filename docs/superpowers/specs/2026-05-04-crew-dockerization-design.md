@@ -212,25 +212,25 @@ allowed_domains = [
   "sandbox": {
     "enabled": true,
     "allowUnsandboxedCommands": false,
-    "excludedCommands": [
-      "npm run bruno:smoke",
-      "npm run test:e2e"
-    ],
+    "excludedCommands": ["npm run bruno:smoke", "npm run test:e2e"],
     "filesystem": {
-      "allowWrite": [
-        "~/.npm",
-        "~/.cache/node",
-        "~/.cache/claude-cli",
-        "~/.cache/claude",
-        "/tmp"
-      ]
+      "allowWrite": ["~/.npm", "~/.cache/node", "~/.cache/claude-cli", "~/.cache/claude", "/tmp"]
     },
     "network": {
       "allowedDomains": [
-        "github.com", "api.github.com", "objects.githubusercontent.com", "codeload.github.com",
-        "registry.npmjs.org", "registry.yarnpkg.com",
-        "safturento.atlassian.net", "api.atlassian.com", "mcp.atlassian.com", "auth.atlassian.com",
-        "api.anthropic.com", "statsig.anthropic.com", "claude.ai"
+        "github.com",
+        "api.github.com",
+        "objects.githubusercontent.com",
+        "codeload.github.com",
+        "registry.npmjs.org",
+        "registry.yarnpkg.com",
+        "safturento.atlassian.net",
+        "api.atlassian.com",
+        "mcp.atlassian.com",
+        "auth.atlassian.com",
+        "api.anthropic.com",
+        "statsig.anthropic.com",
+        "claude.ai"
       ]
     }
   }
@@ -245,7 +245,7 @@ services:
     build:
       context: .
       dockerfile: packages/daemon/Dockerfile
-    command: ["npm", "run", "dev", "--workspace=crew-daemon"]
+    command: ['npm', 'run', 'dev', '--workspace=crew-daemon']
     volumes:
       - ./packages/daemon/src:/app/packages/daemon/src
       - ./packages/shared/src:/app/packages/shared/src
@@ -257,21 +257,21 @@ services:
       - CREW_PORT=7773
       - CREW_SEED_FIXTURES=${CREW_SEED_FIXTURES:-0}
     ports:
-      - "${CREW_PORT:-7773}:7773"
+      - '${CREW_PORT:-7773}:7773'
 
   dashboard:
     profiles: [dev]
     build:
       context: .
       dockerfile: packages/dashboard/Dockerfile
-    command: ["npm", "run", "dev", "--workspace=crew-dashboard"]
+    command: ['npm', 'run', 'dev', '--workspace=crew-dashboard']
     volumes:
       - ./packages/dashboard/src:/app/packages/dashboard/src
       - /app/node_modules
     environment:
       - CREW_DAEMON_URL=http://daemon:7773
     ports:
-      - "${CREW_VITE_PORT:-5173}:5173"
+      - '${CREW_VITE_PORT:-5173}:5173'
 
 volumes:
   crew-state:
@@ -308,9 +308,7 @@ The existing `packages/dashboard/tests/e2e/dashboard.spec.ts` (3 tests) asserts 
 
 ```ts
 const baseURL =
-  process.env.PLAYWRIGHT_BASE_URL ??
-  process.env.CREW_APP_URL ??
-  'http://localhost:5173';
+  process.env.PLAYWRIGHT_BASE_URL ?? process.env.CREW_APP_URL ?? 'http://localhost:5173';
 ```
 
 (Drops the `PORT = 5173` constant.) The `webServer` block stays with `reuseExistingServer: true` — playwright happily reuses an externally-running vite, whether that's canonical-`--profile dev` at `:5173` or a worktree's hashed port. Falls back to spawning vite itself only when nothing's running (e.g., `npm run test:e2e` from a fresh checkout outside any docker context).
@@ -342,7 +340,7 @@ Worktree compose env sets the var; canonical compose doesn't.
 
 `<repo>/.claude/settings.json` and the `~/.config/crew/projects/crew.toml` updates together resolve the dashboard memory's "first dashboard plan that adds e2e coverage MUST include the preflight self-opt-in as its first ticket" gating slot. They land **early in this Epic's ticket order**, after the docker compose foundation but before the playwright harness migration. That way:
 
-- Once foundation merges + opt-in lands, every subsequent CREW-* dispatch on this Epic gets the new preflight checks (Check 2 verifies `excludedCommands`, Check 3 renders the sandbox-network-note prompt section).
+- Once foundation merges + opt-in lands, every subsequent CREW-\* dispatch on this Epic gets the new preflight checks (Check 2 verifies `excludedCommands`, Check 3 renders the sandbox-network-note prompt section).
 - The harness migration ticket and any future test-growth ticket are exercised by the preflight from the moment they're worked on.
 
 ### 5.5 Memory cleanup at Epic close

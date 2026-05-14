@@ -37,7 +37,7 @@ tasks 13–16.
   smoke + authored when both are configured, smoke alone when only
   `visual_testing` is set, and empty when `visual_testing` is unset. The
   ordering assertion (`indexOf('Visual smoke') < indexOf('Authored
-  Playwright')`) — deferred at first PR open — is now in place per plan
+Playwright')`) — deferred at first PR open — is now in place per plan
   task 14 step 1.
 - **Schema is already strict.** Both `tests_dir` and `test_command` are
   declared `z.string().min(1)` (no `.optional()`), so Zod rejects partials

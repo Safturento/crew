@@ -17,6 +17,7 @@
 ### Task 1.1: Author `resolveChromeMcpPath` with TDD
 
 **Files:**
+
 - Create: `packages/cli/src/lib/playwright/resolve-chrome-mcp-path.ts`
 - Create: `packages/cli/src/lib/playwright/resolve-chrome-mcp-path.test.ts`
 
@@ -176,6 +177,7 @@ git commit -m "feat(cli): resolveChromeMcpPath helper for chrome MCP server path
 ### Task 2.1: Extend `buildMcpConfig` to optionally emit a `chrome` server
 
 **Files:**
+
 - Modify: `packages/cli/src/lib/playwright/build-mcp-config.ts`
 - Modify: `packages/cli/src/lib/playwright/build-mcp-config.test.ts`
 
@@ -320,6 +322,7 @@ git commit -m "feat(cli): buildMcpConfig accepts optional playwright and chrome 
 ### Task 2.2: Extend `writeMcpFile` to accept chrome wiring and emit the warning when chrome can't be resolved
 
 **Files:**
+
 - Modify: `packages/cli/src/lib/playwright/write-mcp-file.ts`
 - Modify: `packages/cli/src/lib/playwright/write-mcp-file.test.ts`
 
@@ -366,7 +369,10 @@ describe('writeMcpFile', () => {
   });
 
   it('writes a both-servers config when chrome resolves successfully', async () => {
-    const root = join(home, '.claude/plugins/cache/superpowers-marketplace/superpowers-chrome/2.0.0/mcp/dist');
+    const root = join(
+      home,
+      '.claude/plugins/cache/superpowers-marketplace/superpowers-chrome/2.0.0/mcp/dist',
+    );
     mkdirSync(root, { recursive: true });
     writeFileSync(join(root, 'index.js'), '// stub');
     const result = await writeMcpFile(repo, {
@@ -397,7 +403,10 @@ describe('writeMcpFile', () => {
   });
 
   it('writes a chrome-only config when only chrome is requested and resolves', async () => {
-    const root = join(home, '.claude/plugins/cache/superpowers-marketplace/superpowers-chrome/2.0.0/mcp/dist');
+    const root = join(
+      home,
+      '.claude/plugins/cache/superpowers-marketplace/superpowers-chrome/2.0.0/mcp/dist',
+    );
     mkdirSync(root, { recursive: true });
     writeFileSync(join(root, 'index.js'), '// stub');
     await writeMcpFile(repo, { chrome: true, home });
@@ -406,9 +415,7 @@ describe('writeMcpFile', () => {
   });
 
   it('throws when neither playwright nor chrome is requested', async () => {
-    await expect(writeMcpFile(repo, {})).rejects.toThrow(
-      /at least one of playwright or chrome/,
-    );
+    await expect(writeMcpFile(repo, {})).rejects.toThrow(/at least one of playwright or chrome/);
   });
 });
 ```
@@ -585,6 +592,7 @@ git commit -m "feat(cli): writeMcpFile emits chrome alongside playwright and war
 ### Task 3.1: Update `run.ts` to call writeMcpFile with chrome opts and extend the gate
 
 **Files:**
+
 - Modify: `packages/cli/src/commands/run.ts` (lines ~320–342)
 
 The current call site is:
@@ -607,45 +615,43 @@ After: call `writeMcpFile` when EITHER playwright is enabled OR `config.visual_f
 Replace lines ~320–342 with:
 
 ```typescript
-  // .mcp.json is written AFTER prepareAgentEnvironment so the chromium binary
-  // exists on disk when writeMcpFile resolves --executable-path. Resolving
-  // before install would emit a stale path that points at a not-yet-extracted
-  // binary, and the existsSync guard would fall back to MCP's system-chrome
-  // default (the bug CREW-70 fixed).
-  const wantsPlaywright = playwrightEnabled(config) && config.playwright && smokeEnabled(config);
-  const wantsChrome = Boolean(config.visual_fidelity);
-  if (wantsPlaywright || wantsChrome) {
-    let playwrightOpts: { appUrl: string; resolverCwd: string } | undefined;
-    let resolvedRaw: string | undefined;
-    if (wantsPlaywright && config.playwright) {
-      const resolved = resolveAppUrl(config.playwright.app_url, dockerPorts, envVars);
-      resolvedRaw = resolved.raw;
-      playwrightOpts = { appUrl: resolved.raw, resolverCwd: config.repo_path };
-    }
-    const writeResult = await writeMcpFile(worktree, {
-      playwright: playwrightOpts,
-      chrome: wantsChrome,
-      warn: (msg) => console.warn(pc.yellow(`  ! ${msg}`)),
-    });
-    const summary: string[] = [];
-    if (playwrightOpts) summary.push(`CREW_APP_URL=${resolvedRaw}`);
-    if (writeResult.chromeMcpPath) summary.push(`chrome MCP=${writeResult.chromeMcpPath}`);
-    if (summary.length > 0) {
-      console.log(pc.dim(`→ wrote ${join(worktree, '.mcp.json')} (${summary.join(', ')})`));
-    } else {
-      console.log(pc.dim(`→ skipped ${join(worktree, '.mcp.json')} (no servers resolved)`));
-    }
-    if (writeResult.chromiumPath) {
-      console.log(pc.dim(`    chromium: ${writeResult.chromiumPath}`));
-    } else if (playwrightOpts) {
-      console.log(
-        pc.dim(`    chromium: <unresolved> — MCP will fall back to system chrome channel`),
-      );
-    }
-    if (writeResult.existed) {
-      console.warn(pc.yellow('  ! .mcp.json already existed in worktree — overwritten'));
-    }
+// .mcp.json is written AFTER prepareAgentEnvironment so the chromium binary
+// exists on disk when writeMcpFile resolves --executable-path. Resolving
+// before install would emit a stale path that points at a not-yet-extracted
+// binary, and the existsSync guard would fall back to MCP's system-chrome
+// default (the bug CREW-70 fixed).
+const wantsPlaywright = playwrightEnabled(config) && config.playwright && smokeEnabled(config);
+const wantsChrome = Boolean(config.visual_fidelity);
+if (wantsPlaywright || wantsChrome) {
+  let playwrightOpts: { appUrl: string; resolverCwd: string } | undefined;
+  let resolvedRaw: string | undefined;
+  if (wantsPlaywright && config.playwright) {
+    const resolved = resolveAppUrl(config.playwright.app_url, dockerPorts, envVars);
+    resolvedRaw = resolved.raw;
+    playwrightOpts = { appUrl: resolved.raw, resolverCwd: config.repo_path };
   }
+  const writeResult = await writeMcpFile(worktree, {
+    playwright: playwrightOpts,
+    chrome: wantsChrome,
+    warn: (msg) => console.warn(pc.yellow(`  ! ${msg}`)),
+  });
+  const summary: string[] = [];
+  if (playwrightOpts) summary.push(`CREW_APP_URL=${resolvedRaw}`);
+  if (writeResult.chromeMcpPath) summary.push(`chrome MCP=${writeResult.chromeMcpPath}`);
+  if (summary.length > 0) {
+    console.log(pc.dim(`→ wrote ${join(worktree, '.mcp.json')} (${summary.join(', ')})`));
+  } else {
+    console.log(pc.dim(`→ skipped ${join(worktree, '.mcp.json')} (no servers resolved)`));
+  }
+  if (writeResult.chromiumPath) {
+    console.log(pc.dim(`    chromium: ${writeResult.chromiumPath}`));
+  } else if (playwrightOpts) {
+    console.log(pc.dim(`    chromium: <unresolved> — MCP will fall back to system chrome channel`));
+  }
+  if (writeResult.existed) {
+    console.warn(pc.yellow('  ! .mcp.json already existed in worktree — overwritten'));
+  }
+}
 ```
 
 - [ ] **Step 2: Verify the typecheck passes**
@@ -672,6 +678,7 @@ git commit -m "feat(cli): run.ts wires chrome MCP when [visual_fidelity] is set"
 ### Task 4.1: Vendor the `browsing` skill source into the crew repo
 
 **Files:**
+
 - Create (vendored copies): `packages/cli/src/lib/skills/browsing/{SKILL.md,COMMANDLINE-USAGE.md,EXAMPLES.md,README.md,lib/*}`
 
 Source is `~/.claude/plugins/cache/superpowers-marketplace/superpowers-chrome/2.0.0/skills/browsing/`. Copy only the files needed for an agent reading the skill — exclude test files, node_modules, package.json, the chrome-ws binary itself, and host-override scripts (those are MCP-server-side, not skill-side).
@@ -711,6 +718,7 @@ git commit -m "feat(cli): vendor superpowers-chrome browsing skill (v2.0.0)"
 ### Task 4.2: Extend `SKILL_APPLICABILITY` to include `browsing`
 
 **Files:**
+
 - Modify: `packages/cli/src/lib/run/skill-injection.ts`
 - Modify: `packages/cli/src/lib/run/skill-injection.test.ts`
 
@@ -719,25 +727,25 @@ git commit -m "feat(cli): vendor superpowers-chrome browsing skill (v2.0.0)"
 In `packages/cli/src/lib/run/skill-injection.test.ts`, add:
 
 ```typescript
-  it('includes both visual-fidelity-check and browsing when visual_fidelity is configured', () => {
-    const config = makeConfig({
-      visual_fidelity: {
-        figma_file_key: 'key',
-        figma_pages: ['Composites'],
-        component_dir: 'src/components',
-        dashboard_url: 'http://localhost:5173',
-        snapshot_path: '.crew/figma-snapshot',
-        code_connect_glob: '**/*.figma.tsx',
-        skip_snapshot: false,
-      },
-    });
-    expect(skillsApplicableTo(config).sort()).toEqual(['browsing', 'visual-fidelity-check']);
+it('includes both visual-fidelity-check and browsing when visual_fidelity is configured', () => {
+  const config = makeConfig({
+    visual_fidelity: {
+      figma_file_key: 'key',
+      figma_pages: ['Composites'],
+      component_dir: 'src/components',
+      dashboard_url: 'http://localhost:5173',
+      snapshot_path: '.crew/figma-snapshot',
+      code_connect_glob: '**/*.figma.tsx',
+      skip_snapshot: false,
+    },
   });
+  expect(skillsApplicableTo(config).sort()).toEqual(['browsing', 'visual-fidelity-check']);
+});
 
-  it('returns an empty list when visual_fidelity is not configured', () => {
-    const config = makeConfig({});
-    expect(skillsApplicableTo(config)).toEqual([]);
-  });
+it('returns an empty list when visual_fidelity is not configured', () => {
+  const config = makeConfig({});
+  expect(skillsApplicableTo(config)).toEqual([]);
+});
 ```
 
 (Reuse `makeConfig` helper or import it from the existing test setup.)
@@ -786,6 +794,7 @@ git commit -m "feat(cli): inject browsing skill alongside visual-fidelity-check"
 ### Task 5.1: Rename the directory and update all imports
 
 **Files:**
+
 - Move: `packages/cli/src/lib/playwright/` → `packages/cli/src/lib/mcp-config/`
 - Modify: every import that references `lib/playwright/`
 
@@ -831,6 +840,7 @@ git commit -m "refactor(cli): rename lib/playwright/ to lib/mcp-config/ now that
 ### Task 6.1: Rewrite `workflow.md` Step 5
 
 **Files:**
+
 - Modify: `packages/cli/src/lib/skills/visual-fidelity-check/workflow.md`
 
 Locate the current `## Step 5: Visual check (optional, requires dashboardUrl)` section. Replace it with the five sub-steps below.
@@ -860,7 +870,7 @@ If the dashboard is unreachable: skip step 5, note the gap in the report, procee
 
 Replace it with:
 
-```markdown
+````markdown
 ## Step 5: Live DOM check (required when `dashboardUrl` is set and chrome MCP is wired)
 
 This step uses the `browsing` skill's `mcp__chrome__use_browser` tool to inspect the rendered DOM directly — reading computed CSS, the rendered `<svg>` for icons, and a viewport screenshot via auto-capture. Step 5 catches drift the static Step 3 cannot (Tailwind purging, specificity wars, theme overrides, conditional rendering bugs).
@@ -894,6 +904,8 @@ For each touched (component, variant) instance:
    const cs = getComputedStyle(el);
    return { bg: cs.backgroundColor, border: cs.borderColor, color: cs.color };
    ```
+````
+
 3. CDP returns each value in `rgb(R, G, B)` or `rgba(R, G, B, A)` form. Convert to `#RRGGBB` (and note alpha separately if present).
 4. Look up the same paint role in the Figma snapshot's `enrichment.boundVariables` for this node. Compare `resolvedHex` to the computed value.
 5. On mismatch: finding. Severity follows the existing rules (large hex delta = high; near-identical = low). Cite the live element's selector, the computed CSS value, and the Figma `resolvedAlias` + `resolvedHex`.
@@ -911,7 +923,9 @@ For each touched component whose Figma reference has an `Icon` INSTANCE_SWAP pro
    return {
      hasSvg: !!svg,
      svgOuter: svg?.outerHTML?.slice(0, 500),
-     svgLucide: svg?.getAttribute('data-lucide') || [...(svg?.classList || [])].find(c => c.startsWith('lucide-')),
+     svgLucide:
+       svg?.getAttribute('data-lucide') ||
+       [...(svg?.classList || [])].find((c) => c.startsWith('lucide-')),
      spanText: span?.textContent,
      slotText: slot.textContent,
    };
@@ -922,7 +936,7 @@ For each touched component whose Figma reference has an `Icon` INSTANCE_SWAP pro
    - **`hasSvg` false, `spanText` is a Unicode glyph** (↗, ✓, ×, etc.) → finding, severity ≥ medium. Name the expected lucide glyph.
    - **`hasSvg` false, `slot` is a styled `<span>`** (CSS-only icon) → finding, severity ≥ medium. Name the expected lucide glyph and call out the CSS-only-approximation pattern.
 
-Step 5.4 is the *runtime* counterpart to Step 4's caller-side icon check. Step 4 catches the source pattern; Step 5.4 catches cases where the source looks right but the rendered DOM disagrees (className override, conditional rendering, prop-forwarding bug).
+Step 5.4 is the _runtime_ counterpart to Step 4's caller-side icon check. Step 4 catches the source pattern; Step 5.4 catches cases where the source looks right but the rendered DOM disagrees (className override, conditional rendering, prop-forwarding bug).
 
 ### Step 5.5 — Screenshot capture and cross-reference
 
@@ -931,18 +945,20 @@ Step 5.4 is the *runtime* counterpart to Step 4's caller-side icon check. Step 4
 If 5.1–5.4 already surfaced findings, link the screenshot pair as supporting evidence rather than redundantly describing the same diff in prose.
 
 **Failure mode (dashboard unreachable mid-run):** if Step 5.1 succeeded but a subsequent action fails because docker stopped / port mismatch / etc., fail closed — log "verification gap: dashboard became unreachable at <action>" and surface in the report. Do not treat as "Step 5 passed."
-```
+
+````
 
 - [ ] **Step 2: Commit**
 
 ```bash
 git add packages/cli/src/lib/skills/visual-fidelity-check/workflow.md
 git commit -m "feat(skill): rewrite visual-fidelity Step 5 as live-DOM inspection with chrome"
-```
+````
 
 ### Task 6.2: Update `SKILL.md` workflow overview and Related skills
 
 **Files:**
+
 - Modify: `packages/cli/src/lib/skills/visual-fidelity-check/SKILL.md`
 
 - [ ] **Step 1: Update the Workflow overview list**
@@ -991,11 +1007,12 @@ Phases 1–6 above belong to **Ticket 1: Wire chrome MCP + browsing skill + live
 ### Task 7.1: Author the contributor setup doc
 
 **Files:**
+
 - Create: `docs/visual-fidelity-setup.md`
 
 - [ ] **Step 1: Write the doc**
 
-```markdown
+````markdown
 # Visual fidelity setup (per-contributor)
 
 Crew uses the `visual-fidelity-check` skill in autonomous `crew run CREW-*` dispatches when the project's `[visual_fidelity]` block is configured. Because the project config lives at `~/.config/crew/projects/crew.toml` (user-local, machine-specific), each contributor wires this themselves.
@@ -1011,6 +1028,7 @@ figma_pages = ["Composites", "Dashboard Screens"]
 component_dir = "packages/dashboard/src/components"
 dashboard_url = "${APP_URL}"
 ```
+````
 
 (`snapshot_path` defaults to `.crew/figma-snapshot`; `code_connect_glob` defaults to `**/*.figma.tsx`. Override either if you need to.)
 
@@ -1027,7 +1045,8 @@ This populates `.crew/figma-snapshot/` (gitignored) with `index.json` and per-no
 ## Why this isn't in the repo
 
 The project config (`crew.toml`) lives in `~/.config/crew/projects/` rather than the repo because individual contributors may run with different setups (figma file forks, different snapshot paths, etc.). The `figma_file_key` above points at the canonical Crew design file and is safe to share, but the broader pattern is "config in `~/.config/crew/`, not in the repo".
-```
+
+````
 
 - [ ] **Step 2: Link from README.md**
 
@@ -1035,7 +1054,7 @@ Find the "Local development" section in `README.md`. Add a bullet:
 
 ```markdown
 - **Visual fidelity setup.** See [`docs/visual-fidelity-setup.md`](./docs/visual-fidelity-setup.md) for the `[visual_fidelity]` block to paste into your local `~/.config/crew/projects/crew.toml`.
-```
+````
 
 - [ ] **Step 3: Commit**
 
@@ -1047,6 +1066,7 @@ git commit -m "docs: visual-fidelity-setup contributor guide"
 ### Task 7.2: Author `.figma.tsx` for Timeline-family components
 
 **Files:**
+
 - Create: `packages/dashboard/src/components/Timeline/Timeline.figma.tsx`
 - Create: `packages/dashboard/src/components/Timeline/EventCard.figma.tsx`
 - Create: `packages/dashboard/src/components/Timeline/FilterChips.figma.tsx`
@@ -1068,12 +1088,16 @@ Pattern (use `AgentRow.figma.tsx` as a reference for shape and import style):
 import figma from '@figma/code-connect';
 import { Timeline } from './Timeline';
 
-figma.connect(Timeline, 'https://www.figma.com/design/9FeJPriqdsdA4n9R5Xsrr8/Crew?node-id=<node-id>', {
-  props: {
-    // map Figma component properties to React props
+figma.connect(
+  Timeline,
+  'https://www.figma.com/design/9FeJPriqdsdA4n9R5Xsrr8/Crew?node-id=<node-id>',
+  {
+    props: {
+      // map Figma component properties to React props
+    },
+    example: () => <Timeline />,
   },
-  example: () => <Timeline />,
-});
+);
 ```
 
 Repeat for `EventCard`, `FilterChips`, `LiveModeToggle`, `SearchBar`.
@@ -1089,6 +1113,7 @@ git commit -m "feat(dashboard): Code Connect mapping for Timeline"
 ### Task 7.3: Audit `ColumnHeaderRow` and `ProjectsTable`; author Code Connect if Figma counterpart exists
 
 **Files:**
+
 - Possibly create: `packages/dashboard/src/components/ColumnHeaderRow.figma.tsx`
 - Possibly create: `packages/dashboard/src/components/ProjectsTable.figma.tsx`
 
@@ -1116,6 +1141,7 @@ git commit -m "feat(dashboard): Code Connect mappings for ColumnHeaderRow + Proj
 ### Task 7.4: Run `crew figma-snapshot` and verify output
 
 **Files:**
+
 - Verify (no files modified): `.crew/figma-snapshot/index.json`, sample per-node JSON
 
 - [ ] **Step 1: Paste the TOML block into your local config**
@@ -1153,6 +1179,7 @@ Include the snapshot output line and a one-sentence summary of the spot-check ("
 ### Task 7.5: Move the followup entry (if any) to Resolved
 
 **Files:**
+
 - Modify: `docs/followups.md`
 
 If `docs/followups.md` has an entry filed for the visual-fidelity B2 / superpowers-chrome work during prior planning, move it from `## Active` to `## Resolved`, append `**Resolved 2026-05-13:** one-line summary.`, and update the `## Contents` ToC.

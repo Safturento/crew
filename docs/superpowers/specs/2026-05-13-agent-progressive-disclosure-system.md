@@ -75,17 +75,17 @@ crew/
 
 Nine `.agents/*.md` files, all flat at the root of `.agents/` to start. The meta-doc spells out when a topic graduates into a folder split.
 
-| File | Purpose | Consolidates from | `covers:` globs | Est. size |
-|------|---------|-------------------|-----------------|-----------|
-| `README.md` | Meta-doc | (new) | n/a (always relevant) | ~130 lines |
-| `architecture.md` | 4-package layering + dependency direction + tech-stack rationale (short form) | `docs/plans/architecture.md` (rules portions) | `packages/*/src/**/*.ts`, `package.json` | ~100 lines |
-| `local-dev.md` | Docker stack, hot-reload, `env.toml`, worktree port hashing, `CREW_SEED_FIXTURES` | Root CLAUDE.md local-dev + `docs/plans/project-resolution.md` | `docker-compose*.yml`, `env.toml`, `packages/daemon/seeds/**` | ~80 lines |
-| `testing.md` | Bruno collection rules, Playwright config, daemon fixtures, sandboxed vs un-sandboxed test runs | Root CLAUDE.md Bruno + bruno-collection-maintenance skill summary | `bruno/**`, `packages/*/src/**/*.test.ts`, `packages/dashboard/tests/**` | ~70 lines |
-| `dispatch.md` | How `crew run` works: worktree → env → docker → skills injection → prompt build → claude launch → transcript watch. Verification gates. | `packages/cli/src/lib/{run,prompts,skills,preflight,figma-snapshot}/` source of truth | `packages/cli/src/lib/{run,prompts,skills,preflight,figma-snapshot}/**` | ~120 lines |
-| `security.md` | Secrets handling, sandbox model + known limitations | `docs/plans/sandbox-limitations.md` + secrets refs (link, not duplicate) | `**/.env*`, `**/secrets/**`, `.claude/settings*.json` | ~60 lines |
-| `design-system.md` | Crew's Figma DS, Pill contract, Code Connect status, token system | `docs/plans/design-system.md` (rules portions) | `packages/dashboard/src/components/**`, `*.figma.tsx`, `packages/dashboard/components.json` | ~150 lines |
-| `workflow.md` | CREW-* tickets, `_template.md`, specs/plans naming, `docs/followups.md`, branching, mumen tier | Synthesis of user-level workflow rules + repo conventions | `docs/{tickets,superpowers,followups.md,mumen}/**` | ~80 lines |
-| `commands.md` | npm scripts cheatsheet (full cleanliness check, bruno smoke env vars, e2e workspace flag, docker stack) | `package.json` + scattered refs | `package.json`, `packages/*/package.json` | ~50 lines |
+| File               | Purpose                                                                                                                                 | Consolidates from                                                                     | `covers:` globs                                                                             | Est. size  |
+| ------------------ | --------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- | ---------- |
+| `README.md`        | Meta-doc                                                                                                                                | (new)                                                                                 | n/a (always relevant)                                                                       | ~130 lines |
+| `architecture.md`  | 4-package layering + dependency direction + tech-stack rationale (short form)                                                           | `docs/plans/architecture.md` (rules portions)                                         | `packages/*/src/**/*.ts`, `package.json`                                                    | ~100 lines |
+| `local-dev.md`     | Docker stack, hot-reload, `env.toml`, worktree port hashing, `CREW_SEED_FIXTURES`                                                       | Root CLAUDE.md local-dev + `docs/plans/project-resolution.md`                         | `docker-compose*.yml`, `env.toml`, `packages/daemon/seeds/**`                               | ~80 lines  |
+| `testing.md`       | Bruno collection rules, Playwright config, daemon fixtures, sandboxed vs un-sandboxed test runs                                         | Root CLAUDE.md Bruno + bruno-collection-maintenance skill summary                     | `bruno/**`, `packages/*/src/**/*.test.ts`, `packages/dashboard/tests/**`                    | ~70 lines  |
+| `dispatch.md`      | How `crew run` works: worktree → env → docker → skills injection → prompt build → claude launch → transcript watch. Verification gates. | `packages/cli/src/lib/{run,prompts,skills,preflight,figma-snapshot}/` source of truth | `packages/cli/src/lib/{run,prompts,skills,preflight,figma-snapshot}/**`                     | ~120 lines |
+| `security.md`      | Secrets handling, sandbox model + known limitations                                                                                     | `docs/plans/sandbox-limitations.md` + secrets refs (link, not duplicate)              | `**/.env*`, `**/secrets/**`, `.claude/settings*.json`                                       | ~60 lines  |
+| `design-system.md` | Crew's Figma DS, Pill contract, Code Connect status, token system                                                                       | `docs/plans/design-system.md` (rules portions)                                        | `packages/dashboard/src/components/**`, `*.figma.tsx`, `packages/dashboard/components.json` | ~150 lines |
+| `workflow.md`      | CREW-\* tickets, `_template.md`, specs/plans naming, `docs/followups.md`, branching, mumen tier                                         | Synthesis of user-level workflow rules + repo conventions                             | `docs/{tickets,superpowers,followups.md,mumen}/**`                                          | ~80 lines  |
+| `commands.md`      | npm scripts cheatsheet (full cleanliness check, bruno smoke env vars, e2e workspace flag, docker stack)                                 | `package.json` + scattered refs                                                       | `package.json`, `packages/*/package.json`                                                   | ~50 lines  |
 
 Total: ~840 lines distributed. Compared to ~990 lines of `docs/plans/*.md` alone (much historical narrative). Result is smaller and more current.
 
@@ -99,19 +99,19 @@ name: architecture
 description: 4-package layering rules + dependency direction
 last_updated: 2026-05-13
 covers:
-  - "packages/*/src/**/*.ts"
-  - "package.json"
+  - 'packages/*/src/**/*.ts'
+  - 'package.json'
 ---
 ```
 
-| Field | Required | Purpose |
-|-------|----------|---------|
-| `name` | yes | kebab-case slug; matches filename without `.md` |
-| `description` | yes | One-line summary; root `AGENTS.md` index cites this verbatim |
-| `last_updated` | yes | ISO date; bumped whenever the body materially changes |
-| `covers` | yes | Path globs the doc claims to govern; consumed by parity hook + future audits |
-| `globs` | reserved | AGENTS.md community trigger field; activates when hybrid trigger system lands |
-| `alwaysApply` | reserved | Same |
+| Field          | Required | Purpose                                                                       |
+| -------------- | -------- | ----------------------------------------------------------------------------- |
+| `name`         | yes      | kebab-case slug; matches filename without `.md`                               |
+| `description`  | yes      | One-line summary; root `AGENTS.md` index cites this verbatim                  |
+| `last_updated` | yes      | ISO date; bumped whenever the body materially changes                         |
+| `covers`       | yes      | Path globs the doc claims to govern; consumed by parity hook + future audits  |
+| `globs`        | reserved | AGENTS.md community trigger field; activates when hybrid trigger system lands |
+| `alwaysApply`  | reserved | Same                                                                          |
 
 Per-package `AGENTS.md` frontmatter is lighter (no `covers:` — path-scoped by location):
 
@@ -125,6 +125,7 @@ last_updated: 2026-05-13
 Root `AGENTS.md` has no frontmatter.
 
 A validator script (`scripts/validate-agents-frontmatter.ts`) wired into `npm run lint` asserts:
+
 - Every `.agents/*.md` has all required frontmatter fields
 - Every `covers:` glob is a valid micromatch pattern
 - Every `name:` matches its filename
@@ -149,8 +150,8 @@ last_updated: YYYY-MM-DD
 
 ## When you need it
 
-| Doing | Read |
-|-------|------|
+| Doing       | Read                 |
+| ----------- | -------------------- |
 | <task type> | `.agents/<topic>.md` |
 | <task type> | <skill or topic doc> |
 
@@ -172,7 +173,7 @@ The "When you need it" table is the **package-scoped index** into `.agents/`. Ro
 
 Self-describing. Sections in order:
 
-1. **What this is.** Two-tier progressive disclosure for agent context. AGENTS.md files auto-load; `.agents/<topic>.md` loads on demand. User-level skills (`~/.claude/skills/`) and conventions (`~/.claude/conventions/`) are orthogonal — they teach *how*; `.agents/` captures *what this repo is*.
+1. **What this is.** Two-tier progressive disclosure for agent context. AGENTS.md files auto-load; `.agents/<topic>.md` loads on demand. User-level skills (`~/.claude/skills/`) and conventions (`~/.claude/conventions/`) are orthogonal — they teach _how_; `.agents/` captures _what this repo is_.
 2. **Discovery model.** Today: indexed by AGENTS.md. Future: opt-in frontmatter triggers.
 3. **Frontmatter spec.** The field table from this spec, with reserved fields noted.
 4. **When to add a topic file.** Three criteria (all must be true):
@@ -184,26 +185,26 @@ Self-describing. Sections in order:
 7. **Staleness signals.** Freshness gauge thresholds:
    - <30 days → trust.
    - 30–90 days → trust but verify load-bearing claims if they affect your work.
-   - >90 days → don't trust without checking; bump the date in your PR if confirmed correct.
+   - > 90 days → don't trust without checking; bump the date in your PR if confirmed correct.
 8. **Trigger system (future).** Hybrid Option-3 deferred. When it lands, opted-in docs gain `globs:` + `alwaysApply:` frontmatter; the `crew run` prompt builder walks `.agents/` triggers and auto-injects matched docs.
 9. **Naming conventions.** kebab-case files, no dates in filenames, filename matches frontmatter `name`.
 10. **What does NOT belong in `.agents/`.** Explicit taxonomy with each kind of doc routed to its home:
 
-    | Content | Home |
-    |---------|------|
-    | Per-ticket work log | `docs/tickets/<KEY>.md` |
-    | Design specs (point-in-time, from brainstorming) | `docs/superpowers/specs/` |
-    | Implementation plans (point-in-time, from writing-plans) | `docs/superpowers/plans/` |
-    | Long-form architecture/design rationale | `docs/rationale/` |
-    | Mumen-tier scoping | `docs/mumen/` |
-    | Project followups | `docs/followups.md` |
-    | Universal coding/git/Node conventions | `~/.claude/conventions/` |
-    | "How to do X" capability injection | user-level skills (`~/.claude/skills/`) |
-    | Per-conversation notes / todos / in-flight state | not committed |
+    | Content                                                  | Home                                    |
+    | -------------------------------------------------------- | --------------------------------------- |
+    | Per-ticket work log                                      | `docs/tickets/<KEY>.md`                 |
+    | Design specs (point-in-time, from brainstorming)         | `docs/superpowers/specs/`               |
+    | Implementation plans (point-in-time, from writing-plans) | `docs/superpowers/plans/`               |
+    | Long-form architecture/design rationale                  | `docs/rationale/`                       |
+    | Mumen-tier scoping                                       | `docs/mumen/`                           |
+    | Project followups                                        | `docs/followups.md`                     |
+    | Universal coding/git/Node conventions                    | `~/.claude/conventions/`                |
+    | "How to do X" capability injection                       | user-level skills (`~/.claude/skills/`) |
+    | Per-conversation notes / todos / in-flight state         | not committed                           |
 
-    `.agents/` is for *repo-specific, durable, agent-actionable rules*. If a doc isn't all three, it lives somewhere else above.
+    `.agents/` is for _repo-specific, durable, agent-actionable rules_. If a doc isn't all three, it lives somewhere else above.
 
-    **Pointers vs content.** The rule above is about *content* sitting in `.agents/`, not about *cross-references*. A `.agents/<topic>.md` MAY (and often SHOULD) include a brief footer pointer like `See docs/rationale/<topic>.md for the why` or `See user-level skill <name> for how`. Pointers improve discoverability without bringing narrative into the agent-actionable layer. Aim for one or two short lines; if a topic doc needs a paragraph of context from elsewhere, that's a sign the content classification was wrong.
+    **Pointers vs content.** The rule above is about _content_ sitting in `.agents/`, not about _cross-references_. A `.agents/<topic>.md` MAY (and often SHOULD) include a brief footer pointer like `See docs/rationale/<topic>.md for the why` or `See user-level skill <name> for how`. Pointers improve discoverability without bringing narrative into the agent-actionable layer. Aim for one or two short lines; if a topic doc needs a paragraph of context from elsewhere, that's a sign the content classification was wrong.
 
 11. **Index of current topic docs.** Manually maintained table. Same list cited from root `AGENTS.md`.
 
@@ -214,16 +215,16 @@ Root `AGENTS.md` contains a top-level index:
 ```markdown
 ## When you need it
 
-- Editing daemon services/routes  → `.agents/architecture.md`, package `AGENTS.md`
-- Adding a Bruno endpoint         → `.agents/testing.md`
-- Sandbox/host-network behavior   → `.agents/local-dev.md`, `.agents/security.md`
-- Writing a new CLI subcommand    → `.agents/architecture.md`, `packages/cli/AGENTS.md`
-- Touching dispatch flow          → `.agents/dispatch.md`
-- Updating crew's Figma DS        → `.agents/design-system.md`
-- Running verification commands   → `.agents/commands.md`
+- Editing daemon services/routes → `.agents/architecture.md`, package `AGENTS.md`
+- Adding a Bruno endpoint → `.agents/testing.md`
+- Sandbox/host-network behavior → `.agents/local-dev.md`, `.agents/security.md`
+- Writing a new CLI subcommand → `.agents/architecture.md`, `packages/cli/AGENTS.md`
+- Touching dispatch flow → `.agents/dispatch.md`
+- Updating crew's Figma DS → `.agents/design-system.md`
+- Running verification commands → `.agents/commands.md`
 ```
 
-Each per-package `AGENTS.md` carries a narrower index focused on tasks the agent is likely to do *in that package*. Lazy-loading + path traversal means a daemon-only edit never loads dashboard or cli AGENTS.md.
+Each per-package `AGENTS.md` carries a narrower index focused on tasks the agent is likely to do _in that package_. Lazy-loading + path traversal means a daemon-only edit never loads dashboard or cli AGENTS.md.
 
 ## Parity enforcement
 
@@ -239,12 +240,12 @@ Both rely on the same frontmatter; the soft hook is the safety net for when the 
 
 Four metrics, all derivable from data already captured.
 
-| # | Metric | Question | Derivation | Target |
-|---|--------|----------|------------|--------|
-| 1 | **Doc-load coverage** | Did the agent load the right topic docs? | Transcript Read calls to `.agents/**/*.md` ∩ docs whose `covers:` overlap the PR diff. coverage = \|loaded ∩ expected\| / \|expected\|. | ≥ 80% |
-| 2 | **Cleanliness-check pass rate** | Did the agent run lint/typecheck/test:run/bruno:smoke/visual-fidelity before claiming done? | Bash tool calls between last edit and commit matched against `.agents/commands.md`. | ≥ 95% |
-| 3 | **Context size at PR-claim** | Is progressive disclosure keeping context lean? | `usage.input_tokens` of the assistant message immediately before commit/PR creation. | Trending down vs baseline |
-| 4 | **Doc-parity violations** | When agents change covered code, do they update the doc? | PR diff ∩ each `.agents/<topic>.md` `covers:` glob — doc must be touched in same PR or have `last_updated` ≥ commit date. | ≤ 5% |
+| #   | Metric                          | Question                                                                                    | Derivation                                                                                                                              | Target                    |
+| --- | ------------------------------- | ------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- | ------------------------- |
+| 1   | **Doc-load coverage**           | Did the agent load the right topic docs?                                                    | Transcript Read calls to `.agents/**/*.md` ∩ docs whose `covers:` overlap the PR diff. coverage = \|loaded ∩ expected\| / \|expected\|. | ≥ 80%                     |
+| 2   | **Cleanliness-check pass rate** | Did the agent run lint/typecheck/test:run/bruno:smoke/visual-fidelity before claiming done? | Bash tool calls between last edit and commit matched against `.agents/commands.md`.                                                     | ≥ 95%                     |
+| 3   | **Context size at PR-claim**    | Is progressive disclosure keeping context lean?                                             | `usage.input_tokens` of the assistant message immediately before commit/PR creation.                                                    | Trending down vs baseline |
+| 4   | **Doc-parity violations**       | When agents change covered code, do they update the doc?                                    | PR diff ∩ each `.agents/<topic>.md` `covers:` glob — doc must be touched in same PR or have `last_updated` ≥ commit date.               | ≤ 5%                      |
 
 **Scope.** Metrics 1, 2, 4 are meaningful only for `crew run` dispatches (clean ticket scope). Metric 3 works for both interactive and dispatched but baselining is only easy for dispatches.
 
@@ -285,16 +286,16 @@ Single ticket. Lays down the system so subsequent work has something to slot int
 
 Each ticket = author one topic doc + content-audit + delete or relocate the source doc(s). All parallel after Phase 1 lands; all blocked-by Phase 1.
 
-| Ticket | Authors | Consolidates from | Source disposition |
-|--------|---------|-------------------|--------------------|
-| 2a | `.agents/architecture.md` | `docs/plans/architecture.md` (rules portions) | Rationale portions → `docs/rationale/architecture.md`; original deleted |
-| 2b | `.agents/local-dev.md` | Root AGENTS.md local-dev + `docs/plans/project-resolution.md` | `project-resolution.md` mostly rules → fully migrated, original deleted |
-| 2c | `.agents/testing.md` | Root AGENTS.md Bruno + scattered testing refs | n/a |
-| 2d | `.agents/dispatch.md` | New synthesis from `packages/cli/src/lib/{run,prompts,skills,preflight,figma-snapshot}/` | n/a |
-| 2e | `.agents/security.md` | `docs/plans/sandbox-limitations.md` + user-level secrets refs (link, not copy) | Rules → migrated; rationale (if any) → `docs/rationale/sandbox-limitations.md`; original deleted |
-| 2f | `.agents/design-system.md` | `docs/plans/design-system.md` (rules portions) | Rationale → `docs/rationale/design-system.md`; original deleted |
-| 2g | `.agents/workflow.md` | Synthesis of user-level CLAUDE.md + repo conventions | n/a |
-| 2h | `.agents/commands.md` | `package.json` + scattered command refs | n/a |
+| Ticket | Authors                    | Consolidates from                                                                        | Source disposition                                                                               |
+| ------ | -------------------------- | ---------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| 2a     | `.agents/architecture.md`  | `docs/plans/architecture.md` (rules portions)                                            | Rationale portions → `docs/rationale/architecture.md`; original deleted                          |
+| 2b     | `.agents/local-dev.md`     | Root AGENTS.md local-dev + `docs/plans/project-resolution.md`                            | `project-resolution.md` mostly rules → fully migrated, original deleted                          |
+| 2c     | `.agents/testing.md`       | Root AGENTS.md Bruno + scattered testing refs                                            | n/a                                                                                              |
+| 2d     | `.agents/dispatch.md`      | New synthesis from `packages/cli/src/lib/{run,prompts,skills,preflight,figma-snapshot}/` | n/a                                                                                              |
+| 2e     | `.agents/security.md`      | `docs/plans/sandbox-limitations.md` + user-level secrets refs (link, not copy)           | Rules → migrated; rationale (if any) → `docs/rationale/sandbox-limitations.md`; original deleted |
+| 2f     | `.agents/design-system.md` | `docs/plans/design-system.md` (rules portions)                                           | Rationale → `docs/rationale/design-system.md`; original deleted                                  |
+| 2g     | `.agents/workflow.md`      | Synthesis of user-level CLAUDE.md + repo conventions                                     | n/a                                                                                              |
+| 2h     | `.agents/commands.md`      | `package.json` + scattered command refs                                                  | n/a                                                                                              |
 
 **Content audit step (required for every Phase 2 ticket).** Before deleting a source doc, walk it section-by-section and classify each section as:
 
@@ -338,16 +339,16 @@ Outside Epic:
 
 ### Risks and mitigations
 
-| Risk | Mitigation |
-|------|------------|
-| `CLAUDE.md → AGENTS.md` rename breaks Claude Code session loading | Verified by research: Claude Code reads `AGENTS.md` natively. Smoke-test one session before the Phase 1 PR merges. |
-| `covers:` globs authored inconsistently → metrics garbage | Validator script in Phase 1 + meta-doc parity rule. |
-| Per-package AGENTS.md duplicates topic content | Per-package template is explicit: rules-specific-to-this-package + index + gotchas. Topic content stays in `.agents/`. |
-| Old `docs/plans/*.md` orphaned as ghost docs | Phase 2 tickets delete originals; sweep of inbound refs in Phase 1 catches links. |
-| Content lost during migration | Each Phase 2 ticket's content audit + PR description audit trail makes losses recoverable in review. |
-| Baseline contamination if Phase 4a slips behind Phase 2 | Phase 4a folded into Phase 1 ticket as final step; can't slip independently. |
-| `.agents/` misused as a catch-all (history, scratch, etc.) | "What does NOT belong" taxonomy + 3-criteria gate in meta-doc make boundary violation visible at review. |
-| Agents ignore the freshness gauge thresholds | Soft hook surfaces stale-doc warnings on every commit; Layer-1 metrics catch systemic drift. |
+| Risk                                                              | Mitigation                                                                                                             |
+| ----------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `CLAUDE.md → AGENTS.md` rename breaks Claude Code session loading | Verified by research: Claude Code reads `AGENTS.md` natively. Smoke-test one session before the Phase 1 PR merges.     |
+| `covers:` globs authored inconsistently → metrics garbage         | Validator script in Phase 1 + meta-doc parity rule.                                                                    |
+| Per-package AGENTS.md duplicates topic content                    | Per-package template is explicit: rules-specific-to-this-package + index + gotchas. Topic content stays in `.agents/`. |
+| Old `docs/plans/*.md` orphaned as ghost docs                      | Phase 2 tickets delete originals; sweep of inbound refs in Phase 1 catches links.                                      |
+| Content lost during migration                                     | Each Phase 2 ticket's content audit + PR description audit trail makes losses recoverable in review.                   |
+| Baseline contamination if Phase 4a slips behind Phase 2           | Phase 4a folded into Phase 1 ticket as final step; can't slip independently.                                           |
+| `.agents/` misused as a catch-all (history, scratch, etc.)        | "What does NOT belong" taxonomy + 3-criteria gate in meta-doc make boundary violation visible at review.               |
+| Agents ignore the freshness gauge thresholds                      | Soft hook surfaces stale-doc warnings on every commit; Layer-1 metrics catch systemic drift.                           |
 
 ## Out of scope / future work
 

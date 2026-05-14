@@ -13,7 +13,7 @@ On 2026-05-12 the Crew Design System in Figma was consolidated into a single das
 - Three new form-family composites were added: **Input** (with optional leading icon), **FormField** (Label + Input wrapper), **Switch** (on/off toggle).
 - A small **Stepper** composite was added for the New Run multi-step modal.
 
-The dashboard code (`packages/dashboard/src/components/`) still reflects the *pre-consolidation* DS — separate `Button` / `StateBadge` / `CountBadge` components, no Modal/AlertModal/ModalSelectionRow/Stepper/Switch/FormField composites, and 21 `.figma.tsx` Code Connect files pointing at the now-archived standalone DS file.
+The dashboard code (`packages/dashboard/src/components/`) still reflects the _pre-consolidation_ DS — separate `Button` / `StateBadge` / `CountBadge` components, no Modal/AlertModal/ModalSelectionRow/Stepper/Switch/FormField composites, and 21 `.figma.tsx` Code Connect files pointing at the now-archived standalone DS file.
 
 This spec covers the work to reconcile the code with the new Figma DS at the **component-parity** level: every Figma composite has a matching code component with the right visual contract. **It does not wire the four new modal screens** (New Run, Register, Edit, Delete) into the live dashboard — those land in separate slices once the components exist to compose them with.
 
@@ -42,21 +42,21 @@ Out of scope (deferred to future slices):
 
 The 8-color × 4-intensity matrix is the only shared piece across Button, Badge, and Tag. Three patterns considered:
 
-| Pattern | Pros | Cons |
-|---|---|---|
-| Shared cva fragments (chosen) | Single source of truth, each component file stays focused | Slight indirection — must read the helper to understand a Button's classes |
-| Each component duplicates the full matrix | Self-contained files, no cross-file reading | 3× duplicated 32-row compoundVariants — DRY violation |
-| Single `<Pill>` primitive wrapped by Button/Badge/Tag | 1 source of truth as a real React component | Adds a wrapper layer that doesn't carry semantic value |
+| Pattern                                               | Pros                                                      | Cons                                                                       |
+| ----------------------------------------------------- | --------------------------------------------------------- | -------------------------------------------------------------------------- |
+| Shared cva fragments (chosen)                         | Single source of truth, each component file stays focused | Slight indirection — must read the helper to understand a Button's classes |
+| Each component duplicates the full matrix             | Self-contained files, no cross-file reading               | 3× duplicated 32-row compoundVariants — DRY violation                      |
+| Single `<Pill>` primitive wrapped by Button/Badge/Tag | 1 source of truth as a real React component               | Adds a wrapper layer that doesn't carry semantic value                     |
 
 **Decision:** shared helper at `packages/dashboard/src/lib/pill-variants.ts` exports a function `stateColorVariants(color, intensity)` returning the class-string fragment (bg + border + text). Each component's `cva` config spreads this helper alongside its own size axis. This matches how shadcn's own cva configs are typically structured — small composable pieces, not deep abstractions.
 
 ### Per-component responsibilities
 
-| Code component | Figma Pill variant scope | Responsibility |
-|---|---|---|
-| `<Button>` | `type ∈ {button-xs, button-sm, button-default, button-lg, button-icon-xs, button-icon-sm, button-icon-default, button-icon-lg}` | Clickable actions. Drops the legacy `variant` prop (`default | destructive | danger | ...`) in favor of `color` × `intensity`. Adds `iconOnly` mode for the four `button-icon-*` sizes. |
-| `<Badge>` | `type = pill` | Status indicators (state pills, count chips). Absorbs StateBadge + CountBadge. Adds `Has Icon` slot for the dot pattern. |
-| `<Tag>` | `type = tag` | Small Fira Code mono chips for tool-call rows in agent transcripts. |
+| Code component | Figma Pill variant scope                                                                                                        | Responsibility                                                                                                           |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ | ----------- | ------ | ---------------------------------------------------------------------------------------------- |
+| `<Button>`     | `type ∈ {button-xs, button-sm, button-default, button-lg, button-icon-xs, button-icon-sm, button-icon-default, button-icon-lg}` | Clickable actions. Drops the legacy `variant` prop (`default                                                             | destructive | danger | ...`) in favor of `color`×`intensity`. Adds `iconOnly`mode for the four`button-icon-\*` sizes. |
+| `<Badge>`      | `type = pill`                                                                                                                   | Status indicators (state pills, count chips). Absorbs StateBadge + CountBadge. Adds `Has Icon` slot for the dot pattern. |
+| `<Tag>`        | `type = tag`                                                                                                                    | Small Fira Code mono chips for tool-call rows in agent transcripts.                                                      |
 
 ### Prop vocabulary (consistent across Button / Badge / Tag)
 
@@ -106,16 +106,16 @@ All consumers of `<StateBadge>` and `<CountBadge>` migrate to `<Badge>` with the
 
 Button caller updates: every `<Button variant="X">` call site updates to `<Button color="..." intensity="...">`. Mapping (from `[[project_crew_ds_pill_unified]]`):
 
-| Old `variant` | New `color` × `intensity` |
-|---|---|
-| `default` | `color="white" intensity="loud"` |
-| `destructive` | `color="error" intensity="loud"` |
-| `danger` | `color="error" intensity="mid"` |
-| `warning` | `color="waiting" intensity="loud"` |
-| `secondary` | `color="running" intensity="muted"` |
-| `outline` | `color="running" intensity="mid"` |
-| `ghost` | `color="running" intensity="ghost"` |
-| `link` | `color="initializing" intensity="ghost"` |
+| Old `variant` | New `color` × `intensity`                |
+| ------------- | ---------------------------------------- |
+| `default`     | `color="white" intensity="loud"`         |
+| `destructive` | `color="error" intensity="loud"`         |
+| `danger`      | `color="error" intensity="mid"`          |
+| `warning`     | `color="waiting" intensity="loud"`       |
+| `secondary`   | `color="running" intensity="muted"`      |
+| `outline`     | `color="running" intensity="mid"`        |
+| `ghost`       | `color="running" intensity="ghost"`      |
+| `link`        | `color="initializing" intensity="ghost"` |
 
 ### Tests
 

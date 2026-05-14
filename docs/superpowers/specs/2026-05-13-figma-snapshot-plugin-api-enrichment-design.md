@@ -2,13 +2,13 @@
 
 **Date:** 2026-05-13
 **Status:** Spec — pending implementation plan
-**Related context:** The visual-fidelity-check skill calibration (PR #181, PR #184) showed the skill catches *patterns* of UI regression accurately but produces *specifically wrong* fixes when the snapshot lacks per-instance `componentProperties` and variable bindings. This spec adds those fields to the snapshot.
+**Related context:** The visual-fidelity-check skill calibration (PR #181, PR #184) showed the skill catches _patterns_ of UI regression accurately but produces _specifically wrong_ fixes when the snapshot lacks per-instance `componentProperties` and variable bindings. This spec adds those fields to the snapshot.
 
 ## Context
 
 `crew figma-snapshot` ([CREW-139](https://github.com/Safturento/crew/pull/180)) exports the Figma file's relevant pages to `<worktree>/.crew/figma-snapshot/` for the dispatched agent's `visual-fidelity-check` skill (per the [agent visual verification design](2026-05-12-agent-visual-verification-design.md)). The current implementation uses the Figma REST API exclusively. Two calibration runs of the skill against the CREW-135 fixture (`docs/superpowers/skill-fixtures/visual-fidelity-check/crew-135/runs/`) plus user-in-the-loop visual review revealed the same root cause behind three different wrong-fix patterns:
 
-- **Wrong icon recommendation.** Skill flagged View PR's Unicode `↗` as needing an SVG, recommended `lucide/arrow-up-right`. The real Figma instance uses `lucide/git-pull-request`. The Open as page button (different code site, same skill check) genuinely *does* use `lucide/arrow-up-right` — but the skill couldn't distinguish them.
+- **Wrong icon recommendation.** Skill flagged View PR's Unicode `↗` as needing an SVG, recommended `lucide/arrow-up-right`. The real Figma instance uses `lucide/git-pull-request`. The Open as page button (different code site, same skill check) genuinely _does_ use `lucide/arrow-up-right` — but the skill couldn't distinguish them.
 - **Wrong color recommendation.** Skill flagged the New Run button as having a helper-level shade bug (`bg-neutral-200` vs `zinc/50`). The real bug is caller-side: `TopNav.tsx` uses `color="white"` where the Figma instance uses `color="idle"`. The helper is correct.
 - **Wrong primitive recommendation.** Skill twice hedged the state-badge dot as "judgment call — visually equivalent" despite the iterated "icon findings are NEVER judgment calls" rule. The user's side-by-side screenshot proved the dot is visibly different (code: filled circle; Figma: outlined ring).
 
@@ -56,6 +56,7 @@ crew figma-snapshot
 ```
 
 The enrichment pass runs **after** the REST emit and operates on the existing on-disk snapshot. It does not modify `emit.ts` or the REST client. Decoupling means:
+
 - The REST path stays the source of truth for screenshots + the bulk node tree.
 - The Plugin-API pass only writes the `enrichment` field — REST data is never mutated.
 - If enrichment is skipped (no `claude` on PATH or subprocess fails), the snapshot is still complete-at-pattern-level for the skill.
@@ -85,7 +86,9 @@ The per-node JSON keeps `raw` (REST data) unchanged and adds a top-level `enrich
   "name": "Pill",
   "type": "INSTANCE",
   "page": "Dashboard Screens",
-  "raw": { /* full REST node, unchanged from CREW-139 */ },
+  "raw": {
+    /* full REST node, unchanged from CREW-139 */
+  },
   "enrichment": {
     "source": "plugin-api",
     "capturedAt": "2026-05-13T18:30:00Z",
@@ -95,12 +98,12 @@ The per-node JSON keeps `raw` (REST data) unchanged and adds a top-level `enrich
       "intensity": "mid",
       "Has Icon": true,
       "Icon": { "id": "lucide/circle", "name": "lucide/circle" },
-      "Label": "Waiting"
+      "Label": "Waiting",
     },
     "mainComponent": {
       "id": "271:276",
       "name": "type=pill, color=waiting, intensity=mid",
-      "parentSetName": "Pill"
+      "parentSetName": "Pill",
     },
     "boundVariables": [
       {
@@ -108,17 +111,17 @@ The per-node JSON keeps `raw` (REST data) unchanged and adds a top-level `enrich
         "variableId": "VariableID:1234:567",
         "variableName": "amber-1050",
         "resolvedAlias": "amber-1050",
-        "resolvedHex": "#26282A"
+        "resolvedHex": "#26282A",
       },
       {
         "path": "strokes[0].color",
         "variableId": "VariableID:1234:568",
         "variableName": "amber/500",
         "resolvedAlias": "state/waiting -> amber/400",
-        "resolvedHex": "#F59E0B"
-      }
-    ]
-  }
+        "resolvedHex": "#F59E0B",
+      },
+    ],
+  },
 }
 ```
 
@@ -142,7 +145,8 @@ import { execa } from 'execa';
 const args = [
   '-p',
   promptText,
-  '--mcp-config', '<inline-config-or-file>', // ensure figma MCP is available
+  '--mcp-config',
+  '<inline-config-or-file>', // ensure figma MCP is available
 ];
 
 const result = await execa('claude', args, {
@@ -187,34 +191,34 @@ const node = await figma.getNodeByIdAsync('<NODE_ID>');
 if (!node) return { error: 'not found' };
 
 const enrichment = {
-  source: 'plugin-api',
-  capturedAt: new Date().toISOString(),
-  componentProperties: null,
-  mainComponent: null,
-  boundVariables: [],
+source: 'plugin-api',
+capturedAt: new Date().toISOString(),
+componentProperties: null,
+mainComponent: null,
+boundVariables: [],
 };
 
 if (node.type === 'INSTANCE') {
-  const cp = node.componentProperties || {};
-  enrichment.componentProperties = {};
-  for (const [key, prop] of Object.entries(cp)) {
-    let value = prop.value;
-    if (prop.type === 'INSTANCE_SWAP' && prop.value) {
-      try {
-        const ref = await figma.getNodeByIdAsync(prop.value);
-        if (ref) value = { id: prop.value, name: ref.name };
-      } catch (e) { /* leave value as id string */ }
-    }
-    // Strip the trailing #id from the key (e.g. "Has Icon#272:225" -> "Has Icon")
-    enrichment.componentProperties[key.split('#')[0]] = value;
-  }
-  if (node.mainComponent) {
-    enrichment.mainComponent = {
-      id: node.mainComponent.id,
-      name: node.mainComponent.name,
-      parentSetName: node.mainComponent.parent?.name ?? null,
-    };
-  }
+const cp = node.componentProperties || {};
+enrichment.componentProperties = {};
+for (const [key, prop] of Object.entries(cp)) {
+let value = prop.value;
+if (prop.type === 'INSTANCE_SWAP' && prop.value) {
+try {
+const ref = await figma.getNodeByIdAsync(prop.value);
+if (ref) value = { id: prop.value, name: ref.name };
+} catch (e) { /_ leave value as id string _/ }
+}
+// Strip the trailing #id from the key (e.g. "Has Icon#272:225" -> "Has Icon")
+enrichment.componentProperties[key.split('#')[0]] = value;
+}
+if (node.mainComponent) {
+enrichment.mainComponent = {
+id: node.mainComponent.id,
+name: node.mainComponent.name,
+parentSetName: node.mainComponent.parent?.name ?? null,
+};
+}
 }
 
 // Walk node + paint properties for boundVariables
@@ -231,9 +235,7 @@ The subprocess writes a one-line JSON summary to stdout as its last line. The pa
 ```jsonc
 {
   "enrichedNodeCount": 50,
-  "errors": [
-    { "nodeId": "1:99", "reason": "node not found" }
-  ]
+  "errors": [{ "nodeId": "1:99", "reason": "node not found" }],
 }
 ```
 
@@ -241,14 +243,14 @@ Any deviation from this shape → parent treats as `kind: 'warning'`.
 
 ### Failure modes
 
-| Failure | Detection | Parent response |
-|---|---|---|
-| `claude` not on PATH | `which claude` fails | `kind: 'skipped'`, info log |
-| Subprocess timeout (>90s) | execa timeout | `kind: 'warning'`, warn log |
-| Subprocess exits non-zero | exit code | `kind: 'warning'`, warn log, include stderr summary |
-| Subprocess stdout doesn't end with JSON summary | JSON.parse fails | `kind: 'warning'`, warn log |
-| `enrichedNodeCount === 0` despite no errors | summary check | `kind: 'warning'`, warn log |
-| Partial enrichment (some errors but >0 enriched) | summary parse | `kind: 'ok'` with warnings; surfaces errors as a one-line log per node failed |
+| Failure                                          | Detection            | Parent response                                                               |
+| ------------------------------------------------ | -------------------- | ----------------------------------------------------------------------------- |
+| `claude` not on PATH                             | `which claude` fails | `kind: 'skipped'`, info log                                                   |
+| Subprocess timeout (>90s)                        | execa timeout        | `kind: 'warning'`, warn log                                                   |
+| Subprocess exits non-zero                        | exit code            | `kind: 'warning'`, warn log, include stderr summary                           |
+| Subprocess stdout doesn't end with JSON summary  | JSON.parse fails     | `kind: 'warning'`, warn log                                                   |
+| `enrichedNodeCount === 0` despite no errors      | summary check        | `kind: 'warning'`, warn log                                                   |
+| Partial enrichment (some errors but >0 enriched) | summary parse        | `kind: 'ok'` with warnings; surfaces errors as a one-line log per node failed |
 
 In ALL warning cases, the REST data on disk is intact and the dispatched agent's skill still works at pattern-accuracy.
 

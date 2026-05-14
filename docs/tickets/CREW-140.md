@@ -31,6 +31,7 @@ Wire the `crew figma-snapshot` work from CREW-139 into the dispatch flow so the 
 ## Notes
 
 Verification summary:
+
 - `npm run typecheck --workspaces` — clean
 - `npx vitest run packages/cli` — 608 passing
 - `npm run lint` — clean

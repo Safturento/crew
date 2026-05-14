@@ -12,14 +12,14 @@
 
 **Ticket carve-up** (one Epic + 4 child tickets in CREW + 1 prereq in Recipes):
 
-| Ticket                          | Tasks       | Blocks / parallelism                                                       |
-| ------------------------------- | ----------- | -------------------------------------------------------------------------- |
-| **CREW-pw-α** (Phase 0)         | Tasks 1–4   | Blocks β (findings may amend later phases)                                 |
-| **CREW-pw-β** (Foundation)      | Tasks 5–11  | After α; blocks γ + δ                                                      |
-| **CREW-pw-γ** (`crew run`)      | Tasks 12–13 | After β; **parallel** with δ                                               |
-| **CREW-pw-δ** (`crew fix-pr`)   | Tasks 14–15 | After β; **parallel** with γ                                               |
-| (KAN-prereq)                    | Recipes-side: declare `[playwright]` in `recipes.toml`, update `playwright.config.ts` to read `process.env.CREW_APP_URL`. | Required before Task 16's manual gate produces value |
-| **CREW-pw-final**               | Task 16     | After γ + δ + KAN-prereq merge                                             |
+| Ticket                        | Tasks                                                                                                                     | Blocks / parallelism                                 |
+| ----------------------------- | ------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------- |
+| **CREW-pw-α** (Phase 0)       | Tasks 1–4                                                                                                                 | Blocks β (findings may amend later phases)           |
+| **CREW-pw-β** (Foundation)    | Tasks 5–11                                                                                                                | After α; blocks γ + δ                                |
+| **CREW-pw-γ** (`crew run`)    | Tasks 12–13                                                                                                               | After β; **parallel** with δ                         |
+| **CREW-pw-δ** (`crew fix-pr`) | Tasks 14–15                                                                                                               | After β; **parallel** with γ                         |
+| (KAN-prereq)                  | Recipes-side: declare `[playwright]` in `recipes.toml`, update `playwright.config.ts` to read `process.env.CREW_APP_URL`. | Required before Task 16's manual gate produces value |
+| **CREW-pw-final**             | Task 16                                                                                                                   | After γ + δ + KAN-prereq merge                       |
 
 **Renaming convention.** Throughout: `visual_testing` (TOML key, schema field) → `playwright`. `visualTesting` (TS type, function param, prompt builder option) → `playwright`. `ticket-visual-smoke.md` / `ticket-visual-authored.md` (template files) → `ticket-playwright-smoke.md` / `ticket-playwright-authored.md`. `lib/visual-testing/` (directory) → `lib/playwright/`. `visualTestingBlock` (render placeholder) → `playwrightBlock`.
 
@@ -50,7 +50,7 @@ enabled = true
 app_url = "https://localhost:{httpsPort}"
 ```
 
-(Using the *old* schema deliberately — Phase 0 runs on `main` before the rename.)
+(Using the _old_ schema deliberately — Phase 0 runs on `main` before the rename.)
 
 - [ ] **Step 2: Pick or create a low-stakes Recipes ticket**
 
@@ -101,7 +101,7 @@ No commit at this step — Task 4 commits all three findings together.
 
 **Files:**
 
-- Test scenario: a Recipes worktree with sandbox enabled, Chromium pre-installed *outside* the sandbox.
+- Test scenario: a Recipes worktree with sandbox enabled, Chromium pre-installed _outside_ the sandbox.
 
 - [ ] **Step 1: Pre-install Chromium outside the sandbox**
 
@@ -261,7 +261,7 @@ Fill in the actual outcomes from Tasks 1–3.
 
 - [ ] **Step 2: Apply any required spec amendments**
 
-If P0.1 found extra MCP fixes needed, add a sub-bullet under §6 of the spec — *do not* re-litigate the architecture; just enumerate the additional code change. If P0.2 found launch-time writes, add a paragraph to the spec's §6.8 about the project-side `allowWrite` addition. If P0.3 found loopback blocked, note the TOML addition.
+If P0.1 found extra MCP fixes needed, add a sub-bullet under §6 of the spec — _do not_ re-litigate the architecture; just enumerate the additional code change. If P0.2 found launch-time writes, add a paragraph to the spec's §6.8 about the project-side `allowWrite` addition. If P0.3 found loopback blocked, note the TOML addition.
 
 If no amendments are needed, skip this step.
 
@@ -465,37 +465,37 @@ In the same file's `projectConfigSchema`, replace the `visual_testing: visualTes
 In the `superRefine`, replace the existing `vt`-prefixed block (validates port placeholders + `start_command`) with:
 
 ```ts
-    const pw = cfg.playwright;
-    if (pw) {
-      const smokeOn = Boolean(pw.smoke?.enabled);
-      const authoredOn = Boolean(pw.authored?.enabled);
-      if (!smokeOn && !authoredOn) {
-        ctx.addIssue({
-          code: 'custom',
-          path: ['playwright'],
-          message:
-            'at least one of [playwright.smoke] or [playwright.authored] must be enabled when [playwright] is configured',
-        });
-      }
+const pw = cfg.playwright;
+if (pw) {
+  const smokeOn = Boolean(pw.smoke?.enabled);
+  const authoredOn = Boolean(pw.authored?.enabled);
+  if (!smokeOn && !authoredOn) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['playwright'],
+      message:
+        'at least one of [playwright.smoke] or [playwright.authored] must be enabled when [playwright] is configured',
+    });
+  }
 
-      const usesPortPlaceholder = PORT_PLACEHOLDERS.some((p) => pw.app_url.includes(p));
-      if (usesPortPlaceholder && !cfg.docker) {
-        ctx.addIssue({
-          code: 'custom',
-          path: ['playwright', 'app_url'],
-          message: `app_url uses a port placeholder (${PORT_PLACEHOLDERS.join(', ')}) but no [docker] section is configured`,
-        });
-      }
+  const usesPortPlaceholder = PORT_PLACEHOLDERS.some((p) => pw.app_url.includes(p));
+  if (usesPortPlaceholder && !cfg.docker) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['playwright', 'app_url'],
+      message: `app_url uses a port placeholder (${PORT_PLACEHOLDERS.join(', ')}) but no [docker] section is configured`,
+    });
+  }
 
-      if (!pw.start_command && !cfg.docker) {
-        ctx.addIssue({
-          code: 'custom',
-          path: ['playwright', 'start_command'],
-          message:
-            'start_command is required when [docker] is not configured (the agent needs a command to bring the app up)',
-        });
-      }
-    }
+  if (!pw.start_command && !cfg.docker) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['playwright', 'start_command'],
+      message:
+        'start_command is required when [docker] is not configured (the agent needs a command to bring the app up)',
+    });
+  }
+}
 ```
 
 Remove the old `const vt = cfg.visual_testing; if (vt) { … }` block entirely.
@@ -796,7 +796,8 @@ describe('installPlaywrightBrowsers', () => {
     const proc = {
       stdout: { pipe: vi.fn() },
       stderr: { pipe: vi.fn() },
-      then: (onFulfilled: (v: unknown) => unknown) => Promise.resolve(onFulfilled({ exitCode: rc })),
+      then: (onFulfilled: (v: unknown) => unknown) =>
+        Promise.resolve(onFulfilled({ exitCode: rc })),
     };
     // Force the right shape for execa's return.
     return Object.assign(Promise.resolve({ exitCode: rc, stdout, stderr }), proc);
@@ -969,7 +970,6 @@ git mv packages/cli/src/lib/prompts/templates/ticket-visual-authored.md \
 Open `packages/cli/src/lib/prompts/templates/ticket-playwright-authored.md` and replace its full content with:
 
 ```markdown
-
 ## Authored Playwright test
 
 If the change has regression value (a user-facing flow that broke before or could break again), add a Playwright test:
@@ -1078,6 +1078,7 @@ function buildBrunoSmokeBlock(bs: BrunoSmokePromptOptions | undefined): string {
 ```
 
 Key changes from the previous shape:
+
 - `visualTesting` parameter → `playwright`. Type renamed accordingly.
 - New `smoke?: boolean` flag in the options shape (replaces "always-on smoke when visualTesting is set").
 - Smoke fragment is included only when `smoke === true`. Authored fragment is included only when `authored` is set. Either, both, or neither — the parameter shape now matches the schema.
@@ -1110,6 +1111,7 @@ it('renders only the authored section when smoke is omitted (authored-only)', ()
 ```
 
 Update existing snapshot expectations to reflect:
+
 - Section headings unchanged (`Visual smoke verification`, `Authored Playwright test`).
 - Authored fragment now contains the two new "do not" lines.
 
@@ -1123,6 +1125,7 @@ git diff packages/cli/src/lib/prompts/__snapshots__/builders.test.ts.snap
 ```
 
 The diff should show:
+
 - The authored fragment gaining the two "do not" paragraphs.
 - No unrelated content drift.
 
@@ -1300,7 +1303,7 @@ fi
 
 In `docs/plans/architecture.md`, find the example TOML block (around line 140). It currently has a `[sandbox]` block but no Playwright block. Add a `[playwright]` block to the example so the architecture doc reflects the new shape:
 
-Find the block starting with `[sandbox]` (around line 159) and insert *before* it:
+Find the block starting with `[sandbox]` (around line 159) and insert _before_ it:
 
 ```toml
 [playwright]
@@ -1384,6 +1387,7 @@ if (playwrightEnabled(config)) {
 ```
 
 Key changes:
+
 - `playwrightEnabled` gates the URL resolution (needed for both smoke and authored).
 - `smokeEnabled` gates the `.mcp.json` write (only smoke needs the MCP server).
 - `resolvedAppUrl` is populated whenever any playwright mode is on, so it's available for both the env injection (Step 4) and the prompt builder (Step 5).
@@ -1393,14 +1397,14 @@ Key changes:
 Immediately after `startDockerBringup` returns the `dockerProcess` (around line 182, after `const dockerProcess = startDockerBringup(...)`), and **before** `const ghToken = readFileSync(...)` (around line 184), add:
 
 ```ts
-  if (playwrightEnabled(config)) {
-    console.log(pc.dim('→ ensuring Chromium is installed for Playwright…'));
-    const result = await installPlaywrightBrowsers({ worktree, key, env: childEnv });
-    if (result.rc !== 0) {
-      fail(`playwright install failed (rc=${result.rc}). Log: ${result.logPath}`);
-    }
-    console.log(pc.dim(`    log: ${result.logPath}`));
+if (playwrightEnabled(config)) {
+  console.log(pc.dim('→ ensuring Chromium is installed for Playwright…'));
+  const result = await installPlaywrightBrowsers({ worktree, key, env: childEnv });
+  if (result.rc !== 0) {
+    fail(`playwright install failed (rc=${result.rc}). Log: ${result.logPath}`);
   }
+  console.log(pc.dim(`    log: ${result.logPath}`));
+}
 ```
 
 This runs sequentially before agent spawn — the agent does not start until browsers are ready. Docker bringup continues in parallel in the background.
@@ -1476,6 +1480,7 @@ git commit -m "feat(CREW-pw-γ): wire crew run for [playwright] integration
 **Goal:** confirm the full per-run flow works end-to-end on a UI-touching ticket. This is a manual verification step — no code changes.
 
 **Prerequisites:**
+
 - KAN-prereq is merged (Recipes' `recipes.toml` has `[playwright]` and `playwright.config.ts` reads `process.env.CREW_APP_URL`).
 - Tasks 1–12 are merged.
 
@@ -1639,14 +1644,13 @@ Expected: PASS.
 Create `packages/cli/src/lib/prompts/templates/fix-pr-playwright.md`:
 
 ```markdown
-
 ## Playwright e2e in this worktree
 
 Crew has prepared this worktree for Playwright runs:
 
 - The application stack is running at **{{appUrl}}**.
 - Chromium is installed (browser binary + system libs). `process.env.CREW_APP_URL` is set to the app URL.
-{{authoredClause}}
+  {{authoredClause}}
 
 **Two crew-managed concerns — do not duplicate:**
 
@@ -1887,6 +1891,7 @@ git commit -m "feat(CREW-pw-δ): wire crew fix-pr for [playwright] integration
 **Goal:** confirm the per-fix-pr flow works end-to-end on a Recipes PR with a Playwright failure that the agent can actually fix.
 
 **Prerequisites:**
+
 - KAN-prereq merged.
 - Tasks 1–14 merged.
 - A Recipes PR exists with a failing `npm run test:e2e` check (or a failing visual smoke).
@@ -1920,9 +1925,9 @@ Capture findings if anything fails; no commit.
 
 ### Task 16: Manual verification on a fresh Recipes ticket end-to-end
 
-**Goal:** the Epic's "Definition of done" — a single uninterrupted `crew run` against a fresh, UI-touching Recipes ticket whose acceptance criteria includes "the e2e tests pass". Equivalent to what KAN-35 *should* have been.
+**Goal:** the Epic's "Definition of done" — a single uninterrupted `crew run` against a fresh, UI-touching Recipes ticket whose acceptance criteria includes "the e2e tests pass". Equivalent to what KAN-35 _should_ have been.
 
-**Prerequisites:** all four CREW-pw-* tickets merged. KAN-prereq merged.
+**Prerequisites:** all four CREW-pw-\* tickets merged. KAN-prereq merged.
 
 - [ ] **Step 1: Pick or create a real Recipes ticket whose AC requires e2e**
 
@@ -1937,13 +1942,14 @@ crew run KAN-<n>
 - [ ] **Step 3: Observe the agent run to PR**
 
 The PR description must:
+
 - **Not** contain "manual verification needed" or any equivalent caveat about Docker / Chromium / system libs.
 - Reference an authored e2e test that was run successfully.
 - Pass CI on opening (e2e tests included).
 
 - [ ] **Step 4: Close the Epic**
 
-If the manual gate succeeds, the four CREW-pw-* tickets get marked Done in Jira. Move the Epic to Done. The KAN-35 manual-verification footnote is officially eliminated.
+If the manual gate succeeds, the four CREW-pw-\* tickets get marked Done in Jira. Move the Epic to Done. The KAN-35 manual-verification footnote is officially eliminated.
 
 If it fails: capture exact failure mode, file a follow-up ticket, do not close the Epic until the gap is fixed.
 
