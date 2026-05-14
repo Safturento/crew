@@ -17,7 +17,7 @@ interface ToolUseItem {
   name?: string;
   input?: { command?: string };
 }
-interface TranscriptEvent {
+export interface TranscriptEvent {
   type?: string;
   subtype?: string;
   compactMetadata?: {
@@ -31,7 +31,22 @@ interface TranscriptEvent {
       input_tokens?: number;
       cache_read_input_tokens?: number;
       cache_creation_input_tokens?: number;
+      output_tokens?: number;
     };
+  };
+}
+
+export interface AggregatedStats {
+  output: { total: number; meanPerTurn: number; maxPerTurn: number };
+}
+
+export function aggregateTokenStats(events: TranscriptEvent[]): AggregatedStats {
+  let outputTotal = 0;
+  for (const ev of events) {
+    outputTotal += ev.message?.usage?.output_tokens ?? 0;
+  }
+  return {
+    output: { total: outputTotal, meanPerTurn: 0, maxPerTurn: 0 },
   };
 }
 
@@ -249,4 +264,6 @@ async function main(): Promise<void> {
   db.close();
 }
 
-void main();
+if (import.meta.url === `file://${process.argv[1]}`) {
+  void main();
+}
