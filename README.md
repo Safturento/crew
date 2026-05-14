@@ -45,10 +45,10 @@ Visit `http://localhost:5173` for hot-reload, or `http://localhost:7773` for the
 
 ### Modes
 
-| Command | Mode | When to use |
-|---|---|---|
-| `docker compose --profile dev up -d --build` | Dev (vite + tsx watch) | Active development on crew. Hot-reload across daemon + dashboard. |
-| `docker compose up -d --build` | Stable (daemon only) | Once crew has matured. Daemon serves the pre-built SPA at `:7773`. |
+| Command                                      | Mode                   | When to use                                                        |
+| -------------------------------------------- | ---------------------- | ------------------------------------------------------------------ |
+| `docker compose --profile dev up -d --build` | Dev (vite + tsx watch) | Active development on crew. Hot-reload across daemon + dashboard.  |
+| `docker compose up -d --build`               | Stable (daemon only)   | Once crew has matured. Daemon serves the pre-built SPA at `:7773`. |
 
 ### Configuration via env.toml
 
@@ -104,6 +104,7 @@ A few one-time setup items before `crew` can do everything it's meant to.
 Crew's agent prompts call Jira tools via the prefix `mcp__atlassian__*`, which resolves to the [`sooperset/mcp-atlassian`](https://github.com/sooperset/mcp-atlassian) community server running in Docker. The server name in your Claude Code config **must be `atlassian`** — the prefix is hardcoded in the prompt templates.
 
 Prereqs:
+
 - Docker available on PATH. On WSL2, enable Docker Desktop's WSL Integration for this distro: Settings → Resources → WSL Integration → toggle the distro on.
 - An Atlassian API token from id.atlassian.com → Security → API tokens.
 
@@ -158,18 +159,19 @@ When disabled (no `[playwright]` section), behaviour is unchanged.
 
 Crew does **not** install `@playwright/test` for you — the target repo must have it set up (config + script + folder) before the agent can run authored tests. When the prerequisite is missing, the agent surfaces it in the PR description rather than silently skipping. This matches the convention of keeping target-repo dependencies as a target-repo concern.
 
-**Headed sessions for ad-hoc browsing.** The generated `.mcp.json` always uses `--headless`. If you want a headed browser when *you* invoke MCP browser tools interactively in a worktree, register a user-scope server (`claude mcp add -s user playwright -- npx -y @playwright/mcp@latest`) — your user-scope settings will take precedence in your interactive session, but the dispatched agent still uses the worktree-scoped headless config.
+**Headed sessions for ad-hoc browsing.** The generated `.mcp.json` always uses `--headless`. If you want a headed browser when _you_ invoke MCP browser tools interactively in a worktree, register a user-scope server (`claude mcp add -s user playwright -- npx -y @playwright/mcp@latest`) — your user-scope settings will take precedence in your interactive session, but the dispatched agent still uses the worktree-scoped headless config.
 
 ### Jira API credentials (once per machine)
-`crew finish` transitions the ticket to Done after the PR merges. It reads `CREW_JIRA_EMAIL` and `CREW_JIRA_API_TOKEN` directly from `process.env` — there's no `.env` loading, so dropping them in a repo `.env` won't work. If they aren't set, the transition step is skipped with a warning. Keep them outside any repo. A common pattern is `~/.secrets`, sourced from your shell rc:                        
+
+`crew finish` transitions the ticket to Done after the PR merges. It reads `CREW_JIRA_EMAIL` and `CREW_JIRA_API_TOKEN` directly from `process.env` — there's no `.env` loading, so dropping them in a repo `.env` won't work. If they aren't set, the transition step is skipped with a warning. Keep them outside any repo. A common pattern is `~/.secrets`, sourced from your shell rc:
 
 ```sh
-# ~/.secrets                        
+# ~/.secrets
 export CREW_JIRA_EMAIL="you@example.com"
 export CREW_JIRA_API_TOKEN="..."
 ```
 
-```sh                
+```sh
 chmod 600 ~/.secrets
 echo '[ -f ~/.secrets ] && source ~/.secrets' >> ~/.bashrc
 ```
@@ -345,7 +347,7 @@ DATABASE_URL = "postgres://...@postgres:5432/db"
 
   Any variable declared in the project's `env.toml` (orchestration, app, files-with-`env_var`, even built-ins like `${BASE_NAME}`) can be referenced.
 
-- **`{httpPort}` / `{httpsPort}` / `{postgresPort}`** — legacy syntax for projects *without* `env.toml`. Substitutes from the fixed `writeDockerEnv` port shape. Don't use this for env.toml projects — crew can't populate the legacy ports map from a generic env.toml schema, and you'll get a clear error pointing you at the `${VAR}` form.
+- **`{httpPort}` / `{httpsPort}` / `{postgresPort}`** — legacy syntax for projects _without_ `env.toml`. Substitutes from the fixed `writeDockerEnv` port shape. Don't use this for env.toml projects — crew can't populate the legacy ports map from a generic env.toml schema, and you'll get a clear error pointing you at the `${VAR}` form.
 
 Both syntaxes can coexist in one template (e.g., `${BASE_URL}:{httpsPort}/api`), but in practice projects use one or the other. The `${VAR}` form is the modern way.
 
@@ -373,7 +375,7 @@ The schema-version field is the contract; if any of the steps above are skipped,
 
 ## Status
 
-Pre-MVP. See [`docs/plans/architecture.md`](./docs/plans/architecture.md) for the design and phased rollout.
+Pre-MVP. See [`.agents/architecture.md`](./.agents/architecture.md) for the current architecture rules and [`docs/rationale/architecture.md`](./docs/rationale/architecture.md) for the design rationale and phased rollout.
 
 ## Why it's its own project
 
