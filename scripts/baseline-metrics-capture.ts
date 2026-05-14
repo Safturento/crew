@@ -172,7 +172,12 @@ function extractBashCommands(events: TranscriptEvent[]): string[] {
   for (const ev of events) {
     const items = ev.message?.content ?? [];
     for (const item of items) {
-      if (item.type === 'tool_use' && item.name === 'Bash' && 'input' in item && item.input?.command) {
+      if (
+        item.type === 'tool_use' &&
+        item.name === 'Bash' &&
+        'input' in item &&
+        item.input?.command
+      ) {
         out.push(item.input.command);
       }
     }
