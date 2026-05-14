@@ -95,6 +95,10 @@ This is opt-in. If you don't run it, the docker stack starts with a fresh empty 
 
 `crew run CREW-X` provisions an isolated stack per worktree via `crew`'s existing docker bringup machinery. You don't need to manage these — they come up automatically before the agent spawns and tear down at agent finish (or `crew restart --hard`). Stacks use hash-allocated ports so multiple worktrees can run concurrently without collision.
 
+### Visual-fidelity gate for crew itself
+
+To turn on the `visual-fidelity-check` skill for `crew run CREW-*` dispatches against this repo, paste the `[visual_fidelity]` block from [`docs/visual-fidelity-setup.md`](./docs/visual-fidelity-setup.md) into your `~/.config/crew/projects/crew.toml`. The block is user-local (different contributors may run with different setups), so it isn't committed to the repo — the doc carries the canonical paste-ready snippet plus the `crew figma-snapshot` verification command. The generic "wire any project" description is under [Setup → Visual-fidelity verification](#visual-fidelity-verification-per-project-optional).
+
 ## Setup
 
 A few one-time setup items before `crew` can do everything it's meant to.
