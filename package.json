@@ -17,6 +17,7 @@
     "lint": "eslint packages && npm run lint:agents",
     "lint:fix": "eslint packages --fix",
     "lint:agents": "node scripts/validate-agents-frontmatter.ts",
+    "baseline:capture": "docker compose run --rm --no-deps daemon node --experimental-strip-types /app/scripts/baseline-metrics-capture.ts",
     "format": "prettier --write packages docs",
     "format:check": "prettier --check packages docs",
     "bruno:smoke": "cd bruno && bru run --env \"$CREW_BRUNO_ENV\" endpoints/health/get.bru endpoints/projects/get-list.bru endpoints/projects/get-show.bru endpoints/agents/post-register-run.bru endpoints/agents/get-list.bru endpoints/agents/get-by-key.bru endpoints/agents/get-by-key-not-found.bru endpoints/agents/get-state-history.bru endpoints/agents/get-timeline.bru flows/main-smoke.bru"
