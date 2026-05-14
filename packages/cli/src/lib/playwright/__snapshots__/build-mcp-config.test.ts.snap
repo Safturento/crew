@@ -1,24 +1,6 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`buildMcpConfig > serializes to stable JSON (snapshot) 1`] = `
-"{
-  "mcpServers": {
-    "playwright": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "@playwright/mcp@latest",
-        "--headless"
-      ],
-      "env": {
-        "CREW_APP_URL": "http://localhost:5173"
-      }
-    }
-  }
-}"
-`;
-
-exports[`buildMcpConfig > serializes with chromiumPath to stable JSON (snapshot) 1`] = `
+exports[`buildMcpConfig > serializes a both-server config to stable JSON (snapshot) 1`] = `
 "{
   "mcpServers": {
     "playwright": {
@@ -29,6 +11,30 @@ exports[`buildMcpConfig > serializes with chromiumPath to stable JSON (snapshot)
         "--headless",
         "--executable-path",
         "/home/me/.cache/ms-playwright/chromium-1217/chrome-linux64/chrome"
+      ],
+      "env": {
+        "CREW_APP_URL": "http://localhost:5173"
+      }
+    },
+    "chrome": {
+      "command": "node",
+      "args": [
+        "/home/me/.claude/plugins/cache/superpowers-chrome/2.0.0/mcp/dist/index.js"
+      ]
+    }
+  }
+}"
+`;
+
+exports[`buildMcpConfig > serializes a playwright-only config to stable JSON (snapshot) 1`] = `
+"{
+  "mcpServers": {
+    "playwright": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@playwright/mcp@latest",
+        "--headless"
       ],
       "env": {
         "CREW_APP_URL": "http://localhost:5173"
