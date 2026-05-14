@@ -53,21 +53,45 @@ function countCleanlinessChecks(commands: string[]): number {
   return CLEANLINESS_COMMANDS.filter((c) => commands.some((b) => b.includes(c))).length;
 }
 
-function lastContextTokens(events: TranscriptEvent[]): number {
+interface PrClaimTokens {
+  total: number;
+  uncached: number;
+  cacheRead: number;
+  cacheCreate: number;
+}
+
+function lastPrClaimTokens(events: TranscriptEvent[]): PrClaimTokens {
   // Claude API splits prompt cost into input_tokens (uncached delta),
-  // cache_read_input_tokens, and cache_creation_input_tokens. The actual
-  // context size at that turn is the sum of all three — uncached input alone
-  // is ~1 for cached conversations and a useless signal.
+  // cache_read_input_tokens, and cache_creation_input_tokens. Total context
+  // is the sum; the components answer the diagnostic question — did progress
+  // come from loading less prior content (cacheRead ↓) or fewer per-turn
+  // reads (uncached ↓)?
   for (let i = events.length - 1; i >= 0; i--) {
     const usage = events[i].message?.usage;
     if (!usage) continue;
-    const input = usage.input_tokens ?? 0;
+    const uncached = usage.input_tokens ?? 0;
     const cacheRead = usage.cache_read_input_tokens ?? 0;
     const cacheCreate = usage.cache_creation_input_tokens ?? 0;
-    const total = input + cacheRead + cacheCreate;
-    if (total > 0) return total;
+    const total = uncached + cacheRead + cacheCreate;
+    if (total > 0) return { total, uncached, cacheRead, cacheCreate };
   }
-  return 0;
+  return { total: 0, uncached: 0, cacheRead: 0, cacheCreate: 0 };
+}
+
+function countTurns(events: TranscriptEvent[]): number {
+  // One usage block per assistant message — counts model invocations
+  // regardless of how many tool calls each turn made.
+  return events.filter((e) => e.message?.usage).length;
+}
+
+function countToolCalls(events: TranscriptEvent[]): number {
+  let n = 0;
+  for (const ev of events) {
+    for (const item of ev.message?.content ?? []) {
+      if (item.type === 'tool_use') n++;
+    }
+  }
+  return n;
 }
 
 interface RunRow {
@@ -109,10 +133,18 @@ async function main(): Promise<void> {
     )
     .all() as RunRow[];
 
-  db.exec(`CREATE TABLE IF NOT EXISTS baseline_metrics (
+  // Throwaway snapshot table — script is meant to be re-runnable. Drop and
+  // recreate so schema changes between runs don't require a separate migration.
+  db.exec(`DROP TABLE IF EXISTS baseline_metrics`);
+  db.exec(`CREATE TABLE baseline_metrics (
     run_id INTEGER PRIMARY KEY,
     cleanliness_pass_count INTEGER,
+    turn_count INTEGER,
+    tool_call_count INTEGER,
     pr_claim_input_tokens INTEGER,
+    pr_claim_uncached_tokens INTEGER,
+    pr_claim_cache_read_tokens INTEGER,
+    pr_claim_cache_creation_tokens INTEGER,
     captured_at TEXT NOT NULL
   )`);
 
@@ -144,13 +176,29 @@ async function main(): Promise<void> {
     const events = await readTranscript(transcriptPath);
     const commands = extractBashCommands(events);
     const cleanlinessCount = countCleanlinessChecks(commands);
-    const tokens = lastContextTokens(events);
+    const turns = countTurns(events);
+    const toolCalls = countToolCalls(events);
+    const tokens = lastPrClaimTokens(events);
     db.prepare(
-      `INSERT OR REPLACE INTO baseline_metrics (run_id, cleanliness_pass_count, pr_claim_input_tokens, captured_at)
-       VALUES (?, ?, ?, ?)`,
-    ).run(row.id, cleanlinessCount, tokens, new Date().toISOString());
+      `INSERT INTO baseline_metrics (
+         run_id, cleanliness_pass_count, turn_count, tool_call_count,
+         pr_claim_input_tokens, pr_claim_uncached_tokens,
+         pr_claim_cache_read_tokens, pr_claim_cache_creation_tokens,
+         captured_at
+       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    ).run(
+      row.id,
+      cleanlinessCount,
+      turns,
+      toolCalls,
+      tokens.total,
+      tokens.uncached,
+      tokens.cacheRead,
+      tokens.cacheCreate,
+      new Date().toISOString(),
+    );
     console.log(
-      `run ${row.id}: cleanliness=${cleanlinessCount}/${CLEANLINESS_COMMANDS.length}, tokens=${tokens}`,
+      `run ${row.id}: cleanliness=${cleanlinessCount}/${CLEANLINESS_COMMANDS.length}, turns=${turns}, tools=${toolCalls}, tokens=${tokens.total} (cached=${tokens.cacheRead})`,
     );
   }
   console.log('baseline capture complete');
