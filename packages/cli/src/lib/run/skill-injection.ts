@@ -15,6 +15,10 @@ const SKILL_APPLICABILITY: ReadonlyArray<{
     name: 'visual-fidelity-check',
     applicable: (config) => Boolean(config.visual_fidelity),
   },
+  {
+    name: 'browsing',
+    applicable: (config) => Boolean(config.visual_fidelity),
+  },
 ];
 
 export function skillsApplicableTo(config: ProjectConfig): string[] {

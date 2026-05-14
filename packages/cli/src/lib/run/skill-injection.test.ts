@@ -18,7 +18,7 @@ describe('skillsApplicableTo', () => {
     expect(skillsApplicableTo(baseConfig)).toEqual([]);
   });
 
-  it('returns visual-fidelity-check when visual_fidelity is configured', () => {
+  it('returns visual-fidelity-check and browsing when visual_fidelity is configured', () => {
     const config = {
       ...baseConfig,
       visual_fidelity: {
@@ -26,7 +26,7 @@ describe('skillsApplicableTo', () => {
         component_dir: 'packages/dashboard/src/components',
       },
     } as ProjectConfig;
-    expect(skillsApplicableTo(config)).toEqual(['visual-fidelity-check']);
+    expect(skillsApplicableTo(config).sort()).toEqual(['browsing', 'visual-fidelity-check']);
   });
 });
 
