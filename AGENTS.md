@@ -35,7 +35,7 @@ The `--workspace` flag takes the package's `name` (e.g. `crew-cli`, `crew-daemon
 | Adding a Bruno endpoint                                               | `.agents/testing.md`                                   |
 | Sandbox / host-network / secrets behavior                             | `.agents/local-dev.md`, `.agents/security.md`          |
 | Touching `docker-compose`, `env.toml`, worktree port hashing          | `.agents/local-dev.md`                                 |
-| Working on the Figma DS or Pill components                            | `.agents/design-system.md`                             |
+| Working on dashboard components, the Figma DS, or `.figma.tsx`        | `.agents/design-system.md`                             |
 | Filing followups, writing tickets/specs/plans, branching              | `.agents/workflow.md`                                  |
 | Running verification (lint/typecheck/test/bruno/visual-fidelity)      | `.agents/commands.md`                                  |
 
