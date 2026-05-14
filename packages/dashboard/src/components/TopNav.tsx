@@ -3,6 +3,7 @@ import { Plus } from 'lucide-react';
 
 import type { Route } from '../routing/parseRoute.js';
 import { BrandMark } from './BrandMark.js';
+import { Badge } from './ui/badge.js';
 import { Button } from './ui/button.js';
 
 interface TopNavProps {
@@ -35,26 +36,29 @@ export function TopNav({ route, attentionCount, onClearAttention, onNewRun }: To
       </div>
       <div className="flex items-center gap-2">
         <Button
-          variant="outline"
+          color="running"
+          intensity="ghost"
           size="xs"
           onClick={onClearAttention}
           disabled={attentionCount === 0}
-          className="border-white/10 text-muted-foreground hover:bg-popover disabled:opacity-40"
+          className="disabled:opacity-40"
         >
           Clear attention
           {attentionCount > 0 && (
-            <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-amber-400 px-1.5 text-xs font-semibold text-slate-950">
+            <Badge color="waiting" intensity="mid" className="ml-1">
               {attentionCount}
-            </span>
+            </Badge>
           )}
         </Button>
         <Button
-          variant="default"
+          color="white"
+          intensity="loud"
           size="xs"
+          icon={<Plus aria-hidden />}
           onClick={onNewRun}
-          className="bg-foreground font-semibold text-background hover:bg-foreground/90"
+          className="font-semibold"
         >
-          <Plus aria-hidden /> New Run
+          New Run
         </Button>
       </div>
     </header>
