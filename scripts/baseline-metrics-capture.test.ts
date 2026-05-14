@@ -90,4 +90,42 @@ describe('aggregateTokenStats', () => {
       cacheCreate: 0,
     });
   });
+
+  it('emits one perTurnRow per usage event with full decomposition', () => {
+    const stats = aggregateTokenStats(FIXTURE_EVENTS);
+    expect(stats.perTurnRows).toHaveLength(3);
+
+    expect(stats.perTurnRows[0]).toMatchObject({
+      turn_index: 0,
+      uncached_tokens: 0,
+      cache_read_tokens: 100,
+      cache_creation_tokens: 50,
+      total_tokens: 150,
+      output_tokens: 200,
+      tool_calls_this_turn: 1,
+      tool_calls_breakdown: { Bash: 1 },
+    });
+
+    expect(stats.perTurnRows[1]).toMatchObject({
+      turn_index: 1,
+      uncached_tokens: 10,
+      cache_read_tokens: 150,
+      cache_creation_tokens: 0,
+      total_tokens: 160,
+      output_tokens: 300,
+      tool_calls_this_turn: 2,
+      tool_calls_breakdown: { Read: 1, Bash: 1 },
+    });
+
+    expect(stats.perTurnRows[2]).toMatchObject({
+      turn_index: 2,
+      uncached_tokens: 5,
+      cache_read_tokens: 200,
+      cache_creation_tokens: 0,
+      total_tokens: 205,
+      output_tokens: 400,
+      tool_calls_this_turn: 0,
+      tool_calls_breakdown: {},
+    });
+  });
 });

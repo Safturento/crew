@@ -36,27 +36,46 @@ export interface TranscriptEvent {
   };
 }
 
+export interface PerTurnRow {
+  turn_index: number;
+  uncached_tokens: number;
+  cache_read_tokens: number;
+  cache_creation_tokens: number;
+  total_tokens: number;
+  output_tokens: number;
+  tool_calls_this_turn: number;
+  tool_calls_breakdown: Record<string, number>;
+}
+
 export interface AggregatedStats {
   prClaim: { total: number; uncached: number; cacheRead: number; cacheCreate: number };
   output: { total: number; meanPerTurn: number; maxPerTurn: number };
+  perTurnRows: PerTurnRow[];
   turnCount: number;
   toolCallCount: number;
 }
 
 export function aggregateTokenStats(events: TranscriptEvent[]): AggregatedStats {
+  const perTurnRows: PerTurnRow[] = [];
   let outputTotal = 0;
   let outputMax = 0;
-  let turnCount = 0;
   let toolCallCount = 0;
   let prClaim = { total: 0, uncached: 0, cacheRead: 0, cacheCreate: 0 };
 
   for (const ev of events) {
-    for (const item of ev.message?.content ?? []) {
-      if (item.type === 'tool_use') toolCallCount++;
+    const items = ev.message?.content ?? [];
+    const thisTurnBreakdown: Record<string, number> = {};
+    let thisTurnToolUses = 0;
+    for (const item of items) {
+      if (item.type === 'tool_use') {
+        thisTurnToolUses++;
+        toolCallCount++;
+        const name = item.name ?? 'unknown';
+        thisTurnBreakdown[name] = (thisTurnBreakdown[name] ?? 0) + 1;
+      }
     }
     const u = ev.message?.usage;
     if (!u) continue;
-    turnCount++;
     const output = u.output_tokens ?? 0;
     outputTotal += output;
     if (output > outputMax) outputMax = output;
@@ -67,16 +86,27 @@ export function aggregateTokenStats(events: TranscriptEvent[]): AggregatedStats 
     if (total > 0) {
       prClaim = { total, uncached, cacheRead, cacheCreate };
     }
+    perTurnRows.push({
+      turn_index: perTurnRows.length,
+      uncached_tokens: uncached,
+      cache_read_tokens: cacheRead,
+      cache_creation_tokens: cacheCreate,
+      total_tokens: total,
+      output_tokens: output,
+      tool_calls_this_turn: thisTurnToolUses,
+      tool_calls_breakdown: thisTurnBreakdown,
+    });
   }
 
   return {
     prClaim,
     output: {
       total: outputTotal,
-      meanPerTurn: turnCount > 0 ? Math.floor(outputTotal / turnCount) : 0,
+      meanPerTurn: perTurnRows.length > 0 ? Math.floor(outputTotal / perTurnRows.length) : 0,
       maxPerTurn: outputMax,
     },
-    turnCount,
+    perTurnRows,
+    turnCount: perTurnRows.length,
     toolCallCount,
   };
 }
