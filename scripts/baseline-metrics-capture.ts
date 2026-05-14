@@ -13,11 +13,25 @@ const CLEANLINESS_COMMANDS = [
 ];
 
 interface ToolUseItem {
-  type: string;
+  type: 'tool_use';
+  id?: string;
   name?: string;
   input?: { command?: string };
 }
-interface TranscriptEvent {
+
+interface ToolResultItem {
+  type: 'tool_result';
+  tool_use_id?: string;
+  content?: string | Array<{ type?: string; text?: string }>;
+}
+
+interface OtherContentItem {
+  type?: string;
+}
+
+type ContentItem = ToolUseItem | ToolResultItem | OtherContentItem;
+
+export interface TranscriptEvent {
   type?: string;
   subtype?: string;
   compactMetadata?: {
@@ -26,12 +40,122 @@ interface TranscriptEvent {
     durationMs?: number;
   };
   message?: {
-    content?: ToolUseItem[];
+    content?: ContentItem[];
     usage?: {
       input_tokens?: number;
       cache_read_input_tokens?: number;
       cache_creation_input_tokens?: number;
+      output_tokens?: number;
     };
+  };
+}
+
+export interface PerTurnRow {
+  turn_index: number;
+  uncached_tokens: number;
+  cache_read_tokens: number;
+  cache_creation_tokens: number;
+  total_tokens: number;
+  output_tokens: number;
+  tool_calls_this_turn: number;
+  tool_calls_breakdown: Record<string, number>;
+}
+
+export interface ToolBreakdownEntry {
+  calls: number;
+  result_tokens_est: number;
+}
+
+export interface AggregatedStats {
+  prClaim: { total: number; uncached: number; cacheRead: number; cacheCreate: number };
+  output: { total: number; meanPerTurn: number; maxPerTurn: number };
+  toolBreakdown: Record<string, ToolBreakdownEntry>;
+  maxToolResultSizeTokens: number;
+  perTurnRows: PerTurnRow[];
+  turnCount: number;
+  toolCallCount: number;
+}
+
+// Estimate tool_result content size in tokens via the chars/4 heuristic
+// (Claude's standard rule of thumb). ~10% error; documented in the spec.
+function toolResultTokens(content: ToolResultItem['content']): number {
+  if (typeof content === 'string') return Math.floor(content.length / 4);
+  if (Array.isArray(content)) {
+    const chars = content.reduce((sum, c) => sum + (c.text?.length ?? 0), 0);
+    return Math.floor(chars / 4);
+  }
+  return 0;
+}
+
+export function aggregateTokenStats(events: TranscriptEvent[]): AggregatedStats {
+  const perTurnRows: PerTurnRow[] = [];
+  const toolBreakdown: Record<string, ToolBreakdownEntry> = {};
+  const toolUseIdToName = new Map<string, string>();
+  let outputTotal = 0;
+  let outputMax = 0;
+  let toolCallCount = 0;
+  let maxToolResultSizeTokens = 0;
+  let prClaim = { total: 0, uncached: 0, cacheRead: 0, cacheCreate: 0 };
+
+  for (const ev of events) {
+    const items = ev.message?.content ?? [];
+    const thisTurnBreakdown: Record<string, number> = {};
+    let thisTurnToolUses = 0;
+    for (const item of items) {
+      if (item.type === 'tool_use') {
+        thisTurnToolUses++;
+        toolCallCount++;
+        const name = item.name ?? 'unknown';
+        thisTurnBreakdown[name] = (thisTurnBreakdown[name] ?? 0) + 1;
+        toolBreakdown[name] ??= { calls: 0, result_tokens_est: 0 };
+        toolBreakdown[name].calls++;
+        if (item.id) toolUseIdToName.set(item.id, name);
+      } else if (item.type === 'tool_result') {
+        const tokens = toolResultTokens(item.content);
+        if (tokens > maxToolResultSizeTokens) maxToolResultSizeTokens = tokens;
+        const name = item.tool_use_id ? toolUseIdToName.get(item.tool_use_id) : undefined;
+        if (name) {
+          toolBreakdown[name] ??= { calls: 0, result_tokens_est: 0 };
+          toolBreakdown[name].result_tokens_est += tokens;
+        }
+      }
+    }
+    const u = ev.message?.usage;
+    if (!u) continue;
+    const output = u.output_tokens ?? 0;
+    outputTotal += output;
+    if (output > outputMax) outputMax = output;
+    const uncached = u.input_tokens ?? 0;
+    const cacheRead = u.cache_read_input_tokens ?? 0;
+    const cacheCreate = u.cache_creation_input_tokens ?? 0;
+    const total = uncached + cacheRead + cacheCreate;
+    if (total > 0) {
+      prClaim = { total, uncached, cacheRead, cacheCreate };
+    }
+    perTurnRows.push({
+      turn_index: perTurnRows.length,
+      uncached_tokens: uncached,
+      cache_read_tokens: cacheRead,
+      cache_creation_tokens: cacheCreate,
+      total_tokens: total,
+      output_tokens: output,
+      tool_calls_this_turn: thisTurnToolUses,
+      tool_calls_breakdown: thisTurnBreakdown,
+    });
+  }
+
+  return {
+    prClaim,
+    output: {
+      total: outputTotal,
+      meanPerTurn: perTurnRows.length > 0 ? Math.floor(outputTotal / perTurnRows.length) : 0,
+      maxPerTurn: outputMax,
+    },
+    toolBreakdown,
+    maxToolResultSizeTokens,
+    perTurnRows,
+    turnCount: perTurnRows.length,
+    toolCallCount,
   };
 }
 
@@ -48,7 +172,12 @@ function extractBashCommands(events: TranscriptEvent[]): string[] {
   for (const ev of events) {
     const items = ev.message?.content ?? [];
     for (const item of items) {
-      if (item.type === 'tool_use' && item.name === 'Bash' && item.input?.command) {
+      if (
+        item.type === 'tool_use' &&
+        item.name === 'Bash' &&
+        'input' in item &&
+        item.input?.command
+      ) {
         out.push(item.input.command);
       }
     }
@@ -58,47 +187,6 @@ function extractBashCommands(events: TranscriptEvent[]): string[] {
 
 function countCleanlinessChecks(commands: string[]): number {
   return CLEANLINESS_COMMANDS.filter((c) => commands.some((b) => b.includes(c))).length;
-}
-
-interface PrClaimTokens {
-  total: number;
-  uncached: number;
-  cacheRead: number;
-  cacheCreate: number;
-}
-
-function lastPrClaimTokens(events: TranscriptEvent[]): PrClaimTokens {
-  // Claude API splits prompt cost into input_tokens (uncached delta),
-  // cache_read_input_tokens, and cache_creation_input_tokens. Total context
-  // is the sum; the components answer the diagnostic question — did progress
-  // come from loading less prior content (cacheRead ↓) or fewer per-turn
-  // reads (uncached ↓)?
-  for (let i = events.length - 1; i >= 0; i--) {
-    const usage = events[i].message?.usage;
-    if (!usage) continue;
-    const uncached = usage.input_tokens ?? 0;
-    const cacheRead = usage.cache_read_input_tokens ?? 0;
-    const cacheCreate = usage.cache_creation_input_tokens ?? 0;
-    const total = uncached + cacheRead + cacheCreate;
-    if (total > 0) return { total, uncached, cacheRead, cacheCreate };
-  }
-  return { total: 0, uncached: 0, cacheRead: 0, cacheCreate: 0 };
-}
-
-function countTurns(events: TranscriptEvent[]): number {
-  // One usage block per assistant message — counts model invocations
-  // regardless of how many tool calls each turn made.
-  return events.filter((e) => e.message?.usage).length;
-}
-
-function countToolCalls(events: TranscriptEvent[]): number {
-  let n = 0;
-  for (const ev of events) {
-    for (const item of ev.message?.content ?? []) {
-      if (item.type === 'tool_use') n++;
-    }
-  }
-  return n;
 }
 
 interface CompactionStats {
@@ -165,9 +253,10 @@ async function main(): Promise<void> {
     )
     .all() as RunRow[];
 
-  // Throwaway snapshot table — script is meant to be re-runnable. Drop and
+  // Throwaway snapshot tables — script is meant to be re-runnable. Drop and
   // recreate so schema changes between runs don't require a separate migration.
   db.exec(`DROP TABLE IF EXISTS baseline_metrics`);
+  db.exec(`DROP TABLE IF EXISTS baseline_metrics_per_turn`);
   db.exec(`CREATE TABLE baseline_metrics (
     run_id INTEGER PRIMARY KEY,
     cleanliness_pass_count INTEGER,
@@ -180,7 +269,24 @@ async function main(): Promise<void> {
     pr_claim_uncached_tokens INTEGER,
     pr_claim_cache_read_tokens INTEGER,
     pr_claim_cache_creation_tokens INTEGER,
+    output_tokens_total INTEGER NOT NULL,
+    output_tokens_mean_per_turn INTEGER NOT NULL,
+    output_tokens_max_per_turn INTEGER NOT NULL,
+    max_tool_result_size_tokens INTEGER NOT NULL,
+    tool_token_breakdown TEXT NOT NULL,
     captured_at TEXT NOT NULL
+  )`);
+  db.exec(`CREATE TABLE baseline_metrics_per_turn (
+    run_id INTEGER NOT NULL,
+    turn_index INTEGER NOT NULL,
+    uncached_tokens INTEGER NOT NULL,
+    cache_read_tokens INTEGER NOT NULL,
+    cache_creation_tokens INTEGER NOT NULL,
+    total_tokens INTEGER NOT NULL,
+    output_tokens INTEGER NOT NULL,
+    tool_calls_this_turn INTEGER NOT NULL,
+    tool_calls_breakdown TEXT NOT NULL,
+    PRIMARY KEY (run_id, turn_index)
   )`);
 
   if (rows.length === 0) {
@@ -211,42 +317,77 @@ async function main(): Promise<void> {
     const events = await readTranscript(transcriptPath);
     const commands = extractBashCommands(events);
     const cleanlinessCount = countCleanlinessChecks(commands);
-    const turns = countTurns(events);
-    const toolCalls = countToolCalls(events);
     const compactions = compactionStats(events);
-    const tokens = lastPrClaimTokens(events);
+    const stats = aggregateTokenStats(events);
     db.prepare(
       `INSERT INTO baseline_metrics (
          run_id, cleanliness_pass_count, turn_count, tool_call_count,
          compaction_count, auto_compaction_count, max_pre_compact_tokens,
          pr_claim_input_tokens, pr_claim_uncached_tokens,
          pr_claim_cache_read_tokens, pr_claim_cache_creation_tokens,
+         output_tokens_total, output_tokens_mean_per_turn, output_tokens_max_per_turn,
+         max_tool_result_size_tokens, tool_token_breakdown,
          captured_at
-       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     ).run(
       row.id,
       cleanlinessCount,
-      turns,
-      toolCalls,
+      stats.turnCount,
+      stats.toolCallCount,
       compactions.total,
       compactions.auto,
       compactions.maxPreTokens,
-      tokens.total,
-      tokens.uncached,
-      tokens.cacheRead,
-      tokens.cacheCreate,
+      stats.prClaim.total,
+      stats.prClaim.uncached,
+      stats.prClaim.cacheRead,
+      stats.prClaim.cacheCreate,
+      stats.output.total,
+      stats.output.meanPerTurn,
+      stats.output.maxPerTurn,
+      stats.maxToolResultSizeTokens,
+      JSON.stringify(stats.toolBreakdown),
       new Date().toISOString(),
     );
+    const insertTurn = db.prepare(
+      `INSERT INTO baseline_metrics_per_turn (
+         run_id, turn_index,
+         uncached_tokens, cache_read_tokens, cache_creation_tokens,
+         total_tokens, output_tokens,
+         tool_calls_this_turn, tool_calls_breakdown
+       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    );
+    const insertAllTurns = db.transaction((turns: typeof stats.perTurnRows) => {
+      for (const turn of turns) {
+        insertTurn.run(
+          row.id,
+          turn.turn_index,
+          turn.uncached_tokens,
+          turn.cache_read_tokens,
+          turn.cache_creation_tokens,
+          turn.total_tokens,
+          turn.output_tokens,
+          turn.tool_calls_this_turn,
+          JSON.stringify(turn.tool_calls_breakdown),
+        );
+      }
+    });
+    insertAllTurns(stats.perTurnRows);
     const compactSuffix =
       compactions.total > 0
         ? `, compact=${compactions.total}(${compactions.auto} auto, peak=${compactions.maxPreTokens})`
         : '';
     console.log(
-      `run ${row.id}: cleanliness=${cleanlinessCount}/${CLEANLINESS_COMMANDS.length}, turns=${turns}, tools=${toolCalls}, tokens=${tokens.total} (cached=${tokens.cacheRead})${compactSuffix}`,
+      `run ${row.id}: cleanliness=${cleanlinessCount}/${CLEANLINESS_COMMANDS.length}, ` +
+        `turns=${stats.turnCount}, tools=${stats.toolCallCount}, ` +
+        `tokens=${stats.prClaim.total} (cached=${stats.prClaim.cacheRead}), ` +
+        `output=${stats.output.total} (mean=${stats.output.meanPerTurn}, max=${stats.output.maxPerTurn}), ` +
+        `maxToolResult=${stats.maxToolResultSizeTokens}${compactSuffix}`,
     );
   }
   console.log('baseline capture complete');
   db.close();
 }
 
-void main();
+if (import.meta.url === `file://${process.argv[1]}`) {
+  void main();
+}
