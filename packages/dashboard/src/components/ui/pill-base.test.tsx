@@ -53,4 +53,19 @@ describe('PillBase', () => {
     expect(el.dataset.color).toBe('waiting');
     expect(el.dataset.intensity).toBe('loud');
   });
+
+  it('asChild composes icon slot + class string onto the wrapped child element', () => {
+    render(
+      <PillBase asChild shape="h-6 px-2" icon={<svg data-testid="icon" />}>
+        <a href="/x">View PR</a>
+      </PillBase>,
+    );
+    const link = screen.getByRole('link', { name: /View PR/ });
+    expect(link.getAttribute('href')).toBe('/x');
+    // The merged className lands on the anchor itself, not on a wrapper.
+    expect(link.className).toContain('h-6');
+    expect(link.className).toContain('inline-flex');
+    // The icon is rendered as a sibling of the anchor's text, inside the anchor.
+    expect(link.querySelector('[data-testid="icon"]')).not.toBeNull();
+  });
 });
