@@ -372,7 +372,11 @@ async function main(): Promise<void> {
         ? `, compact=${compactions.total}(${compactions.auto} auto, peak=${compactions.maxPreTokens})`
         : '';
     console.log(
-      `run ${row.id}: cleanliness=${cleanlinessCount}/${CLEANLINESS_COMMANDS.length}, turns=${stats.turnCount}, tools=${stats.toolCallCount}, tokens=${stats.prClaim.total} (cached=${stats.prClaim.cacheRead})${compactSuffix}`,
+      `run ${row.id}: cleanliness=${cleanlinessCount}/${CLEANLINESS_COMMANDS.length}, ` +
+        `turns=${stats.turnCount}, tools=${stats.toolCallCount}, ` +
+        `tokens=${stats.prClaim.total} (cached=${stats.prClaim.cacheRead}), ` +
+        `output=${stats.output.total} (mean=${stats.output.meanPerTurn}, max=${stats.output.maxPerTurn}), ` +
+        `maxToolResult=${stats.maxToolResultSizeTokens}${compactSuffix}`,
     );
   }
   console.log('baseline capture complete');
