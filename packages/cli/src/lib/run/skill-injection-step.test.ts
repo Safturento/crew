@@ -46,8 +46,8 @@ describe('runSkillInjection', () => {
     expect(log).not.toHaveBeenCalled();
   });
 
-  it('copies an applicable skill into the worktree and logs the destination', async () => {
-    const sourceRoot = makeSourceRoot(['visual-fidelity-check']);
+  it('copies the applicable skills into the worktree and logs the destinations', async () => {
+    const sourceRoot = makeSourceRoot(['visual-fidelity-check', 'browsing']);
     const worktree = makeWorktree();
     const log = vi.fn();
     const warn = vi.fn();
@@ -60,11 +60,18 @@ describe('runSkillInjection', () => {
     } as ProjectConfig;
 
     const result = await runSkillInjection({ worktree, config, sourceRoot, log, warn });
-    expect(result).toEqual({ kind: 'ok', skillsInjected: ['visual-fidelity-check'] });
+    expect(result.kind).toBe('ok');
+    if (result.kind === 'ok') {
+      expect(result.skillsInjected.sort()).toEqual(['browsing', 'visual-fidelity-check']);
+    }
     expect(
       readFileSync(join(worktree, '.claude/skills/visual-fidelity-check/SKILL.md'), 'utf8'),
     ).toBe('# visual-fidelity-check\n');
+    expect(
+      readFileSync(join(worktree, '.claude/skills/browsing/SKILL.md'), 'utf8'),
+    ).toBe('# browsing\n');
     expect(log).toHaveBeenCalledWith(expect.stringContaining('visual-fidelity-check'));
+    expect(log).toHaveBeenCalledWith(expect.stringContaining('browsing'));
     expect(warn).not.toHaveBeenCalled();
   });
 

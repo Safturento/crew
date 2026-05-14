@@ -8,7 +8,7 @@ import {
   playwrightEnabled,
   resolveAppUrl,
   type DockerPorts,
-} from '../playwright/index.js';
+} from '../mcp-config/index.js';
 import { runPreflight } from '../preflight/index.js';
 import { buildPreflightChecks } from '../preflight/build-checks.js';
 import { agentNeedsAppRunning } from './app-lifecycle.js';

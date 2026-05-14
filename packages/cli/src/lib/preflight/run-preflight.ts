@@ -1,5 +1,5 @@
 import type { ProjectConfig } from 'crew-shared';
-import type { DockerPorts } from '../playwright/index.js';
+import type { DockerPorts } from '../mcp-config/index.js';
 import type { PreflightCheck } from './types.js';
 
 export interface RunPreflightOptions {

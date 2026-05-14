@@ -1,5 +1,5 @@
 import type { ProjectConfig } from 'crew-shared';
-import { playwrightEnabled, resolveAppUrl, type DockerPorts } from '../playwright/index.js';
+import { playwrightEnabled, resolveAppUrl, type DockerPorts } from '../mcp-config/index.js';
 import { probeUrl } from './probe-url.js';
 import { PreflightError, type PreflightCheck } from './types.js';
 

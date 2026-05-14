@@ -31,7 +31,7 @@ import {
   smokeEnabled,
   verifyAfterRunEnabled,
   writeMcpFile,
-} from '../lib/playwright/index.js';
+} from '../lib/mcp-config/index.js';
 import {
   resolveBrunoEnvName,
   writeEnvFile as writeBrunoEnvFile,
