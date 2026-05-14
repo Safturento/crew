@@ -147,10 +147,7 @@ describe('ProjectsService.list', () => {
 describe('ProjectsService.getBySlug', () => {
   it('returns the full ProjectConfig for a known slug', () => {
     const dir = projectsDir();
-    writeFileSync(
-      join(dir, 'kanban-api.toml'),
-      validToml('kanban-api', '/code/kanban-api'),
-    );
+    writeFileSync(join(dir, 'kanban-api.toml'), validToml('kanban-api', '/code/kanban-api'));
     const svc = new ProjectsService({
       projectsDir: dir,
       logger: silentLogger,
@@ -188,10 +185,7 @@ describe('ProjectsService.getBySlug', () => {
     // File is `weird-name.toml` but cfg.name is `canonical`. The slug exposed
     // via the API is `cfg.name` (mirrors how list() reports each project), so
     // getBySlug looks up by that field — not the filename.
-    writeFileSync(
-      join(dir, 'weird-name.toml'),
-      validToml('canonical', '/tmp/canonical'),
-    );
+    writeFileSync(join(dir, 'weird-name.toml'), validToml('canonical', '/tmp/canonical'));
     const svc = new ProjectsService({
       projectsDir: dir,
       logger: silentLogger,
@@ -205,10 +199,7 @@ describe('ProjectsService.getBySlug', () => {
 describe('ProjectsService.getConfigPath', () => {
   it('returns the resolved file path for a project', () => {
     const dir = projectsDir();
-    writeFileSync(
-      join(dir, 'kanban-api.toml'),
-      validToml('kanban-api', '/code/kanban-api'),
-    );
+    writeFileSync(join(dir, 'kanban-api.toml'), validToml('kanban-api', '/code/kanban-api'));
     const svc = new ProjectsService({
       projectsDir: dir,
       logger: silentLogger,
@@ -229,10 +220,7 @@ describe('ProjectsService.getConfigPath', () => {
 
   it('returns the actual file path even when filename differs from cfg.name', () => {
     const dir = projectsDir();
-    writeFileSync(
-      join(dir, 'weird-name.toml'),
-      validToml('canonical', '/tmp/canonical'),
-    );
+    writeFileSync(join(dir, 'weird-name.toml'), validToml('canonical', '/tmp/canonical'));
     const svc = new ProjectsService({
       projectsDir: dir,
       logger: silentLogger,

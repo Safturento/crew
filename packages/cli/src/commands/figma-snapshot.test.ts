@@ -1,9 +1,9 @@
-import { describe, it, expect, vi } from 'vitest';
-import { mkdtempSync, existsSync, rmSync, readFileSync } from 'node:fs';
+import { describe, expect, it, vi } from 'vitest';
+import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { runFigmaSnapshot, type FigmaSnapshotDeps } from './figma-snapshot.js';
-import type { ProjectConfig } from '../lib/index.js';
+import { type FigmaSnapshotDeps, runFigmaSnapshot } from './figma-snapshot.js';
+import type { ProjectConfig } from 'crew-shared';
 
 const baseConfig: ProjectConfig = {
   name: 'crew',
@@ -184,9 +184,7 @@ describe('runFigmaSnapshot', () => {
         }),
         getImages: vi.fn().mockResolvedValue({ images: {} }),
       };
-      const enrich = vi
-        .fn()
-        .mockResolvedValue({ kind: 'skipped', reason: 'claude not on PATH' });
+      const enrich = vi.fn().mockResolvedValue({ kind: 'skipped', reason: 'claude not on PATH' });
 
       const result = await runFigmaSnapshot({
         worktree,

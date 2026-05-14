@@ -13,16 +13,16 @@ A mandatory pre-completion gate for UI work in projects with a Figma source of t
 
 ## Red flags — STOP and run the skill
 
-| Thought | Reality |
-|---|---|
-| "All tests pass, ready to merge" | Tests don't catch visual regressions. Run the skill. |
-| "I already screenshotted, looked correct" | Self-graded against nothing. Run the skill. |
-| "The classes I emit are what the spec says" | The spec might be wrong — Figma is the source. Run the skill. |
-| "Visual smoke via Playwright MCP passes" | That's "the page didn't crash," not "the design matches." Run the skill. |
-| "It's a small change to one variant" | Small visual changes are exactly what self-grading misses. Run the skill. |
-| "The dashboard already had this issue" | Then surface it in the report; don't skip the run. |
-| "Snapshot isn't there / I can't find it" | Fail closed — surface as blocker, don't proceed. |
-| "I'll re-check after the user reviews the PR" | The user's time isn't a fallback for self-verification. Run the gate. |
+| Thought                                       | Reality                                                                   |
+| --------------------------------------------- | ------------------------------------------------------------------------- |
+| "All tests pass, ready to merge"              | Tests don't catch visual regressions. Run the skill.                      |
+| "I already screenshotted, looked correct"     | Self-graded against nothing. Run the skill.                               |
+| "The classes I emit are what the spec says"   | The spec might be wrong — Figma is the source. Run the skill.             |
+| "Visual smoke via Playwright MCP passes"      | That's "the page didn't crash," not "the design matches." Run the skill.  |
+| "It's a small change to one variant"          | Small visual changes are exactly what self-grading misses. Run the skill. |
+| "The dashboard already had this issue"        | Then surface it in the report; don't skip the run.                        |
+| "Snapshot isn't there / I can't find it"      | Fail closed — surface as blocker, don't proceed.                          |
+| "I'll re-check after the user reviews the PR" | The user's time isn't a fallback for self-verification. Run the gate.     |
 
 ## Workflow
 
@@ -41,11 +41,11 @@ Examples of what reports look like: `examples/findings-report-example.md` and `e
 
 ## Three kinds of findings
 
-| Kind | What | Where to fix |
-|---|---|---|
-| **Structural** | Helper/cva produces wrong Tailwind class for a Figma variant (e.g. `bg-neutral-200` where Figma binds `zinc/50`) | Helper/component source |
-| **Caller** | Component call site uses wrong prop vs Figma's design intent (e.g. `intensity="muted"` where Figma uses `intensity="mid"`) | The caller file |
-| **Visual** | Rendered screenshot diverges from Figma screenshot in a way structural+caller didn't catch (icon glyph, layout subtlety) | Investigate root cause — could be either |
+| Kind           | What                                                                                                                       | Where to fix                             |
+| -------------- | -------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------- |
+| **Structural** | Helper/cva produces wrong Tailwind class for a Figma variant (e.g. `bg-neutral-200` where Figma binds `zinc/50`)           | Helper/component source                  |
+| **Caller**     | Component call site uses wrong prop vs Figma's design intent (e.g. `intensity="muted"` where Figma uses `intensity="mid"`) | The caller file                          |
+| **Visual**     | Rendered screenshot diverges from Figma screenshot in a way structural+caller didn't catch (icon glyph, layout subtlety)   | Investigate root cause — could be either |
 
 Every finding must cite **file:line + actual code snippet + Figma reference (node + tokenAlias or hex) + the diff**. A finding without all four is incomplete — sharpen or drop.
 
@@ -61,17 +61,17 @@ If `enrichment` is absent on a node you need to check, log a verification gap an
 
 ### Icon findings are NEVER judgment calls
 
-If code's icon (Unicode glyph, wrong lucide variant, CSS-only span standing in for an SVG) doesn't match the Figma reference's icon, flag it. Severity ≥ medium. Naming the *specific* expected icon is part of the fix — write "use `lucide/arrow-up-right`" not "use an SVG." Read the specific name from `enrichment.componentProperties.Icon.name` — set-level defaults are unreliable (the Pill set's default Icon is `lucide/git-pull-request`, but individual instances use `lucide/circle`, `lucide/x`, `lucide/arrow-up-right`, `lucide/plus`, etc. depending on the instance's `Icon` INSTANCE_SWAP override). See workflow.md Step 4 for sub-cases.
+If code's icon (Unicode glyph, wrong lucide variant, CSS-only span standing in for an SVG) doesn't match the Figma reference's icon, flag it. Severity ≥ medium. Naming the _specific_ expected icon is part of the fix — write "use `lucide/arrow-up-right`" not "use an SVG." Read the specific name from `enrichment.componentProperties.Icon.name` — set-level defaults are unreliable (the Pill set's default Icon is `lucide/git-pull-request`, but individual instances use `lucide/circle`, `lucide/x`, `lucide/arrow-up-right`, `lucide/plus`, etc. depending on the instance's `Icon` INSTANCE_SWAP override). See workflow.md Step 4 for sub-cases.
 
 ## Rationalizations to counter
 
-| Rationalization | Reality |
-|---|---|
-| "I already ran Playwright MCP" | Rendering ≠ comparing to Figma. |
-| "The cva matches the spec doc" | The spec might be wrong. Figma is source. |
-| "User catches stuff in PR review" | User's time ≠ self-verification fallback. |
-| "Plan said visual smoke was deferred" | If the work touched UI, run the gate anyway. |
-| "Snapshot failed but my work is fine" | Fail closed. Surface the snapshot failure. |
+| Rationalization                                 | Reality                                                   |
+| ----------------------------------------------- | --------------------------------------------------------- |
+| "I already ran Playwright MCP"                  | Rendering ≠ comparing to Figma.                           |
+| "The cva matches the spec doc"                  | The spec might be wrong. Figma is source.                 |
+| "User catches stuff in PR review"               | User's time ≠ self-verification fallback.                 |
+| "Plan said visual smoke was deferred"           | If the work touched UI, run the gate anyway.              |
+| "Snapshot failed but my work is fine"           | Fail closed. Surface the snapshot failure.                |
 | "Findings are pre-existing, not from my change" | Then say so explicitly in the report. Don't skip the run. |
 
 ## Failure modes

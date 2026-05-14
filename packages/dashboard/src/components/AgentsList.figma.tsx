@@ -6,8 +6,6 @@ figma.connect(
   AgentsList,
   'https://www.figma.com/design/DsA7QuEa2WthDATkksd1Bq/Crew-Design-System?node-id=21-25',
   {
-    example: () => (
-      <AgentsList projects={[]} agents={[]} onSelectAgent={() => {}} />
-    ),
+    example: () => <AgentsList projects={[]} agents={[]} onSelectAgent={() => {}} />,
   },
 );

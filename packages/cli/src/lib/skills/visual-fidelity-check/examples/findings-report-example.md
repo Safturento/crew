@@ -66,9 +66,9 @@
   ```ts
   const WHITE_CLASSES: StateClassTokens = {
     text: 'text-slate-950',
-    bg: 'bg-neutral-200',       // ← #E5E5E5
+    bg: 'bg-neutral-200', // ← #E5E5E5
     border: 'border-slate-500',
-    solidBg: 'bg-neutral-200',  // ← #E5E5E5
+    solidBg: 'bg-neutral-200', // ← #E5E5E5
     solidBorder: 'border-slate-500',
   };
   ```

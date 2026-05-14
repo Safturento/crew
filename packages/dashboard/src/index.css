@@ -27,8 +27,8 @@
      Pixel-read of <state-color>@10% over slate-900 — used as solid bg for
      mid/muted state pills, so opacity stays out of the runtime path. */
   --color-blue-1050: #17253f;
-  --color-slate-1050: #1c2538;  /* running */
-  --color-slate-1100: #172134;  /* idle (one step darker than slate-1050) */
+  --color-slate-1050: #1c2538; /* running */
+  --color-slate-1100: #172134; /* idle (one step darker than slate-1050) */
   --color-amber-1050: #26282a;
   --color-violet-1050: #1e233f;
   --color-red-1050: #262031;

@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
 import { AgentRow } from './AgentRow.js';
-import type { Agent, AgentState } from '../data/types.js';
+import type { Agent, AgentState } from '@/data/types';
 
 const baseAgent: Agent = {
   key: 'KAN-31',
@@ -72,9 +72,7 @@ describe('AgentRow', () => {
 
   it('renders no quick action for running/initializing/finished', () => {
     for (const state of ['running', 'initializing', 'finished'] as AgentState[]) {
-      const { unmount } = render(
-        <AgentRow agent={{ ...baseAgent, state }} onSelect={() => {}} />,
-      );
+      const { unmount } = render(<AgentRow agent={{ ...baseAgent, state }} onSelect={() => {}} />);
       expect(
         screen.queryByRole('button', {
           name: /Provide input|Inspect|Resume|Finish|Archive/,
@@ -127,11 +125,7 @@ describe('AgentRow', () => {
     const user = userEvent.setup();
     const onAction = vi.fn();
     render(
-      <AgentRow
-        agent={{ ...baseAgent, state: 'idle' }}
-        onSelect={() => {}}
-        onAction={onAction}
-      />,
+      <AgentRow agent={{ ...baseAgent, state: 'idle' }} onSelect={() => {}} onAction={onAction} />,
     );
     await user.click(screen.getByRole('button', { name: 'Resume' }));
     expect(onAction).toHaveBeenCalledWith('resume', expect.objectContaining({ key: 'KAN-31' }));
@@ -178,9 +172,7 @@ describe('AgentRow', () => {
   it('event-propagation guard: clicking inside qa-group does not select the row', async () => {
     const user = userEvent.setup();
     const onSelect = vi.fn();
-    render(
-      <AgentRow agent={{ ...baseAgent, state: 'idle' }} onSelect={onSelect} />,
-    );
+    render(<AgentRow agent={{ ...baseAgent, state: 'idle' }} onSelect={onSelect} />);
     const finish = screen.getByRole('button', { name: 'Finish' });
     await user.click(finish);
     expect(onSelect).not.toHaveBeenCalled();
