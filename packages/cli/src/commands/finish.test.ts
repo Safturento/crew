@@ -1,16 +1,20 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { execa } from 'execa';
 import { readdir, stat, unlink } from 'node:fs/promises';
 import {
   computeWorktreePath,
+  type FinishDeps,
   isInsideWorktree,
   pruneSandboxStubs,
   readJiraSecrets,
   runFinish,
-  type FinishDeps,
 } from './finish.js';
-import type { ProjectConfig } from '../lib/index.js';
-import type { CrewDaemonClient, DaemonResult, RegisterRunSuccess } from '../lib/daemon-client/index.js';
+import type {
+  CrewDaemonClient,
+  DaemonResult,
+  ProjectConfig,
+  RegisterRunSuccess,
+} from '../lib/index.js';
 
 vi.mock('execa', () => ({ execa: vi.fn() }));
 vi.mock('node:fs/promises', () => ({
@@ -81,9 +85,11 @@ const sampleConfig: ProjectConfig = {
   },
 };
 
-function makeDeps(overrides: Partial<Omit<FinishDeps, 'daemonClient'>> & {
-  daemonClient?: DaemonClientStub & Pick<CrewDaemonClient, 'baseUrl'>;
-} = {}): FinishDeps & {
+function makeDeps(
+  overrides: Partial<Omit<FinishDeps, 'daemonClient'>> & {
+    daemonClient?: DaemonClientStub & Pick<CrewDaemonClient, 'baseUrl'>;
+  } = {},
+): FinishDeps & {
   logs: string[];
   warns: string[];
   daemonClient: DaemonClientStub & Pick<CrewDaemonClient, 'baseUrl'>;

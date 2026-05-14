@@ -2,13 +2,15 @@ import { Command } from 'commander';
 import { execa } from 'execa';
 import { randomUUID } from 'node:crypto';
 import { readdir, stat, unlink } from 'node:fs/promises';
-import { resolve, basename, dirname, join, sep } from 'node:path';
+import { basename, dirname, join, resolve, sep } from 'node:path';
 import pc from 'picocolors';
-import { discoverProjectConfig, JiraClient, type ProjectConfig } from '../lib/index.js';
 import {
-  crewDaemonClientFromEnv,
   type CrewDaemonClient,
-} from '../lib/daemon-client/index.js';
+  crewDaemonClientFromEnv,
+  discoverProjectConfig,
+  JiraClient,
+  type ProjectConfig,
+} from '../lib/index.js';
 
 export interface FinishDeps {
   cwd: string;

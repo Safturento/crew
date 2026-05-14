@@ -2,7 +2,7 @@ import { useState } from 'react';
 import type { MouseEvent } from 'react';
 import { ChevronDown, ExternalLink, Folder } from 'lucide-react';
 
-import type { Agent, Project } from '../data/types.js';
+import type { Agent, Project } from '@/data/types';
 import { AgentRow, type QuickActionKind } from './AgentRow.js';
 import { Button } from './ui/button.js';
 import { ColumnHeaderRow } from './ColumnHeaderRow.js';
@@ -84,12 +84,7 @@ export function ProjectSection({
             </div>
           ) : (
             agents.map((a) => (
-              <AgentRow
-                key={a.key}
-                agent={a}
-                onSelect={onSelectAgent}
-                onAction={onAgentAction}
-              />
+              <AgentRow key={a.key} agent={a} onSelect={onSelectAgent} onAction={onAgentAction} />
             ))
           )}
         </div>
