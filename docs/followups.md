@@ -65,7 +65,7 @@ Format: see the user-level `~/.claude/CLAUDE.md` "Followup detection" section.
   - [2026-04-29 — Slice 1c agents continuation work](#2026-04-29--slice-1c-agents-continuation-work)
   - [2026-04-29 — CREW-25 cva-refactor cleanup leftovers](#2026-04-29--crew-25-cva-refactor-cleanup-leftovers)
   - [2026-04-28 — Dashboard write/action endpoint surfaces](#2026-04-28--dashboard-writeaction-endpoint-surfaces)
-  - [2026-04-28 — Flesh out `docs/plans/project-resolution.md` stub](#2026-04-28--flesh-out-docsplansproject-resolutionmd-stub)
+  - [2026-04-28 — Flesh out the project-resolution design](#2026-04-28--flesh-out-the-project-resolution-design)
   - [2026-04-28 — Dashboard agent detail drawer + full-page route](#2026-04-28--dashboard-agent-detail-drawer--full-page-route)
   - [2026-04-28 — Dashboard New Run modal + projects route view](#2026-04-28--dashboard-new-run-modal--projects-route-view)
   - [2026-04-28 — `useAttention.clear()` snapshot semantic isn't directly tested](#2026-04-28--useattentionclear-snapshot-semantic-isnt-directly-tested)
@@ -1477,17 +1477,19 @@ Don't open this epic until slice 1b (CREW-47) closes.
 - Authentication: this is localhost-only, but a `POST /jobs/run` invoked by accident could spawn an agent against the wrong ticket. Probably needs a confirmation token or an idempotency key. Resolve in spec.
 - Should `/jobs/` endpoints be sync (return when the agent exits) or async (return immediately, observe via SSE)? Async is the natural fit given runs are long-lived.
 
-### 2026-04-28 — Flesh out `docs/plans/project-resolution.md` stub
+### 2026-04-28 — Flesh out the project-resolution design
 
-**What:** The plan at `docs/plans/project-resolution.md` is explicitly marked stub. Three sections are placeholder TODOs (Recommendation by context, Chosen approach, Implementation outline, Verification). The triggering incident — `crew run <KAN-ticket>` from inside the `crew` repo failing with a wrong-project error — is still real today. CLI partial workaround: `--project <name>` flag exists on `crew list` and `crew status` but not on `crew run` / `crew fix-pr` / `crew finish` / `crew resume` etc.
+**What:** The design exploration at `docs/rationale/project-resolution.md` is explicitly marked pre-implementation notes — "Initial leaning", "Sketched implementation outline", with no chosen approach locked in. The triggering incident — `crew run <KAN-ticket>` from inside the `crew` repo failing with a wrong-project error — is still real today. CLI partial workaround: `--project <name>` flag exists on `crew list` and `crew status` but not on `crew run` / `crew fix-pr` / `crew finish` / `crew resume` etc.
 
-**Why noticed:** The doc itself opens with `**Status:** Stub`. PR [#21](https://github.com/Safturento/crew/pull/21) merged it in Apr 28 with the explicit intent "needs fleshing out before this drives any code." Five months of subsequent work on the daemon + dashboard sharpens the need: the dashboard's write endpoints (entry above) will land project-by-name from a non-CLI surface.
+**Why noticed:** The doc itself opens with `**Status:** Pre-implementation design notes`. PR [#21](https://github.com/Safturento/crew/pull/21) merged it in Apr 28 (then as `docs/plans/project-resolution.md`) with the explicit intent "needs fleshing out before this drives any code." Five months of subsequent work on the daemon + dashboard sharpens the need: the dashboard's write endpoints (entry above) will land project-by-name from a non-CLI surface. CREW-156 migrated the stub to `docs/rationale/` and documented the current cwd-only behavior in `.agents/local-dev.md`; the followup itself still applies because nothing's been implemented yet.
 
 **Anchors:**
 
-- `docs/plans/project-resolution.md` — the stub
+- `docs/rationale/project-resolution.md` — the design exploration (was `docs/plans/project-resolution.md` before CREW-156)
+- `.agents/local-dev.md` — current cwd-only behavior + pointer to this followup
 - [PR #21](https://github.com/Safturento/crew/pull/21) — original landing
 - `packages/cli/src/commands/list.ts:105`, `packages/cli/src/commands/status.ts:91` — partial `--project` flag implementation
+- `packages/cli/src/lib/discover-project-config.ts` — current cwd-only resolver
 - `packages/shared/src/config/loader.ts` — `loadProjectConfigByName` exists but no key-prefix resolver
 
 **What's been considered:** Four options (A: ticket-key prefix, B: explicit `--project`, C: per-user default, D: hybrid precedence). Initial leaning is D (hybrid) per the doc's last paragraph.

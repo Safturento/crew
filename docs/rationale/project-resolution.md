@@ -1,8 +1,10 @@
-# Project resolution from any directory
+# Project resolution — rationale & design exploration
 
-> **Status:** Stub. Context is real; options/recommendation/implementation are sketched and need fleshing out before this drives any code.
+Background and design exploration for crew's project-resolution behavior. The current rules — cwd-only discovery via `git remote get-url origin`, the `--project` opt-out on `crew list`/`crew status`, the "no match → fail" contract — are documented in [`.agents/local-dev.md`](../../.agents/local-dev.md). This file captures the design discussion that surfaced when the dashboard was first scoped, before any of that hybrid behavior shipped.
 
-## Context
+> **Status:** Pre-implementation design notes. The "options considered" and "implementation outline" sections are sketched, not final. Treat this as a thinking record, not a spec.
+
+## Why this question came up
 
 A CLI that operates against multiple registered projects has to answer one question on every invocation: _which project is this command for?_ Two common signals:
 
@@ -13,7 +15,9 @@ Tools that rely solely on (1) force the user to `cd` before every command, which
 
 Once a tool grows a dashboard or any non-CLI entry point, project resolution can no longer be cwd-implicit. Either the cwd path becomes one signal among several, or it gets replaced entirely by an explicit project identifier on every command. Picking the right blend early avoids re-plumbing every subcommand later.
 
-> **Project-specific:** crew today auto-discovers the project by walking up from cwd to find a registered `repo_path` (see `docs/plans/architecture.md` line 167), and _errors out_ when the cwd-detected project doesn't match the ticket's tracker key. The triggering incident: running `crew run <KAN-ticket>` from inside the `crew` repo failed with a wrong-project error instead of just resolving `KAN-` to the recipes-app project. The Phase 3 dashboard will trigger the same operations (`run`, `fix-pr`, `finish`, `status`) from a process that has no meaningful cwd. Between the friction today and the dashboard's needs tomorrow, the CLI should support project-by-ticket _now_ so the dashboard inherits a working code path instead of a parallel one.
+### Triggering incident
+
+Running `crew run <KAN-ticket>` from inside the `crew` repo failed with a wrong-project error instead of resolving `KAN-` to the recipes-app project. The Phase 3 dashboard will trigger the same operations (`run`, `fix-pr`, `finish`, `status`) from a process that has no meaningful cwd. Between the friction today and the dashboard's needs tomorrow, the CLI should support project-by-ticket _now_ so the dashboard inherits a working code path instead of a parallel one.
 
 ## Options considered
 
@@ -45,35 +49,25 @@ User passes `--project recipes-app` when outside the repo; cwd auto-detect kicks
 - **Pros:** Each signal handles its natural case. CLI users in-repo get today's behavior unchanged. Non-CLI callers (dashboard, scripts) get a deterministic flag path. Ticket-key inference covers the "I'm in a different repo and want to run a quick command" case without typing a flag.
 - **Cons:** Three resolution paths to document and test. Precedence has to be obvious or it confuses users.
 
-## Recommendation by context
+## Initial leaning
 
-> TODO — write up which option fits which context (single-project vs multi-project, solo vs team, CLI-only vs CLI+UI).
+**D (hybrid)** for any tool that already supports cwd-based resolution and is adding a non-CLI entry point. **A (key prefix)** is enough if the tool is greenfield and every command takes a key.
 
-Initial leaning: **D (hybrid)** for any tool that already supports cwd-based resolution and is adding a non-CLI entry point. **A (key prefix)** is enough if the tool is greenfield and every command takes a key.
+For crew specifically: likely **D**, because crew already has cwd auto-discover working and we don't want to break the muscle memory of `crew run KAN-23` from inside `Recipes-App/`. The dashboard's calls would always pass `--project` (or its API equivalent), and ad-hoc CLI use from a different repo would lean on the ticket-key prefix.
 
-## Chosen approach
+## Sketched implementation outline
 
-> TODO — pick one and explain the reasoning that tipped it for this project.
+When this work is picked up:
 
-> **Project-specific:** Likely D, because crew already has cwd auto-discover working and we don't want to break the muscle memory of `crew run KAN-23` from inside `Recipes-App/`. The dashboard's calls would always pass `--project` (or its API equivalent), and ad-hoc CLI use from a different repo would lean on the ticket-key prefix.
-
-## Implementation outline
-
-> TODO — flesh out once chosen approach is locked.
-
-Rough sketch:
-
-1. **Project registry lookup helper** in `shared/config/` (currently `cli/src/lib/config/`): given a ticket key, return the matching project config; given a `--project` name, ditto. Surface a single `resolveProject({ key?, projectName?, cwd? })` entry point so subcommands don't each reinvent precedence.
+1. **Project registry lookup helper** in `shared/config/`: given a ticket key, return the matching project config; given a `--project` name, ditto. Surface a single `resolveProject({ key?, projectName?, cwd? })` entry point so subcommands don't each reinvent precedence.
 2. **Audit subcommands.** Every command that today assumes cwd needs to call `resolveProject` instead. Some take a ticket key already (`run`, `fix-pr`, `finish`, `status`); some don't (`list`, `daemon status`).
 3. **Error messaging.** When resolution fails, list registered projects with their tracker keys so the user can pick the right one.
 4. **Dashboard contract.** The daemon's REST API takes `project` as an explicit field on every request that needs one; the CLI's resolver and the daemon's resolver share the same `shared/` helper.
 5. **Tests.** Unit-test the resolver with each precedence case (flag-only, key-only, cwd-only, conflicts, none).
 
-## Verification
+## Verification ideas
 
-> TODO
-
-Smoke-test ideas:
+Smoke-test ideas for the hybrid resolver:
 
 - `cd /tmp && crew run KAN-23` — resolves to `recipes-app` via tracker key.
 - `cd ~/Repos/crew && crew status CREW-9` — resolves to `crew` via cwd.

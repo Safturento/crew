@@ -1,13 +1,105 @@
 ---
 name: local-dev
 description: Docker stack, env.toml, worktree isolation, sandbox baseline
-last_updated: 2026-05-13
+last_updated: 2026-05-14
 covers:
-  - "docker-compose*.yml"
-  - "env.toml"
-  - "packages/daemon/seeds/**"
+  - 'docker-compose*.yml'
+  - 'env.toml'
+  - 'packages/daemon/seeds/**'
 ---
 
 # Local development
 
-_Stub. Populated in ticket #3._
+Crew runs as a docker compose stack on the host: a `daemon` service (Fastify + SQLite at `/state/state.db`) and a `dashboard` service (Vite). `crew run <KEY>` brings up a per-worktree stack via [`packages/cli/src/lib/docker/start-bringup.ts`](../packages/cli/src/lib/docker/start-bringup.ts); the canonical stack is started with `docker compose up --build --wait` from the repo root. User-facing setup lives in [`README.md`](../README.md); this file captures the rules agents need when touching the stack itself.
+
+## Hot-reload is the default
+
+Both services source-mount from the worktree, so edits land without rebuild:
+
+- `daemon`: `tsx watch`. Mounts `./packages/daemon/src` and `./packages/shared/src` into `/app/packages/.../src`.
+- `dashboard`: Vite dev server. Mounts `./packages/dashboard/src`.
+
+An anonymous `node_modules` volume preserves `npm ci` output from being clobbered by the source bind-mount. If a fresh dependency doesn't show up, that volume is the place to look — `docker compose down -v` clears it.
+
+## Worktree DBs are ephemeral and seeded
+
+The canonical stack persists state at the `crew-state` named volume (`/state/state.db` inside the container). Per-worktree stacks use their own ephemeral volume and re-seed from fixtures on every bring-up.
+
+Seeding is gated by `CREW_SEED_FIXTURES=1`. When set, the daemon runs [`packages/daemon/seeds/dev.ts`](../packages/daemon/seeds/dev.ts) at startup — deterministic project TOMLs, agents, runs, tool calls, and a fixture transcript. Tests target these fixtures, never your canonical state. `crew run <KEY>` always exports `CREW_SEED_FIXTURES=1` for the worktree stack.
+
+When you add a fixture, edit `seeds/dev.ts` and bump the fixture set together with any test that depends on it. The seed file is `git`-tracked; don't write per-developer fixtures.
+
+## `env.toml` is the source of truth for per-worktree env
+
+`<repo>/env.toml` declares orchestration variables (`COMPOSE_PROJECT_NAME`, `CREW_PORT`, `CREW_VITE_PORT`, `APP_URL`, `DAEMON_URL`, `COMPOSE_PROFILES`). `crew run` materializes this spec into a `.env` file via [`packages/cli/src/lib/env-spec/`](../packages/cli/src/lib/env-spec/), substituting per-worktree values.
+
+Two rules:
+
+- **`${VAR}` syntax only.** Templated values reference other keys with `${OTHER_VAR}`. Never the legacy `{httpPort}` / `{httpsPort}` / `{postgresPort}` placeholders — those still exist in `projectConfigSchema` for tracker-key-driven legacy config, but new env.toml entries use `${VAR}`.
+- **No hardcoded ports in `docker-compose.yml`.** Compose reads `${CREW_PORT:-7773}` and `${CREW_VITE_PORT:-5173}` so the canonical worktree keeps default ports while worktrees get hashed ones.
+
+## Per-worktree docker isolation
+
+Multiple worktrees co-exist by hashing the worktree directory basename into non-default host ports:
+
+- `md5(basename) → first 4 hex chars → offset = (hash mod 99) + 1`
+- HTTP: `8000 + offset`, HTTPS: `8400 + offset`, Postgres: `15400 + offset`
+- Implementation: [`packages/cli/src/lib/docker/port-hash.ts`](../packages/cli/src/lib/docker/port-hash.ts).
+
+The canonical worktree (named in `[docker].canonical_worktree` of the project config) keeps the standard ports — its bringup short-circuits the hash step. This rule applies to crew itself: `crew-CREW-*` worktrees get hashed ports, while `crew/` (the canonical clone) gets the defaults.
+
+`COMPOSE_PROJECT_NAME` is templated as `${BASE_NAME}-${WORKTREE_ID}` so each worktree's compose stack is namespaced and `docker compose ps` shows them distinctly.
+
+## Sandbox baseline + `excludedCommands`
+
+[`<repo>/.claude/settings.json`](../.claude/settings.json) declares the sandbox baseline that every `crew run` agent inherits:
+
+- `sandbox.enabled = true`, `allowUnsandboxedCommands = false`.
+- `network.allowedDomains` whitelists GitHub, npm, Atlassian, Anthropic, plus `localhost` / `127.0.0.1`.
+- `filesystem.allowWrite` includes `~/.npm`, `~/.cache/{node,claude-cli,claude}`, and `/tmp`.
+
+The `excludedCommands` glob list specifies commands that run **un-sandboxed** because they need host-loopback access to the worktree docker stack:
+
+```
+"npm run bruno:smoke*"
+"npm run test:e2e*"
+"docker compose*"
+```
+
+### ECONNREFUSED on sandboxed `localhost` calls is expected
+
+Sandboxed Bash tool calls run in their own network namespace with a private loopback. A direct `curl http://localhost:PORT` / `wget` / Node `fetch` from inside a sandboxed call **will always return `ECONNREFUSED`**, even when the docker stack is healthy on the host. That is not evidence the stack is down.
+
+The two reachability tests that **do** work against the host loopback are `npm run bruno:smoke` and `npm run test:e2e`, because both match `excludedCommands` and run un-sandboxed.
+
+`excludedCommands` matches by leading-substring glob (`command*`). To stay matched:
+
+- Run the bare command: `npm run test:e2e`. Trailing args (`--workspace=crew-dashboard`, pipes, redirects) are fine; they ride along inside the glob.
+- **Do not wrap.** `cd <dir> && npm run …`, `sh -c "npm run …"`, and `npm --prefix <dir> run …` all defeat the prefix match and silently fall back to sandboxed execution. Use the `--workspace=` flag if you need to scope to a sub-package.
+
+A failing `npm run test:e2e` that produces `ECONNREFUSED` while the same flow worked via Playwright MCP is the signature of a wrapper-defeated match.
+
+## Project resolution
+
+`crew run <KEY>` (and every other subcommand) auto-discovers which project config to use from the current working directory. The resolver is [`packages/cli/src/lib/discover-project-config.ts`](../packages/cli/src/lib/discover-project-config.ts):
+
+1. Shell `git -C <cwd> remote get-url origin`. Parse `owner/repo` out of the URL.
+2. Scan `~/.config/crew/projects/*.toml`. Return the first config whose `[github].repo` matches.
+3. Return `null` if no match — subcommands fail with `no crew project config matches this repository — configure ~/.config/crew/projects/<name>.toml`.
+
+`crew list` and `crew status` accept `--project <name>` as an opt-out for callers outside any registered repo; the other subcommands (`run`, `fix-pr`, `finish`, `resume`) still require cwd-based discovery. There is no ticket-key-prefix resolution today: a `CREW-*` invocation from inside the `recipes-app` repo will pick up the recipes-app config, not the crew config. The dashboard does not depend on cwd because it talks to the daemon's HTTP API, which receives a project name explicitly.
+
+Future direction (hybrid `--project` + ticket-key prefix + cwd, applied uniformly across all subcommands) is captured in [`docs/rationale/project-resolution.md`](../docs/rationale/project-resolution.md). Don't add resolver behavior in code without first updating that rationale doc and this section together.
+
+## Bringing the stack up by hand
+
+Useful when debugging a worktree without going through `crew run`:
+
+```bash
+docker compose up --build --wait        # builds + waits for healthchecks
+docker compose logs -f daemon dashboard # tails both services
+docker compose down                     # stops; volumes persist
+docker compose down -v                  # also drops crew-state + anonymous volumes
+```
+
+The `--wait` flag respects the daemon's healthcheck (`GET /health`); if it times out, the daemon is the problem, not the dashboard.
