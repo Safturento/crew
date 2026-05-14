@@ -37,16 +37,47 @@ export interface TranscriptEvent {
 }
 
 export interface AggregatedStats {
+  prClaim: { total: number; uncached: number; cacheRead: number; cacheCreate: number };
   output: { total: number; meanPerTurn: number; maxPerTurn: number };
+  turnCount: number;
+  toolCallCount: number;
 }
 
 export function aggregateTokenStats(events: TranscriptEvent[]): AggregatedStats {
   let outputTotal = 0;
+  let outputMax = 0;
+  let turnCount = 0;
+  let toolCallCount = 0;
+  let prClaim = { total: 0, uncached: 0, cacheRead: 0, cacheCreate: 0 };
+
   for (const ev of events) {
-    outputTotal += ev.message?.usage?.output_tokens ?? 0;
+    for (const item of ev.message?.content ?? []) {
+      if (item.type === 'tool_use') toolCallCount++;
+    }
+    const u = ev.message?.usage;
+    if (!u) continue;
+    turnCount++;
+    const output = u.output_tokens ?? 0;
+    outputTotal += output;
+    if (output > outputMax) outputMax = output;
+    const uncached = u.input_tokens ?? 0;
+    const cacheRead = u.cache_read_input_tokens ?? 0;
+    const cacheCreate = u.cache_creation_input_tokens ?? 0;
+    const total = uncached + cacheRead + cacheCreate;
+    if (total > 0) {
+      prClaim = { total, uncached, cacheRead, cacheCreate };
+    }
   }
+
   return {
-    output: { total: outputTotal, meanPerTurn: 0, maxPerTurn: 0 },
+    prClaim,
+    output: {
+      total: outputTotal,
+      meanPerTurn: turnCount > 0 ? Math.floor(outputTotal / turnCount) : 0,
+      maxPerTurn: outputMax,
+    },
+    turnCount,
+    toolCallCount,
   };
 }
 

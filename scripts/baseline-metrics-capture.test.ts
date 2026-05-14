@@ -68,4 +68,26 @@ describe('aggregateTokenStats', () => {
     const stats = aggregateTokenStats(FIXTURE_EVENTS);
     expect(stats.output.total).toBe(900); // 200 + 300 + 400
   });
+
+  it('computes output mean and max per turn', () => {
+    const stats = aggregateTokenStats(FIXTURE_EVENTS);
+    expect(stats.output.maxPerTurn).toBe(400);
+    expect(stats.output.meanPerTurn).toBe(300); // floor(900 / 3)
+  });
+
+  it('counts turns (usage events) and tool_use calls', () => {
+    const stats = aggregateTokenStats(FIXTURE_EVENTS);
+    expect(stats.turnCount).toBe(3);
+    expect(stats.toolCallCount).toBe(3); // 1 + 2 + 0
+  });
+
+  it('captures the last turn snapshot as prClaim (backward-compat with lastPrClaimTokens)', () => {
+    const stats = aggregateTokenStats(FIXTURE_EVENTS);
+    expect(stats.prClaim).toEqual({
+      total: 205, // 5 + 200 + 0
+      uncached: 5,
+      cacheRead: 200,
+      cacheCreate: 0,
+    });
+  });
 });
