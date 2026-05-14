@@ -12,6 +12,20 @@
 
 ---
 
+## Prerequisites
+
+Before starting Task 1, create the implementation branch from `main`. The spec + this plan already live on `spec/baseline-metrics-expansion`; the implementation lands on its own ticket branch.
+
+```bash
+git checkout main
+git pull
+git checkout -b CREW-165   # or whatever ticket key is assigned
+```
+
+All task commits land on this branch. Task 8 pushes it and opens the PR.
+
+---
+
 ## File Structure
 
 - **Modify:** `scripts/baseline-metrics-capture.ts` — extend types, add `aggregateTokenStats` (exported), update `main()` CREATE TABLE + INSERTs, add per-turn table writes
@@ -977,17 +991,9 @@ All four must pass.
 
 - [ ] **Step 4: Push and open the PR**
 
-```bash
-git push -u origin spec/baseline-metrics-expansion
-```
+The branch is already `CREW-165` (created in Prerequisites). Push and PR:
 
-Wait — the implementation has been on a *plan* branch alongside the spec. Confirm with the user whether to:
-- Move all task commits to a fresh `CREW-165` branch (preferred, matches project convention of branch-per-ticket), OR
-- Keep them on `spec/baseline-metrics-expansion` and open the PR from there.
-
-If the ticket exists (CREW-165 or whatever the next free key is), create the branch and re-push:
 ```bash
-git checkout -b CREW-165
 git push -u origin CREW-165
 gh pr create --title "expand baseline_metrics: output + per-turn + per-tool attribution" --body "$(cat <<'EOF'
 ## Summary
