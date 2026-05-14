@@ -13,10 +13,24 @@ const CLEANLINESS_COMMANDS = [
 ];
 
 interface ToolUseItem {
-  type: string;
+  type: 'tool_use';
+  id?: string;
   name?: string;
   input?: { command?: string };
 }
+
+interface ToolResultItem {
+  type: 'tool_result';
+  tool_use_id?: string;
+  content?: string | Array<{ type?: string; text?: string }>;
+}
+
+interface OtherContentItem {
+  type?: string;
+}
+
+type ContentItem = ToolUseItem | ToolResultItem | OtherContentItem;
+
 export interface TranscriptEvent {
   type?: string;
   subtype?: string;
@@ -26,7 +40,7 @@ export interface TranscriptEvent {
     durationMs?: number;
   };
   message?: {
-    content?: ToolUseItem[];
+    content?: ContentItem[];
     usage?: {
       input_tokens?: number;
       cache_read_input_tokens?: number;
@@ -47,16 +61,35 @@ export interface PerTurnRow {
   tool_calls_breakdown: Record<string, number>;
 }
 
+export interface ToolBreakdownEntry {
+  calls: number;
+  result_tokens_est: number;
+}
+
 export interface AggregatedStats {
   prClaim: { total: number; uncached: number; cacheRead: number; cacheCreate: number };
   output: { total: number; meanPerTurn: number; maxPerTurn: number };
+  toolBreakdown: Record<string, ToolBreakdownEntry>;
   perTurnRows: PerTurnRow[];
   turnCount: number;
   toolCallCount: number;
 }
 
+// Estimate tool_result content size in tokens via the chars/4 heuristic
+// (Claude's standard rule of thumb). ~10% error; documented in the spec.
+function toolResultTokens(content: ToolResultItem['content']): number {
+  if (typeof content === 'string') return Math.floor(content.length / 4);
+  if (Array.isArray(content)) {
+    const chars = content.reduce((sum, c) => sum + (c.text?.length ?? 0), 0);
+    return Math.floor(chars / 4);
+  }
+  return 0;
+}
+
 export function aggregateTokenStats(events: TranscriptEvent[]): AggregatedStats {
   const perTurnRows: PerTurnRow[] = [];
+  const toolBreakdown: Record<string, ToolBreakdownEntry> = {};
+  const toolUseIdToName = new Map<string, string>();
   let outputTotal = 0;
   let outputMax = 0;
   let toolCallCount = 0;
@@ -72,6 +105,15 @@ export function aggregateTokenStats(events: TranscriptEvent[]): AggregatedStats 
         toolCallCount++;
         const name = item.name ?? 'unknown';
         thisTurnBreakdown[name] = (thisTurnBreakdown[name] ?? 0) + 1;
+        toolBreakdown[name] ??= { calls: 0, result_tokens_est: 0 };
+        toolBreakdown[name].calls++;
+        if (item.id) toolUseIdToName.set(item.id, name);
+      } else if (item.type === 'tool_result') {
+        const name = item.tool_use_id ? toolUseIdToName.get(item.tool_use_id) : undefined;
+        if (name) {
+          toolBreakdown[name] ??= { calls: 0, result_tokens_est: 0 };
+          toolBreakdown[name].result_tokens_est += toolResultTokens(item.content);
+        }
       }
     }
     const u = ev.message?.usage;
@@ -105,6 +147,7 @@ export function aggregateTokenStats(events: TranscriptEvent[]): AggregatedStats 
       meanPerTurn: perTurnRows.length > 0 ? Math.floor(outputTotal / perTurnRows.length) : 0,
       maxPerTurn: outputMax,
     },
+    toolBreakdown,
     perTurnRows,
     turnCount: perTurnRows.length,
     toolCallCount,
@@ -124,7 +167,7 @@ function extractBashCommands(events: TranscriptEvent[]): string[] {
   for (const ev of events) {
     const items = ev.message?.content ?? [];
     for (const item of items) {
-      if (item.type === 'tool_use' && item.name === 'Bash' && item.input?.command) {
+      if (item.type === 'tool_use' && item.name === 'Bash' && 'input' in item && item.input?.command) {
         out.push(item.input.command);
       }
     }

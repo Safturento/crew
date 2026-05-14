@@ -91,6 +91,15 @@ describe('aggregateTokenStats', () => {
     });
   });
 
+  it('attributes tool_result size to the originating tool via tool_use_id (chars/4 heuristic)', () => {
+    const stats = aggregateTokenStats(FIXTURE_EVENTS);
+    // Bash: tu_001 result 'hello\n' = 6 chars → floor(6/4) = 1
+    //       tu_003 result 'foo\nbar\n' = 8 chars → floor(8/4) = 2
+    expect(stats.toolBreakdown.Bash).toEqual({ calls: 2, result_tokens_est: 3 });
+    // Read: tu_002 result is 'long file content '.repeat(50) = 900 chars → 225
+    expect(stats.toolBreakdown.Read).toEqual({ calls: 1, result_tokens_est: 225 });
+  });
+
   it('emits one perTurnRow per usage event with full decomposition', () => {
     const stats = aggregateTokenStats(FIXTURE_EVENTS);
     expect(stats.perTurnRows).toHaveLength(3);
