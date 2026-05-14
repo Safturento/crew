@@ -2,30 +2,79 @@ import { execa } from 'execa';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { isAbsolute, join } from 'node:path';
 import { buildMcpConfig } from './build-mcp-config.js';
+import { resolveChromeMcpPath } from './resolve-chrome-mcp-path.js';
 
 const EXCLUDE_LINE = '.mcp.json';
+
+export interface PlaywrightWriteOptions {
+  appUrl: string;
+  resolverCwd: string;
+}
+
+export interface WriteMcpFileOptions {
+  playwright?: PlaywrightWriteOptions;
+  // When true, attempt to resolve the superpowers-chrome MCP server from the
+  // user's plugin cache and write a chrome server entry alongside playwright.
+  // If resolution fails the entry is omitted (with a warning via `warn`) and
+  // the dispatch continues — chrome MCP is optional.
+  chrome?: boolean;
+  // Override homedir for tests. Resolved via `resolveChromeMcpPath`.
+  home?: string;
+  // Logger invoked when chrome was requested but couldn't be resolved.
+  // Defaults to no-op so callers can inject `pc.yellow`-formatted output
+  // without forcing every caller to do so.
+  warn?: (msg: string) => void;
+}
 
 export interface WriteMcpFileResult {
   existed: boolean;
   chromiumPath: string | null;
+  chromeMcpPath: string | null;
 }
 
 export async function writeMcpFile(
   worktreePath: string,
-  opts: { appUrl: string; resolverCwd: string },
+  opts: WriteMcpFileOptions,
 ): Promise<WriteMcpFileResult> {
+  if (!opts.playwright && !opts.chrome) {
+    throw new Error('writeMcpFile: at least one of playwright or chrome must be provided');
+  }
   const mcpPath = join(worktreePath, '.mcp.json');
   const existed = existsSync(mcpPath);
 
-  const chromiumPath = await resolveChromiumExecutablePath(opts.resolverCwd);
-  const config = buildMcpConfig({
-    appUrl: opts.appUrl,
-    chromiumPath: chromiumPath ?? undefined,
-  });
-  writeFileSync(mcpPath, JSON.stringify(config, null, 2) + '\n');
+  let chromiumPath: string | null = null;
+  if (opts.playwright) {
+    chromiumPath = await resolveChromiumExecutablePath(opts.playwright.resolverCwd);
+  }
 
+  let chromeMcpPath: string | null = null;
+  if (opts.chrome) {
+    chromeMcpPath = resolveChromeMcpPath(opts.home);
+    if (chromeMcpPath === null && opts.warn) {
+      opts.warn(
+        'superpowers-chrome plugin not found in ~/.claude/plugins/cache/ — chrome MCP not wired; visual-fidelity Step 5 will degrade to verification-gap',
+      );
+    }
+  }
+
+  // If the only server requested was chrome and chrome failed to resolve,
+  // there's nothing to write — skip the file entirely. The dispatched agent
+  // runs without any MCP wired and the visual-fidelity skill logs a gap.
+  const haveAnyServer = Boolean(opts.playwright) || chromeMcpPath !== null;
+  if (!haveAnyServer) {
+    return { existed, chromiumPath, chromeMcpPath };
+  }
+
+  const config = buildMcpConfig({
+    playwright: opts.playwright
+      ? { appUrl: opts.playwright.appUrl, chromiumPath: chromiumPath ?? undefined }
+      : undefined,
+    chrome: chromeMcpPath ? { mcpServerPath: chromeMcpPath } : undefined,
+  });
+
+  writeFileSync(mcpPath, JSON.stringify(config, null, 2) + '\n');
   await appendExcludeLine(worktreePath);
-  return { existed, chromiumPath };
+  return { existed, chromiumPath, chromeMcpPath };
 }
 
 // Ask `@playwright/test` (resolved against `resolverCwd`) which chromium
