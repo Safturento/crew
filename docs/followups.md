@@ -7,6 +7,7 @@ Format: see the user-level `~/.claude/CLAUDE.md` "Followup detection" section.
 ## Contents
 
 - [Active](#active)
+  - [2026-05-14 — Per-turn metric series so cache size can be graphed over a run](#2026-05-14--per-turn-metric-series-so-cache-size-can-be-graphed-over-a-run)
   - [2026-05-13 — Agent rows: code renders as table; Figma designs as cards (architectural layout drift, affects 3 screens)](#2026-05-13--agent-rows-code-renders-as-table-figma-designs-as-cards-architectural-layout-drift-affects-3-screens)
   - [2026-05-13 — Agent drawer Close button uses Unicode "X" glyph instead of `lucide/x` SVG](#2026-05-13--agent-drawer-close-button-uses-unicode-x-glyph-instead-of-lucidex-svg)
   - [2026-05-13 — Agent drawer / agent page search input missing leading magnifying-glass icon](#2026-05-13--agent-drawer--agent-page-search-input-missing-leading-magnifying-glass-icon)
@@ -86,6 +87,27 @@ Format: see the user-level `~/.claude/CLAUDE.md` "Followup detection" section.
 - [Abandoned](#abandoned)
 
 ## Active
+
+### 2026-05-14 — Per-turn metric series so cache size can be graphed over a run
+
+**What:** Today `baseline_metrics` (and Phase 4's planned `run_metrics`) record one row per run — only the final-turn snapshot. To graph cache size over time of a run, or cache size per turn, we need a per-turn time series: one row per turn carrying `turn_index`, `uncached_tokens`, `cache_read_tokens`, `cache_creation_tokens`, `total_tokens`, plus the bash/tool counts that occurred on that turn. A second table (`run_turn_metrics` keyed by `(run_id, turn_index)`) is the natural shape. The single-row aggregate stays useful as the headline; the per-turn table powers shape diagnostics (does context climb linearly through the run? does it spike at PR-claim time? do cleanliness-check turns drag a huge cache read?).
+
+**Why noticed:** 2026-05-14 conversation closing out CREW-154's baseline-metrics fix. While discussing component-split (uncached / cache_read / cache_creation) the user observed: "in the future we might even be able to graph data about cache size over the time of a run and cache size over turns — that's definitely out of scope and a separate enhancement though." Recording so it doesn't evaporate when the Phase 4 metrics pipeline is being designed.
+
+**Anchors:**
+
+- `scripts/baseline-metrics-capture.ts` — current one-row-per-run shape; `countTurns` / `lastPrClaimTokens` already iterate the per-turn data, they just collapse it.
+- Phase 4 ticket `CREW-164` — where this naturally lands (the `0003_run_metrics` migration + MetricsService work). Doesn't fit baseline; baseline is meant to be a single point-in-time snapshot.
+- Transcript JSONL events at `~/.claude/projects/<slug>/<session_id>.jsonl` — each assistant message's `message.usage` is one turn's data point.
+
+**What's been considered:** The per-turn table is additive — it doesn't replace the per-run aggregate, just complements it. A view (`run_summary`) over `run_turn_metrics` can derive the per-run aggregate, so we don't need to double-write. Pulling cost is a single pass over events the script already loads.
+
+**Shape of work:** Single ticket, lands in Phase 4 / CREW-164's scope. Add `run_turn_metrics` table to the `0003_run_metrics` migration; extend `MetricsService` to emit per-turn rows on transcript ingest; expose `/api/metrics/run/:id/turns` for the future dashboard widget. Dashboard charts (sparkline per agent row, full series on agent page) are a downstream enhancement, not part of this entry.
+
+**Open questions:**
+
+- Sample rate: every turn, or every N tokens? Every turn is fine to start — a 100-turn run is 100 rows; cheap.
+- Retention: keep forever, or expire alongside transcripts? Probably tied to transcript lifetime since that's the source of truth.
 
 ### 2026-05-13 — Agent rows: code renders as table; Figma designs as cards (architectural layout drift, affects 3 screens)
 
