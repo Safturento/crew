@@ -36,6 +36,8 @@ services:
       timeout: 5s
       retries: 5
       start_period: 90s
+    mem_limit: 1g
+    cpus: 1.0
 
   dashboard:
     profiles: [dev]
@@ -53,6 +55,8 @@ services:
     depends_on:
       daemon:
         condition: service_healthy
+    mem_limit: 1g
+    cpus: 1.0
 
 volumes:
   crew-state:
