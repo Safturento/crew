@@ -33,7 +33,7 @@ Detailed step-by-step procedure lives in **`workflow.md`** — read it when invo
 3. Map each to a Figma node via the matching `.figma.tsx`
 4. **Structural check** — what classes does the code emit per variant? Compare to Figma's resolved tokens
 5. **Caller check** — what props do call sites pass? Compare to Figma's variant choices for the same context
-6. **Visual check** (optional) — render + screenshot + compare to Figma screen
+6. **Live DOM check** (required when `dashboardUrl` is set and chrome MCP is wired) — read computed CSS + rendered `<svg>` via `mcp__chrome__use_browser`, compare to Figma snapshot's enrichment data
 7. Compile the findings report (markdown, grouped by severity)
 8. **Decide whether to claim done** — any high-severity = stop, fix, re-run
 
@@ -82,5 +82,6 @@ If code's icon (Unicode glyph, wrong lucide variant, CSS-only span standing in f
 
 ## Related skills
 
+- `browsing` — controls the running dashboard via Chrome DevTools Protocol; required by Step 5 (live DOM inspection)
 - `superpowers:writing-skills` — for iterating this skill
 - `figma:figma-use` — only if you need to fetch live Figma data (the on-disk snapshot covers normal runs)
