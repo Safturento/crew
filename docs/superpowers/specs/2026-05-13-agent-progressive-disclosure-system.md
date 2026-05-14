@@ -203,6 +203,8 @@ Self-describing. Sections in order:
 
     `.agents/` is for *repo-specific, durable, agent-actionable rules*. If a doc isn't all three, it lives somewhere else above.
 
+    **Pointers vs content.** The rule above is about *content* sitting in `.agents/`, not about *cross-references*. A `.agents/<topic>.md` MAY (and often SHOULD) include a brief footer pointer like `See docs/rationale/<topic>.md for the why` or `See user-level skill <name> for how`. Pointers improve discoverability without bringing narrative into the agent-actionable layer. Aim for one or two short lines; if a topic doc needs a paragraph of context from elsewhere, that's a sign the content classification was wrong.
+
 11. **Index of current topic docs.** Manually maintained table. Same list cited from root `AGENTS.md`.
 
 ## Discovery model
@@ -358,6 +360,5 @@ Outside Epic:
 
 ## Open questions
 
-- **Should the `docs/rationale/` content be linked from the corresponding `.agents/<topic>.md` for cross-reference?** Probably yes via a brief "See `docs/rationale/<topic>.md` for the why" footer, but the meta-doc's "what does NOT belong" rule says rationale stays out of `.agents/`. Footer-as-pointer is the compromise; revisit during Phase 2 if it feels off.
 - **How aggressively do we backfill `last_updated` on existing skill descriptions that reference this repo?** User-level work, handled in-conversation; deferred to the manual-task slot.
 - **When does the hybrid trigger system earn activation?** When at least one Layer-1 metric (likely Metric 1 — doc-load coverage) underperforms target despite well-authored `covers:` globs. Don't activate preemptively.
