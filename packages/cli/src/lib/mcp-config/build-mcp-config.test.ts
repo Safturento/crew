@@ -62,7 +62,9 @@ describe('buildMcpConfig', () => {
         appUrl: 'http://localhost:5173',
         chromiumPath: '/home/me/.cache/ms-playwright/chromium-1217/chrome-linux64/chrome',
       },
-      chrome: { mcpServerPath: '/home/me/.claude/plugins/cache/superpowers-chrome/2.0.0/mcp/dist/index.js' },
+      chrome: {
+        mcpServerPath: '/home/me/.claude/plugins/cache/superpowers-chrome/2.0.0/mcp/dist/index.js',
+      },
     });
     expect(JSON.stringify(config, null, 2)).toMatchSnapshot();
   });

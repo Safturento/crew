@@ -95,7 +95,8 @@ export async function runResume(key: string, opts: ResumeOptions): Promise<void>
   // updated CREW_APP_URL, etc.). Stale .mcp.json from an older crew is a real
   // footgun — the agent silently uses the old config, e.g. falls back to the
   // system chrome channel when crew now wires the bundled chromium directly.
-  const wantsPlaywrightResume = playwrightEnabled(config) && Boolean(config.playwright) && smokeEnabled(config);
+  const wantsPlaywrightResume =
+    playwrightEnabled(config) && Boolean(config.playwright) && smokeEnabled(config);
   const wantsChromeResume = Boolean(config.visual_fidelity);
   if (wantsPlaywrightResume || wantsChromeResume) {
     let playwrightOpts: { appUrl: string; resolverCwd: string } | undefined;

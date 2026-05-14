@@ -37,7 +37,7 @@ For each touched component:
 4. Read the metadata JSON. Two data tiers may be present:
    - **`raw`** (always present) — full REST API node tree. Use for canonical structure, names, geometry, basic fills/strokes hex values.
    - **`enrichment`** (present when `crew figma-snapshot` completed its Plugin-API pass; absent on REST-only fallback runs) — adds:
-     - `componentProperties` — for INSTANCE nodes, the *specific* variant config (e.g. `{ type: "pill", color: "waiting", intensity: "mid", Icon: { id: "lucide/circle", name: "lucide/circle" } }`). INSTANCE_SWAP icon properties resolve to `{ id, name }` so you can read the specific lucide glyph directly.
+     - `componentProperties` — for INSTANCE nodes, the _specific_ variant config (e.g. `{ type: "pill", color: "waiting", intensity: "mid", Icon: { id: "lucide/circle", name: "lucide/circle" } }`). INSTANCE_SWAP icon properties resolve to `{ id, name }` so you can read the specific lucide glyph directly.
      - `mainComponent` — `{ id, name, parentSetName }` for INSTANCE nodes, naming the resolved master variant (e.g. `name: "type=pill, color=waiting, intensity=mid"`).
      - `boundVariables` — flattened array of `{ path, variableName, resolvedAlias, resolvedHex }` per paint. `resolvedAlias` is the alias chain (e.g. `"state/running -> slate/400"`), `resolvedHex` is the final color in `#RRGGBB` form.
 
@@ -73,7 +73,7 @@ For each touched component, also check its callers:
 
 1. `grep -rn '<ComponentName' <componentDir>` (exclude `.test.tsx` and `.figma.tsx`).
 2. For each caller, extract the props passed: `<Button color="X" intensity="Y" size="Z">...</Button>`.
-3. Look up the Figma file's Dashboard Screens snapshot for instances of the same component in the same screen / context. Read `<snapshotPath>/screens/<node>.json`. **The enrichment field is load-bearing here** — it's how you learn what variant the Figma design *actually* uses, not just what set the instance points at:
+3. Look up the Figma file's Dashboard Screens snapshot for instances of the same component in the same screen / context. Read `<snapshotPath>/screens/<node>.json`. **The enrichment field is load-bearing here** — it's how you learn what variant the Figma design _actually_ uses, not just what set the instance points at:
    - **With `enrichment.componentProperties`** (preferred): the instance's variant config is read directly: `enrichment.componentProperties.{ type, color, intensity, Icon, Label, ... }`. INSTANCE_SWAP properties like `Icon` resolve to `{ id, name }` (e.g. `Icon: { id: "lucide/circle", name: "lucide/circle" }`) — read the specific lucide glyph name directly, no inference.
    - **With `enrichment.mainComponent.name`**: the resolved master variant is named (e.g. `"type=pill, color=waiting, intensity=mid"`) — parse the variant key=value pairs out of the name as a confirmation cross-check.
    - **REST-only fallback**: you only have the parent component ID; you must guess the variant from the instance's resolved styles. Note this as a verification gap.
@@ -148,7 +148,9 @@ For each touched component whose Figma reference has an `Icon` INSTANCE_SWAP pro
    return {
      hasSvg: !!svg,
      svgOuter: svg?.outerHTML?.slice(0, 500),
-     svgLucide: svg?.getAttribute('data-lucide') || [...(svg?.classList || [])].find(c => c.startsWith('lucide-')),
+     svgLucide:
+       svg?.getAttribute('data-lucide') ||
+       [...(svg?.classList || [])].find((c) => c.startsWith('lucide-')),
      spanText: span?.textContent,
      slotText: slot.textContent,
    };
@@ -159,7 +161,7 @@ For each touched component whose Figma reference has an `Icon` INSTANCE_SWAP pro
    - **`hasSvg` false, `spanText` is a Unicode glyph** (↗, ✓, ×, etc.) → finding, severity ≥ medium. Name the expected lucide glyph.
    - **`hasSvg` false, `slot` is a styled `<span>`** (CSS-only icon) → finding, severity ≥ medium. Name the expected lucide glyph and call out the CSS-only-approximation pattern.
 
-Step 5.4 is the *runtime* counterpart to Step 4's caller-side icon check. Step 4 catches the source pattern; Step 5.4 catches cases where the source looks right but the rendered DOM disagrees (className override, conditional rendering, prop-forwarding bug).
+Step 5.4 is the _runtime_ counterpart to Step 4's caller-side icon check. Step 4 catches the source pattern; Step 5.4 catches cases where the source looks right but the rendered DOM disagrees (className override, conditional rendering, prop-forwarding bug).
 
 ### Step 5.5 — Screenshot capture and cross-reference
 
@@ -173,7 +175,7 @@ If 5.1–5.4 already surfaced findings, link the screenshot pair as supporting e
 
 Report format (markdown, ~50-200 lines depending on findings count):
 
-```markdown
+````markdown
 # visual-fidelity-check report — YYYY-MM-DD
 
 **Branch:** <branch name>
@@ -191,6 +193,8 @@ Report format (markdown, ~50-200 lines depending on findings count):
   ```tsx
   <2-5 lines>
   ```
+````
+
 - **Figma reference:** node-id, variant name, relevant tokenAlias / hex
 - **Diff:** what code produces vs what Figma intends
 - **Fix:** specific change to make
@@ -206,6 +210,7 @@ Report format (markdown, ~50-200 lines depending on findings count):
 ## Verification gaps
 
 (things the skill could not check — missing snapshot data, unreachable dashboard, components without .figma.tsx, etc.)
+
 ```
 
 ## Step 7: Decide whether to claim done
@@ -225,3 +230,4 @@ Default to fixing rather than deferring. Each deferred finding is a chance for t
 - Don't trust the spec / plan / cva config alone. They might be wrong. The Figma snapshot is the source.
 - Don't over-fit to a single fixture. Findings should be general patterns (caller-side intensity mismatch, wrong helper shade, Unicode-vs-SVG) that recur across the codebase.
 - If a finding's "fix" requires more than 5 lines of code change, escalate as a question rather than auto-fixing. Maybe the helper is wrong in a way that affects 30 sites — that's not a routine fix.
+```

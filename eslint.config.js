@@ -19,7 +19,15 @@ export default tseslint.config(
     },
   },
   {
-    ignores: ['**/dist/**', '**/node_modules/**', '**/coverage/**'],
+    // Vendored skill bundles (e.g. browsing) are content copied verbatim into
+    // dispatched worktrees, not crew source — they ship as Node CommonJS scripts
+    // intended for the superpowers-chrome MCP runtime, not crew's TS build.
+    ignores: [
+      '**/dist/**',
+      '**/node_modules/**',
+      '**/coverage/**',
+      'packages/cli/src/lib/skills/browsing/**',
+    ],
   },
   prettier,
 );

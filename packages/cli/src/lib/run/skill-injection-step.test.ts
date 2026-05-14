@@ -67,9 +67,9 @@ describe('runSkillInjection', () => {
     expect(
       readFileSync(join(worktree, '.claude/skills/visual-fidelity-check/SKILL.md'), 'utf8'),
     ).toBe('# visual-fidelity-check\n');
-    expect(
-      readFileSync(join(worktree, '.claude/skills/browsing/SKILL.md'), 'utf8'),
-    ).toBe('# browsing\n');
+    expect(readFileSync(join(worktree, '.claude/skills/browsing/SKILL.md'), 'utf8')).toBe(
+      '# browsing\n',
+    );
     expect(log).toHaveBeenCalledWith(expect.stringContaining('visual-fidelity-check'));
     expect(log).toHaveBeenCalledWith(expect.stringContaining('browsing'));
     expect(warn).not.toHaveBeenCalled();

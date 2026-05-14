@@ -322,7 +322,8 @@ export async function runRun(key: string, opts: RunOptions): Promise<never> {
   // before install would emit a stale path that points at a not-yet-extracted
   // binary, and the existsSync guard would fall back to MCP's system-chrome
   // default (the bug CREW-70 fixed).
-  const wantsPlaywright = playwrightEnabled(config) && Boolean(config.playwright) && smokeEnabled(config);
+  const wantsPlaywright =
+    playwrightEnabled(config) && Boolean(config.playwright) && smokeEnabled(config);
   const wantsChrome = Boolean(config.visual_fidelity);
   if (wantsPlaywright || wantsChrome) {
     let playwrightOpts: { appUrl: string; resolverCwd: string } | undefined;
