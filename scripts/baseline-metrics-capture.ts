@@ -70,6 +70,7 @@ export interface AggregatedStats {
   prClaim: { total: number; uncached: number; cacheRead: number; cacheCreate: number };
   output: { total: number; meanPerTurn: number; maxPerTurn: number };
   toolBreakdown: Record<string, ToolBreakdownEntry>;
+  maxToolResultSizeTokens: number;
   perTurnRows: PerTurnRow[];
   turnCount: number;
   toolCallCount: number;
@@ -93,6 +94,7 @@ export function aggregateTokenStats(events: TranscriptEvent[]): AggregatedStats 
   let outputTotal = 0;
   let outputMax = 0;
   let toolCallCount = 0;
+  let maxToolResultSizeTokens = 0;
   let prClaim = { total: 0, uncached: 0, cacheRead: 0, cacheCreate: 0 };
 
   for (const ev of events) {
@@ -109,10 +111,12 @@ export function aggregateTokenStats(events: TranscriptEvent[]): AggregatedStats 
         toolBreakdown[name].calls++;
         if (item.id) toolUseIdToName.set(item.id, name);
       } else if (item.type === 'tool_result') {
+        const tokens = toolResultTokens(item.content);
+        if (tokens > maxToolResultSizeTokens) maxToolResultSizeTokens = tokens;
         const name = item.tool_use_id ? toolUseIdToName.get(item.tool_use_id) : undefined;
         if (name) {
           toolBreakdown[name] ??= { calls: 0, result_tokens_est: 0 };
-          toolBreakdown[name].result_tokens_est += toolResultTokens(item.content);
+          toolBreakdown[name].result_tokens_est += tokens;
         }
       }
     }
@@ -148,6 +152,7 @@ export function aggregateTokenStats(events: TranscriptEvent[]): AggregatedStats 
       maxPerTurn: outputMax,
     },
     toolBreakdown,
+    maxToolResultSizeTokens,
     perTurnRows,
     turnCount: perTurnRows.length,
     toolCallCount,

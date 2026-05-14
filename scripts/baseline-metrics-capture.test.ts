@@ -91,6 +91,12 @@ describe('aggregateTokenStats', () => {
     });
   });
 
+  it('captures the largest single tool_result size (in tokens)', () => {
+    const stats = aggregateTokenStats(FIXTURE_EVENTS);
+    // largest is tu_002's result → 225 tokens
+    expect(stats.maxToolResultSizeTokens).toBe(225);
+  });
+
   it('attributes tool_result size to the originating tool via tool_use_id (chars/4 heuristic)', () => {
     const stats = aggregateTokenStats(FIXTURE_EVENTS);
     // Bash: tu_001 result 'hello\n' = 6 chars → floor(6/4) = 1
