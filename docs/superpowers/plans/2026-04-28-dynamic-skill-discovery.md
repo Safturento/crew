@@ -15,6 +15,7 @@
 ## Task 1: Add `gray-matter` dependency and create the `skills.ts` module skeleton
 
 **Files:**
+
 - Modify: `packages/cli/package.json`
 - Create: `packages/cli/src/lib/prompts/skills.ts`
 
@@ -88,6 +89,7 @@ git commit -m "feat(skills): scaffold skill discovery module + add gray-matter d
 ## Task 2: Implement `discoverSkills` (TDD)
 
 **Files:**
+
 - Create: `packages/cli/src/lib/prompts/skills.test.ts`
 - Modify: `packages/cli/src/lib/prompts/skills.ts`
 - Create: `packages/cli/test/fixtures/skills-home/.claude/skills/alpha-skill/SKILL.md`
@@ -149,6 +151,7 @@ description: "unterminated string
 `packages/cli/test/fixtures/skills-home/.claude/skills/empty-dir/.gitkeep`:
 
 ```
+
 ```
 
 (Empty file — the directory exists but contains no `SKILL.md`. `.gitkeep` is needed because git doesn't track empty directories.)
@@ -209,11 +212,17 @@ describe('discoverSkills', () => {
 
   it('combines both sources when both exist, alphabetized within source, user before project', () => {
     const result = discoverSkills({ home: HOME_FIXTURE, repoPath: REPO_FIXTURE });
-    const valid = result.filter((s) => ['alpha-skill', 'beta-skill', 'project-skill'].includes(s.name));
+    const valid = result.filter((s) =>
+      ['alpha-skill', 'beta-skill', 'project-skill'].includes(s.name),
+    );
     expect(valid).toEqual([
       { name: 'alpha-skill', description: 'Use when alpha-skill scenarios apply.', source: 'user' },
       { name: 'beta-skill', description: 'Use when beta-skill scenarios apply.', source: 'user' },
-      { name: 'project-skill', description: 'Use when project-skill scenarios apply.', source: 'project' },
+      {
+        name: 'project-skill',
+        description: 'Use when project-skill scenarios apply.',
+        source: 'project',
+      },
     ]);
   });
 
@@ -225,17 +234,13 @@ describe('discoverSkills', () => {
   it('skips frontmatter without a description field and warns', () => {
     const result = discoverSkills({ home: HOME_FIXTURE, repoPath: EMPTY_DIR });
     expect(result.find((s) => s.name === 'no-description')).toBeUndefined();
-    expect(warnSpy).toHaveBeenCalledWith(
-      expect.stringContaining('no-description'),
-    );
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('no-description'));
   });
 
   it('skips SKILL.md files with unparseable frontmatter and warns', () => {
     const result = discoverSkills({ home: HOME_FIXTURE, repoPath: EMPTY_DIR });
     expect(result.find((s) => s.name === 'malformed')).toBeUndefined();
-    expect(warnSpy).toHaveBeenCalledWith(
-      expect.stringContaining('malformed'),
-    );
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('malformed'));
   });
 });
 ```
@@ -302,15 +307,14 @@ function readSkillsFromRoot(root: string, source: 'user' | 'project'): Discovere
 
     const description = frontmatter.description;
     if (typeof description !== 'string' || description.trim() === '') {
-      console.warn(
-        `crew: skipping skill at ${skillFile} — frontmatter has no description`,
-      );
+      console.warn(`crew: skipping skill at ${skillFile} — frontmatter has no description`);
       continue;
     }
 
-    const name = typeof frontmatter.name === 'string' && frontmatter.name.trim() !== ''
-      ? frontmatter.name
-      : dir;
+    const name =
+      typeof frontmatter.name === 'string' && frontmatter.name.trim() !== ''
+        ? frontmatter.name
+        : dir;
 
     entries.push({ name, description, source });
   }
@@ -348,6 +352,7 @@ git commit -m "feat(skills): implement discoverSkills with user + project source
 ## Task 3: Implement `renderDiscoveredSkillsBlock` (TDD)
 
 **Files:**
+
 - Modify: `packages/cli/src/lib/prompts/skills.test.ts`
 - Modify: `packages/cli/src/lib/prompts/skills.ts`
 
@@ -472,6 +477,7 @@ git commit -m "feat(skills): render discovered skills block grouped by source"
 ## Task 4: Wire the discovered block into the ticket-prompt path
 
 **Files:**
+
 - Modify: `packages/cli/src/lib/prompts/templates/ticket.md`
 - Modify: `packages/cli/src/lib/prompts/ticket.ts`
 - Modify: `packages/cli/src/lib/prompts/index.ts`
@@ -497,7 +503,7 @@ You are required to use these Superpowers skills as appropriate. Invoke each via
 ## Workflow
 ```
 
-(Note: `{{discoveredSkillsBlock}}` sits *inline* at the end of the last bullet line — no leading whitespace — so an empty render leaves that line ending exactly as it was.)
+(Note: `{{discoveredSkillsBlock}}` sits _inline_ at the end of the last bullet line — no leading whitespace — so an empty render leaves that line ending exactly as it was.)
 
 - [ ] **Step 2: Update `buildTicketPrompt` to accept and forward the block**
 
@@ -552,25 +558,25 @@ If a snapshot mismatch appears, the `{{discoveredSkillsBlock}}` placeholder was 
 Append to `packages/cli/src/lib/prompts/builders.test.ts` inside the existing `describe('buildTicketPrompt', ...)` block:
 
 ```typescript
-  it('renders the discovered skills block under the curated Skills list', () => {
-    const prompt = buildTicketPrompt({
-      key: 'KAN-23',
-      githubRepo: 'Safturento/Recipes',
-      jiraSite: 'https://safturento.atlassian.net',
-      discoveredSkillsBlock:
-        '\n\nThe following user-level skills are equally required when their description matches what you\'re about to do — invoke them via the `Skill` tool the same way:\n\n- **`reaching-for-frontend-libraries`** — Use when implementing frontend features.',
-    });
-
-    expect(prompt).toContain('superpowers:requesting-code-review');
-    expect(prompt).toContain('user-level skills are equally required');
-    expect(prompt).toContain('reaching-for-frontend-libraries');
-
-    const curatedIdx = prompt.indexOf('superpowers:requesting-code-review');
-    const discoveredIdx = prompt.indexOf('reaching-for-frontend-libraries');
-    expect(discoveredIdx).toBeGreaterThan(curatedIdx);
-
-    expect(prompt).toMatchSnapshot();
+it('renders the discovered skills block under the curated Skills list', () => {
+  const prompt = buildTicketPrompt({
+    key: 'KAN-23',
+    githubRepo: 'Safturento/Recipes',
+    jiraSite: 'https://safturento.atlassian.net',
+    discoveredSkillsBlock:
+      "\n\nThe following user-level skills are equally required when their description matches what you're about to do — invoke them via the `Skill` tool the same way:\n\n- **`reaching-for-frontend-libraries`** — Use when implementing frontend features.",
   });
+
+  expect(prompt).toContain('superpowers:requesting-code-review');
+  expect(prompt).toContain('user-level skills are equally required');
+  expect(prompt).toContain('reaching-for-frontend-libraries');
+
+  const curatedIdx = prompt.indexOf('superpowers:requesting-code-review');
+  const discoveredIdx = prompt.indexOf('reaching-for-frontend-libraries');
+  expect(discoveredIdx).toBeGreaterThan(curatedIdx);
+
+  expect(prompt).toMatchSnapshot();
+});
 ```
 
 - [ ] **Step 5: Run the tests and accept the new snapshot**
@@ -582,6 +588,7 @@ Expected: The new test fails on first run because no snapshot exists yet. Run wi
 `npm run test:run --workspace crew-cli -- builders.test -u`
 
 Expected: All tests pass; `__snapshots__/builders.test.ts.snap` gains a new entry. Inspect the diff with `git diff packages/cli/src/lib/prompts/__snapshots__/` and confirm:
+
 - The `## Skills` section ends with the curated bullets.
 - A blank line follows.
 - The `user-level skills` paragraph appears with the populated bullet.
@@ -600,20 +607,20 @@ import { discoverSkills, renderDiscoveredSkillsBlock } from '../lib/prompts/skil
 Then update the `buildTicketPrompt` call site (currently around `run.ts:153`) to pass the rendered block:
 
 ```typescript
-  const prompt = buildTicketPrompt({
-    key,
-    githubRepo: config.github.repo,
-    jiraSite: config.jira.site,
-    visualTesting:
-      config.visual_testing?.enabled && resolvedAppUrl
-        ? {
-            // … existing visual testing fields …
-          }
-        : undefined,
-    discoveredSkillsBlock: renderDiscoveredSkillsBlock(
-      discoverSkills({ repoPath: config.repo_path }),
-    ),
-  });
+const prompt = buildTicketPrompt({
+  key,
+  githubRepo: config.github.repo,
+  jiraSite: config.jira.site,
+  visualTesting:
+    config.visual_testing?.enabled && resolvedAppUrl
+      ? {
+          // … existing visual testing fields …
+        }
+      : undefined,
+  discoveredSkillsBlock: renderDiscoveredSkillsBlock(
+    discoverSkills({ repoPath: config.repo_path }),
+  ),
+});
 ```
 
 (Preserve the existing `visualTesting` object exactly as it is — only add the `discoveredSkillsBlock` field.)
@@ -640,6 +647,7 @@ git commit -m "feat(skills): inject discovered skills into crew run ticket promp
 ## Task 5: Wire the discovered block into the fix-pr prompt path
 
 **Files:**
+
 - Modify: `packages/cli/src/lib/prompts/templates/fix-pr.md`
 - Modify: `packages/cli/src/lib/prompts/fix-pr.ts`
 - Modify: `packages/cli/src/lib/prompts/builders.test.ts`
@@ -708,21 +716,21 @@ Expected: All existing `buildFixPrPrompt` tests pass. The current snapshot is un
 Append inside the `describe('buildFixPrPrompt', ...)` block in `builders.test.ts`:
 
 ```typescript
-  it('renders the discovered skills block under the curated Skills list', () => {
-    const prompt = buildFixPrPrompt({
-      key: 'KAN-23',
-      feedback: 'Some feedback',
-      feedbackSource: 'manual test',
-      discoveredSkillsBlock:
-        '\n\nThe following user-level skills are equally required when their description matches what you\'re about to do — invoke them via the `Skill` tool the same way:\n\n- **`reaching-for-frontend-libraries`** — Use when implementing frontend features.',
-    });
-
-    expect(prompt).toContain('superpowers:requesting-code-review');
-    expect(prompt).toContain('reaching-for-frontend-libraries');
-    const curatedIdx = prompt.indexOf('superpowers:requesting-code-review');
-    const discoveredIdx = prompt.indexOf('reaching-for-frontend-libraries');
-    expect(discoveredIdx).toBeGreaterThan(curatedIdx);
+it('renders the discovered skills block under the curated Skills list', () => {
+  const prompt = buildFixPrPrompt({
+    key: 'KAN-23',
+    feedback: 'Some feedback',
+    feedbackSource: 'manual test',
+    discoveredSkillsBlock:
+      "\n\nThe following user-level skills are equally required when their description matches what you're about to do — invoke them via the `Skill` tool the same way:\n\n- **`reaching-for-frontend-libraries`** — Use when implementing frontend features.",
   });
+
+  expect(prompt).toContain('superpowers:requesting-code-review');
+  expect(prompt).toContain('reaching-for-frontend-libraries');
+  const curatedIdx = prompt.indexOf('superpowers:requesting-code-review');
+  const discoveredIdx = prompt.indexOf('reaching-for-frontend-libraries');
+  expect(discoveredIdx).toBeGreaterThan(curatedIdx);
+});
 ```
 
 - [ ] **Step 5: Run the tests**
@@ -755,15 +763,15 @@ function repoPathFromWorktree(worktree: string, key: string): string {
 Then update the `buildFixPrPrompt` call site (currently around `fix-pr.ts:179`):
 
 ```typescript
-  const prompt = buildFixPrPrompt({
-    key,
-    feedback,
-    feedbackSource: source,
-    conflictFiles: conflicts,
-    discoveredSkillsBlock: renderDiscoveredSkillsBlock(
-      discoverSkills({ repoPath: repoPathFromWorktree(worktree, key) }),
-    ),
-  });
+const prompt = buildFixPrPrompt({
+  key,
+  feedback,
+  feedbackSource: source,
+  conflictFiles: conflicts,
+  discoveredSkillsBlock: renderDiscoveredSkillsBlock(
+    discoverSkills({ repoPath: repoPathFromWorktree(worktree, key) }),
+  ),
+});
 ```
 
 - [ ] **Step 7: Verify the full CLI typechecks and all tests pass**
@@ -800,6 +808,7 @@ npm run test:run
 ```
 
 Expected:
+
 - `lint`: clean
 - `format`: no files would be reformatted
 - `typecheck`: no errors
@@ -849,6 +858,7 @@ EOF
 ## Self-review
 
 **Spec coverage:**
+
 - Architecture (`skills.ts` module, two functions, two callers, two templates) — Task 1 + 2 + 3 + 4 + 5.
 - Discovery from `~/.claude/skills/` and `<repo>/.claude/skills/` — Task 2.
 - Source distinction via separate sub-paragraphs — Task 3.

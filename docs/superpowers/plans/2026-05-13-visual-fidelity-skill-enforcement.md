@@ -17,6 +17,7 @@
 ### Task 1.1: Restructure `ticket-visual-fidelity.md` to render a numbered workflow step body
 
 **Files:**
+
 - Modify: `packages/cli/src/lib/prompts/templates/ticket-visual-fidelity.md`
 
 The current template renders an `## Visual-fidelity verification` H2 between numbered steps. After this task, it renders the body of a numbered step 8 — no H2, no leading blank line that would orphan it from the step number injected by `ticket.md`.
@@ -43,6 +44,7 @@ git commit -m "feat(cli): make ticket-visual-fidelity render as numbered step 8 
 ### Task 1.2: Renumber the subsequent steps in `ticket.md` and re-anchor the block
 
 **Files:**
+
 - Modify: `packages/cli/src/lib/prompts/templates/ticket.md`
 
 Steps 8 (Verify), 9 (Self-review), 10 (Push and PR), 11 (Move to In Review), 12 (Final report) become 9, 10, 11, 12, 13. The `{{visualFidelityBlock}}` placeholder moves to where the new step 8 belongs and loses any surrounding prose that previously framed it as an aside.
@@ -120,7 +122,10 @@ it('renders the visual-fidelity block as numbered step 8 body when visualFidelit
     key: 'CREW-999',
     githubRepo: 'foo/bar',
     jiraSite: 'https://x.atlassian.net',
-    visualFidelity: { snapshotPath: '.crew/snap', componentDir: 'packages/dashboard/src/components' },
+    visualFidelity: {
+      snapshotPath: '.crew/snap',
+      componentDir: 'packages/dashboard/src/components',
+    },
   });
   expect(out).toMatch(/^8\. \*\*Visual fidelity gate\*\*/m);
   expect(out).toMatch(/^9\. \*\*Verify\.\*\*/m);
@@ -165,6 +170,7 @@ The crew CLI dispatcher gains a generic skill-injection step that copies skill d
 ### Task 2.1: Author the applicability + discovery helper
 
 **Files:**
+
 - Create: `packages/cli/src/lib/run/skill-injection.ts`
 - Create: `packages/cli/src/lib/run/skill-injection.test.ts`
 
@@ -195,7 +201,10 @@ describe('skillsApplicableTo', () => {
   it('returns visual-fidelity-check when visual_fidelity is configured', () => {
     const config = {
       ...baseConfig,
-      visual_fidelity: { snapshot_path: '.crew/snap', component_dir: 'packages/dashboard/src/components' },
+      visual_fidelity: {
+        snapshot_path: '.crew/snap',
+        component_dir: 'packages/dashboard/src/components',
+      },
     } as ProjectConfig;
     expect(skillsApplicableTo(config)).toEqual(['visual-fidelity-check']);
   });
@@ -255,6 +264,7 @@ git commit -m "feat(cli): add skillsApplicableTo helper for dispatcher skill inj
 ### Task 2.2: Implement the copy-skill-into-worktree function
 
 **Files:**
+
 - Modify: `packages/cli/src/lib/run/skill-injection.ts`
 - Modify: `packages/cli/src/lib/run/skill-injection.test.ts`
 
@@ -295,9 +305,9 @@ describe('copySkillIntoWorktree', () => {
   it('throws when the source skill directory does not exist', () => {
     const root = mkdtempSync(join(tmpdir(), 'crew-skill-inject-missing-'));
     mkdirSync(join(root, 'worktree'), { recursive: true });
-    expect(() => copySkillIntoWorktree(join(root, 'worktree'), 'nope', join(root, 'src-skills'))).toThrow(
-      /skill directory not found/i,
-    );
+    expect(() =>
+      copySkillIntoWorktree(join(root, 'worktree'), 'nope', join(root, 'src-skills')),
+    ).toThrow(/skill directory not found/i);
   });
 });
 ```
@@ -356,6 +366,7 @@ git commit -m "feat(cli): add copySkillIntoWorktree for dispatcher skill injecti
 ### Task 2.3: Add the run-time orchestrator step
 
 **Files:**
+
 - Create: `packages/cli/src/lib/run/skill-injection-step.ts`
 - Create: `packages/cli/src/lib/run/skill-injection-step.test.ts`
 
@@ -414,14 +425,17 @@ describe('runSkillInjection', () => {
     const warn = vi.fn();
     const config = {
       ...baseConfig,
-      visual_fidelity: { snapshot_path: '.crew/snap', component_dir: 'packages/dashboard/src/components' },
+      visual_fidelity: {
+        snapshot_path: '.crew/snap',
+        component_dir: 'packages/dashboard/src/components',
+      },
     } as ProjectConfig;
 
     const result = await runSkillInjection({ worktree, config, sourceRoot, log, warn });
     expect(result).toEqual({ kind: 'ok', skillsInjected: ['visual-fidelity-check'] });
-    expect(readFileSync(join(worktree, '.claude/skills/visual-fidelity-check/SKILL.md'), 'utf8')).toBe(
-      '# visual-fidelity-check\n',
-    );
+    expect(
+      readFileSync(join(worktree, '.claude/skills/visual-fidelity-check/SKILL.md'), 'utf8'),
+    ).toBe('# visual-fidelity-check\n');
     expect(log).toHaveBeenCalledWith(expect.stringContaining('visual-fidelity-check'));
     expect(warn).not.toHaveBeenCalled();
   });
@@ -433,7 +447,10 @@ describe('runSkillInjection', () => {
     const warn = vi.fn();
     const config = {
       ...baseConfig,
-      visual_fidelity: { snapshot_path: '.crew/snap', component_dir: 'packages/dashboard/src/components' },
+      visual_fidelity: {
+        snapshot_path: '.crew/snap',
+        component_dir: 'packages/dashboard/src/components',
+      },
     } as ProjectConfig;
 
     const result = await runSkillInjection({ worktree, config, sourceRoot, log, warn });
@@ -480,7 +497,9 @@ export interface SkillInjectionOptions {
  * land, and the missing skill's gate degrades naturally (e.g. visual-fidelity
  * gate reports "skill not loaded" via the PreToolUse hook in B1.3).
  */
-export async function runSkillInjection(opts: SkillInjectionOptions): Promise<SkillInjectionResult> {
+export async function runSkillInjection(
+  opts: SkillInjectionOptions,
+): Promise<SkillInjectionResult> {
   const applicable = skillsApplicableTo(opts.config);
   if (applicable.length === 0) return { kind: 'skipped' };
 
@@ -524,6 +543,7 @@ git commit -m "feat(cli): add runSkillInjection pre-dispatch step"
 ### Task 2.4: Export from `lib/run/index.ts`
 
 **Files:**
+
 - Modify: `packages/cli/src/lib/run/index.ts`
 
 Export the new public surface so `commands/run.ts` can import alongside the existing run-step exports.
@@ -533,7 +553,11 @@ Export the new public surface so `commands/run.ts` can import alongside the exis
 Open `packages/cli/src/lib/run/index.ts`. Add (near the existing `runPreDispatchFigmaSnapshot` export):
 
 ```ts
-export { runSkillInjection, type SkillInjectionResult, type SkillInjectionOptions } from './skill-injection-step.js';
+export {
+  runSkillInjection,
+  type SkillInjectionResult,
+  type SkillInjectionOptions,
+} from './skill-injection-step.js';
 ```
 
 - [ ] **Step 2: Verify typecheck**
@@ -554,6 +578,7 @@ git commit -m "feat(cli): export runSkillInjection from lib/run barrel"
 ### Task 2.5: Wire into `commands/run.ts`
 
 **Files:**
+
 - Modify: `packages/cli/src/commands/run.ts`
 
 The skill-injection step runs after the figma-snapshot step (which materializes the snapshot the skill compares against) and before `prepareAgentEnvironment` (which sets up the agent's MCP config). Co-locating the two visual-fidelity pre-dispatch hooks makes the dependency obvious.
@@ -580,12 +605,7 @@ Immediately after that block, add (inside the `if (config.visual_fidelity)` body
 
 ```ts
 console.log(pc.dim('→ injecting dispatcher-managed skills into the worktree…'));
-const skillsSourceRoot = join(
-  dirname(fileURLToPath(import.meta.url)),
-  '..',
-  'lib',
-  'skills',
-);
+const skillsSourceRoot = join(dirname(fileURLToPath(import.meta.url)), '..', 'lib', 'skills');
 await runSkillInjection({
   worktree,
   config,
@@ -598,8 +618,8 @@ await runSkillInjection({
 `fileURLToPath` and `dirname` are not yet imported in `run.ts`. Add to the existing `node:` imports at the top of the file:
 
 ```ts
-import { dirname, basename, join } from 'node:path';   // basename + join already there; add dirname
-import { fileURLToPath } from 'node:url';              // new
+import { dirname, basename, join } from 'node:path'; // basename + join already there; add dirname
+import { fileURLToPath } from 'node:url'; // new
 ```
 
 Also add `runSkillInjection` to the existing import block from `../lib/run/index.js`:
@@ -608,7 +628,7 @@ Also add `runSkillInjection` to the existing import block from `../lib/run/index
 import {
   // ... existing imports
   runPreDispatchFigmaSnapshot,
-  runSkillInjection,            // new
+  runSkillInjection, // new
   // ... existing imports
 } from '../lib/run/index.js';
 ```
@@ -631,6 +651,7 @@ git commit -m "feat(cli): wire runSkillInjection into crew run pre-dispatch flow
 ### Task 2.6: Ensure skill files are included in the built CLI output
 
 **Files:**
+
 - Modify: `packages/cli/package.json` (potentially)
 - Modify: `packages/cli/tsconfig.json` (potentially)
 
@@ -679,6 +700,7 @@ git commit -m "build(cli): copy lib/skills/ into dist during build"
 ### Task 2.7: Integration test — full dispatch step against a fixture worktree
 
 **Files:**
+
 - Modify: `packages/cli/src/lib/run/skill-injection-step.test.ts`
 
 Add a test that exercises the full step against a realistic config and source-root, asserting the worktree ends up with a discoverable skill that `skills.ts`'s existing `readSkillsFromRoot` would find.
@@ -701,7 +723,10 @@ describe('runSkillInjection — end-to-end discovery', () => {
     const worktree = makeWorktree();
     const config = {
       ...baseConfig,
-      visual_fidelity: { snapshot_path: '.crew/snap', component_dir: 'packages/dashboard/src/components' },
+      visual_fidelity: {
+        snapshot_path: '.crew/snap',
+        component_dir: 'packages/dashboard/src/components',
+      },
     } as ProjectConfig;
 
     await runSkillInjection({
@@ -744,6 +769,7 @@ A bash hook script ships in the repo and is referenced from `.claude/settings.js
 ### Task 3.1: Author the hook script
 
 **Files:**
+
 - Create: `packages/cli/scripts/hooks/visual-fidelity-pr-gate.sh`
 
 A bash script that reads the hook input (JSON on stdin per Claude Code's hook contract), determines whether the active session transcript shows a visual-fidelity-check skill invocation, and exits with a blocking message if not. Fails closed.
@@ -840,6 +866,7 @@ git commit -m "feat(cli): add visual-fidelity-pr-gate PreToolUse hook script"
 ### Task 3.2: Wire the hook into `.claude/settings.json`
 
 **Files:**
+
 - Modify: `.claude/settings.json`
 
 Reference the hook from the repo's committed settings so all dispatched worktrees inherit it via the worktree checkout.
@@ -850,7 +877,9 @@ Open `.claude/settings.json` and add a top-level `hooks` block alongside the exi
 
 ```json
 {
-  "sandbox": { /* ... unchanged ... */ },
+  "sandbox": {
+    /* ... unchanged ... */
+  },
   "hooks": {
     "PreToolUse": [
       {
@@ -879,6 +908,7 @@ git commit -m "feat: enable visual-fidelity-pr-gate hook in repo settings"
 ### Task 3.3: Test the hook with fixture transcripts
 
 **Files:**
+
 - Create: `packages/cli/scripts/hooks/visual-fidelity-pr-gate.test.sh`
 
 A small shell test that feeds known transcript fixtures + hook inputs into the hook and asserts the exit code and stderr.
@@ -1012,6 +1042,7 @@ import('./packages/cli/dist/lib/prompts/index.js').then(({buildTicketPrompt}) =>
 ```
 
 Expected output shows:
+
 - Step 7 (Execute)
 - Step 8 (Visual fidelity gate) with the IN ADDITION TO language
 - Step 9 (Verify)

@@ -106,6 +106,7 @@ Each task below produces a self-contained, committable change.
 ## Task 1: Move `transcripts/` and `claudeProjectDirFor` to `crew-shared`
 
 **Files:**
+
 - Create: `packages/shared/src/transcripts/{index,parser,parser.test,tail,tail.test,types}.ts`
 - Create: `packages/shared/src/claude-paths/{index,claudeProjectDirFor,claudeProjectDirFor.test}.ts`
 - Modify: `packages/shared/src/index.ts`
@@ -264,6 +265,7 @@ git commit -m "refactor: move transcripts + claudeProjectDirFor to crew-shared (
 ## Task 2: First migration — `agents`, `runs`, `tool_calls`
 
 **Files:**
+
 - Create: `packages/daemon/src/migrations/0001_agents_runs_tool_calls.ts`
 - Create: `packages/daemon/src/migrations/0001_agents_runs_tool_calls.test.ts`
 - Modify: `packages/daemon/src/db.ts`
@@ -391,11 +393,7 @@ export async function up(db: Kysely<unknown>): Promise<void> {
     .addColumn('occurred_at', 'text', (col) => col.notNull())
     .execute();
 
-  await db.schema
-    .createIndex('idx_tool_calls_run_id')
-    .on('tool_calls')
-    .column('run_id')
-    .execute();
+  await db.schema.createIndex('idx_tool_calls_run_id').on('tool_calls').column('run_id').execute();
 
   // Idempotency for daemon-restart recovery: the same (run, occurred_at,
   // tool_name) tuple should never be ingested twice. INSERT OR IGNORE in
@@ -491,6 +489,7 @@ git commit -m "feat(daemon): first migration — agents, runs, tool_calls (CREW-
 ## Task 3: `IngestService` — chokidar/tail-driven JSONL ingest
 
 **Files:**
+
 - Modify: `packages/daemon/package.json` (add `chokidar`)
 - Create: `packages/daemon/src/services/IngestService.ts`
 - Create: `packages/daemon/src/services/IngestService.test.ts`
@@ -793,7 +792,13 @@ Expected: FAIL — module does not exist.
 ```typescript
 import type { Kysely } from 'kysely';
 import type { Logger } from 'pino';
-import { tailTranscript, parseToolCall, summarizeInput, type TranscriptEvent, claudeProjectDirFor } from 'crew-shared';
+import {
+  tailTranscript,
+  parseToolCall,
+  summarizeInput,
+  type TranscriptEvent,
+  claudeProjectDirFor,
+} from 'crew-shared';
 import { join } from 'node:path';
 import type { DaemonDatabase } from '../db.js';
 
@@ -840,7 +845,11 @@ export class IngestService {
     const open = await this.db
       .selectFrom('runs')
       .innerJoin('agents', 'agents.key', 'runs.agent_key')
-      .select(['runs.id as runId', 'runs.session_id as sessionId', 'agents.worktree_path as worktreePath'])
+      .select([
+        'runs.id as runId',
+        'runs.session_id as sessionId',
+        'agents.worktree_path as worktreePath',
+      ])
       .where('runs.completed_at', 'is', null)
       .execute();
     for (const row of open) {
@@ -858,7 +867,9 @@ export class IngestService {
       (input.worktreePath && input.sessionId
         ? join(claudeProjectDirFor(input.worktreePath), `${input.sessionId}.jsonl`)
         : (() => {
-            throw new Error('IngestService.attach requires either jsonlPath or both worktreePath and sessionId');
+            throw new Error(
+              'IngestService.attach requires either jsonlPath or both worktreePath and sessionId',
+            );
           })());
 
     const controller = new AbortController();
@@ -943,6 +954,7 @@ git commit -m "feat(daemon): IngestService — chokidar-tail JSONL ingest with i
 ## Task 4: `AgentsService.list` + `GET /api/agents`
 
 **Files:**
+
 - Create: `packages/daemon/src/services/AgentsService.ts`
 - Create: `packages/daemon/src/services/AgentsService.test.ts`
 - Create: `packages/daemon/src/routes/agents.ts`
@@ -1009,7 +1021,11 @@ async function makeRun(
   db: Kysely<DaemonDatabase>,
   agentKey: string,
   sessionId: string,
-  opts: { command?: 'run' | 'fix-pr' | 'finish'; completedAt?: string | null; exitCode?: number | null } = {},
+  opts: {
+    command?: 'run' | 'fix-pr' | 'finish';
+    completedAt?: string | null;
+    exitCode?: number | null;
+  } = {},
 ): Promise<number> {
   const row = await db
     .insertInto('runs')
@@ -1445,15 +1461,11 @@ const AgentSchema = z.object({
 const AgentsResponseSchema = z.object({ agents: z.array(AgentSchema) });
 
 export async function registerAgentsRoutes(app: DaemonApp): Promise<void> {
-  app.get(
-    '/api/agents',
-    { schema: { response: { 200: AgentsResponseSchema } } },
-    async (req) => {
-      const svc = req.diScope.resolve('agentsService');
-      const agents = await svc.list();
-      return { agents };
-    },
-  );
+  app.get('/api/agents', { schema: { response: { 200: AgentsResponseSchema } } }, async (req) => {
+    const svc = req.diScope.resolve('agentsService');
+    const agents = await svc.list();
+    return { agents };
+  });
 }
 ```
 
@@ -1468,7 +1480,7 @@ import { registerAgentsRoutes } from './routes/agents.js';
 After the existing `await registerProjectsRoutes(app);` line, add:
 
 ```typescript
-  await registerAgentsRoutes(app);
+await registerAgentsRoutes(app);
 ```
 
 - [ ] **Step 10: Run the route test to verify it passes**
@@ -1499,6 +1511,7 @@ git commit -m "feat(daemon): AgentsService.list + GET /api/agents (CREW-XX)"
 ## Task 5: `POST /api/agents/runs` + `POST .../runs/:runId/complete`
 
 **Files:**
+
 - Create: `packages/daemon/src/routes/runs.ts`
 - Create: `packages/daemon/src/routes/runs.test.ts`
 - Modify: `packages/daemon/src/container.ts` (register `IngestService`)
@@ -1529,14 +1542,14 @@ ingestService: asFunction(({ db, logger }: DaemonCradle) => new IngestService({ 
 Edit `packages/daemon/src/app.ts`. After the `await app.register(fastifyAwilixPlugin, ...)` block, add:
 
 ```typescript
-  // Resolve the ingest service via the diContainer's cradle (not request-scoped).
-  const ingest = container.cradle.ingestService;
-  app.addHook('onReady', async () => {
-    await ingest.start();
-  });
-  app.addHook('onClose', async () => {
-    await ingest.stop();
-  });
+// Resolve the ingest service via the diContainer's cradle (not request-scoped).
+const ingest = container.cradle.ingestService;
+app.addHook('onReady', async () => {
+  await ingest.start();
+});
+app.addHook('onClose', async () => {
+  await ingest.stop();
+});
 ```
 
 (`container` is a local you'll need to extract — change the existing one-liner to `const container = buildContainer({ config, logger, db }); await app.register(fastifyAwilixPlugin, { container, ... });`. Update the `disposeOnClose: true` and other options to remain.)
@@ -1800,9 +1813,7 @@ export async function registerRunsRoutes(app: DaemonApp): Promise<void> {
         .where('session_id', '=', body.sessionId)
         .executeTakeFirst();
       if (existing) {
-        return reply
-          .code(409)
-          .send({ error: 'session_already_registered', runId: existing.id });
+        return reply.code(409).send({ error: 'session_already_registered', runId: existing.id });
       }
 
       // Upsert the agent (preserve existing ticket_title when the new one is '').
@@ -1915,7 +1926,7 @@ import { registerRunsRoutes } from './routes/runs.js';
 After `await registerAgentsRoutes(app);`, add:
 
 ```typescript
-  await registerRunsRoutes(app);
+await registerRunsRoutes(app);
 ```
 
 - [ ] **Step 7: Run route tests to verify they pass**
@@ -1946,6 +1957,7 @@ git commit -m "feat(daemon): POST /api/agents/runs + complete endpoint, IngestSe
 ## Task 6: CLI daemon-client + `crew run` integration
 
 **Files:**
+
 - Create: `packages/cli/src/lib/daemon-client/index.ts`
 - Create: `packages/cli/src/lib/daemon-client/index.test.ts`
 - Modify: `packages/cli/src/lib/index.ts` (re-export the daemon client)
@@ -1976,17 +1988,21 @@ const validBody = {
 
 describe('CrewDaemonClient.registerRun', () => {
   it('POSTs the body and returns the response on 201', async () => {
-    const fetchSpy = vi
-      .spyOn(globalThis, 'fetch')
-      .mockResolvedValue(
-        new Response(
-          JSON.stringify({
-            agent: { ...validBody },
-            run: { id: 42, agentKey: 'KAN-1', command: 'run', sessionId: 's1', startedAt: validBody.startedAt },
-          }),
-          { status: 201, headers: { 'content-type': 'application/json' } },
-        ),
-      );
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          agent: { ...validBody },
+          run: {
+            id: 42,
+            agentKey: 'KAN-1',
+            command: 'run',
+            sessionId: 's1',
+            startedAt: validBody.startedAt,
+          },
+        }),
+        { status: 201, headers: { 'content-type': 'application/json' } },
+      ),
+    );
     const client = new CrewDaemonClient({ baseUrl: 'http://localhost:7773' });
     const result = await client.registerRun(validBody);
     expect(result.ok).toBe(true);
@@ -2020,7 +2036,10 @@ describe('CrewDaemonClient.completeRun', () => {
   it('POSTs and returns ok:true on 204', async () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(null, { status: 204 }));
     const client = new CrewDaemonClient({ baseUrl: 'http://localhost:7773' });
-    const result = await client.completeRun(42, { exitCode: 0, completedAt: '2026-04-29T13:00:00Z' });
+    const result = await client.completeRun(42, {
+      exitCode: 0,
+      completedAt: '2026-04-29T13:00:00Z',
+    });
     expect(result.ok).toBe(true);
   });
 
@@ -2028,7 +2047,10 @@ describe('CrewDaemonClient.completeRun', () => {
     vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('ECONNREFUSED'));
     const warn = vi.fn();
     const client = new CrewDaemonClient({ baseUrl: 'http://localhost:7773', warn });
-    const result = await client.completeRun(42, { exitCode: 0, completedAt: '2026-04-29T13:00:00Z' });
+    const result = await client.completeRun(42, {
+      exitCode: 0,
+      completedAt: '2026-04-29T13:00:00Z',
+    });
     expect(result.ok).toBe(false);
     expect(warn).toHaveBeenCalled();
   });
@@ -2137,10 +2159,7 @@ export class CrewDaemonClient {
     }
   }
 
-  async completeRun(
-    runId: number,
-    input: CompleteRunInput,
-  ): Promise<DaemonResult<{ ok: true }>> {
+  async completeRun(runId: number, input: CompleteRunInput): Promise<DaemonResult<{ ok: true }>> {
     try {
       const res = await fetch(`${this.baseUrl}/api/agents/runs/${runId}/complete`, {
         method: 'POST',
@@ -2195,20 +2214,20 @@ import { basename } from 'node:path';
 Find the block immediately after `const transcriptPath = await findNewestTranscript(projectDir, { signal: abort.signal });` and the early-return for missing transcript. After the existing `console.log(pc.dim(`→ watching ${transcriptPath}`));` line, BEFORE the `for await (const event of tailTranscript(...))` loop, add:
 
 ```typescript
-  const sessionId = basename(transcriptPath, '.jsonl');
-  const daemonClient = crewDaemonClientFromEnv(process.env);
-  const startedAt = new Date().toISOString();
-  const registration = await daemonClient.registerRun({
-    key,
-    projectName: config.name,
-    ticketTitle: '',
-    worktreePath: worktree,
-    branch: key,
-    sessionId,
-    command: 'run',
-    startedAt,
-  });
-  const runId = registration.ok ? registration.run.id : null;
+const sessionId = basename(transcriptPath, '.jsonl');
+const daemonClient = crewDaemonClientFromEnv(process.env);
+const startedAt = new Date().toISOString();
+const registration = await daemonClient.registerRun({
+  key,
+  projectName: config.name,
+  ticketTitle: '',
+  worktreePath: worktree,
+  branch: key,
+  sessionId,
+  command: 'run',
+  startedAt,
+});
+const runId = registration.ok ? registration.run.id : null;
 ```
 
 > **ticketTitle:** slice 1b passes `''` and lets the daemon's COALESCE rule preserve any existing title. A future ticket plumbs Jira lookup into the registration call (it's not strictly required for slice 1b — the dashboard surface tolerates an empty title).
@@ -2216,12 +2235,12 @@ Find the block immediately after `const transcriptPath = await findNewestTranscr
 After the existing `const result = await claudeProcess;` line near the bottom (around line 247), and before `logStream.end();`, add the completion call:
 
 ```typescript
-  if (runId !== null) {
-    await daemonClient.completeRun(runId, {
-      exitCode: result.exitCode ?? 1,
-      completedAt: new Date().toISOString(),
-    });
-  }
+if (runId !== null) {
+  await daemonClient.completeRun(runId, {
+    exitCode: result.exitCode ?? 1,
+    completedAt: new Date().toISOString(),
+  });
+}
 ```
 
 - [ ] **Step 7: Run CLI tests + typecheck**
@@ -2268,11 +2287,13 @@ git commit -m "feat(cli): daemon-client + crew run registers/completes runs (CRE
 ## Task 7: `crew fix-pr` integration
 
 **Files:**
+
 - Modify: `packages/cli/src/commands/fix-pr.ts`
 
 - [ ] **Step 1: Add the same daemon-client wiring to `crew fix-pr`**
 
 Read `packages/cli/src/commands/fix-pr.ts`. Identify:
+
 - The line where the project config is loaded (typically `const config = await discoverProjectConfig(...)`).
 - The line where the claude process is spawned (`execa('claude', ...)`).
 - The line where `findNewestTranscript` resolves the transcript path.
@@ -2288,20 +2309,20 @@ import { basename } from 'node:path';
 After the `findNewestTranscript` call resolves (and the early-exit-if-missing block), before the tail loop, add:
 
 ```typescript
-  const sessionId = basename(transcriptPath, '.jsonl');
-  const daemonClient = crewDaemonClientFromEnv(process.env);
-  const startedAt = new Date().toISOString();
-  const registration = await daemonClient.registerRun({
-    key,
-    projectName: config.name,
-    ticketTitle: '',
-    worktreePath: worktree,
-    branch: key,
-    sessionId,
-    command: 'fix-pr',
-    startedAt,
-  });
-  const runId = registration.ok ? registration.run.id : null;
+const sessionId = basename(transcriptPath, '.jsonl');
+const daemonClient = crewDaemonClientFromEnv(process.env);
+const startedAt = new Date().toISOString();
+const registration = await daemonClient.registerRun({
+  key,
+  projectName: config.name,
+  ticketTitle: '',
+  worktreePath: worktree,
+  branch: key,
+  sessionId,
+  command: 'fix-pr',
+  startedAt,
+});
+const runId = registration.ok ? registration.run.id : null;
 ```
 
 (Note: `worktree` and `key` are already in scope in fix-pr.ts; if your local variable names differ, use the existing names.)
@@ -2309,12 +2330,12 @@ After the `findNewestTranscript` call resolves (and the early-exit-if-missing bl
 After `await claudeProcess` resolves, before any final cleanup, add:
 
 ```typescript
-  if (runId !== null) {
-    await daemonClient.completeRun(runId, {
-      exitCode: result.exitCode ?? 1,
-      completedAt: new Date().toISOString(),
-    });
-  }
+if (runId !== null) {
+  await daemonClient.completeRun(runId, {
+    exitCode: result.exitCode ?? 1,
+    completedAt: new Date().toISOString(),
+  });
+}
 ```
 
 - [ ] **Step 2: Run CLI tests + typecheck**
@@ -2337,6 +2358,7 @@ git commit -m "feat(cli): crew fix-pr registers/completes runs with the daemon (
 ## Task 8: Dashboard wiring — `HttpDaemonClient`, polling, delete temporaries
 
 **Files:**
+
 - Create: `packages/dashboard/src/data/HttpDaemonClient.ts`
 - Create: `packages/dashboard/src/data/HttpDaemonClient.test.ts`
 - Delete: `packages/dashboard/src/data/HttpProjectsClient.ts`
@@ -2359,10 +2381,10 @@ afterEach(() => vi.restoreAllMocks());
 describe('HttpDaemonClient.listProjects', () => {
   it('GETs /api/projects and returns the array', async () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(
-      new Response(
-        JSON.stringify({ projects: [{ name: 'demo', repoPath: '/x' }] }),
-        { status: 200, headers: { 'content-type': 'application/json' } },
-      ),
+      new Response(JSON.stringify({ projects: [{ name: 'demo', repoPath: '/x' }] }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      }),
     );
     const client = new HttpDaemonClient();
     expect(await client.listProjects()).toEqual([{ name: 'demo', repoPath: '/x' }]);

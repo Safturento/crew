@@ -12,8 +12,8 @@
 
 **Ticket carve-up** (single child ticket under epic CREW-56):
 
-| Ticket | Tasks | Notes |
-|---|---|---|
+| Ticket          | Tasks      | Notes                                                                                                            |
+| --------------- | ---------- | ---------------------------------------------------------------------------------------------------------------- |
 | **CREW-resume** | Tasks 1–13 | One coherent body of work; ~12 commits. Manual gate (Task 13) is the closing step rather than a separate ticket. |
 
 The work is small enough that splitting buys nothing. If a reviewer prefers two PRs, a clean split is Tasks 1–6 (foundation + extending existing commands with `-m`) vs. Tasks 7–13 (new commands + manual gate) — but one PR is the default.
@@ -80,7 +80,6 @@ Create `packages/cli/src/lib/prompts/templates/user-message.md`:
 ## Additional context from the user
 
 {{message}}
-
 ```
 
 (Trailing newline is intentional — keeps the slot from running into whatever follows it in the parent template.)
@@ -203,6 +202,7 @@ with:
 You are running unattended on a fresh git worktree to implement Jira ticket {{key}} end-to-end. The repo's `CLAUDE.md` is your authoritative project guide; read it before doing anything else.
 
 {{userMessageBlock}}
+
 ## Skills
 ```
 
@@ -223,11 +223,11 @@ export interface BuildTicketPromptOptions {
   key: string;
   githubRepo: string;
   jiraSite: string;
-  visualTesting?: VisualTestingPromptOptions;     // existing
-  playwright?: PlaywrightPromptOptions;            // existing
-  brunoSmoke?: BrunoSmokePromptOptions;            // existing
-  discoveredSkillsBlock?: string;                  // existing
-  userMessage?: string;                            // NEW
+  visualTesting?: VisualTestingPromptOptions; // existing
+  playwright?: PlaywrightPromptOptions; // existing
+  brunoSmoke?: BrunoSmokePromptOptions; // existing
+  discoveredSkillsBlock?: string; // existing
+  userMessage?: string; // NEW
 }
 ```
 
@@ -241,7 +241,7 @@ return render('ticket', {
   githubRepo: opts.githubRepo,
   jiraSite: opts.jiraSite,
   // ...existing placeholders...
-  userMessageBlock: renderUserMessageBlock(opts.userMessage),  // NEW
+  userMessageBlock: renderUserMessageBlock(opts.userMessage), // NEW
 });
 ```
 
@@ -296,9 +296,7 @@ Find the test in `packages/cli/src/lib/run/preconditions.test.ts` that covers `r
 
 ```ts
 it('throws a helpful error when the worktree already exists, naming the new commands', () => {
-  expect(() => requireWorktreeAvailable(existingPath)).toThrow(
-    /worktree already exists at .+/,
-  );
+  expect(() => requireWorktreeAvailable(existingPath)).toThrow(/worktree already exists at .+/);
   expect(() => requireWorktreeAvailable(existingPath)).toThrow(/crew resume/);
   expect(() => requireWorktreeAvailable(existingPath)).toThrow(/crew restart --hard/);
 });
@@ -356,7 +354,7 @@ Extend the `RunOptions` interface (search for it in the file; add `message?: str
 ```ts
 interface RunOptions {
   skipDocker?: boolean;
-  message?: string;  // NEW
+  message?: string; // NEW
 }
 ```
 
@@ -368,7 +366,7 @@ const prompt = buildTicketPrompt({
   githubRepo: config.github.repo,
   jiraSite: config.jira.site,
   // ...existing fields...
-  userMessage: opts.message,  // NEW
+  userMessage: opts.message, // NEW
 });
 ```
 
@@ -479,9 +477,7 @@ export type FeedbackMode =
 In `loadFeedback`, drop the `'stdin'` branch and the `Readable`/`stdin` plumbing. Add the `'message'` branch:
 
 ```ts
-export async function loadFeedback(
-  opts: LoadFeedbackOptions,
-): Promise<LoadedFeedback> {
+export async function loadFeedback(opts: LoadFeedbackOptions): Promise<LoadedFeedback> {
   if (opts.mode.kind === 'file') {
     const path = opts.mode.path;
     if (!existsSync(path)) {
@@ -518,7 +514,7 @@ Update `FixPrFlags`:
 interface FixPrFlags {
   fromPr?: boolean;
   fromFile?: string;
-  message?: string;  // replaces fromStdin
+  message?: string; // replaces fromStdin
 }
 ```
 
@@ -532,7 +528,7 @@ function selectMode(flags: FixPrFlags): FeedbackMode {
     flags.message !== undefined ? 'message' : null,
   ].filter(Boolean);
   if (explicit.length > 1) {
-    throw new Error("--from-pr, --from-file, and -m are mutually exclusive");
+    throw new Error('--from-pr, --from-file, and -m are mutually exclusive');
   }
   if (flags.fromFile !== undefined) return { kind: 'file', path: flags.fromFile };
   if (flags.message !== undefined) return { kind: 'message', message: flags.message };
@@ -693,9 +689,7 @@ export interface DeleteSessionsResult {
  * `README` an operator dropped in) are preserved. Idempotent — returns
  * dirExisted: false when there's nothing to do.
  */
-export function deleteSessionsForWorktree(
-  opts: DeleteSessionsOptions,
-): DeleteSessionsResult {
+export function deleteSessionsForWorktree(opts: DeleteSessionsOptions): DeleteSessionsResult {
   const root = opts.projectsRoot ?? DEFAULT_PROJECTS_ROOT;
   const dir = join(root, encodeWorktreeProjectPath(opts.worktree));
 
@@ -809,7 +803,7 @@ describe('removeWorktreeAndBranch', () => {
     mkdirSync(worktree, { recursive: true });
     writeFileSync(join(worktree, 'sentinel'), '');
     execaMock
-      .mockReturnValueOnce(fakeOk() as ReturnType<typeof execa>)  // worktree remove
+      .mockReturnValueOnce(fakeOk() as ReturnType<typeof execa>) // worktree remove
       .mockReturnValueOnce(fakeOk() as ReturnType<typeof execa>); // branch -D
 
     const result = await removeWorktreeAndBranch({ worktree, key });
@@ -820,11 +814,7 @@ describe('removeWorktreeAndBranch', () => {
       ['worktree', 'remove', worktree, '--force'],
       expect.any(Object),
     );
-    expect(execaMock).toHaveBeenCalledWith(
-      'git',
-      ['branch', '-D', key],
-      expect.any(Object),
-    );
+    expect(execaMock).toHaveBeenCalledWith('git', ['branch', '-D', key], expect.any(Object));
   });
 
   it('treats a missing branch as already-removed (rc=128)', async () => {
@@ -843,9 +833,7 @@ describe('removeWorktreeAndBranch', () => {
   it('treats a worktree-remove failure (rc=128) as already-removed', async () => {
     mkdirSync(worktree, { recursive: true });
     execaMock
-      .mockReturnValueOnce(
-        fakeFail('fatal: ... is not a working tree') as ReturnType<typeof execa>,
-      )
+      .mockReturnValueOnce(fakeFail('fatal: ... is not a working tree') as ReturnType<typeof execa>)
       .mockReturnValueOnce(fakeOk() as ReturnType<typeof execa>);
 
     const result = await removeWorktreeAndBranch({ worktree, key });
@@ -1040,6 +1028,7 @@ Create `packages/cli/src/lib/prompts/templates/resume.md`:
 You're being resumed on {{key}} after an interruption.
 
 {{userMessageBlock}}
+
 ## Worktree state
 
 - Branch: {{branch}}
@@ -1047,6 +1036,7 @@ You're being resumed on {{key}} after an interruption.
 - {{uncommittedCount}} uncommitted files (preserved as-is from before the interruption)
 
 {{playwrightBlock}}{{brunoSmokeBlock}}
+
 ## What to do
 
 Reassess where you left off — check your last actions in this conversation, the worktree's git state, and any uncommitted changes. Then continue toward closing the ticket. If the user-supplied context above changes your direction, factor it in before resuming.
@@ -1178,11 +1168,9 @@ describe('readWorktreeState', () => {
 
   it('returns branch, commitsAhead, uncommittedCount from git output', async () => {
     execaMock
-      .mockReturnValueOnce(ok('KAN-23\n') as ReturnType<typeof execa>)        // branch
-      .mockReturnValueOnce(ok('3\n') as ReturnType<typeof execa>)             // rev-list count
-      .mockReturnValueOnce(
-        ok(' M file.ts\n?? new.ts\n M other.ts\n') as ReturnType<typeof execa>,
-      );                                                                       // status --porcelain
+      .mockReturnValueOnce(ok('KAN-23\n') as ReturnType<typeof execa>) // branch
+      .mockReturnValueOnce(ok('3\n') as ReturnType<typeof execa>) // rev-list count
+      .mockReturnValueOnce(ok(' M file.ts\n?? new.ts\n M other.ts\n') as ReturnType<typeof execa>); // status --porcelain
 
     const state = await readWorktreeState('/worktree');
     expect(state.branch).toBe('KAN-23');
@@ -1237,20 +1225,17 @@ export async function readWorktreeState(worktree: string): Promise<WorktreeState
   });
   const branch = branchResult.stdout.trim();
 
-  const aheadResult = await execa(
-    'git',
-    ['rev-list', '--count', 'origin/main..HEAD'],
-    { cwd: worktree, reject: false },
-  );
+  const aheadResult = await execa('git', ['rev-list', '--count', 'origin/main..HEAD'], {
+    cwd: worktree,
+    reject: false,
+  });
   const commitsAhead = Number.parseInt(aheadResult.stdout.trim() || '0', 10);
 
   const statusResult = await execa('git', ['status', '--porcelain'], {
     cwd: worktree,
     reject: false,
   });
-  const uncommittedCount = statusResult.stdout
-    .split('\n')
-    .filter((line) => line.length > 0).length;
+  const uncommittedCount = statusResult.stdout.split('\n').filter((line) => line.length > 0).length;
 
   return {
     branch,
@@ -1409,9 +1394,7 @@ interface ResetOptions {
 export async function runReset(key: string, opts: ResetOptions): Promise<void> {
   const config = await discoverProjectConfig(process.cwd());
   if (!config) {
-    process.stderr.write(
-      pc.red(`error: no crew project config found from ${process.cwd()}\n`),
-    );
+    process.stderr.write(pc.red(`error: no crew project config found from ${process.cwd()}\n`));
     process.exit(1);
   }
   const worktree = worktreePathFor(config.repo_path, key);
@@ -1421,9 +1404,7 @@ export async function runReset(key: string, opts: ResetOptions): Promise<void> {
   if (!sessions.dirExisted) {
     process.stderr.write(pc.dim(`→ no sessions to delete (no project dir)\n`));
   } else {
-    process.stderr.write(
-      pc.dim(`→ deleted ${sessions.deletedCount} session file(s)\n`),
-    );
+    process.stderr.write(pc.dim(`→ deleted ${sessions.deletedCount} session file(s)\n`));
   }
 
   if (!opts.hard) return;
@@ -1441,11 +1422,7 @@ export async function runReset(key: string, opts: ResetOptions): Promise<void> {
     ),
   );
   process.stderr.write(
-    pc.dim(
-      branchRemoved
-        ? `→ branch removed: ${key}\n`
-        : `→ branch already removed: ${key}\n`,
-    ),
+    pc.dim(branchRemoved ? `→ branch removed: ${key}\n` : `→ branch already removed: ${key}\n`),
   );
 }
 
@@ -1568,7 +1545,7 @@ Expected: FAIL — `Cannot find module './resume.js'`.
 
 - [ ] **Step 10c: Decide the fresh-spawn seam**
 
-`spawnClaudeResume` always passes `--resume <id>`. The no-session branch needs to spawn `claude` *without* `--resume`. Two acceptable options — pick one and stick with it:
+`spawnClaudeResume` always passes `--resume <id>`. The no-session branch needs to spawn `claude` _without_ `--resume`. Two acceptable options — pick one and stick with it:
 
 1. **Add `spawnClaudeFresh` to `lib/claude/spawn.ts`.** Signature mirrors `spawnClaudeResume` but without `sessionId`. Cleanest separation; both functions in the same module.
 2. **Make `sessionId` optional on `spawnClaudeResume`.** When undefined, omit `--resume`. Smaller diff but the function name becomes a lie.
@@ -1588,18 +1565,14 @@ export interface SpawnClaudeFreshOptions {
 }
 
 export function spawnClaudeFresh(opts: SpawnClaudeFreshOptions): ResultPromise {
-  const sub = execa(
-    'claude',
-    ['--dangerously-skip-permissions', '-p', opts.prompt],
-    {
-      cwd: opts.cwd,
-      env: {
-        ...process.env,
-        ...(opts.env ?? {}),
-        PATH: ensureLocalBinOnPath(process.env.PATH),
-      },
+  const sub = execa('claude', ['--dangerously-skip-permissions', '-p', opts.prompt], {
+    cwd: opts.cwd,
+    env: {
+      ...process.env,
+      ...(opts.env ?? {}),
+      PATH: ensureLocalBinOnPath(process.env.PATH),
     },
-  );
+  });
   const log = createWriteStream(opts.logFile);
   sub.stdout?.pipe(log);
   sub.stderr?.pipe(log);
@@ -1641,18 +1614,14 @@ interface ResumeOptions {
 export async function runResume(key: string, opts: ResumeOptions): Promise<void> {
   const config = await discoverProjectConfig(process.cwd());
   if (!config) {
-    process.stderr.write(
-      pc.red(`error: no crew project config found from ${process.cwd()}\n`),
-    );
+    process.stderr.write(pc.red(`error: no crew project config found from ${process.cwd()}\n`));
     process.exit(1);
   }
   const worktree = worktreePathFor(config.repo_path, key);
 
   if (!existsSync(worktree)) {
     process.stderr.write(
-      pc.red(
-        `error: no worktree at ${worktree}; did you mean 'crew run ${key}'?\n`,
-      ),
+      pc.red(`error: no worktree at ${worktree}; did you mean 'crew run ${key}'?\n`),
     );
     process.exit(1);
   }
@@ -1714,9 +1683,7 @@ export async function runResume(key: string, opts: ResumeOptions): Promise<void>
     return;
   }
 
-  process.stderr.write(
-    pc.dim('→ no prior session found; starting fresh in existing worktree\n'),
-  );
+  process.stderr.write(pc.dim('→ no prior session found; starting fresh in existing worktree\n'));
   const prompt = buildTicketPrompt({
     key,
     githubRepo: config.github.repo,
@@ -1930,10 +1897,7 @@ export const restartCommand = new Command('restart')
   .description("Wipe state and re-run the agent on a ticket's worktree")
   .argument('<key>', 'Jira ticket key (e.g. KAN-23)', (v) => v.toUpperCase())
   .option('--hard', 'also remove worktree + branch (full clean slate via crew run)')
-  .option(
-    '-m, --message <message>',
-    'additional context to pass through to the underlying command',
-  )
+  .option('-m, --message <message>', 'additional context to pass through to the underlying command')
   .option('--skip-docker', 'skip the docker stack step')
   .action(async (key: string, opts: RestartOptions) => {
     await runRestart(key, opts);

@@ -10,16 +10,16 @@ The architecture doc was authored before `~/.claude/skills/reaching-for-backend-
 
 The skill's "alt-stack carve-out" exempts projects with an established stack to preserve. The daemon is greenfield (`packages/daemon/` is empty bar a placeholder `package.json` and `README.md`), so there is no established stack to preserve here — the architecture doc's calls were planning artifacts, not committed code. Aligning now is cheaper than aligning later.
 
-| Concern | Pick | Notes |
-|---|---|---|
-| HTTP framework | **Fastify** + `fastify-type-provider-zod` | Skill default; `fastify-type-provider-zod` gives end-to-end Zod inference on routes |
-| Schema validation | **Zod** | Already used elsewhere in the repo (CLI's TOML parsing); same library on the wire |
-| Persistence | **SQLite** at `~/.config/crew/state.db` via **Kysely** + `kysely-better-sqlite3` | SQLite kept for the personal-tool fit (no extra container, single file, trivially backed up); Kysely added to align with the skill's typed-query-builder pattern. Postgres remains a future option if multi-process access is ever needed. |
-| Migrations | Kysely's migration runner | No migrations created in this slice; runner is wired so 1b's first migration is one file |
-| DI | **`@fastify/awilix`** | Plumbing installed in this slice; only the config loader is registered. Real services (transcript parser, state aggregator) start in 1b — that's where Awilix earns its keep. |
-| Logging | **pino** | File at `~/.config/crew/daemon.log`; pretty-printed in foreground mode |
-| Config / env | **Zod schema parsed once at boot** | One typed `config` object; no scattered `process.env.X` reads |
-| Testing | **Vitest** + Fastify `app.inject()` | tmpdir-based fixtures for project TOMLs; no mocks of the loader |
+| Concern           | Pick                                                                             | Notes                                                                                                                                                                                                                                      |
+| ----------------- | -------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| HTTP framework    | **Fastify** + `fastify-type-provider-zod`                                        | Skill default; `fastify-type-provider-zod` gives end-to-end Zod inference on routes                                                                                                                                                        |
+| Schema validation | **Zod**                                                                          | Already used elsewhere in the repo (CLI's TOML parsing); same library on the wire                                                                                                                                                          |
+| Persistence       | **SQLite** at `~/.config/crew/state.db` via **Kysely** + `kysely-better-sqlite3` | SQLite kept for the personal-tool fit (no extra container, single file, trivially backed up); Kysely added to align with the skill's typed-query-builder pattern. Postgres remains a future option if multi-process access is ever needed. |
+| Migrations        | Kysely's migration runner                                                        | No migrations created in this slice; runner is wired so 1b's first migration is one file                                                                                                                                                   |
+| DI                | **`@fastify/awilix`**                                                            | Plumbing installed in this slice; only the config loader is registered. Real services (transcript parser, state aggregator) start in 1b — that's where Awilix earns its keep.                                                              |
+| Logging           | **pino**                                                                         | File at `~/.config/crew/daemon.log`; pretty-printed in foreground mode                                                                                                                                                                     |
+| Config / env      | **Zod schema parsed once at boot**                                               | One typed `config` object; no scattered `process.env.X` reads                                                                                                                                                                              |
+| Testing           | **Vitest** + Fastify `app.inject()`                                              | tmpdir-based fixtures for project TOMLs; no mocks of the loader                                                                                                                                                                            |
 
 ## 2. Scope
 
@@ -51,12 +51,12 @@ Explicitly out of scope (deferred to 1b):
 
 `crew daemon serve` is the single entry point that loads config, opens the SQLite handle, runs migrations, builds the Fastify app, and listens. Backgrounding is handled by `crew daemon start`, which spawns `crew daemon serve` detached.
 
-| Command | Behaviour |
-|---|---|
-| `crew daemon serve` | Foreground. Loads config, opens DB, runs migrations, listens on `localhost:CREW_PORT` (default `7773`), logs to stdout (pino-pretty). Exits on SIGTERM/SIGINT. |
-| `crew daemon start` | `child_process.spawn(crewBin, ['daemon', 'serve'], { detached: true, stdio: ['ignore', logFd, logFd] })`, parent unrefs the child and exits. Writes the child PID to `~/.config/crew/daemon.pid`. Logs go to `~/.config/crew/daemon.log` (pino JSON, one line per record). |
-| `crew daemon stop` | Reads PID file, sends `SIGTERM`, waits up to 5s for exit (`kill 0` polling), removes PID file. Reports `stopped` / `not running` / `failed to stop`. |
-| `crew daemon status` | Reads PID file. If absent → `stopped`. If present, sends `kill 0`; on success reports `running (pid N, port P)`, on `ESRCH` reports `stale pidfile (pid N)` and unlinks it. |
+| Command              | Behaviour                                                                                                                                                                                                                                                                  |
+| -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `crew daemon serve`  | Foreground. Loads config, opens DB, runs migrations, listens on `localhost:CREW_PORT` (default `7773`), logs to stdout (pino-pretty). Exits on SIGTERM/SIGINT.                                                                                                             |
+| `crew daemon start`  | `child_process.spawn(crewBin, ['daemon', 'serve'], { detached: true, stdio: ['ignore', logFd, logFd] })`, parent unrefs the child and exits. Writes the child PID to `~/.config/crew/daemon.pid`. Logs go to `~/.config/crew/daemon.log` (pino JSON, one line per record). |
+| `crew daemon stop`   | Reads PID file, sends `SIGTERM`, waits up to 5s for exit (`kill 0` polling), removes PID file. Reports `stopped` / `not running` / `failed to stop`.                                                                                                                       |
+| `crew daemon status` | Reads PID file. If absent → `stopped`. If present, sends `kill 0`; on success reports `running (pid N, port P)`, on `ESRCH` reports `stale pidfile (pid N)` and unlinks it.                                                                                                |
 
 PID file location, log file location, port, and config directory are all read from the boot-time Zod schema (env vars: `CREW_CONFIG_DIR`, `CREW_PORT`, `CREW_LOG_FILE`, `CREW_PID_FILE` — each with sensible defaults under `~/.config/crew/`).
 
@@ -145,14 +145,14 @@ If the build directory is missing at boot, the daemon logs a `warn` and serves a
 
 ## 7. Tests
 
-| Surface | Test |
-|---|---|
-| `ProjectsService` | Vitest. `fs.mkdtempSync`, write fixture TOMLs, instantiate service pointed at the tmpdir, assert the returned projects. Cover: happy path, empty dir, mixed valid/invalid TOMLs (verify warn log + valid ones still returned), absent dir. |
-| `GET /api/projects` route | Vitest + `app.inject({ method: 'GET', url: '/api/projects' })`. Asserts status, response shape, and Zod validation on the response. |
+| Surface                             | Test                                                                                                                                                                                                                                                                                   |
+| ----------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ProjectsService`                   | Vitest. `fs.mkdtempSync`, write fixture TOMLs, instantiate service pointed at the tmpdir, assert the returned projects. Cover: happy path, empty dir, mixed valid/invalid TOMLs (verify warn log + valid ones still returned), absent dir.                                             |
+| `GET /api/projects` route           | Vitest + `app.inject({ method: 'GET', url: '/api/projects' })`. Asserts status, response shape, and Zod validation on the response.                                                                                                                                                    |
 | Lifecycle (`start`/`stop`/`status`) | Smoke test gated behind `CREW_RUN_INTEGRATION=1` (`describe.skipIf(!process.env.CREW_RUN_INTEGRATION)`) so default `vitest run` stays fast. Spawns the CLI, waits for PID file, asserts `status` reports `running`, `stop` cleans up. Run locally before merge; not yet wired into CI. |
-| `HttpProjectsClient` | Vitest with `fetch` stubbed. Asserts request URL, response parsing, and Zod validation failure mode (malformed response throws). |
-| `HybridDaemonClient` | Vitest. Constructs with stubbed `HttpProjectsClient` and `MockDaemonClient`, asserts each method delegates to the right one. |
-| `App` integration | Existing `App.test.tsx` updated: render with a hybrid client whose `HttpProjectsClient` uses fetch-stubbed projects + the real `MockDaemonClient` for agents. Assert both project sections and mock agents render. |
+| `HttpProjectsClient`                | Vitest with `fetch` stubbed. Asserts request URL, response parsing, and Zod validation failure mode (malformed response throws).                                                                                                                                                       |
+| `HybridDaemonClient`                | Vitest. Constructs with stubbed `HttpProjectsClient` and `MockDaemonClient`, asserts each method delegates to the right one.                                                                                                                                                           |
+| `App` integration                   | Existing `App.test.tsx` updated: render with a hybrid client whose `HttpProjectsClient` uses fetch-stubbed projects + the real `MockDaemonClient` for agents. Assert both project sections and mock agents render.                                                                     |
 
 ## 8. Open questions / decisions deferred
 

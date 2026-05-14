@@ -19,6 +19,7 @@ Per `~/.claude/CLAUDE.md` "Don't ticket — handle manually": deliverables under
 ### Task A.1: Scaffold the skill-fixtures harness
 
 **Files:**
+
 - Create: `<repo>/docs/superpowers/skill-fixtures/visual-fidelity-check/README.md`
 - Create: `<repo>/docs/superpowers/skill-fixtures/visual-fidelity-check/_template/description.md`
 - Create: `<repo>/docs/superpowers/skill-fixtures/visual-fidelity-check/_template/expected/.gitkeep`
@@ -38,16 +39,17 @@ truth + ground-truth findings the skill should produce.
 ## Fixture structure
 
 Each fixture is a folder:
-
 ```
+
 <fixture-name>/
-├── description.md       # what's wrong in this fixture (ground truth)
-├── snapshot/            # Figma snapshot at the time of the fixture
-├── rendered/            # captured screenshots of the actual rendered output
-├── expected/            # what the skill SHOULD report
-└── runs/                # actual skill outputs from each iteration
-    ├── 2026-05-12-run-01.md
-    └── ...
+├── description.md # what's wrong in this fixture (ground truth)
+├── snapshot/ # Figma snapshot at the time of the fixture
+├── rendered/ # captured screenshots of the actual rendered output
+├── expected/ # what the skill SHOULD report
+└── runs/ # actual skill outputs from each iteration
+├── 2026-05-12-run-01.md
+└── ...
+
 ```
 
 ## Adding a fixture
@@ -96,6 +98,7 @@ git commit -m "docs(harness): scaffold visual-fidelity-check skill-fixtures dir"
 ### Task A.2: Capture CREW-135 fixture — Figma snapshot
 
 **Files:**
+
 - Create: `<repo>/docs/superpowers/skill-fixtures/visual-fidelity-check/crew-135/snapshot/index.json`
 - Create: `<repo>/docs/superpowers/skill-fixtures/visual-fidelity-check/crew-135/snapshot/variables.json`
 - Create: `<repo>/docs/superpowers/skill-fixtures/visual-fidelity-check/crew-135/snapshot/composites/272-120.{png,json}` (Pill set)
@@ -119,7 +122,15 @@ Invoke `mcp__plugin_figma_figma__use_figma` with a script that traverses the Pil
     "strokes": [{ "tokenAlias": "tw/colors/slate/500", "hex": "#64748B", "weight": 1 }],
     "textColor": { "tokenAlias": "tw/colors/slate/400", "hex": "#94A3B8" }
   },
-  "geometry": { "height": 32, "paddingTop": 6, "paddingRight": 12, "paddingBottom": 6, "paddingLeft": 12, "cornerRadius": 6, "itemSpacing": 6 },
+  "geometry": {
+    "height": 32,
+    "paddingTop": 6,
+    "paddingRight": 12,
+    "paddingBottom": 6,
+    "paddingLeft": 12,
+    "cornerRadius": 6,
+    "itemSpacing": 6
+  },
   "font": { "family": "Hanken Grotesk", "weight": "Medium", "size": 14 }
 }
 ```
@@ -144,6 +155,7 @@ git commit -m "docs(harness): CREW-135 fixture — Figma snapshot (Pill set + ag
 ### Task A.3: Capture CREW-135 fixture — rendered state
 
 **Files:**
+
 - Create: `<repo>/docs/superpowers/skill-fixtures/visual-fidelity-check/crew-135/rendered/*.png`
 
 - [ ] **Step 1: Check out PR #177 locally + boot dashboard**
@@ -179,6 +191,7 @@ git commit -m "docs(harness): CREW-135 fixture — captured rendered state from 
 ### Task A.4: Author CREW-135 fixture — description + expected findings
 
 **Files:**
+
 - Create: `<repo>/docs/superpowers/skill-fixtures/visual-fidelity-check/crew-135/description.md`
 - Create: `<repo>/docs/superpowers/skill-fixtures/visual-fidelity-check/crew-135/expected/findings.md`
 
@@ -259,7 +272,7 @@ This is the moment where you stop using `executing-plans`-style steps and switch
 
 - [ ] **Step 1: Invoke superpowers:writing-skills in chat**
 
-In a chat session, say: *"I want to author a new user-scoped skill at `~/.claude/skills/visual-fidelity-check/`. Invoke the writing-skills skill to help."* The writing-skills skill will scaffold the directory, frontmatter, and discovery process.
+In a chat session, say: _"I want to author a new user-scoped skill at `~/.claude/skills/visual-fidelity-check/`. Invoke the writing-skills skill to help."_ The writing-skills skill will scaffold the directory, frontmatter, and discovery process.
 
 - [ ] **Step 2: Provide the skill's purpose + workflow**
 
@@ -296,7 +309,7 @@ This is iterative — there's no fixed step count. Run the skill, review accurac
 
 - [ ] **Step 1: Run the skill against the fixture (first attempt)**
 
-In chat: *"Invoke `visual-fidelity-check` against the CREW-135 fixture at `<repo>/docs/superpowers/skill-fixtures/visual-fidelity-check/crew-135/`. Use the snapshot at `<fixture>/snapshot/` as the Figma reference and the rendered images at `<fixture>/rendered/` as the actual output."*
+In chat: _"Invoke `visual-fidelity-check` against the CREW-135 fixture at `<repo>/docs/superpowers/skill-fixtures/visual-fidelity-check/crew-135/`. Use the snapshot at `<fixture>/snapshot/` as the Figma reference and the rendered images at `<fixture>/rendered/` as the actual output."_
 
 The skill produces a findings report. Save it to `crew-135/runs/2026-05-12-run-01.md`.
 
@@ -356,6 +369,7 @@ Adds the `[visual_fidelity]` section to the crew project config schema, plus the
 #### Task B1.1: Add `visualFidelitySchema` to packages/shared
 
 **Files:**
+
 - Modify: `packages/shared/src/config/schema.ts` (add schema)
 - Modify: `packages/shared/src/index.ts` (re-export if needed)
 - Test: `packages/shared/src/config/schema.test.ts` (extend existing)
@@ -396,10 +410,12 @@ describe('visualFidelitySchema', () => {
   });
 
   it('rejects missing figma_file_key', () => {
-    expect(() => projectConfigSchema.parse({
-      // ... required fields ...
-      visual_fidelity: { figma_pages: ['p1'], component_dir: 'x', dashboard_url: 'x' },
-    })).toThrow();
+    expect(() =>
+      projectConfigSchema.parse({
+        // ... required fields ...
+        visual_fidelity: { figma_pages: ['p1'], component_dir: 'x', dashboard_url: 'x' },
+      }),
+    ).toThrow();
   });
 });
 ```
@@ -450,6 +466,7 @@ git commit -m "feat(shared): add visual_fidelity project-config block"
 #### Task B1.2: Scaffold `crew figma-snapshot` command
 
 **Files:**
+
 - Create: `packages/cli/src/commands/figma-snapshot.ts`
 - Create: `packages/cli/src/commands/figma-snapshot.test.ts`
 - Modify: `packages/cli/src/index.ts` (register the new command)
@@ -465,7 +482,9 @@ describe('crew figma-snapshot', () => {
   it('returns ok=false with a reason when visual_fidelity is missing from project config', async () => {
     const deps: FigmaSnapshotDeps = {
       worktree: '/tmp/nonexistent',
-      config: { /* minimal config without visual_fidelity */ } as never,
+      config: {
+        /* minimal config without visual_fidelity */
+      } as never,
       log: () => {},
     };
     const result = await runFigmaSnapshot(deps);
@@ -505,7 +524,10 @@ export interface FigmaSnapshotResult {
 
 export async function runFigmaSnapshot(deps: FigmaSnapshotDeps): Promise<FigmaSnapshotResult> {
   if (!deps.config.visual_fidelity) {
-    return { ok: false, reason: 'No [visual_fidelity] block in project config; nothing to snapshot.' };
+    return {
+      ok: false,
+      reason: 'No [visual_fidelity] block in project config; nothing to snapshot.',
+    };
   }
   if (deps.config.visual_fidelity.skip_snapshot) {
     return { ok: true, reason: 'skip_snapshot=true; no-op', nodesExported: 0 };
@@ -517,7 +539,9 @@ export async function runFigmaSnapshot(deps: FigmaSnapshotDeps): Promise<FigmaSn
 export function registerFigmaSnapshotCommand(program: Command): void {
   program
     .command('figma-snapshot')
-    .description('Export the project\'s Figma file to <worktree>/.crew/figma-snapshot/ for agent visual verification.')
+    .description(
+      "Export the project's Figma file to <worktree>/.crew/figma-snapshot/ for agent visual verification.",
+    )
     .action(async () => {
       const cwd = process.cwd();
       const config = await discoverProjectConfig(cwd);
@@ -569,6 +593,7 @@ git commit -m "feat(cli): scaffold crew figma-snapshot command (stub)"
 #### Task B1.3: Implement Figma REST client
 
 **Files:**
+
 - Create: `packages/cli/src/lib/figma-snapshot/client.ts`
 - Create: `packages/cli/src/lib/figma-snapshot/client.test.ts`
 - Modify: `packages/cli/src/lib/index.ts` (re-export the namespace)
@@ -649,7 +674,9 @@ export class FigmaRestClient {
   constructor(opts: FigmaRestClientOptions = {}) {
     const token = opts.token ?? process.env.FIGMA_API_TOKEN;
     if (!token) {
-      throw new Error('FIGMA_API_TOKEN env var is required for figma-snapshot. Generate one at https://www.figma.com/developers/api#access-tokens');
+      throw new Error(
+        'FIGMA_API_TOKEN env var is required for figma-snapshot. Generate one at https://www.figma.com/developers/api#access-tokens',
+      );
     }
     this.token = token;
     this.fetch = opts.fetch ?? globalThis.fetch;
@@ -668,7 +695,11 @@ export class FigmaRestClient {
   }
 
   async getImages(fileKey: string, nodeIds: string[], scale = 2): Promise<FigmaImagesResponse> {
-    const params = new URLSearchParams({ ids: nodeIds.join(','), scale: String(scale), format: 'png' });
+    const params = new URLSearchParams({
+      ids: nodeIds.join(','),
+      scale: String(scale),
+      format: 'png',
+    });
     return this.req(`/images/${fileKey}?${params}`);
   }
 }
@@ -699,6 +730,7 @@ git commit -m "feat(cli): FigmaRestClient wrapping Figma REST API (file + images
 #### Task B1.4: Implement snapshot emission (page traversal + file writes)
 
 **Files:**
+
 - Create: `packages/cli/src/lib/figma-snapshot/emit.ts`
 - Create: `packages/cli/src/lib/figma-snapshot/emit.test.ts`
 
@@ -716,13 +748,15 @@ import type { FigmaFileResponse, FigmaImagesResponse } from './client.js';
 describe('emitSnapshot', () => {
   const mockFileResponse: FigmaFileResponse = {
     document: {
-      id: '0:0', name: 'Document', type: 'DOCUMENT',
+      id: '0:0',
+      name: 'Document',
+      type: 'DOCUMENT',
       children: [
         {
-          id: '212:630', name: 'Composites', type: 'CANVAS',
-          children: [
-            { id: '272:120', name: 'Pill', type: 'COMPONENT_SET', children: [] },
-          ],
+          id: '212:630',
+          name: 'Composites',
+          type: 'CANVAS',
+          children: [{ id: '272:120', name: 'Pill', type: 'COMPONENT_SET', children: [] }],
         },
       ],
     },
@@ -776,8 +810,8 @@ import type { FigmaNode, FigmaRestClient } from './client.js';
 
 export interface EmitSnapshotOptions {
   fileKey: string;
-  pages: string[];               // page names to include (e.g. ['Composites', 'Dashboard Screens'])
-  outDir: string;                // <worktree>/.crew/figma-snapshot
+  pages: string[]; // page names to include (e.g. ['Composites', 'Dashboard Screens'])
+  outDir: string; // <worktree>/.crew/figma-snapshot
   client: FigmaRestClient;
   fetchImage?: (url: string) => Promise<Buffer>;
   imageScale?: number;
@@ -887,6 +921,7 @@ git commit -m "feat(cli): emitSnapshot writes per-component PNG + JSON + index.j
 #### Task B1.5: Wire emit into the command
 
 **Files:**
+
 - Modify: `packages/cli/src/commands/figma-snapshot.ts`
 - Modify: `packages/cli/src/commands/figma-snapshot.test.ts`
 
@@ -904,10 +939,16 @@ it('writes a snapshot to <worktree>/.crew/figma-snapshot when visual_fidelity is
   const mockClient = {
     getFile: async () => ({
       document: {
-        id: '0:0', name: 'Document', type: 'DOCUMENT',
+        id: '0:0',
+        name: 'Document',
+        type: 'DOCUMENT',
         children: [
-          { id: '212:630', name: 'Composites', type: 'CANVAS',
-            children: [{ id: '272:120', name: 'Pill', type: 'COMPONENT_SET', children: [] }] },
+          {
+            id: '212:630',
+            name: 'Composites',
+            type: 'CANVAS',
+            children: [{ id: '272:120', name: 'Pill', type: 'COMPONENT_SET', children: [] }],
+          },
         ],
       },
     }),
@@ -954,13 +995,17 @@ export interface FigmaSnapshotDeps {
   worktree: string;
   config: ProjectConfig;
   log: (msg: string) => void;
-  clientFactory?: () => FigmaRestClient;     // test seam
-  fetchImage?: (url: string) => Promise<Buffer>;   // test seam
+  clientFactory?: () => FigmaRestClient; // test seam
+  fetchImage?: (url: string) => Promise<Buffer>; // test seam
 }
 
 export async function runFigmaSnapshot(deps: FigmaSnapshotDeps): Promise<FigmaSnapshotResult> {
   const vf = deps.config.visual_fidelity;
-  if (!vf) return { ok: false, reason: 'No [visual_fidelity] block in project config; nothing to snapshot.' };
+  if (!vf)
+    return {
+      ok: false,
+      reason: 'No [visual_fidelity] block in project config; nothing to snapshot.',
+    };
   if (vf.skip_snapshot) return { ok: true, reason: 'skip_snapshot=true; no-op', nodesExported: 0 };
 
   const client = deps.clientFactory?.() ?? new FigmaRestClient();
@@ -995,6 +1040,7 @@ git commit -m "feat(cli): crew figma-snapshot writes snapshot to worktree"
 #### Task B1.6: Update README + add `.crew/visual-fidelity.json` to crew's own config
 
 **Files:**
+
 - Modify: `README.md` (document figma-snapshot + the env var)
 - Create: `packages/dashboard/.crew/visual-fidelity.json` (crew's own dashboard project config — eat your own dog food)
 
@@ -1054,6 +1100,7 @@ Calls `crew figma-snapshot` before agent dispatch and updates the agent's run-pr
 #### Task B2.1: Call figma-snapshot from `crew run` pre-dispatch
 
 **Files:**
+
 - Modify: `packages/cli/src/commands/run.ts` (or wherever the dispatch flow orchestrates pre-dispatch steps)
 - Modify: `packages/cli/src/commands/run.test.ts`
 
@@ -1068,20 +1115,26 @@ it('calls runFigmaSnapshot before dispatch when visual_fidelity is configured', 
   const figmaSnapshotSpy = vi.fn().mockResolvedValue({ ok: true, nodesExported: 50 });
   const dispatchSpy = vi.fn();
   await runCrew({
-    config: { /* ... with visual_fidelity */ } as never,
+    config: {
+      /* ... with visual_fidelity */
+    } as never,
     figmaSnapshot: figmaSnapshotSpy,
     dispatch: dispatchSpy,
     // ... other deps
   });
   expect(figmaSnapshotSpy).toHaveBeenCalled();
-  expect(figmaSnapshotSpy.mock.invocationCallOrder[0]).toBeLessThan(dispatchSpy.mock.invocationCallOrder[0]);
+  expect(figmaSnapshotSpy.mock.invocationCallOrder[0]).toBeLessThan(
+    dispatchSpy.mock.invocationCallOrder[0],
+  );
 });
 
 it('skips figma-snapshot when visual_fidelity is absent', async () => {
   const figmaSnapshotSpy = vi.fn();
   const dispatchSpy = vi.fn();
   await runCrew({
-    config: { /* no visual_fidelity */ } as never,
+    config: {
+      /* no visual_fidelity */
+    } as never,
     figmaSnapshot: figmaSnapshotSpy,
     dispatch: dispatchSpy,
   });
@@ -1106,7 +1159,9 @@ if (deps.config.visual_fidelity) {
   if (!snap.ok) {
     deps.warn(`figma-snapshot failed: ${snap.reason}. Continuing without snapshot.`);
   } else {
-    deps.log(`✓ Figma snapshot: ${snap.nodesExported} nodes → ${join(worktree, deps.config.visual_fidelity.snapshot_path)}`);
+    deps.log(
+      `✓ Figma snapshot: ${snap.nodesExported} nodes → ${join(worktree, deps.config.visual_fidelity.snapshot_path)}`,
+    );
   }
 }
 ```
@@ -1129,6 +1184,7 @@ git commit -m "feat(cli): crew run calls figma-snapshot before dispatch when con
 #### Task B2.2: Update the dispatch agent's run-prompt with the visual-fidelity gate
 
 **Files:**
+
 - Modify: `packages/cli/src/lib/run-prompt/*` (wherever the agent's dispatch prompt is templated — find via `grep -rn 'run-prompt\|dispatchPrompt\|agentPrompt' packages/cli/src/`)
 - Test: extend existing run-prompt tests
 
@@ -1145,7 +1201,9 @@ grep -rn 'sandbox-network-note\|run-prompt' packages/cli/src/ | head -10
 ```ts
 it('includes a visual-fidelity-check gate when visual_fidelity is configured', () => {
   const prompt = buildRunPrompt({
-    config: { /* with visual_fidelity */ } as never,
+    config: {
+      /* with visual_fidelity */
+    } as never,
     worktree: '/tmp/wt',
   });
   expect(prompt).toMatch(/visual-fidelity-check/);
@@ -1154,7 +1212,9 @@ it('includes a visual-fidelity-check gate when visual_fidelity is configured', (
 
 it('omits the gate section when visual_fidelity is absent', () => {
   const prompt = buildRunPrompt({
-    config: { /* no visual_fidelity */ } as never,
+    config: {
+      /* no visual_fidelity */
+    } as never,
     worktree: '/tmp/wt',
   });
   expect(prompt).not.toMatch(/visual-fidelity-check/);
@@ -1248,22 +1308,22 @@ After T-B1 + T-B2 land:
 
 ## Spec coverage check
 
-| Spec section | Plan tasks |
-|---|---|
-| Piece 1: Figma snapshot generator | T-B1 (tasks B1.1–B1.6) |
-| Piece 2: visual-fidelity-check skill | Phase A (tasks A.5, calibrated via A.6) |
-| Piece 3: Skill validation harness | Phase A (tasks A.1–A.4 + A.6) |
-| Dispatch flow integration | T-B2 (tasks B2.1–B2.3) |
-| Project config at `<repo>/.crew/visual-fidelity.json` (per spec) — adapted to `[visual_fidelity]` in the main TOML | T-B1 (task B1.1 + B1.6) |
-| Snapshot output structure | T-B1 (tasks B1.4) |
-| Per-component JSON shape | T-B1 (task B1.4) + Phase A (task A.2 for the first fixture, hand-rolled with richer data than REST alone) |
-| variables.json | Phase A (task A.2 for fixture); deferred from B1 — variables come from project's own state-meta source (see "Plan deviations" below) |
-| Skill workflow | Phase A (task A.5) — content from spec |
-| Skill structure (SKILL.md + workflow.md + examples) | Phase A (task A.5) |
-| Skill authoring approach (via superpowers:writing-skills) | Phase A (task A.5) |
-| First fixture (CREW-135) | Phase A (tasks A.2–A.4) |
-| Validation loop | Phase A (task A.6) |
-| Testing strategy | Each task has tests; harness validation in A.6 |
+| Spec section                                                                                                       | Plan tasks                                                                                                                           |
+| ------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------ |
+| Piece 1: Figma snapshot generator                                                                                  | T-B1 (tasks B1.1–B1.6)                                                                                                               |
+| Piece 2: visual-fidelity-check skill                                                                               | Phase A (tasks A.5, calibrated via A.6)                                                                                              |
+| Piece 3: Skill validation harness                                                                                  | Phase A (tasks A.1–A.4 + A.6)                                                                                                        |
+| Dispatch flow integration                                                                                          | T-B2 (tasks B2.1–B2.3)                                                                                                               |
+| Project config at `<repo>/.crew/visual-fidelity.json` (per spec) — adapted to `[visual_fidelity]` in the main TOML | T-B1 (task B1.1 + B1.6)                                                                                                              |
+| Snapshot output structure                                                                                          | T-B1 (tasks B1.4)                                                                                                                    |
+| Per-component JSON shape                                                                                           | T-B1 (task B1.4) + Phase A (task A.2 for the first fixture, hand-rolled with richer data than REST alone)                            |
+| variables.json                                                                                                     | Phase A (task A.2 for fixture); deferred from B1 — variables come from project's own state-meta source (see "Plan deviations" below) |
+| Skill workflow                                                                                                     | Phase A (task A.5) — content from spec                                                                                               |
+| Skill structure (SKILL.md + workflow.md + examples)                                                                | Phase A (task A.5)                                                                                                                   |
+| Skill authoring approach (via superpowers:writing-skills)                                                          | Phase A (task A.5)                                                                                                                   |
+| First fixture (CREW-135)                                                                                           | Phase A (tasks A.2–A.4)                                                                                                              |
+| Validation loop                                                                                                    | Phase A (task A.6)                                                                                                                   |
+| Testing strategy                                                                                                   | Each task has tests; harness validation in A.6                                                                                       |
 
 ## Plan deviations from spec
 

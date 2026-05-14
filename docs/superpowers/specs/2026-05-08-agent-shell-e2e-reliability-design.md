@@ -43,7 +43,7 @@ Every dashboard-touching ticket from here forward will need the e2e suite to pas
 1. **Empirical wildcard probe** — first plan task, before changing settings. Test which glob form (`"foo*"`, `"foo *"`, `"foo**"`, etc.) actually bypasses the sandbox on a known-failing sandboxed Bash call. Document the result in this spec file (live edit) before writing the production change.
 2. **Update `<repo>/.claude/settings.json`** `excludedCommands` to use the verified wildcard form for all three entries (`bruno:smoke`, `test:e2e`, `docker compose`). Update `packages/cli/src/lib/preflight/verify-excluded-commands.ts` (and tests) to require the verified form.
 3. **Drop the `webServer` block from `packages/dashboard/playwright.config.ts`.** Tests target the worktree docker stack only. Inline comment documents the rationale so the block doesn't get re-added.
-4. **Make `baseURL` deterministic via the materialized `.env`.** Replace the `process.env.PLAYWRIGHT_BASE_URL ?? process.env.CREW_APP_URL ?? 'http://localhost:5173'` chain with a function that walks up to repo root, reads the worktree's `<repo>/.env` (materialized by `crew env init`/`crew env refresh` from `env.toml`), picks `APP_URL`, and fails loudly if absent. Keep `PLAYWRIGHT_BASE_URL` env-var override (escape hatch for ad-hoc debugging); drop `CREW_APP_URL` and the literal fallback. Note: `env.toml` is the *spec*; `.env` is the resolved values written by the materializer. Reading `.env` avoids re-running the materializer and removes the need for a TOML parser dep in the dashboard package.
+4. **Make `baseURL` deterministic via the materialized `.env`.** Replace the `process.env.PLAYWRIGHT_BASE_URL ?? process.env.CREW_APP_URL ?? 'http://localhost:5173'` chain with a function that walks up to repo root, reads the worktree's `<repo>/.env` (materialized by `crew env init`/`crew env refresh` from `env.toml`), picks `APP_URL`, and fails loudly if absent. Keep `PLAYWRIGHT_BASE_URL` env-var override (escape hatch for ad-hoc debugging); drop `CREW_APP_URL` and the literal fallback. Note: `env.toml` is the _spec_; `.env` is the resolved values written by the materializer. Reading `.env` avoids re-running the materializer and removes the need for a TOML parser dep in the dashboard package.
 5. **Plumb `PLAYWRIGHT_BASE_URL` in `run.ts:397-402`** alongside the existing `CREW_APP_URL`. Belt-and-suspenders for callers that don't go through `npm run` (e.g. a future agent invoking `npx playwright test` directly).
 6. **Update `packages/cli/src/lib/prompts/templates/sandbox-network-note.md`** with two edits:
    - **Atomic followup resolution:** replace the `crew restart {{key}} --hard` line (which destroys the worktree) with `docker compose up --build --wait` from the worktree. Move the `2026-05-07 — sandbox-network-note.md recommends crew restart --hard…` followup entry from Active to Resolved in the same diff.
@@ -64,21 +64,21 @@ Every dashboard-touching ticket from here forward will need the e2e suite to pas
 
 Before changing any production setting, the implementing agent runs a one-shot probe on its own sandboxed shell to determine which glob form bypasses the sandbox.
 
-**Method.** Pick a known-failing sandboxed command (e.g. `curl -s http://localhost:21559/healthz`, which fails ECONNREFUSED inside `bwrap --unshare-net`). Wrap it as `npm run test:probe` in `packages/dashboard/package.json` temporarily (or use an existing whitelisted command form). Add a candidate entry to `<repo>/.claude/settings.json` `excludedCommands`. Run a sandboxed Bash invocation that *would* match the entry under each glob hypothesis. Record outcome: "matched (un-sandboxed)" vs "not matched (sandboxed)".
+**Method.** Pick a known-failing sandboxed command (e.g. `curl -s http://localhost:21559/healthz`, which fails ECONNREFUSED inside `bwrap --unshare-net`). Wrap it as `npm run test:probe` in `packages/dashboard/package.json` temporarily (or use an existing whitelisted command form). Add a candidate entry to `<repo>/.claude/settings.json` `excludedCommands`. Run a sandboxed Bash invocation that _would_ match the entry under each glob hypothesis. Record outcome: "matched (un-sandboxed)" vs "not matched (sandboxed)".
 
 **Probe results (run 2026-05-08, against worktree at `localhost:21114`):**
 
-| Candidate entry | Invocation form | Result | Notes |
-| --- | --- | --- | --- |
-| (none — baseline) | `npm run probe:loopback --workspace=crew-dashboard` | NO MATCH | confirms sandbox isolates loopback (`PROBE_FAIL`) |
-| `"npm run probe:loopback*"` | `npm run probe:loopback --workspace=crew-dashboard` | MATCH | concatenated glob accepts trailing args |
-| `"npm run probe:loopback*"` | `npm run probe:loopback` (bare, in workspace dir) | MATCH | trailing `*` is zero-or-more |
-| `"npm run probe:loopback*"` | `npm run probe:loopback --workspace=crew-dashboard 2>&1 \| tail -5` | MATCH | shell pipe / redirect does **not** defeat matching |
-| `"npm run probe:loopback*"` | `cd /tmp && npm --prefix <dir> run probe:loopback 2>&1 \| tail -5` | NO MATCH | `cd && …` and `npm --prefix …` wrappers defeat the prefix match |
-| `"npm run probe:loopback*"` | `sh -c "npm run probe:loopback"` | NO MATCH | `sh -c …` wrapper is the entry that gets matched, not the inner |
-| `"npm run probe:loopback **"` | `npm run probe:loopback --workspace=crew-dashboard` | MATCH | space + double-star equivalent to `*` for our purposes |
-| `"npm run probe:loopback *"` | `npm run probe:loopback` (bare) | MATCH | space + single-star also matches the empty trailing |
-| `"npm run probe:loopback"` (exact, control) | `npm run probe:loopback --workspace=crew-dashboard` | NO MATCH | reproduces the CREW-103 failure mode |
+| Candidate entry                             | Invocation form                                                     | Result   | Notes                                                           |
+| ------------------------------------------- | ------------------------------------------------------------------- | -------- | --------------------------------------------------------------- |
+| (none — baseline)                           | `npm run probe:loopback --workspace=crew-dashboard`                 | NO MATCH | confirms sandbox isolates loopback (`PROBE_FAIL`)               |
+| `"npm run probe:loopback*"`                 | `npm run probe:loopback --workspace=crew-dashboard`                 | MATCH    | concatenated glob accepts trailing args                         |
+| `"npm run probe:loopback*"`                 | `npm run probe:loopback` (bare, in workspace dir)                   | MATCH    | trailing `*` is zero-or-more                                    |
+| `"npm run probe:loopback*"`                 | `npm run probe:loopback --workspace=crew-dashboard 2>&1 \| tail -5` | MATCH    | shell pipe / redirect does **not** defeat matching              |
+| `"npm run probe:loopback*"`                 | `cd /tmp && npm --prefix <dir> run probe:loopback 2>&1 \| tail -5`  | NO MATCH | `cd && …` and `npm --prefix …` wrappers defeat the prefix match |
+| `"npm run probe:loopback*"`                 | `sh -c "npm run probe:loopback"`                                    | NO MATCH | `sh -c …` wrapper is the entry that gets matched, not the inner |
+| `"npm run probe:loopback **"`               | `npm run probe:loopback --workspace=crew-dashboard`                 | MATCH    | space + double-star equivalent to `*` for our purposes          |
+| `"npm run probe:loopback *"`                | `npm run probe:loopback` (bare)                                     | MATCH    | space + single-star also matches the empty trailing             |
+| `"npm run probe:loopback"` (exact, control) | `npm run probe:loopback --workspace=crew-dashboard`                 | NO MATCH | reproduces the CREW-103 failure mode                            |
 
 **Conclusion:** matching is **leading-substring (prefix) with `*` glob semantics**. `command*` and `command *` are equivalent — both match `command` alone, `command --flag=…`, and `command --flag=… 2>&1 | tail -N` (pipes/redirects ride along because the entry only constrains the leading bytes). Wrappers that prepend something **before** the matched prefix (`cd … &&`, `sh -c "…"`, `npm --prefix … run …` instead of `npm run …`) defeat the match.
 
@@ -102,7 +102,7 @@ Before changing any production setting, the implementing agent runs a one-shot p
 ]
 ```
 
-**File: `packages/cli/src/lib/preflight/verify-excluded-commands.ts`** — `requiredEntries(config)` (lines 13-28 today) should emit the verified glob form. The exact-match check at line 67-70 stays exact-match — committed entry vs required entry must match identically; what changes is *what* the required entry is.
+**File: `packages/cli/src/lib/preflight/verify-excluded-commands.ts`** — `requiredEntries(config)` (lines 13-28 today) should emit the verified glob form. The exact-match check at line 67-70 stays exact-match — committed entry vs required entry must match identically; what changes is _what_ the required entry is.
 
 Update existing tests in `packages/cli/src/lib/preflight/verify-excluded-commands.test.ts` to use the new entry shape. Add a regression test: a project committing the old exact-match form (e.g. `"npm run test:e2e"` without the glob suffix) fails the preflight with a clear error pointing at the canonical form.
 
@@ -216,7 +216,7 @@ The implementing agent fills in the verified specifics from §3.1 (e.g. exactly 
 **File: `<repo>/docs/followups.md`** — atomic update in the same PR as §3.6:
 
 1. Cut the entry `### 2026-05-07 — sandbox-network-note.md recommends crew restart --hard for docker recovery, but --hard nukes the worktree` from `## Active`.
-2. Paste it under `## Resolved` with a one-line `**Resolved 2026-05-08:** Replaced the destructive `crew restart --hard` recommendation with `docker compose up --build --wait` as part of CREW-XXX (this ticket).` addendum.
+2. Paste it under `## Resolved` with a one-line `**Resolved 2026-05-08:** Replaced the destructive `crew restart --hard`recommendation with`docker compose up --build --wait` as part of CREW-XXX (this ticket).` addendum.
 3. Update the ToC links in `## Contents` to move the entry's link from the Active sub-list to the Resolved sub-list.
 4. Remove the `**Ticket:**` line from the entry body if one was added (this followup didn't get one — it's being resolved without ever being individually ticketed, since it's a one-liner co-located with this work).
 

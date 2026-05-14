@@ -9,6 +9,7 @@
 **Architecture:** AGENTS.md files act as lean indexes (always-loaded or path-traversal lazy). `.agents/<topic>.md` files are discovery-on-demand. A frontmatter validator script enforces schema. A soft PreToolUse hook on `gh pr create` (sibling to `visual-fidelity-pr-gate`) warns on parity violations. A `MetricsService` on the daemon derives four metrics from already-ingested transcript events.
 
 **Tech Stack:**
+
 - Markdown + YAML frontmatter for docs (`.agents/*.md`, `AGENTS.md`).
 - TypeScript + Vitest for the validator script (`scripts/validate-agents-frontmatter.ts`).
 - Bash + jq for the soft hook (matches `visual-fidelity-pr-gate.sh` pattern).
@@ -22,20 +23,20 @@
 
 This plan covers **11 child tickets** in one Epic + **1 manual user-level task** outside the Epic. Tickets are labeled #1 through #11 throughout the plan. Each ticket section is self-contained — you can execute one ticket without reading the others (with the exception that all tickets are blocked-by ticket #1).
 
-| Ticket | Phase | Title | Blocked-by |
-|--------|-------|-------|------------|
-| #1 | Phase 1 | Foundation — scaffold + rename + validator + baseline | — |
-| #2 | Phase 2 | `.agents/architecture.md` | #1 |
-| #3 | Phase 2 | `.agents/local-dev.md` | #1 |
-| #4 | Phase 2 | `.agents/testing.md` | #1 |
-| #5 | Phase 2 | `.agents/dispatch.md` | #1 |
-| #6 | Phase 2 | `.agents/security.md` | #1 |
-| #7 | Phase 2 | `.agents/design-system.md` | #1 |
-| #8 | Phase 2 | `.agents/workflow.md` | #1 |
-| #9 | Phase 2 | `.agents/commands.md` | #1 |
-| #10 | Phase 3 | Soft doc-parity hook | #1 |
-| #11 | Phase 4 | Metrics pipeline | #1 |
-| (manual) | Phase 3 | Extend `verification-before-completion` skill | #1 |
+| Ticket   | Phase   | Title                                                 | Blocked-by |
+| -------- | ------- | ----------------------------------------------------- | ---------- |
+| #1       | Phase 1 | Foundation — scaffold + rename + validator + baseline | —          |
+| #2       | Phase 2 | `.agents/architecture.md`                             | #1         |
+| #3       | Phase 2 | `.agents/local-dev.md`                                | #1         |
+| #4       | Phase 2 | `.agents/testing.md`                                  | #1         |
+| #5       | Phase 2 | `.agents/dispatch.md`                                 | #1         |
+| #6       | Phase 2 | `.agents/security.md`                                 | #1         |
+| #7       | Phase 2 | `.agents/design-system.md`                            | #1         |
+| #8       | Phase 2 | `.agents/workflow.md`                                 | #1         |
+| #9       | Phase 2 | `.agents/commands.md`                                 | #1         |
+| #10      | Phase 3 | Soft doc-parity hook                                  | #1         |
+| #11      | Phase 4 | Metrics pipeline                                      | #1         |
+| (manual) | Phase 3 | Extend `verification-before-completion` skill         | #1         |
 
 After all Phase 2 tickets land, a small cleanup commit removes the verbose inline content from root `AGENTS.md` (the spec's "Final cleanup at end of Phase 2" clause). This commit lives in whichever Phase 2 ticket ships last — assign it to ticket #9 by convention.
 
@@ -107,6 +108,7 @@ Any markdown file or skill description that mentions `CLAUDE.md` in the context 
 ## Ticket #1 — Phase 1 Foundation
 
 **Files:**
+
 - Create: `.agents/README.md`, `.agents/architecture.md`, `.agents/local-dev.md`, `.agents/testing.md`, `.agents/dispatch.md`, `.agents/security.md`, `.agents/design-system.md`, `.agents/workflow.md`, `.agents/commands.md` (all as empty stubs with frontmatter only)
 - Create: `packages/cli/AGENTS.md`, `packages/daemon/AGENTS.md`, `packages/dashboard/AGENTS.md`, `packages/shared/AGENTS.md` (template stubs)
 - Create: `docs/rationale/` directory (initially empty; `.gitkeep` until ticket #2 populates it)
@@ -174,7 +176,11 @@ covers: ["**"]
 `;
     const result = validateFrontmatter(content, '.agents/local-dev.md');
     expect(result.ok).toBe(false);
-    expect(result.errors.some((e) => e.includes('name "architecture" does not match filename "local-dev"'))).toBe(true);
+    expect(
+      result.errors.some((e) =>
+        e.includes('name "architecture" does not match filename "local-dev"'),
+      ),
+    ).toBe(true);
   });
 
   it('fails when last_updated is not ISO date', () => {
@@ -223,6 +229,7 @@ last_updated: 2026-05-13
 ```bash
 npx vitest run scripts/validate-agents-frontmatter.test.ts
 ```
+
 Expected: FAIL — module `./validate-agents-frontmatter.js` not found.
 
 ### Step 4: Implement the validator (minimal)
@@ -355,6 +362,7 @@ npm install --save-dev js-yaml glob micromatch @types/js-yaml @types/micromatch
 ```bash
 npx vitest run scripts/validate-agents-frontmatter.test.ts
 ```
+
 Expected: PASS — 6/6.
 
 ### Step 7: Wire validator into npm scripts
@@ -371,9 +379,11 @@ Expected: PASS — 6/6.
 ```
 
 Run to confirm wiring:
+
 ```bash
 npm run lint:agents
 ```
+
 Expected: fails because `.agents/` doesn't exist yet — confirms the wiring is in place. Move to next step (we'll un-fail it as we create the stub files).
 
 ### Step 8: Create `.agents/` and `docs/rationale/` directories with stubs
@@ -381,6 +391,7 @@ Expected: fails because `.agents/` doesn't exist yet — confirms the wiring is 
 - [ ] Create each stub file. Frontmatter only, no body content. Use today's ISO date for `last_updated`.
 
 `.agents/README.md` (meta-doc — special: no `name`/`covers` required since it isn't a topic doc):
+
 ```markdown
 ---
 description: How the .agents/ system works and how to extend it
@@ -393,14 +404,15 @@ _Stub. Populated in ticket #1's later steps._
 ```
 
 `.agents/architecture.md` (and the other 7 topic docs, substituting name/description/covers per spec):
+
 ```markdown
 ---
 name: architecture
 description: 4-package layering rules + dependency direction
 last_updated: 2026-05-13
 covers:
-  - "packages/*/src/**/*.ts"
-  - "package.json"
+  - 'packages/*/src/**/*.ts'
+  - 'package.json'
 ---
 
 # Architecture
@@ -410,16 +422,16 @@ _Stub. Populated in ticket #2._
 
 Use the following frontmatter for each:
 
-| File | `name` | `description` | `covers` (yaml list) |
-|------|--------|---------------|----------------------|
-| `.agents/architecture.md` | `architecture` | `4-package layering rules + dependency direction` | `packages/*/src/**/*.ts`, `package.json` |
-| `.agents/local-dev.md` | `local-dev` | `Docker stack, env.toml, worktree isolation, sandbox baseline` | `docker-compose*.yml`, `env.toml`, `packages/daemon/seeds/**` |
-| `.agents/testing.md` | `testing` | `Bruno + Playwright + daemon fixtures` | `bruno/**`, `packages/*/src/**/*.test.ts`, `packages/dashboard/tests/**` |
-| `.agents/dispatch.md` | `dispatch` | `crew run prompt-build, skills injection, verification gates` | `packages/cli/src/lib/{run,prompts,skills,preflight,figma-snapshot}/**` |
-| `.agents/security.md` | `security` | `Secrets handling, sandbox model + known limitations` | `**/.env*`, `**/secrets/**`, `.claude/settings*.json` |
-| `.agents/design-system.md` | `design-system` | `Crew Figma DS + Pill contract` | `packages/dashboard/src/components/**`, `*.figma.tsx`, `packages/dashboard/components.json` |
-| `.agents/workflow.md` | `workflow` | `CREW-* tickets, followups, specs/plans, branching` | `docs/tickets/**`, `docs/superpowers/**`, `docs/followups.md`, `docs/mumen/**` |
-| `.agents/commands.md` | `commands` | `npm scripts cheatsheet with env-var notes` | `package.json`, `packages/*/package.json` |
+| File                       | `name`          | `description`                                                  | `covers` (yaml list)                                                                        |
+| -------------------------- | --------------- | -------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| `.agents/architecture.md`  | `architecture`  | `4-package layering rules + dependency direction`              | `packages/*/src/**/*.ts`, `package.json`                                                    |
+| `.agents/local-dev.md`     | `local-dev`     | `Docker stack, env.toml, worktree isolation, sandbox baseline` | `docker-compose*.yml`, `env.toml`, `packages/daemon/seeds/**`                               |
+| `.agents/testing.md`       | `testing`       | `Bruno + Playwright + daemon fixtures`                         | `bruno/**`, `packages/*/src/**/*.test.ts`, `packages/dashboard/tests/**`                    |
+| `.agents/dispatch.md`      | `dispatch`      | `crew run prompt-build, skills injection, verification gates`  | `packages/cli/src/lib/{run,prompts,skills,preflight,figma-snapshot}/**`                     |
+| `.agents/security.md`      | `security`      | `Secrets handling, sandbox model + known limitations`          | `**/.env*`, `**/secrets/**`, `.claude/settings*.json`                                       |
+| `.agents/design-system.md` | `design-system` | `Crew Figma DS + Pill contract`                                | `packages/dashboard/src/components/**`, `*.figma.tsx`, `packages/dashboard/components.json` |
+| `.agents/workflow.md`      | `workflow`      | `CREW-* tickets, followups, specs/plans, branching`            | `docs/tickets/**`, `docs/superpowers/**`, `docs/followups.md`, `docs/mumen/**`              |
+| `.agents/commands.md`      | `commands`      | `npm scripts cheatsheet with env-var notes`                    | `package.json`, `packages/*/package.json`                                                   |
 
 - [ ] Create `docs/rationale/.gitkeep` so the empty directory commits.
 
@@ -440,21 +452,22 @@ git mv CLAUDE.md AGENTS.md
 - [ ] Edit the new root `AGENTS.md`: add the topic index near the top, immediately after the "Repo layout" section. The verbose content stays for now (per the spec's resolved ambiguity — final cleanup at end of Phase 2).
 
 Insert this block in AGENTS.md:
+
 ```markdown
 ## When you need it
 
-| Doing | Read |
-|-------|------|
-| Editing daemon services/routes | `.agents/architecture.md`, `packages/daemon/AGENTS.md` |
-| Adding/changing a CLI subcommand | `.agents/architecture.md`, `packages/cli/AGENTS.md` |
-| Touching dispatch flow (run/fix-pr/finish, prompts, skills injection) | `.agents/dispatch.md` |
-| Adding or changing an HTTP route | `.agents/architecture.md`, `.agents/testing.md` |
-| Adding a Bruno endpoint | `.agents/testing.md` |
-| Sandbox / host-network / secrets behavior | `.agents/local-dev.md`, `.agents/security.md` |
-| Touching `docker-compose`, `env.toml`, worktree port hashing | `.agents/local-dev.md` |
-| Working on the Figma DS or Pill components | `.agents/design-system.md` |
-| Filing followups, writing tickets/specs/plans, branching | `.agents/workflow.md` |
-| Running verification (lint/typecheck/test/bruno/visual-fidelity) | `.agents/commands.md` |
+| Doing                                                                 | Read                                                   |
+| --------------------------------------------------------------------- | ------------------------------------------------------ |
+| Editing daemon services/routes                                        | `.agents/architecture.md`, `packages/daemon/AGENTS.md` |
+| Adding/changing a CLI subcommand                                      | `.agents/architecture.md`, `packages/cli/AGENTS.md`    |
+| Touching dispatch flow (run/fix-pr/finish, prompts, skills injection) | `.agents/dispatch.md`                                  |
+| Adding or changing an HTTP route                                      | `.agents/architecture.md`, `.agents/testing.md`        |
+| Adding a Bruno endpoint                                               | `.agents/testing.md`                                   |
+| Sandbox / host-network / secrets behavior                             | `.agents/local-dev.md`, `.agents/security.md`          |
+| Touching `docker-compose`, `env.toml`, worktree port hashing          | `.agents/local-dev.md`                                 |
+| Working on the Figma DS or Pill components                            | `.agents/design-system.md`                             |
+| Filing followups, writing tickets/specs/plans, branching              | `.agents/workflow.md`                                  |
+| Running verification (lint/typecheck/test/bruno/visual-fidelity)      | `.agents/commands.md`                                  |
 
 See [`.agents/README.md`](.agents/README.md) for how this system works and how to extend it.
 
@@ -483,13 +496,13 @@ Thin command-line wrapper. Subcommands parse args, call `shared/`, render output
 
 ## When you need it
 
-| Doing | Read |
-|-------|------|
-| Adding/modifying a subcommand | `.agents/architecture.md` |
-| Changing dispatch flow (run, prompts, skills injection) | `.agents/dispatch.md` |
-| Touching anything in `bruno/` | `.agents/testing.md`, user-level `bruno-collection-maintenance` skill |
-| Sandbox / host-network considerations in subcommands | `.agents/local-dev.md`, `.agents/security.md` |
-| Running verification before claiming done | `.agents/commands.md` |
+| Doing                                                   | Read                                                                  |
+| ------------------------------------------------------- | --------------------------------------------------------------------- |
+| Adding/modifying a subcommand                           | `.agents/architecture.md`                                             |
+| Changing dispatch flow (run, prompts, skills injection) | `.agents/dispatch.md`                                                 |
+| Touching anything in `bruno/`                           | `.agents/testing.md`, user-level `bruno-collection-maintenance` skill |
+| Sandbox / host-network considerations in subcommands    | `.agents/local-dev.md`, `.agents/security.md`                         |
+| Running verification before claiming done               | `.agents/commands.md`                                                 |
 
 ## Common gotchas
 
@@ -518,12 +531,12 @@ Long-running state-tracking process. Watches transcripts, persists run state to 
 
 ## When you need it
 
-| Doing | Read |
-|-------|------|
-| Writing a new route or service | `.agents/architecture.md`, user-level `reaching-for-backend-patterns` skill |
-| Adding a Bruno endpoint to cover a new route | `.agents/testing.md`, `bruno-collection-maintenance` skill |
-| Schema changes / new migration | `.agents/architecture.md` |
-| Running verification | `.agents/commands.md` |
+| Doing                                        | Read                                                                        |
+| -------------------------------------------- | --------------------------------------------------------------------------- |
+| Writing a new route or service               | `.agents/architecture.md`, user-level `reaching-for-backend-patterns` skill |
+| Adding a Bruno endpoint to cover a new route | `.agents/testing.md`, `bruno-collection-maintenance` skill                  |
+| Schema changes / new migration               | `.agents/architecture.md`                                                   |
+| Running verification                         | `.agents/commands.md`                                                       |
 
 ## Common gotchas
 
@@ -551,12 +564,12 @@ React + Vite + Tailwind web UI. Single-page app. No business logic — view over
 
 ## When you need it
 
-| Doing | Read |
-|-------|------|
-| Writing a React component | `.agents/architecture.md`, user-level `reaching-for-frontend-libraries` skill |
-| Touching the Figma DS / Pill components | `.agents/design-system.md`, user-level `visual-fidelity-check` skill |
-| Adding e2e Playwright tests | `.agents/testing.md` |
-| Running verification | `.agents/commands.md` |
+| Doing                                   | Read                                                                          |
+| --------------------------------------- | ----------------------------------------------------------------------------- |
+| Writing a React component               | `.agents/architecture.md`, user-level `reaching-for-frontend-libraries` skill |
+| Touching the Figma DS / Pill components | `.agents/design-system.md`, user-level `visual-fidelity-check` skill          |
+| Adding e2e Playwright tests             | `.agents/testing.md`                                                          |
+| Running verification                    | `.agents/commands.md`                                                         |
 
 ## Common gotchas
 
@@ -583,10 +596,10 @@ The leaf of the dependency graph. Types, transcript parsers, project config, Jir
 
 ## When you need it
 
-| Doing | Read |
-|-------|------|
+| Doing                      | Read                      |
+| -------------------------- | ------------------------- |
 | Adding a new shared module | `.agents/architecture.md` |
-| Running verification | `.agents/commands.md` |
+| Running verification       | `.agents/commands.md`     |
 
 ## Common gotchas
 
@@ -600,6 +613,7 @@ _To be populated._
 ```bash
 npm run lint:agents
 ```
+
 Expected: `AGENTS frontmatter validation: ok`.
 
 ### Step 13: Write the baseline-metrics-capture script
@@ -625,12 +639,17 @@ const CLEANLINESS_COMMANDS = [
 
 async function readTranscript(jsonlPath: string): Promise<unknown[]> {
   const raw = await fs.readFile(jsonlPath, 'utf8');
-  return raw.split('\n').filter(Boolean).map((line) => JSON.parse(line));
+  return raw
+    .split('\n')
+    .filter(Boolean)
+    .map((line) => JSON.parse(line));
 }
 
 function extractBashCommands(events: unknown[]): string[] {
   const out: string[] = [];
-  for (const ev of events as Array<{ message?: { content?: Array<{ type: string; name?: string; input?: { command?: string } }> } }>) {
+  for (const ev of events as Array<{
+    message?: { content?: Array<{ type: string; name?: string; input?: { command?: string } }> };
+  }>) {
     const items = ev.message?.content ?? [];
     for (const item of items) {
       if (item.type === 'tool_use' && item.name === 'Bash' && item.input?.command) {
@@ -703,7 +722,9 @@ async function main() {
       `INSERT OR REPLACE INTO baseline_metrics (run_id, cleanliness_pass_count, pr_claim_input_tokens, captured_at)
        VALUES (?, ?, ?, ?)`,
     ).run(row.id, cleanlinessCount, tokens, new Date().toISOString());
-    console.log(`run ${row.id}: cleanliness=${cleanlinessCount}/${CLEANLINESS_COMMANDS.length}, tokens=${tokens}`);
+    console.log(
+      `run ${row.id}: cleanliness=${cleanlinessCount}/${CLEANLINESS_COMMANDS.length}, tokens=${tokens}`,
+    );
   }
   console.log('baseline capture complete');
   db.close();
@@ -717,17 +738,19 @@ void main();
 ```bash
 npx tsx scripts/baseline-metrics-capture.ts
 ```
+
 Expected: 20 lines of `run X: cleanliness=N/5, tokens=M` followed by `baseline capture complete`.
 
 ### Step 14: Sweep inbound references to CLAUDE.md
 
-- [ ] Grep for and update any reference to `CLAUDE.md` that means *this repo's* root doc. **Do not** update references to user-level `~/.claude/CLAUDE.md` or to other projects' CLAUDE.md.
+- [ ] Grep for and update any reference to `CLAUDE.md` that means _this repo's_ root doc. **Do not** update references to user-level `~/.claude/CLAUDE.md` or to other projects' CLAUDE.md.
 
 ```bash
 grep -rn 'CLAUDE\.md' --include='*.md' --include='*.ts' --include='*.sh' . | grep -v node_modules | grep -v '\.git/'
 ```
 
 For each hit:
+
 - If it points at the repo root (now `AGENTS.md`): change `CLAUDE.md` → `AGENTS.md`.
 - If it points at user-level `~/.claude/CLAUDE.md`: leave alone.
 - If unclear: skip and surface in PR description as a manual-review item.
@@ -739,6 +762,7 @@ For each hit:
 ```bash
 npm run lint && npm run format:check && npm run typecheck && npm run test:run
 ```
+
 Expected: all green.
 
 - [ ] Commit.
@@ -768,6 +792,7 @@ The canonical procedure is documented in ticket #2 in full. Tickets #3–#9 list
 ### Ticket #2 — `.agents/architecture.md`
 
 **Files:**
+
 - Create/edit: `.agents/architecture.md` (replace stub with full content)
 - Modify: `AGENTS.md` (fill in matching index entry; remove the inline content sections that are now in `.agents/architecture.md`)
 - Modify: `packages/<pkg>/AGENTS.md` (update "When you need it" if architecture is mentioned)
@@ -797,6 +822,7 @@ cat docs/plans/architecture.md
   - **S — Stale / superseded** (target: deletion; note "removed because: ..." in PR)
 
 For `architecture.md` specifically:
+
 - "Context" section → R (origin story, why crew exists)
 - "Audience", "Non-goals" → R
 - "Tech stack" table → A (current rules; condense bullet list of "use X for Y")
@@ -812,14 +838,15 @@ For `architecture.md` specifically:
 - [ ] Replace the stub at `.agents/architecture.md` with the full content. Frontmatter stays the same except `last_updated` bumps to today's date. Body contains the A-tagged content from the audit, condensed and re-written for agent consumption (rules-first, no narrative).
 
 Suggested structure for `.agents/architecture.md`:
+
 ```markdown
 ---
 name: architecture
 description: 4-package layering rules + dependency direction
 last_updated: 2026-05-13
 covers:
-  - "packages/*/src/**/*.ts"
-  - "package.json"
+  - 'packages/*/src/**/*.ts'
+  - 'package.json'
 ---
 
 # Architecture
@@ -837,20 +864,20 @@ Four-package npm workspace. Dependency direction is one-way:
 
 ## Tech stack (current)
 
-| Concern | Pick | Notes |
-|---------|------|-------|
-| Language | TypeScript | strict mode, `verbatimModuleSyntax` |
-| Runtime | Node 22+ via `tsx` for dev | no build step in dev |
-| Arg parsing | commander | |
-| Subprocess | execa | for git/docker/gh/claude |
-| HTTP server | Fastify + `fastify-type-provider-zod` | daemon only |
-| DB | Kysely + `kysely-better-sqlite3` | daemon only |
-| DI | `@fastify/awilix` | daemon only |
-| FS watching | chokidar | daemon only |
-| Testing | Vitest + React Testing Library (frontend) | tests live alongside source |
-| Logging | pino (daemon), `picocolors` for CLI stdout | |
+| Concern     | Pick                                       | Notes                               |
+| ----------- | ------------------------------------------ | ----------------------------------- |
+| Language    | TypeScript                                 | strict mode, `verbatimModuleSyntax` |
+| Runtime     | Node 22+ via `tsx` for dev                 | no build step in dev                |
+| Arg parsing | commander                                  |                                     |
+| Subprocess  | execa                                      | for git/docker/gh/claude            |
+| HTTP server | Fastify + `fastify-type-provider-zod`      | daemon only                         |
+| DB          | Kysely + `kysely-better-sqlite3`           | daemon only                         |
+| DI          | `@fastify/awilix`                          | daemon only                         |
+| FS watching | chokidar                                   | daemon only                         |
+| Testing     | Vitest + React Testing Library (frontend)  | tests live alongside source         |
+| Logging     | pino (daemon), `picocolors` for CLI stdout |                                     |
 
-For the *why* behind these picks, see [`docs/rationale/architecture.md`](../docs/rationale/architecture.md).
+For the _why_ behind these picks, see [`docs/rationale/architecture.md`](../docs/rationale/architecture.md).
 
 ## Per-project config
 
@@ -879,7 +906,7 @@ Frontmatter is optional here (rationale docs aren't in `.agents/`). Use a light 
 ```markdown
 # Architecture — rationale & history
 
-Background and design rationale for crew's architecture. The current rules live in [`.agents/architecture.md`](../../.agents/architecture.md); this file captures the *why* and historical evolution.
+Background and design rationale for crew's architecture. The current rules live in [`.agents/architecture.md`](../../.agents/architecture.md); this file captures the _why_ and historical evolution.
 
 ## Origin (from Recipes-App scripts)
 
@@ -927,6 +954,7 @@ git rm docs/plans/architecture.md
 ```bash
 npm run lint:agents
 ```
+
 Expected: pass.
 
 - [ ] Run full cleanliness.
@@ -934,6 +962,7 @@ Expected: pass.
 ```bash
 npm run lint && npm run format:check && npm run typecheck && npm run test:run
 ```
+
 Expected: pass.
 
 ### Step 9: Bump `last_updated`
@@ -956,6 +985,7 @@ gh pr create --title "feat(.agents): migrate architecture topic" --body "..."
 ### Ticket #3 — `.agents/local-dev.md`
 
 **Sources:**
+
 - Root `AGENTS.md` "Local development" section (inline content that survived ticket #1)
 - `docs/plans/project-resolution.md` (full file)
 
@@ -968,6 +998,7 @@ gh pr create --title "feat(.agents): migrate architecture topic" --body "..."
 **Execution:** Follow Ticket #2 Steps 1–10, substituting paths. Content audit (Step 2) classifies each section of both source files. Final cleanup deletes both sources.
 
 **Topic-specific content to include in `.agents/local-dev.md`:**
+
 - Hot-reload behavior (daemon `tsx watch`, dashboard Vite)
 - Worktree DBs are ephemeral and seeded; `CREW_SEED_FIXTURES=1` runs seeds
 - `env.toml` is the source of truth for per-worktree env vars; `${VAR}` syntax not `{httpPort}`
@@ -981,6 +1012,7 @@ gh pr create --title "feat(.agents): migrate architecture topic" --body "..."
 ### Ticket #4 — `.agents/testing.md`
 
 **Sources:**
+
 - Root `AGENTS.md` "Bruno collection" section
 - Scattered Bruno/Playwright/fixture references across the codebase (grep at content-audit time)
 
@@ -993,6 +1025,7 @@ gh pr create --title "feat(.agents): migrate architecture topic" --body "..."
 **Execution:** Follow Ticket #2 Steps 1–10. Step 2's content audit cross-references the user-level `bruno-collection-maintenance` skill — content already covered by that skill is **not** duplicated; the topic doc links to it.
 
 **Topic-specific content to include:**
+
 - Bruno collection layout (`bruno/endpoints/<group>/<verb>-<name>.bru`, flows, `bruno/environments/` is gitignored)
 - The same-commit rule: Bruno file updates with route changes
 - Sandboxed vs un-sandboxed test runs (the `excludedCommands` exception for `bruno:smoke` + `test:e2e`)
@@ -1015,6 +1048,7 @@ gh pr create --title "feat(.agents): migrate architecture topic" --body "..."
 **Execution:** Modified Ticket #2 procedure — skip Step 2 (no content audit; new content), skip Step 4 (no rationale extraction), skip Step 7 (no source to delete). Steps 1, 3, 5, 6, 8, 9, 10 still apply.
 
 **Topic-specific content to include:**
+
 - Dispatch flow narrative: worktree creation → env.toml materialization → docker bringup → MCP config write → skills injection → prompt build → Claude launch → transcript watch → result reporting
 - The `preflight/` step: probe URLs, verify excluded commands, build checks
 - The `prompts/` builder: how `buildTicketPrompt` composes ticket-body + bruno-smoke block + visual-fidelity block + discovered-skills block + sandbox-network note
@@ -1035,9 +1069,10 @@ gh pr create --title "feat(.agents): migrate architecture topic" --body "..."
 
 **Rationale extraction:** any narrative in `sandbox-limitations.md` (e.g. "we hit this limitation because…") goes to `docs/rationale/sandbox-limitations.md`.
 
-**Execution:** Follow Ticket #2 Steps 1–10 fully. Content-audit classification of `sandbox-limitations.md` distinguishes rules (the catalog of known limitations + workarounds) from rationale (the narrative about *why* a given limitation exists).
+**Execution:** Follow Ticket #2 Steps 1–10 fully. Content-audit classification of `sandbox-limitations.md` distinguishes rules (the catalog of known limitations + workarounds) from rationale (the narrative about _why_ a given limitation exists).
 
 **Topic-specific content to include:**
+
 - Secrets handling: never read `.env*`, `secrets/`, `credentials*`, `*token*` files; pointer to user-level CLAUDE.md "Secrets" section for the universal rule
 - Sandbox model overview: `.claude/settings.json` baseline, `excludedCommands` exception path, `allowedDomains` network allowlist
 - Catalog of known sandbox limitations (from `sandbox-limitations.md`) with their workarounds
@@ -1059,6 +1094,7 @@ gh pr create --title "feat(.agents): migrate architecture topic" --body "..."
 **Execution:** Follow Ticket #2 Steps 1–10. Step 2's audit is the largest of any Phase 2 ticket — expect 30+ sections to classify. Take time on it.
 
 **Topic-specific content to include in `.agents/design-system.md`:**
+
 - Pill contract: 6 types × 8 colors × 4 intensities = 192 variants (current state per memory)
 - Token system: Crew Semantic Colors → tw/colors/slate aliasing strategy
 - `components/ui/` vs `components/<feature>/` split rule (from user-level Node conventions; reaffirm here)
@@ -1070,7 +1106,7 @@ gh pr create --title "feat(.agents): migrate architecture topic" --body "..."
 
 ### Ticket #8 — `.agents/workflow.md`
 
-**Source:** Synthesis from user-level CLAUDE.md (planning workflow, branching, followup detection, conventions library) + repo conventions (CREW-* tickets, `docs/tickets/_template.md`, `docs/superpowers/{specs,plans}/` naming, `docs/followups.md` location, mumen tier).
+**Source:** Synthesis from user-level CLAUDE.md (planning workflow, branching, followup detection, conventions library) + repo conventions (CREW-\* tickets, `docs/tickets/_template.md`, `docs/superpowers/{specs,plans}/` naming, `docs/followups.md` location, mumen tier).
 
 **Target:** `.agents/workflow.md`
 
@@ -1081,7 +1117,8 @@ gh pr create --title "feat(.agents): migrate architecture topic" --body "..."
 **Execution:** Modified Ticket #2 procedure (same shape as Ticket #5: no source doc to delete; no rationale extraction).
 
 **Topic-specific content to include:**
-- CREW-* is the Jira prefix for this repo; tickets in this repo always start with CREW-
+
+- CREW-\* is the Jira prefix for this repo; tickets in this repo always start with CREW-
 - Where each kind of doc lives (mirror the taxonomy from `.agents/README.md`'s "What does NOT belong" section)
 - Branching convention for crew: `feat/<scope>`, `fix/<scope>`, `docs/<scope>` etc., matched against recent branches via `git log --oneline -10`
 - Followups: `docs/followups.md` is the per-repo queue; the format is defined in user-level CLAUDE.md "Followup detection" section
@@ -1105,6 +1142,7 @@ gh pr create --title "feat(.agents): migrate architecture topic" --body "..."
 **Execution:** Modified Ticket #2 procedure (no source doc, no rationale extraction).
 
 **Topic-specific content to include:**
+
 - The full "cleanliness check" command sequence to run before claiming work done: `npm run lint && npm run format:check && npm run typecheck && npm run test:run && npm run build`
 - Bruno smoke: `npm run bruno:smoke` requires `CREW_BRUNO_ENV=local` (or similar) env var; failure mode without the env var
 - E2E: `npm run test:e2e` (workspace-flagged to dashboard); local Docker stack must be up
@@ -1125,6 +1163,7 @@ Per the spec, the final ticket of Phase 2 also removes any remaining inline cont
 ```bash
 wc -l AGENTS.md
 ```
+
 Expected: ≤ 60.
 
 - [ ] Also remove the `docs/plans/` directory itself if empty.
@@ -1132,6 +1171,7 @@ Expected: ≤ 60.
 ```bash
 rmdir docs/plans 2>/dev/null || ls docs/plans
 ```
+
 If `ls` reports anything, the directory is not empty — investigate and either move remaining files or note them in the PR.
 
 ---
@@ -1139,6 +1179,7 @@ If `ls` reports anything, the directory is not empty — investigate and either 
 ## Ticket #10 — Phase 3 Soft doc-parity hook
 
 **Files:**
+
 - Create: `packages/cli/scripts/hooks/doc-parity-gate.sh`
 - Create: `packages/cli/scripts/hooks/doc-parity-gate.test.sh`
 - Modify: `.claude/settings.json` (register the new PreToolUse hook)
@@ -1269,6 +1310,7 @@ git update-index --add --chmod=+x packages/cli/scripts/hooks/doc-parity-gate.tes
 ```bash
 bash packages/cli/scripts/hooks/doc-parity-gate.test.sh
 ```
+
 Expected: all 4 tests fail because `doc-parity-gate.sh` doesn't exist yet.
 
 ### Step 4: Implement the hook
@@ -1399,6 +1441,7 @@ git update-index --add --chmod=+x packages/cli/scripts/hooks/doc-parity-gate.sh
 ```bash
 bash packages/cli/scripts/hooks/doc-parity-gate.test.sh
 ```
+
 Expected: `4 passed, 0 failed`.
 
 ### Step 6: Register the hook in `.claude/settings.json`
@@ -1430,6 +1473,7 @@ Cross-check the existing file's exact structure before editing — match its for
 ```bash
 npm run lint && npm run format:check && npm run typecheck && npm run test:run
 ```
+
 Expected: pass.
 
 - [ ] Commit and PR.
@@ -1446,6 +1490,7 @@ gh pr create --title "feat(hook): soft doc-parity gate" --body "..."
 ## Ticket #11 — Phase 4 Metrics pipeline
 
 **Files:**
+
 - Create: `packages/shared/src/transcripts/extract-bash-commands.ts` + test
 - Create: `packages/shared/src/transcripts/extract-read-paths.ts` + test
 - Create: `packages/daemon/src/migrations/0003_run_metrics.ts` + test
@@ -1483,9 +1528,22 @@ describe('extractBashCommands', () => {
 
   it('extracts commands from Bash tool_use entries', () => {
     const events = [
-      { type: 'assistant', message: { content: [{ type: 'tool_use', name: 'Bash', input: { command: 'npm run lint' } }] } },
-      { type: 'assistant', message: { content: [{ type: 'tool_use', name: 'Read', input: { file_path: 'x.ts' } }] } },
-      { type: 'assistant', message: { content: [{ type: 'tool_use', name: 'Bash', input: { command: 'git status' } }] } },
+      {
+        type: 'assistant',
+        message: {
+          content: [{ type: 'tool_use', name: 'Bash', input: { command: 'npm run lint' } }],
+        },
+      },
+      {
+        type: 'assistant',
+        message: { content: [{ type: 'tool_use', name: 'Read', input: { file_path: 'x.ts' } }] },
+      },
+      {
+        type: 'assistant',
+        message: {
+          content: [{ type: 'tool_use', name: 'Bash', input: { command: 'git status' } }],
+        },
+      },
     ];
     expect(extractBashCommands(events)).toEqual(['npm run lint', 'git status']);
   });
@@ -1515,17 +1573,36 @@ describe('extractReadPaths', () => {
 
   it('extracts file paths from Read tool_use entries', () => {
     const events = [
-      { type: 'assistant', message: { content: [{ type: 'tool_use', name: 'Read', input: { file_path: '/path/to/file.ts' } }] } },
-      { type: 'assistant', message: { content: [{ type: 'tool_use', name: 'Bash', input: { command: 'ls' } }] } },
-      { type: 'assistant', message: { content: [{ type: 'tool_use', name: 'Read', input: { file_path: '/other.md' } }] } },
+      {
+        type: 'assistant',
+        message: {
+          content: [{ type: 'tool_use', name: 'Read', input: { file_path: '/path/to/file.ts' } }],
+        },
+      },
+      {
+        type: 'assistant',
+        message: { content: [{ type: 'tool_use', name: 'Bash', input: { command: 'ls' } }] },
+      },
+      {
+        type: 'assistant',
+        message: {
+          content: [{ type: 'tool_use', name: 'Read', input: { file_path: '/other.md' } }],
+        },
+      },
     ];
     expect(extractReadPaths(events)).toEqual(['/path/to/file.ts', '/other.md']);
   });
 
   it('deduplicates repeated reads of the same file', () => {
     const events = [
-      { type: 'assistant', message: { content: [{ type: 'tool_use', name: 'Read', input: { file_path: '/a.ts' } }] } },
-      { type: 'assistant', message: { content: [{ type: 'tool_use', name: 'Read', input: { file_path: '/a.ts' } }] } },
+      {
+        type: 'assistant',
+        message: { content: [{ type: 'tool_use', name: 'Read', input: { file_path: '/a.ts' } }] },
+      },
+      {
+        type: 'assistant',
+        message: { content: [{ type: 'tool_use', name: 'Read', input: { file_path: '/a.ts' } }] },
+      },
     ];
     expect(extractReadPaths(events)).toEqual(['/a.ts']);
   });
@@ -1539,6 +1616,7 @@ describe('extractReadPaths', () => {
 ```bash
 npx vitest run packages/shared/src/transcripts/extract-bash-commands.test.ts packages/shared/src/transcripts/extract-read-paths.test.ts
 ```
+
 Expected: FAIL — modules don't exist.
 
 ### Step 4: Implement the extractors
@@ -1615,6 +1693,7 @@ export function extractReadPaths(events: Event[]): string[] {
 ```bash
 npx vitest run packages/shared/src/transcripts/
 ```
+
 Expected: PASS.
 
 ### Step 6: Write the migration test
@@ -1674,6 +1753,7 @@ describe('migration 0003_run_metrics', () => {
 ```bash
 npx vitest run packages/daemon/src/migrations/0003_run_metrics.test.ts
 ```
+
 Expected: FAIL — module doesn't exist.
 
 ### Step 8: Implement the migration
@@ -1728,6 +1808,7 @@ export interface RunsTable {
 ```bash
 npx vitest run packages/daemon/src/migrations/0003_run_metrics.test.ts
 ```
+
 Expected: PASS.
 
 ### Step 11: Write `MetricsService` tests (TDD red)
@@ -1766,15 +1847,34 @@ describe('MetricsService', () => {
   });
 
   it('records metrics for a run', async () => {
-    await db.insertInto('runs').values({
-      agent_key: 'KEY-1', command: 'run', session_id: 's1', started_at: '2026-05-13T10:00:00Z',
-      completed_at: '2026-05-13T11:00:00Z', exit_code: 0,
-      doc_load_coverage_pct: null, cleanliness_pass: null, pr_claim_input_tokens: null,
-      parity_violations: null, baseline: 0,
-    }).execute();
+    await db
+      .insertInto('runs')
+      .values({
+        agent_key: 'KEY-1',
+        command: 'run',
+        session_id: 's1',
+        started_at: '2026-05-13T10:00:00Z',
+        completed_at: '2026-05-13T11:00:00Z',
+        exit_code: 0,
+        doc_load_coverage_pct: null,
+        cleanliness_pass: null,
+        pr_claim_input_tokens: null,
+        parity_violations: null,
+        baseline: 0,
+      })
+      .execute();
 
-    await svc.recordMetrics(1, { docLoadCoveragePct: 85, cleanlinessPass: 1, prClaimInputTokens: 12000, parityViolations: 0 });
-    const row = await db.selectFrom('runs').selectAll().where('id', '=', 1).executeTakeFirstOrThrow();
+    await svc.recordMetrics(1, {
+      docLoadCoveragePct: 85,
+      cleanlinessPass: 1,
+      prClaimInputTokens: 12000,
+      parityViolations: 0,
+    });
+    const row = await db
+      .selectFrom('runs')
+      .selectAll()
+      .where('id', '=', 1)
+      .executeTakeFirstOrThrow();
     expect(row.doc_load_coverage_pct).toBe(85);
     expect(row.cleanliness_pass).toBe(1);
     expect(row.pr_claim_input_tokens).toBe(12000);
@@ -1782,14 +1882,50 @@ describe('MetricsService', () => {
   });
 
   it('aggregates non-baseline metrics', async () => {
-    await db.insertInto('runs').values([
-      { agent_key: 'a', command: 'run', session_id: 's1', started_at: 't', completed_at: 't', exit_code: 0,
-        doc_load_coverage_pct: 80, cleanliness_pass: 1, pr_claim_input_tokens: 10000, parity_violations: 0, baseline: 0 },
-      { agent_key: 'b', command: 'run', session_id: 's2', started_at: 't', completed_at: 't', exit_code: 0,
-        doc_load_coverage_pct: 90, cleanliness_pass: 1, pr_claim_input_tokens: 8000, parity_violations: 1, baseline: 0 },
-      { agent_key: 'c', command: 'run', session_id: 's3', started_at: 't', completed_at: 't', exit_code: 0,
-        doc_load_coverage_pct: null, cleanliness_pass: 0, pr_claim_input_tokens: 20000, parity_violations: null, baseline: 1 },
-    ]).execute();
+    await db
+      .insertInto('runs')
+      .values([
+        {
+          agent_key: 'a',
+          command: 'run',
+          session_id: 's1',
+          started_at: 't',
+          completed_at: 't',
+          exit_code: 0,
+          doc_load_coverage_pct: 80,
+          cleanliness_pass: 1,
+          pr_claim_input_tokens: 10000,
+          parity_violations: 0,
+          baseline: 0,
+        },
+        {
+          agent_key: 'b',
+          command: 'run',
+          session_id: 's2',
+          started_at: 't',
+          completed_at: 't',
+          exit_code: 0,
+          doc_load_coverage_pct: 90,
+          cleanliness_pass: 1,
+          pr_claim_input_tokens: 8000,
+          parity_violations: 1,
+          baseline: 0,
+        },
+        {
+          agent_key: 'c',
+          command: 'run',
+          session_id: 's3',
+          started_at: 't',
+          completed_at: 't',
+          exit_code: 0,
+          doc_load_coverage_pct: null,
+          cleanliness_pass: 0,
+          pr_claim_input_tokens: 20000,
+          parity_violations: null,
+          baseline: 1,
+        },
+      ])
+      .execute();
 
     const agg = await svc.aggregate({ baseline: false });
     expect(agg.runCount).toBe(2);
@@ -1800,12 +1936,37 @@ describe('MetricsService', () => {
   });
 
   it('aggregates baseline separately', async () => {
-    await db.insertInto('runs').values([
-      { agent_key: 'a', command: 'run', session_id: 's1', started_at: 't', completed_at: 't', exit_code: 0,
-        doc_load_coverage_pct: null, cleanliness_pass: 1, pr_claim_input_tokens: 15000, parity_violations: null, baseline: 1 },
-      { agent_key: 'b', command: 'run', session_id: 's2', started_at: 't', completed_at: 't', exit_code: 0,
-        doc_load_coverage_pct: null, cleanliness_pass: 0, pr_claim_input_tokens: 18000, parity_violations: null, baseline: 1 },
-    ]).execute();
+    await db
+      .insertInto('runs')
+      .values([
+        {
+          agent_key: 'a',
+          command: 'run',
+          session_id: 's1',
+          started_at: 't',
+          completed_at: 't',
+          exit_code: 0,
+          doc_load_coverage_pct: null,
+          cleanliness_pass: 1,
+          pr_claim_input_tokens: 15000,
+          parity_violations: null,
+          baseline: 1,
+        },
+        {
+          agent_key: 'b',
+          command: 'run',
+          session_id: 's2',
+          started_at: 't',
+          completed_at: 't',
+          exit_code: 0,
+          doc_load_coverage_pct: null,
+          cleanliness_pass: 0,
+          pr_claim_input_tokens: 18000,
+          parity_violations: null,
+          baseline: 1,
+        },
+      ])
+      .execute();
 
     const agg = await svc.aggregate({ baseline: true });
     expect(agg.runCount).toBe(2);
@@ -1820,6 +1981,7 @@ describe('MetricsService', () => {
 ```bash
 npx vitest run packages/daemon/src/services/MetricsService.test.ts
 ```
+
 Expected: FAIL — module doesn't exist.
 
 ### Step 13: Implement `MetricsService`
@@ -1871,23 +2033,46 @@ export class MetricsService {
 
     const runCount = rows.length;
     if (runCount === 0) {
-      return { runCount: 0, avgDocLoadCoverage: null, cleanlinessPassRate: 0, avgPrClaimInputTokens: 0, parityViolationRate: 0 };
+      return {
+        runCount: 0,
+        avgDocLoadCoverage: null,
+        cleanlinessPassRate: 0,
+        avgPrClaimInputTokens: 0,
+        parityViolationRate: 0,
+      };
     }
 
-    const docLoadValues = rows.map((r) => r.doc_load_coverage_pct).filter((v): v is number => v !== null);
-    const avgDocLoadCoverage = docLoadValues.length > 0 ? docLoadValues.reduce((a, b) => a + b, 0) / docLoadValues.length : null;
+    const docLoadValues = rows
+      .map((r) => r.doc_load_coverage_pct)
+      .filter((v): v is number => v !== null);
+    const avgDocLoadCoverage =
+      docLoadValues.length > 0
+        ? docLoadValues.reduce((a, b) => a + b, 0) / docLoadValues.length
+        : null;
 
     const cleanlinessPassCount = rows.filter((r) => r.cleanliness_pass === 1).length;
     const cleanlinessPassRate = cleanlinessPassCount / runCount;
 
-    const tokenValues = rows.map((r) => r.pr_claim_input_tokens).filter((v): v is number => v !== null);
-    const avgPrClaimInputTokens = tokenValues.length > 0 ? tokenValues.reduce((a, b) => a + b, 0) / tokenValues.length : 0;
+    const tokenValues = rows
+      .map((r) => r.pr_claim_input_tokens)
+      .filter((v): v is number => v !== null);
+    const avgPrClaimInputTokens =
+      tokenValues.length > 0 ? tokenValues.reduce((a, b) => a + b, 0) / tokenValues.length : 0;
 
-    const parityValues = rows.map((r) => r.parity_violations).filter((v): v is number => v !== null);
+    const parityValues = rows
+      .map((r) => r.parity_violations)
+      .filter((v): v is number => v !== null);
     const parityViolationCount = parityValues.filter((v) => v > 0).length;
-    const parityViolationRate = parityValues.length > 0 ? parityViolationCount / parityValues.length : 0;
+    const parityViolationRate =
+      parityValues.length > 0 ? parityViolationCount / parityValues.length : 0;
 
-    return { runCount, avgDocLoadCoverage, cleanlinessPassRate, avgPrClaimInputTokens, parityViolationRate };
+    return {
+      runCount,
+      avgDocLoadCoverage,
+      cleanlinessPassRate,
+      avgPrClaimInputTokens,
+      parityViolationRate,
+    };
   }
 }
 ```
@@ -1897,6 +2082,7 @@ export class MetricsService {
 ```bash
 npx vitest run packages/daemon/src/services/MetricsService.test.ts
 ```
+
 Expected: PASS — 3/3.
 
 ### Step 15: Wire `MetricsService` into the Awilix container
@@ -1953,6 +2139,7 @@ describe('GET /metrics', () => {
 ```bash
 npx vitest run packages/daemon/src/routes/metrics.test.ts
 ```
+
 Expected: FAIL — route not registered.
 
 ### Step 18: Implement the `/metrics` route
@@ -1977,13 +2164,17 @@ const ResponseSchema = z.object({
 });
 
 export const metricsRoutes: FastifyPluginAsyncZod = async (fastify) => {
-  fastify.get('/metrics', {
-    schema: { querystring: QuerySchema, response: { 200: ResponseSchema } },
-  }, async (request) => {
-    const metricsService = fastify.diContainer.resolve<MetricsService>('metricsService');
-    const agg = await metricsService.aggregate({ baseline: request.query.baseline });
-    return agg;
-  });
+  fastify.get(
+    '/metrics',
+    {
+      schema: { querystring: QuerySchema, response: { 200: ResponseSchema } },
+    },
+    async (request) => {
+      const metricsService = fastify.diContainer.resolve<MetricsService>('metricsService');
+      const agg = await metricsService.aggregate({ baseline: request.query.baseline });
+      return agg;
+    },
+  );
 };
 ```
 
@@ -2003,6 +2194,7 @@ await fastify.register(metricsRoutes);
 ```bash
 npx vitest run packages/daemon/src/routes/metrics.test.ts
 ```
+
 Expected: PASS — 2/2.
 
 ### Step 21: Add Bruno coverage for `/metrics`
@@ -2062,8 +2254,14 @@ async function fetchMetrics(baseline: boolean): Promise<Metrics> {
 }
 
 export function MetricsTrendWidget() {
-  const current = useQuery({ queryKey: ['metrics', 'current'], queryFn: () => fetchMetrics(false) });
-  const baseline = useQuery({ queryKey: ['metrics', 'baseline'], queryFn: () => fetchMetrics(true) });
+  const current = useQuery({
+    queryKey: ['metrics', 'current'],
+    queryFn: () => fetchMetrics(false),
+  });
+  const baseline = useQuery({
+    queryKey: ['metrics', 'baseline'],
+    queryFn: () => fetchMetrics(true),
+  });
 
   if (current.isLoading || baseline.isLoading) return <div>loading</div>;
   if (current.error || baseline.error) return <div>error</div>;
@@ -2078,9 +2276,15 @@ export function MetricsTrendWidget() {
         <dt>Doc-load coverage (current)</dt>
         <dd>{c.avgDocLoadCoverage !== null ? `${c.avgDocLoadCoverage.toFixed(0)}%` : 'n/a'}</dd>
         <dt>Cleanliness pass rate</dt>
-        <dd>{(c.cleanlinessPassRate * 100).toFixed(0)}% (baseline: {(b.cleanlinessPassRate * 100).toFixed(0)}%)</dd>
+        <dd>
+          {(c.cleanlinessPassRate * 100).toFixed(0)}% (baseline:{' '}
+          {(b.cleanlinessPassRate * 100).toFixed(0)}%)
+        </dd>
         <dt>Avg context size at PR-claim</dt>
-        <dd>{c.avgPrClaimInputTokens.toLocaleString()} tokens (baseline: {b.avgPrClaimInputTokens.toLocaleString()})</dd>
+        <dd>
+          {c.avgPrClaimInputTokens.toLocaleString()} tokens (baseline:{' '}
+          {b.avgPrClaimInputTokens.toLocaleString()})
+        </dd>
         <dt>Parity violation rate</dt>
         <dd>{(c.parityViolationRate * 100).toFixed(0)}%</dd>
       </dl>
@@ -2116,6 +2320,7 @@ This is the binding step: the parser extractors from Step 4 feed into the `Metri
 ```bash
 npm run lint && npm run format:check && npm run typecheck && npm run test:run && npm run bruno:smoke
 ```
+
 Expected: all green.
 
 ### Step 28: Commit and PR
@@ -2144,6 +2349,7 @@ gh pr create --title "feat: metrics pipeline + dashboard" --body "..."
 - [ ] Insert a new step after the existing lint/typecheck/test checks:
 
   > **Doc-parity audit (when working in a repo with `.agents/`):**
+  >
   > - Get the list of changed files: `git diff --name-only main...HEAD` (or `git diff --cached --name-only` for staged work).
   > - For each `.agents/*.md` whose `covers:` glob overlaps a changed file path, read the doc and decide: does my change require updating it?
   > - If yes: update the doc and bump `last_updated` to today's ISO date.
@@ -2160,6 +2366,7 @@ gh pr create --title "feat: metrics pipeline + dashboard" --body "..."
 I'll do this against the spec one section at a time.
 
 **Spec coverage check:**
+
 - [x] Two-tier progressive disclosure (AGENTS.md + `.agents/`) — covered by Ticket #1 + Phase 2 tickets
 - [x] Root AGENTS.md under 60 lines — final cleanup in Ticket #9, verified by `wc -l`
 - [x] Per-package AGENTS.md lazy-loaded — files created in Ticket #1
@@ -2176,6 +2383,7 @@ I'll do this against the spec one section at a time.
 **Placeholder scan:** No "TBD"/"TODO"/"implement later" remaining; the "_To be populated_" lines in per-package AGENTS.md "Common gotchas" sections are intentional and tracked — gotchas are surfaced organically as Phase 2 tickets land, not pre-fabricated.
 
 **Type consistency check:**
+
 - `MetricInputs.cleanlinessPass: 0 | 1` matches `RunsTable.cleanliness_pass: number | null` (storing as integer per SQLite convention)
 - `AggregateMetrics.avgDocLoadCoverage: number | null` matches the SQL nullable column
 - `validateFrontmatter`'s return type `ValidationResult` is consistent across the validator file

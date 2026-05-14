@@ -14,25 +14,25 @@
 
 **File changes summary:**
 
-| File | Change |
-| --- | --- |
-| `docs/superpowers/specs/2026-05-08-agent-shell-e2e-reliability-design.md:§3.1` | Backfill probe-results table (live edit during Task 1). |
-| `<repo>/.claude/settings.json:5-8` | Replace exact-match entries with verified glob form for all three commands. |
-| `packages/cli/src/lib/preflight/verify-excluded-commands.ts` | Update `requiredEntries` to emit the verified glob form. |
-| `packages/cli/src/lib/preflight/verify-excluded-commands.test.ts` | Update existing tests for new entry shape; add regression for old exact-match form. |
-| `packages/dashboard/playwright.config.ts` | Remove `webServer` block; replace baseURL `??` chain with `.env`-reading resolver. |
-| `packages/dashboard/playwright.config.test.ts` | New: tests for `resolveBaseURL` resolver. |
-| `packages/cli/src/commands/run.ts:397-402` | Add `PLAYWRIGHT_BASE_URL: resolvedAppUrl` to env block. |
-| `packages/cli/src/commands/fix-pr.ts:236` | Same plumbing for the parallel injection point. |
-| `packages/cli/src/lib/prompts/templates/sandbox-network-note.md` | Replace destructive `crew restart --hard` recommendation with `docker compose up --build --wait`; add form-sensitivity warning section. |
-| `packages/cli/src/lib/prompts/__snapshots__/` | Snapshot updates from the prompt template change. |
-| `docs/followups.md` | Move the `2026-05-07 — sandbox-network-note.md…` entry from Active to Resolved (atomic with the prompt change). |
+| File                                                                           | Change                                                                                                                                  |
+| ------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------- |
+| `docs/superpowers/specs/2026-05-08-agent-shell-e2e-reliability-design.md:§3.1` | Backfill probe-results table (live edit during Task 1).                                                                                 |
+| `<repo>/.claude/settings.json:5-8`                                             | Replace exact-match entries with verified glob form for all three commands.                                                             |
+| `packages/cli/src/lib/preflight/verify-excluded-commands.ts`                   | Update `requiredEntries` to emit the verified glob form.                                                                                |
+| `packages/cli/src/lib/preflight/verify-excluded-commands.test.ts`              | Update existing tests for new entry shape; add regression for old exact-match form.                                                     |
+| `packages/dashboard/playwright.config.ts`                                      | Remove `webServer` block; replace baseURL `??` chain with `.env`-reading resolver.                                                      |
+| `packages/dashboard/playwright.config.test.ts`                                 | New: tests for `resolveBaseURL` resolver.                                                                                               |
+| `packages/cli/src/commands/run.ts:397-402`                                     | Add `PLAYWRIGHT_BASE_URL: resolvedAppUrl` to env block.                                                                                 |
+| `packages/cli/src/commands/fix-pr.ts:236`                                      | Same plumbing for the parallel injection point.                                                                                         |
+| `packages/cli/src/lib/prompts/templates/sandbox-network-note.md`               | Replace destructive `crew restart --hard` recommendation with `docker compose up --build --wait`; add form-sensitivity warning section. |
+| `packages/cli/src/lib/prompts/__snapshots__/`                                  | Snapshot updates from the prompt template change.                                                                                       |
+| `docs/followups.md`                                                            | Move the `2026-05-07 — sandbox-network-note.md…` entry from Active to Resolved (atomic with the prompt change).                         |
 
 ---
 
 ## Task 1: Empirical wildcard probe (gate)
 
-**Files:** none modified at the production level. The probe edits `<repo>/.claude/settings.json` and `packages/dashboard/package.json` *temporarily* and reverts them before commit. Backfill of results lands in the spec.
+**Files:** none modified at the production level. The probe edits `<repo>/.claude/settings.json` and `packages/dashboard/package.json` _temporarily_ and reverts them before commit. Backfill of results lands in the spec.
 
 **Why first:** the production `excludedCommands` form depends on what glob syntax actually bypasses the sandbox. The Claude Code docs show a single example (`docker *`) without specifying matching semantics. Measuring up-front turns Task 2 from a guess into a transcription.
 
@@ -70,14 +70,14 @@ If `strace` isn't available or doesn't surface a clear distinction, a simpler al
 
 For each candidate below, edit `<repo>/.claude/settings.json` to set `excludedCommands` to the array containing only that single entry, then run the same probe and compare to the baseline signature. Record the result as `MATCH` (no sandbox signature) or `NO MATCH` (sandbox signature present).
 
-| Candidate entry | Probe command |
-| --- | --- |
-| `"npm run probe:loopback"` | `npm run probe:loopback --workspace=crew-dashboard` |
-| `"npm run probe:loopback*"` | `npm run probe:loopback --workspace=crew-dashboard` |
-| `"npm run probe:loopback *"` | `npm run probe:loopback --workspace=crew-dashboard` |
-| `"npm run probe:loopback**"` | `npm run probe:loopback --workspace=crew-dashboard` |
-| `"npm run probe:loopback*"` | `npm run probe:loopback --workspace=crew-dashboard 2>&1 \| tail -5` |
-| `"npm run *"` | `npm run probe:loopback --workspace=crew-dashboard` |
+| Candidate entry              | Probe command                                                       |
+| ---------------------------- | ------------------------------------------------------------------- |
+| `"npm run probe:loopback"`   | `npm run probe:loopback --workspace=crew-dashboard`                 |
+| `"npm run probe:loopback*"`  | `npm run probe:loopback --workspace=crew-dashboard`                 |
+| `"npm run probe:loopback *"` | `npm run probe:loopback --workspace=crew-dashboard`                 |
+| `"npm run probe:loopback**"` | `npm run probe:loopback --workspace=crew-dashboard`                 |
+| `"npm run probe:loopback*"`  | `npm run probe:loopback --workspace=crew-dashboard 2>&1 \| tail -5` |
+| `"npm run *"`                | `npm run probe:loopback --workspace=crew-dashboard`                 |
 
 (The fifth row exists specifically to test whether shell-pipe forms defeat matching. The sixth row probes whether broad-glob entries are honored at all.)
 
@@ -88,14 +88,14 @@ Edit `docs/superpowers/specs/2026-05-08-agent-shell-e2e-reliability-design.md:§
 ```markdown
 **Probe results (run 2026-05-08):**
 
-| Candidate | Workspace flag | Pipe | Result | Notes |
-| --- | --- | --- | --- | --- |
-| `"npm run probe:loopback"` | yes | no | NO MATCH | exact-match doesn't accept extra args |
-| `"npm run probe:loopback*"` | yes | no | MATCH | concatenated glob works |
-| `"npm run probe:loopback*"` | yes | yes (`\| tail`) | NO MATCH | shell pipe defeats matching |
-| `"npm run probe:loopback *"` | yes | no | … | … |
-| `"npm run probe:loopback**"` | yes | no | … | … |
-| `"npm run *"` | yes | no | … | … |
+| Candidate                    | Workspace flag | Pipe            | Result   | Notes                                 |
+| ---------------------------- | -------------- | --------------- | -------- | ------------------------------------- |
+| `"npm run probe:loopback"`   | yes            | no              | NO MATCH | exact-match doesn't accept extra args |
+| `"npm run probe:loopback*"`  | yes            | no              | MATCH    | concatenated glob works               |
+| `"npm run probe:loopback*"`  | yes            | yes (`\| tail`) | NO MATCH | shell pipe defeats matching           |
+| `"npm run probe:loopback *"` | yes            | no              | …        | …                                     |
+| `"npm run probe:loopback**"` | yes            | no              | …        | …                                     |
+| `"npm run *"`                | yes            | no              | …        | …                                     |
 
 **Conclusion:** the canonical form is `<chosen-form>`. Pipes <are/aren't> covered. The §3.6 prompt warning <does/does not> need to call out pipe variants specifically.
 ```
@@ -164,28 +164,28 @@ Run the suite to confirm it's still green against the un-edited source:
 npm run test:run --workspace=crew-cli -- packages/cli/src/lib/preflight/verify-excluded-commands.test.ts
 ```
 
-Expected: GREEN. The literals in the test file moved together; the source file's `requiredEntries` still emits the old form, and the tests' `excludedCommands` writes still contain the old form too — wait, that's wrong. Re-check: the tests author both sides of the comparison, so they pass without source edits. **However**, the regression we want is the *source* emitting the new form against settings.json that has the new form. So at this step the tests are passing for the wrong reason. Continue to 2.3.
+Expected: GREEN. The literals in the test file moved together; the source file's `requiredEntries` still emits the old form, and the tests' `excludedCommands` writes still contain the old form too — wait, that's wrong. Re-check: the tests author both sides of the comparison, so they pass without source edits. **However**, the regression we want is the _source_ emitting the new form against settings.json that has the new form. So at this step the tests are passing for the wrong reason. Continue to 2.3.
 
 - [ ] **Step 2.3: Add a regression test for the old exact-match form**
 
 Append to `packages/cli/src/lib/preflight/verify-excluded-commands.test.ts`, inside the existing `describe('verifyExcludedCommandsCheck', ...)` block (substitute the canonical form from Task 1):
 
 ```ts
-  it('rejects the legacy exact-match form for bruno:smoke', async () => {
-    await writeSettings({
-      sandbox: { excludedCommands: ['npm run bruno:smoke'] }, // legacy exact-match
-    });
-    const check = verifyExcludedCommandsCheck();
-    try {
-      await check.run({ config: cfgWithBruno, worktree });
-      expect.fail('expected throw — legacy form should not satisfy the new requirement');
-    } catch (err) {
-      expect(err).toBeInstanceOf(PreflightError);
-      const pe = err as PreflightError;
-      expect(pe.details.missing).toBe('"npm run bruno:smoke*"');
-      expect(String(pe.details.reason)).toContain('[bruno_smoke].enabled = true');
-    }
+it('rejects the legacy exact-match form for bruno:smoke', async () => {
+  await writeSettings({
+    sandbox: { excludedCommands: ['npm run bruno:smoke'] }, // legacy exact-match
   });
+  const check = verifyExcludedCommandsCheck();
+  try {
+    await check.run({ config: cfgWithBruno, worktree });
+    expect.fail('expected throw — legacy form should not satisfy the new requirement');
+  } catch (err) {
+    expect(err).toBeInstanceOf(PreflightError);
+    const pe = err as PreflightError;
+    expect(pe.details.missing).toBe('"npm run bruno:smoke*"');
+    expect(String(pe.details.reason)).toContain('[bruno_smoke].enabled = true');
+  }
+});
 ```
 
 Run; expect failure (the source still emits the old exact-match form, so the test's "missing" expectation doesn't match what `requiredEntries` produces yet):
@@ -275,9 +275,9 @@ The `webServer` block spawns a fresh Vite alongside whatever the docker stack is
 Edit `packages/dashboard/playwright.config.ts`. Delete lines 22-29 (the entire `webServer: { … }` block, including the trailing comma if present). Add a brief inline comment in its place documenting why it's intentionally absent:
 
 ```ts
-  // Intentionally no webServer block: tests run against the worktree's docker
-  // dashboard stack only. A fallback Vite spawn here was masking real failures
-  // — see docs/superpowers/specs/2026-05-08-agent-shell-e2e-reliability-design.md.
+// Intentionally no webServer block: tests run against the worktree's docker
+// dashboard stack only. A fallback Vite spawn here was masking real failures
+// — see docs/superpowers/specs/2026-05-08-agent-shell-e2e-reliability-design.md.
 ```
 
 After the edit, the config's exported object should have only `testDir`, `fullyParallel`, `forbidOnly`, `retries`, `reporter`, `use`, and `projects` — no `webServer`.
@@ -362,7 +362,10 @@ describe('resolveBaseURL', () => {
   });
 
   it('throws a helpful error when .env has no APP_URL line', async () => {
-    await writeFile(path.join(repoRoot, '.env'), 'CREW_PORT=29066\nDAEMON_URL=http://localhost:29066\n');
+    await writeFile(
+      path.join(repoRoot, '.env'),
+      'CREW_PORT=29066\nDAEMON_URL=http://localhost:29066\n',
+    );
     expect(() => resolveBaseURL(repoRoot)).toThrow(/APP_URL/);
     expect(() => resolveBaseURL(repoRoot)).toThrow(/crew env refresh/);
   });
@@ -553,7 +556,6 @@ Replace with:
 Append to the same file (substitute the canonical form `<chosen-form>` from Task 1's results, and adjust the bullet list based on which variants the probe found to break the match):
 
 ```markdown
-
 ## Excluded-command matching is form-sensitive
 
 Crew's whitelisted commands ({{whitelistedCommands}}) match `<repo>/.claude/settings.json`'s `excludedCommands` entries by glob. The current entries use the form `<chosen-form>` (e.g. `npm run test:e2e*`). **Wrappers and shell redirections may break the match,** in which case the command runs sandboxed and won't reach host loopback even though it looks like it should.
@@ -563,11 +565,13 @@ To stay matched:
 - **Run the bare command:** `npm run test:e2e` (not `cd packages/dashboard && npm run test:e2e`).
 - **The `--workspace=crew-dashboard` flag is covered by the glob** (the `command*` form accepts trailing args). You can add it.
 - **Don't pipe to `tail` / `head` / etc.** — `2>&1 | tail -25` defeats the match because the runtime evaluates the rule against the pipeline as a string. Capture full output and use a logfile + the `Read` tool to extract the parts you want. For example:
+```
 
-  ```
-  npm run test:e2e --workspace=crew-dashboard > /tmp/test-e2e.log 2>&1
-  # then read /tmp/test-e2e.log via the Read tool
-  ```
+npm run test:e2e --workspace=crew-dashboard > /tmp/test-e2e.log 2>&1
+
+# then read /tmp/test-e2e.log via the Read tool
+
+```
 
 A failed `{{e2eCommand}}` that produced `ECONNREFUSED` while the same flow worked via Playwright MCP is the signature of a wrapper-defeated match.
 ```
@@ -602,6 +606,7 @@ Edit `docs/followups.md`:
    ```
 
    Substitute the actual ticket key (created in step 7).
+
 3. Update the `## Contents` ToC: remove the entry's link from the Active sub-list, add it to the Resolved sub-list. Use the same anchor slug GitHub generates for the H3.
 4. The entry didn't have a `**Ticket:**` line (it was being resolved without ever being individually ticketed), so there's nothing to remove there.
 

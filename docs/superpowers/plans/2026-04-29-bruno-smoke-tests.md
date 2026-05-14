@@ -12,14 +12,14 @@
 
 **Ticket carve-up** (one Epic + 3 child tickets in CREW + 1 off-repo skill ticket + 2 independent prereq tickets in target repos):
 
-| Ticket                          | Tasks      | Blocks                                                                  |
-| ------------------------------- | ---------- | ----------------------------------------------------------------------- |
-| **CREW-bruno-α** (foundation)   | Tasks 1-9  | Blocks β, γ                                                             |
-| **CREW-bruno-β** (ticket prompt) | Tasks 10-12 | After α; parallel with γ + skill                                       |
-| **CREW-bruno-γ** (fix-pr prompt) | Tasks 13-16 | After α; parallel with β + skill                                       |
-| **CREW-bruno-skill** (off-repo) | Task 17    | Independent — can run any time                                          |
-| (KAN-prereq)                    | Bruno collection for Recipes + `npm run bruno:smoke` script | Independent; required before β produces value in Recipes  |
-| (CREW-prereq)                   | Bruno collection for crew daemon                            | After daemon-bootstrap-spec merges; required before β produces value |
+| Ticket                           | Tasks                                                       | Blocks                                                               |
+| -------------------------------- | ----------------------------------------------------------- | -------------------------------------------------------------------- |
+| **CREW-bruno-α** (foundation)    | Tasks 1-9                                                   | Blocks β, γ                                                          |
+| **CREW-bruno-β** (ticket prompt) | Tasks 10-12                                                 | After α; parallel with γ + skill                                     |
+| **CREW-bruno-γ** (fix-pr prompt) | Tasks 13-16                                                 | After α; parallel with β + skill                                     |
+| **CREW-bruno-skill** (off-repo)  | Task 17                                                     | Independent — can run any time                                       |
+| (KAN-prereq)                     | Bruno collection for Recipes + `npm run bruno:smoke` script | Independent; required before β produces value in Recipes             |
+| (CREW-prereq)                    | Bruno collection for crew daemon                            | After daemon-bootstrap-spec merges; required before β produces value |
 
 **Implementation note — module location:** This plan keeps bruno-smoke logic in `packages/cli/src/lib/bruno-smoke/`, parallel to `packages/cli/src/lib/visual-testing/`. When `crew-shared` gets bootstrapped (architecture Phase 1.5), this module relocates with no API changes.
 
@@ -348,11 +348,7 @@ import { buildEnvFileContent } from './build-env-file.js';
 describe('buildEnvFileContent', () => {
   it('emits a vars block with only baseUrl when smokeUser is omitted', () => {
     const content = buildEnvFileContent({ baseUrl: 'http://localhost:3000' });
-    expect(content).toBe(
-      'vars {\n' +
-        '  baseUrl: http://localhost:3000\n' +
-        '}\n',
-    );
+    expect(content).toBe('vars {\n' + '  baseUrl: http://localhost:3000\n' + '}\n');
   });
 
   it('emits a vars block with baseUrl and testUser fields when smokeUser is provided', () => {
@@ -574,10 +570,7 @@ export interface WriteEnvFileResult {
   existed: boolean;
 }
 
-export function writeEnvFile(
-  worktreePath: string,
-  opts: WriteEnvFileOptions,
-): WriteEnvFileResult {
+export function writeEnvFile(worktreePath: string, opts: WriteEnvFileOptions): WriteEnvFileResult {
   const collectionRoot = join(worktreePath, opts.collectionDir);
   if (!existsSync(collectionRoot) || !statSync(collectionRoot).isDirectory()) {
     throw new Error(
@@ -895,8 +888,8 @@ In `packages/cli/src/lib/prompts/templates/ticket.md`, find the `{{visualTesting
 
 ```markdown
 7. **Execute, committing per step.** Use `superpowers:test-driven-development`. Frequent small commits referencing `{{key}}`.
-{{visualTestingBlock}}
-{{brunoSmokeBlock}}
+   {{visualTestingBlock}}
+   {{brunoSmokeBlock}}
 8. **Verify.** Invoke `superpowers:verification-before-completion`. Run lint / format / typecheck / test:run.
 ```
 
@@ -1349,7 +1342,6 @@ Expected: FAIL — bruno-smoke block still renders empty.
 Create `packages/cli/src/lib/prompts/templates/ticket-bruno-smoke.md`:
 
 ```markdown
-
 ## API smoke verification (Bruno)
 
 This project has a Bruno collection at `{{collectionDir}}/`. The worktree's API runs at **{{baseUrl}}**, and crew has generated `{{collectionDir}}/environments/{{envName}}.bru` with `baseUrl`{{testUserClause}} for you. The environment is exported as `CREW_BRUNO_ENV={{envName}}` in your spawn env.
@@ -1360,7 +1352,6 @@ Two non-negotiable rules whenever this project's API is involved:
 2. **Update `.bru` files when endpoints change.** If you add, remove, or modify any HTTP endpoint, the same PR must add or update the matching `{{collectionDir}}/endpoints/<route-group>/<verb>-<name>[-<case>].bru` and `{{collectionDir}}/flows/<flow>.bru` files. Coverage drifts the moment a route changes without its `.bru`.
 
 The `bruno-collection-maintenance` skill (auto-discovered) covers naming conventions, the `vars:post-response` patterns, and the conventions for `flows/` vs `endpoints/`.
-
 ```
 
 (Note: leading and trailing blank lines kept so the block sits cleanly between the visual-testing block and step 8.)
@@ -1515,7 +1506,6 @@ Expected: FAIL — fix-pr bruno-smoke block still renders empty.
 Create `packages/cli/src/lib/prompts/templates/fix-pr-bruno-smoke.md`:
 
 ```markdown
-
 ## API smoke verification (Bruno)
 
 This project has a Bruno collection at `{{collectionDir}}/`. Crew already generated `{{collectionDir}}/environments/{{envName}}.bru` (pointing at **{{baseUrl}}**) for the original run. `CREW_BRUNO_ENV={{envName}}` is set in your env.
@@ -1526,7 +1516,6 @@ While applying feedback:
 - Before pushing, run `npm run bruno:smoke`. Smoke must pass. A connection error usually means the worktree's stack isn't up — bring it up the same way the original `crew run` did, then re-run smoke.
 
 Treat smoke failure the same as test failure: do not push.
-
 ```
 
 - [ ] **Step 4: Update `buildBrunoSmokeBlock` in `fix-pr.ts`**
@@ -1850,21 +1839,22 @@ description: Use when authoring or modifying HTTP routes (Fastify route registra
 This skill applies whenever you author or modify HTTP routes in a project that has a `bruno/` directory. Crew's per-project setup writes a generated `bruno/environments/<envName>.bru` and exports `CREW_BRUNO_ENV=<envName>`, so the project's `npm run bruno:smoke` script can be invoked directly. Your job is to keep the collection in sync with the code.
 
 ## File layout
-
 ```
+
 bruno/
-├── bruno.json                              # collection metadata
-├── .gitignore                              # excludes environments/
-├── environments/<envName>.bru              # generated per-worktree by crew — never commit
+├── bruno.json # collection metadata
+├── .gitignore # excludes environments/
+├── environments/<envName>.bru # generated per-worktree by crew — never commit
 ├── endpoints/
-│   └── <route-group>/
-│       ├── post-create.bru
-│       ├── get-show.bru
-│       ├── get-list.bru
-│       └── delete-destroy.bru
+│ └── <route-group>/
+│ ├── post-create.bru
+│ ├── get-show.bru
+│ ├── get-list.bru
+│ └── delete-destroy.bru
 └── flows/
-    ├── login.bru                           # the auth flow other flows depend on
-    └── main-smoke.bru                      # the canonical end-to-end smoke
+├── login.bru # the auth flow other flows depend on
+└── main-smoke.bru # the canonical end-to-end smoke
+
 ```
 
 - **`endpoints/`** — one `.bru` per (route, verb) pair. Filename `<verb>-<name>[-<case>].bru` (e.g. `post-create-with-tags.bru` for a variant). Mirror the project's route grouping (`endpoints/recipes/`, `endpoints/auth/`).
@@ -1885,19 +1875,23 @@ bruno/
 The project's `flows/login.bru` runs first and saves a token via `vars:post-response`:
 
 ```
+
 vars:post-response {
-  token: res.body.token
+token: res.body.token
 }
+
 ```
 
 Subsequent flow steps read it from the env (it's set on the env for the duration of the run, scoped to the flow):
 
 ```
+
 auth {
-  bearer: {
-    token: {{token}}
-  }
+bearer: {
+token: {{token}}
 }
+}
+
 ```
 
 When you add an authenticated endpoint, copy this shape — do not hand-roll a token by pasting one in.

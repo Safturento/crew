@@ -37,7 +37,7 @@ The existing `conflict-preamble.md` content folds into the new preamble — the 
 Then re-run crew fix-pr <KEY>.
 ```
 
-This branches *before* the existing `hasUncommittedChanges` check so the user gets recovery guidance instead of the generic "commit, stash, or discard" message.
+This branches _before_ the existing `hasUncommittedChanges` check so the user gets recovery guidance instead of the generic "commit, stash, or discard" message.
 
 **Footer change**: wrapper no longer knows up-front whether a rebase happened. Capture `git rev-parse HEAD` before spawn, compare after; if HEAD changed, print the existing "inspect before pushing" advisory. Cheaper alternative if HEAD-comparison feels brittle: always print the advisory on clean exit (it's never wrong to inspect before `--force-with-lease`).
 
@@ -64,7 +64,7 @@ This branches *before* the existing `hasUncommittedChanges` check so the user ge
 ## Out of scope
 
 - Updating `sandbox-network-note.md` to remove its misleading `crew restart --hard` recommendation. Followup-worthy, separate diff.
-- Wiring `resume` to use the new `buildRebasePreamble` helper. Build modularly so resume *can* import it later, but don't wire resume up here — there's no concrete trigger yet.
+- Wiring `resume` to use the new `buildRebasePreamble` helper. Build modularly so resume _can_ import it later, but don't wire resume up here — there's no concrete trigger yet.
 - `crew run` (fresh) — confirmed it doesn't currently rebase.
 
 ## Test plan

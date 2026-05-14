@@ -19,44 +19,44 @@
 
 ### Modified code files
 
-| File | Change | Phase |
-|---|---|---|
-| `packages/dashboard/src/index.css` | Add 7 state-color CSS variables to `@theme` block (mirror the Crew DS additions); reuse existing `--color-state-*` values that survived CREW-122 token migration | A |
-| `packages/dashboard/src/components/StateBadge.tsx` | Refactor to consume `state/*` token classes (e.g. `bg-state-running`) via the new `@theme` entries; use shadcn-style CVA structure | A |
-| `packages/dashboard/src/components/AgentRow.tsx` | Replace inline `<button>` markup with `<Button variant="ghost" size="sm">` from shadcn primitive | A |
-| `packages/dashboard/src/components/TopNav.tsx`, `BrandMark.tsx`, `AgentsList.tsx`, `ProjectSection.tsx` | Spot-fix any inline shadcn-replaceable patterns surfaced during the fidelity sweep | A |
-| `packages/dashboard/src/components/AgentBody.tsx`, `StateHistoryBar.tsx`, `TokenTable.tsx`, `ViewportFrame.tsx` | Spot-fix any inline shadcn-replaceable patterns | B |
+| File                                                                                                            | Change                                                                                                                                                           | Phase |
+| --------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----- |
+| `packages/dashboard/src/index.css`                                                                              | Add 7 state-color CSS variables to `@theme` block (mirror the Crew DS additions); reuse existing `--color-state-*` values that survived CREW-122 token migration | A     |
+| `packages/dashboard/src/components/StateBadge.tsx`                                                              | Refactor to consume `state/*` token classes (e.g. `bg-state-running`) via the new `@theme` entries; use shadcn-style CVA structure                               | A     |
+| `packages/dashboard/src/components/AgentRow.tsx`                                                                | Replace inline `<button>` markup with `<Button variant="ghost" size="sm">` from shadcn primitive                                                                 | A     |
+| `packages/dashboard/src/components/TopNav.tsx`, `BrandMark.tsx`, `AgentsList.tsx`, `ProjectSection.tsx`         | Spot-fix any inline shadcn-replaceable patterns surfaced during the fidelity sweep                                                                               | A     |
+| `packages/dashboard/src/components/AgentBody.tsx`, `StateHistoryBar.tsx`, `TokenTable.tsx`, `ViewportFrame.tsx` | Spot-fix any inline shadcn-replaceable patterns                                                                                                                  | B     |
 
 ### New code files
 
-| File | Purpose | Phase |
-|---|---|---|
-| `packages/dashboard/src/components/TopNav.figma.tsx` | Code Connect mapping for Crew DS TopNav → dashboard TopNav | A |
-| `packages/dashboard/src/components/BrandMark.figma.tsx` | Code Connect mapping | A |
-| `packages/dashboard/src/components/AgentRow.figma.tsx` | Code Connect mapping | A |
-| `packages/dashboard/src/components/StateBadge.figma.tsx` | Code Connect mapping | A |
-| `packages/dashboard/src/components/ProjectSection.figma.tsx` | Code Connect mapping | A |
-| `packages/dashboard/src/components/AgentsList.figma.tsx` | Code Connect mapping | A |
-| `packages/dashboard/src/components/AgentBody.figma.tsx` | Code Connect mapping | B |
-| `packages/dashboard/src/components/StateHistoryBar.figma.tsx` | Code Connect mapping | B |
-| `packages/dashboard/src/components/TokenTable.figma.tsx` | Code Connect mapping | B |
-| `packages/dashboard/src/components/ViewportFrame.figma.tsx` | Code Connect mapping | B |
+| File                                                          | Purpose                                                    | Phase |
+| ------------------------------------------------------------- | ---------------------------------------------------------- | ----- |
+| `packages/dashboard/src/components/TopNav.figma.tsx`          | Code Connect mapping for Crew DS TopNav → dashboard TopNav | A     |
+| `packages/dashboard/src/components/BrandMark.figma.tsx`       | Code Connect mapping                                       | A     |
+| `packages/dashboard/src/components/AgentRow.figma.tsx`        | Code Connect mapping                                       | A     |
+| `packages/dashboard/src/components/StateBadge.figma.tsx`      | Code Connect mapping                                       | A     |
+| `packages/dashboard/src/components/ProjectSection.figma.tsx`  | Code Connect mapping                                       | A     |
+| `packages/dashboard/src/components/AgentsList.figma.tsx`      | Code Connect mapping                                       | A     |
+| `packages/dashboard/src/components/AgentBody.figma.tsx`       | Code Connect mapping                                       | B     |
+| `packages/dashboard/src/components/StateHistoryBar.figma.tsx` | Code Connect mapping                                       | B     |
+| `packages/dashboard/src/components/TokenTable.figma.tsx`      | Code Connect mapping                                       | B     |
+| `packages/dashboard/src/components/ViewportFrame.figma.tsx`   | Code Connect mapping                                       | B     |
 
 ### Modified docs
 
-| File | Change | Phase |
-|---|---|---|
+| File                          | Change                                                                                                                                                                                                                                                                                  | Phase |
+| ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----- |
 | `docs/plans/design-system.md` | Append a `## Component inventory` section (or extend existing) listing each new Crew DS composite with its Figma node ID, dashboard counterpart path, and `.figma.tsx` mapping path. Update Status table row for Phase 4. Add the 7 state-color semantic tokens to the Crew DS section. | A + B |
 
 ### Figma deliverables
 
-| Deliverable | File | Phase |
-|---|---|---|
-| 6 new Crew DS composite components (TopNav, BrandMark, AgentRow, AgentsList, StateBadge, ProjectSection) | Crew DS file (`DsA7QuEa2WthDATkksd1Bq`) | A |
-| 7 new state-color semantic tokens added to `Crew / Semantic Colors` collection | Crew DS file | A |
-| `Agents List (/)` frame migrated (color binding + Crew DS instance swap) | Crew Dashboard Screens (`9FeJPriqdsdA4n9R5Xsrr8`) | A |
-| 4 new Crew DS composite components (AgentBody, StateHistoryBar, TokenTable, ViewportFrame) | Crew DS file | B |
-| `Agents List (/) - Agent Drawer Open` + `Agent Page (/agent/XXX-123/full)` frames migrated | Crew Dashboard Screens | B |
+| Deliverable                                                                                              | File                                              | Phase |
+| -------------------------------------------------------------------------------------------------------- | ------------------------------------------------- | ----- |
+| 6 new Crew DS composite components (TopNav, BrandMark, AgentRow, AgentsList, StateBadge, ProjectSection) | Crew DS file (`DsA7QuEa2WthDATkksd1Bq`)           | A     |
+| 7 new state-color semantic tokens added to `Crew / Semantic Colors` collection                           | Crew DS file                                      | A     |
+| `Agents List (/)` frame migrated (color binding + Crew DS instance swap)                                 | Crew Dashboard Screens (`9FeJPriqdsdA4n9R5Xsrr8`) | A     |
+| 4 new Crew DS composite components (AgentBody, StateHistoryBar, TokenTable, ViewportFrame)               | Crew DS file                                      | B     |
+| `Agents List (/) - Agent Drawer Open` + `Agent Page (/agent/XXX-123/full)` frames migrated               | Crew Dashboard Screens                            | B     |
 
 ---
 
@@ -89,6 +89,7 @@ grep -A1 'color-state' packages/dashboard/src/index.css
 **Files:** None (Figma-only). Crew DS file: `DsA7QuEa2WthDATkksd1Bq`.
 
 The dashboard's `index.css` defines 7 state colors:
+
 - `--color-state-initializing: oklch(0.7 0.16 250)` (blue)
 - `--color-state-running: oklch(0.78 0.005 260)` (neutral-light)
 - `--color-state-idle: oklch(0.65 0.01 260)` (neutral-mid)
@@ -104,10 +105,12 @@ These need to graduate into Crew DS as semantic tokens.
 ```js
 // use_figma against Core file
 const cols = await figma.variables.getLocalVariableCollectionsAsync();
-const twColors = cols.find(c => c.name === "tw/colors");
-const vars = await Promise.all(twColors.variableIds.map(id => figma.variables.getVariableByIdAsync(id)));
+const twColors = cols.find((c) => c.name === 'tw/colors');
+const vars = await Promise.all(
+  twColors.variableIds.map((id) => figma.variables.getVariableByIdAsync(id)),
+);
 const defaultModeId = twColors.modes[0].modeId;
-return vars.map(v => ({
+return vars.map((v) => ({
   name: v.name,
   key: v.key,
   rgb: v.valuesByMode[defaultModeId],
@@ -116,15 +119,15 @@ return vars.map(v => ({
 
 - [ ] **Step 2:** Map each state color to a primitive (record this mapping for the next step):
 
-| State | OKLCH | Approx Tailwind primitive (verify via Step 1 output) |
-|---|---|---|
-| initializing | 0.7 0.16 250 | `blue/500` |
-| running | 0.78 0.005 260 | `slate/400` |
-| idle | 0.65 0.01 260 | `slate/500` |
-| waiting | 0.82 0.16 90 | `amber/400` |
-| pr-open | 0.72 0.16 295 | `violet/500` |
-| error | 0.7 0.16 25 | `red/500` |
-| finished | 0.72 0.096 150 | `emerald/500` |
+| State        | OKLCH          | Approx Tailwind primitive (verify via Step 1 output) |
+| ------------ | -------------- | ---------------------------------------------------- |
+| initializing | 0.7 0.16 250   | `blue/500`                                           |
+| running      | 0.78 0.005 260 | `slate/400`                                          |
+| idle         | 0.65 0.01 260  | `slate/500`                                          |
+| waiting      | 0.82 0.16 90   | `amber/400`                                          |
+| pr-open      | 0.72 0.16 295  | `violet/500`                                         |
+| error        | 0.7 0.16 25    | `red/500`                                            |
+| finished     | 0.72 0.096 150 | `emerald/500`                                        |
 
 (Adjust based on Step 1's actual primitives — pick the closest by L distance first, then chroma + hue.)
 
@@ -133,23 +136,23 @@ return vars.map(v => ({
 ```js
 // Pattern; populate the names + corePrimitiveKeys from Step 2 mapping
 const STATES = [
-  { name: "state/initializing", coreKey: "<key>" },
-  { name: "state/running", coreKey: "<key>" },
+  { name: 'state/initializing', coreKey: '<key>' },
+  { name: 'state/running', coreKey: '<key>' },
   // ...etc
 ];
 
 const cols = await figma.variables.getLocalVariableCollectionsAsync();
-const semantic = cols.find(c => c.name === "Crew / Semantic Colors");
-const lightId = semantic.modes.find(m => /light/i.test(m.name)).modeId;
-const darkId = semantic.modes.find(m => /dark/i.test(m.name)).modeId;
+const semantic = cols.find((c) => c.name === 'Crew / Semantic Colors');
+const lightId = semantic.modes.find((m) => /light/i.test(m.name)).modeId;
+const darkId = semantic.modes.find((m) => /dark/i.test(m.name)).modeId;
 
 const created = [];
 for (const s of STATES) {
   const corePrimitive = await figma.variables.importVariableByKeyAsync(s.coreKey);
-  const v = figma.variables.createVariable(s.name, semantic, "COLOR");
-  v.scopes = ["FRAME_FILL", "SHAPE_FILL", "STROKE_COLOR", "TEXT_FILL", "EFFECT_COLOR"];
-  v.setValueForMode(lightId, { type: "VARIABLE_ALIAS", id: corePrimitive.id });
-  v.setValueForMode(darkId, { type: "VARIABLE_ALIAS", id: corePrimitive.id });
+  const v = figma.variables.createVariable(s.name, semantic, 'COLOR');
+  v.scopes = ['FRAME_FILL', 'SHAPE_FILL', 'STROKE_COLOR', 'TEXT_FILL', 'EFFECT_COLOR'];
+  v.setValueForMode(lightId, { type: 'VARIABLE_ALIAS', id: corePrimitive.id });
+  v.setValueForMode(darkId, { type: 'VARIABLE_ALIAS', id: corePrimitive.id });
   created.push(v.id);
 }
 return { createdNodeIds: created };
@@ -173,10 +176,10 @@ return { createdNodeIds: created };
 
 ```js
 // Create a Composites page if not present
-let page = figma.root.children.find(p => p.name === "Composites");
+let page = figma.root.children.find((p) => p.name === 'Composites');
 if (!page) {
   page = figma.createPage();
-  page.name = "Composites";
+  page.name = 'Composites';
 }
 await figma.setCurrentPageAsync(page);
 
@@ -186,7 +189,7 @@ for (const child of page.children) maxX = Math.max(maxX, child.x + child.width);
 
 // Build the BrandMark component (vector path or text for the placeholder)
 const cmp = figma.createComponent();
-cmp.name = "BrandMark";
+cmp.name = 'BrandMark';
 cmp.x = maxX + 200;
 cmp.y = 0;
 cmp.resize(120, 32);
@@ -202,12 +205,16 @@ Build the component to match what the dashboard renders (load fonts as needed vi
 - [ ] **Step 5:** Author `packages/dashboard/src/components/BrandMark.figma.tsx`:
 
 ```tsx
-import { figma } from "@figma/code-connect";
-import { BrandMark } from "@/components/BrandMark";
+import { figma } from '@figma/code-connect';
+import { BrandMark } from '@/components/BrandMark';
 
-figma.connect(BrandMark, "https://www.figma.com/design/DsA7QuEa2WthDATkksd1Bq/Crew-Design-System?node-id=<id>", {
-  example: () => <BrandMark />,
-});
+figma.connect(
+  BrandMark,
+  'https://www.figma.com/design/DsA7QuEa2WthDATkksd1Bq/Crew-Design-System?node-id=<id>',
+  {
+    example: () => <BrandMark />,
+  },
+);
 ```
 
 (Replace `<id>` with the actual node ID from the script return.)
@@ -230,6 +237,7 @@ git commit -m "feat(dashboard): Code Connect mapping for BrandMark (CREW-119)"
 ### Task A.4: Build Crew DS TopNav component
 
 **Files:**
+
 - Create: `packages/dashboard/src/components/TopNav.figma.tsx`
 
 - [ ] **Step 1:** Read `packages/dashboard/src/components/TopNav.tsx` for variants and structure.
@@ -246,10 +254,10 @@ Use semantic Crew DS tokens for all colors; Core's `tw/space` / `tw/padding` for
 ```js
 // Pattern (script body — adjust per actual design)
 const cmp = figma.createComponent();
-cmp.name = "TopNav";
-cmp.layoutMode = "HORIZONTAL";
-cmp.primaryAxisAlignItems = "SPACE_BETWEEN";
-cmp.counterAxisAlignItems = "CENTER";
+cmp.name = 'TopNav';
+cmp.layoutMode = 'HORIZONTAL';
+cmp.primaryAxisAlignItems = 'SPACE_BETWEEN';
+cmp.counterAxisAlignItems = 'CENTER';
 // ... bind padding to a tw/space variable, fill to `card` semantic, etc.
 return { createdNodeIds: [cmp.id] };
 ```
@@ -270,6 +278,7 @@ git commit -m "feat(dashboard): Code Connect mapping for TopNav (CREW-119)"
 ### Task A.5: Build Crew DS StateBadge component (shared with Phase B)
 
 **Files:**
+
 - Create: `packages/dashboard/src/components/StateBadge.figma.tsx`
 
 - [ ] **Step 1:** Read `packages/dashboard/src/components/StateBadge.tsx`. Capture the CVA variant config — should map to the 7 agent states (running/error/waiting/etc.).
@@ -282,7 +291,7 @@ git commit -m "feat(dashboard): Code Connect mapping for TopNav (CREW-119)"
 
 ```js
 // Pattern: build one component per state, then combineAsVariants
-const states = ["running", "error", "waiting", "pr-open", "finished", "initializing", "idle"];
+const states = ['running', 'error', 'waiting', 'pr-open', 'finished', 'initializing', 'idle'];
 const components = [];
 for (const state of states) {
   const c = figma.createComponent();
@@ -291,7 +300,7 @@ for (const state of states) {
   components.push(c);
 }
 const set = figma.combineAsVariants(components, page);
-set.name = "StateBadge";
+set.name = 'StateBadge';
 return { createdNodeIds: [set.id] };
 ```
 
@@ -300,23 +309,27 @@ return { createdNodeIds: [set.id] };
 - [ ] **Step 5:** Author `StateBadge.figma.tsx`:
 
 ```tsx
-import { figma } from "@figma/code-connect";
-import { StateBadge } from "@/components/StateBadge";
+import { figma } from '@figma/code-connect';
+import { StateBadge } from '@/components/StateBadge';
 
-figma.connect(StateBadge, "https://www.figma.com/design/DsA7QuEa2WthDATkksd1Bq/Crew-Design-System?node-id=<id>", {
-  props: {
-    state: figma.enum("state", {
-      "running": "running",
-      "error": "error",
-      "waiting": "waiting",
-      "pr-open": "pr-open",
-      "finished": "finished",
-      "initializing": "initializing",
-      "idle": "idle",
-    }),
+figma.connect(
+  StateBadge,
+  'https://www.figma.com/design/DsA7QuEa2WthDATkksd1Bq/Crew-Design-System?node-id=<id>',
+  {
+    props: {
+      state: figma.enum('state', {
+        running: 'running',
+        error: 'error',
+        waiting: 'waiting',
+        'pr-open': 'pr-open',
+        finished: 'finished',
+        initializing: 'initializing',
+        idle: 'idle',
+      }),
+    },
+    example: ({ state }) => <StateBadge state={state} />,
   },
-  example: ({ state }) => <StateBadge state={state} />,
-});
+);
 ```
 
 - [ ] **Step 6:** Run typecheck.
@@ -331,6 +344,7 @@ git commit -m "feat(dashboard): Code Connect mapping for StateBadge (CREW-119)"
 ### Task A.6: Build Crew DS AgentRow component
 
 **Files:**
+
 - Create: `packages/dashboard/src/components/AgentRow.figma.tsx`
 
 The densest composite. Variants align with CVA in code.
@@ -357,7 +371,7 @@ for (const state of states) {
   }
 }
 const set = figma.combineAsVariants(variants, page);
-set.name = "AgentRow";
+set.name = 'AgentRow';
 return { createdNodeIds: [set.id] };
 ```
 
@@ -377,6 +391,7 @@ git commit -m "feat(dashboard): Code Connect mapping for AgentRow (CREW-119)"
 ### Task A.7: Build Crew DS ProjectSection component
 
 **Files:**
+
 - Create: `packages/dashboard/src/components/ProjectSection.figma.tsx`
 
 - [ ] **Step 1:** Read `packages/dashboard/src/components/ProjectSection.tsx`.
@@ -401,6 +416,7 @@ git commit -m "feat(dashboard): Code Connect mapping for ProjectSection (CREW-11
 ### Task A.8: Build Crew DS AgentsList component
 
 **Files:**
+
 - Create: `packages/dashboard/src/components/AgentsList.figma.tsx`
 
 - [ ] **Step 1:** Read `packages/dashboard/src/components/AgentsList.tsx`. This is the route-level container.
@@ -425,6 +441,7 @@ git commit -m "feat(dashboard): Code Connect mapping for AgentsList (CREW-119)"
 ### Task A.9: Add state-color CSS variables to dashboard `@theme`
 
 **Files:**
+
 - Modify: `packages/dashboard/src/index.css`
 
 The `--color-state-*` variables already exist in `@theme` from CREW-122 (preserved during the migration). Verify they're current, and add `--color-state-foreground` if the design needs a contrasting text color.
@@ -470,6 +487,7 @@ If unchanged, no commit needed.
 ### Task A.10: Refactor `AgentRow.tsx` to use shadcn Button
 
 **Files:**
+
 - Modify: `packages/dashboard/src/components/AgentRow.tsx`
 
 - [ ] **Step 1:** Read `AgentRow.tsx`. Identify the inline `<button>` usage (likely the row's action button — "Provide input", "Resume", "View PR", "Finish", etc.).
@@ -485,7 +503,7 @@ Expected: PASS (current state is the baseline).
 - [ ] **Step 3:** Replace inline `<button className="...">` with `<Button variant="ghost" size="sm">` (or appropriate variant — check the Figma reference). Import:
 
 ```tsx
-import { Button } from "@/components/ui/button";
+import { Button } from '@/components/ui/button';
 ```
 
 If multiple buttons exist (e.g. "Resume" and "View PR" side by side), each becomes its own `<Button>`.
@@ -524,6 +542,7 @@ git commit -m "refactor(dashboard): AgentRow uses shadcn Button primitive (CREW-
 ### Task A.11: Refactor `StateBadge.tsx` to use state-color tokens
 
 **Files:**
+
 - Modify: `packages/dashboard/src/components/StateBadge.tsx`
 
 - [ ] **Step 1:** Read current `StateBadge.tsx`. It probably already uses `bg-state-running` etc. classes (since CREW-122 preserved the tokens). Confirm.
@@ -531,23 +550,23 @@ git commit -m "refactor(dashboard): AgentRow uses shadcn Button primitive (CREW-
 - [ ] **Step 2:** Verify the CVA shape uses semantic intent (variant per state) rather than raw color values. If it currently hardcodes hex colors, refactor to use the `state-*` Tailwind classes via CVA:
 
 ```tsx
-import { cva } from "class-variance-authority";
+import { cva } from 'class-variance-authority';
 
 const stateBadgeVariants = cva(
-  "inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 text-xs font-medium",
+  'inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 text-xs font-medium',
   {
     variants: {
       state: {
-        running: "bg-state-running text-state-running-foreground",
-        error: "bg-state-error text-state-error-foreground",
-        waiting: "bg-state-waiting text-state-waiting-foreground",
-        "pr-open": "bg-state-pr-open text-state-pr-open-foreground",
-        finished: "bg-state-finished text-state-finished-foreground",
-        initializing: "bg-state-initializing text-state-initializing-foreground",
-        idle: "bg-state-idle text-state-idle-foreground",
+        running: 'bg-state-running text-state-running-foreground',
+        error: 'bg-state-error text-state-error-foreground',
+        waiting: 'bg-state-waiting text-state-waiting-foreground',
+        'pr-open': 'bg-state-pr-open text-state-pr-open-foreground',
+        finished: 'bg-state-finished text-state-finished-foreground',
+        initializing: 'bg-state-initializing text-state-initializing-foreground',
+        idle: 'bg-state-idle text-state-idle-foreground',
       },
     },
-  }
+  },
 );
 ```
 
@@ -619,14 +638,17 @@ All four expected: PASS / no visual regressions.
 - [ ] **Step 2:** Walk the frame via `use_figma` to enumerate fill-bearing nodes + their hardcoded colors:
 
 ```js
-const frame = await figma.getNodeByIdAsync("1:2");
-const nodes = frame.findAll(n =>
-  ("fills" in n) && Array.isArray(n.fills) && n.fills.some(f => f.type === "SOLID" && !f.boundVariables)
+const frame = await figma.getNodeByIdAsync('1:2');
+const nodes = frame.findAll(
+  (n) =>
+    'fills' in n &&
+    Array.isArray(n.fills) &&
+    n.fills.some((f) => f.type === 'SOLID' && !f.boundVariables),
 );
-return nodes.map(n => ({
+return nodes.map((n) => ({
   id: n.id,
   name: n.name,
-  fillColors: n.fills.filter(f => f.type === "SOLID").map(f => f.color),
+  fillColors: n.fills.filter((f) => f.type === 'SOLID').map((f) => f.color),
 }));
 ```
 
@@ -642,10 +664,9 @@ return nodes.map(n => ({
 
 ```js
 // Pattern
-const crewBg = await figma.variables.importVariableByKeyAsync("<key>");
-node.fills = node.fills.map(f => f.type === "SOLID"
-  ? figma.variables.setBoundVariableForPaint(f, "color", crewBg)
-  : f
+const crewBg = await figma.variables.importVariableByKeyAsync('<key>');
+node.fills = node.fills.map((f) =>
+  f.type === 'SOLID' ? figma.variables.setBoundVariableForPaint(f, 'color', crewBg) : f,
 );
 ```
 
@@ -702,6 +723,7 @@ The original CREW-119 ticket goal — close gaps between dashboard rendered outp
 ### Task A.16: Update `docs/plans/design-system.md` inventory
 
 **Files:**
+
 - Modify: `docs/plans/design-system.md`
 
 - [ ] **Step 1:** Add or extend a `## Component inventory` section. Each entry:
@@ -748,13 +770,16 @@ Expected: BrandMark, TopNav, StateBadge, AgentRow, ProjectSection, AgentsList (p
 - [ ] **Step 4:** Verify Agents List frame is migrated — no remaining hardcoded fills (script):
 
 ```js
-const frame = await figma.getNodeByIdAsync("1:2");
-const unbound = frame.findAll(n =>
-  ("fills" in n) && Array.isArray(n.fills) && n.fills.some(f =>
-    f.type === "SOLID" && (!f.boundVariables || !Object.keys(f.boundVariables).length)
-  )
+const frame = await figma.getNodeByIdAsync('1:2');
+const unbound = frame.findAll(
+  (n) =>
+    'fills' in n &&
+    Array.isArray(n.fills) &&
+    n.fills.some(
+      (f) => f.type === 'SOLID' && (!f.boundVariables || !Object.keys(f.boundVariables).length),
+    ),
 );
-return { unboundCount: unbound.length, samples: unbound.slice(0, 10).map(n => n.name) };
+return { unboundCount: unbound.length, samples: unbound.slice(0, 10).map((n) => n.name) };
 ```
 
 Expected: `unboundCount: 0` (or close — some text fills may stay raw if intentional).
@@ -797,10 +822,12 @@ All PASS.
 - [ ] **Step 1:** Verify StateBadge exists in Crew DS Composites page via `get_metadata`:
 
 ```js
-const page = figma.root.children.find(p => p.name === "Composites");
+const page = figma.root.children.find((p) => p.name === 'Composites');
 await figma.setCurrentPageAsync(page);
-const sb = page.findAll(n => (n.type === "COMPONENT_SET" || n.type === "COMPONENT") && n.name === "StateBadge");
-return { exists: sb.length > 0, ids: sb.map(c => c.id) };
+const sb = page.findAll(
+  (n) => (n.type === 'COMPONENT_SET' || n.type === 'COMPONENT') && n.name === 'StateBadge',
+);
+return { exists: sb.length > 0, ids: sb.map((c) => c.id) };
 ```
 
 Expected: `exists: true`. If false, Phase A wasn't merged — STOP and surface to user.
@@ -808,6 +835,7 @@ Expected: `exists: true`. If false, Phase A wasn't merged — STOP and surface t
 ### Task B.3: Build Crew DS AgentBody component
 
 **Files:**
+
 - Create: `packages/dashboard/src/components/AgentBody.figma.tsx`
 
 The drawer's main container — headers, body content, action bar.
@@ -834,6 +862,7 @@ git commit -m "feat(dashboard): Code Connect mapping for AgentBody (CREW-117)"
 ### Task B.4: Build Crew DS StateHistoryBar component
 
 **Files:**
+
 - Create: `packages/dashboard/src/components/StateHistoryBar.figma.tsx`
 
 A horizontal timeline of agent state transitions, color-coded.
@@ -860,6 +889,7 @@ git commit -m "feat(dashboard): Code Connect mapping for StateHistoryBar (CREW-1
 ### Task B.5: Build Crew DS TokenTable component
 
 **Files:**
+
 - Create: `packages/dashboard/src/components/TokenTable.figma.tsx`
 
 Tabular display of token usage per turn / per tool.
@@ -886,6 +916,7 @@ git commit -m "feat(dashboard): Code Connect mapping for TokenTable (CREW-117)"
 ### Task B.6: Build Crew DS ViewportFrame component
 
 **Files:**
+
 - Create: `packages/dashboard/src/components/ViewportFrame.figma.tsx`
 
 Device-frame wrapper for the embedded preview iframe.
@@ -912,6 +943,7 @@ git commit -m "feat(dashboard): Code Connect mapping for ViewportFrame (CREW-117
 ### Task B.7: Refactor dashboard composites for shadcn primitive consumption
 
 **Files:**
+
 - Modify: `packages/dashboard/src/components/AgentBody.tsx`
 - Modify: any of `StateHistoryBar.tsx`, `TokenTable.tsx`, `ViewportFrame.tsx` if they have inline shadcn-replaceable patterns
 
@@ -992,6 +1024,7 @@ The full-page agent view (drawer expanded to full viewport).
 ### Task B.11: Update `docs/plans/design-system.md` inventory
 
 **Files:**
+
 - Modify: `docs/plans/design-system.md`
 
 - [ ] **Step 1:** Append Phase B composites to the Component inventory section (AgentBody, StateHistoryBar, TokenTable, ViewportFrame) with their Figma node IDs.

@@ -19,16 +19,16 @@ Project-specific config for the `design-with-figma` skill (lives at `~/.claude/s
 
 ## Status
 
-| Phase                                           | Status                                                                                                                          |
-| ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
-| Phase 1 — Core library                          | Agent work complete (CREW-121); user must publish in Figma desktop                                                              |
-| Phase 2 code — shadcn install + token migration | Done (CREW-122)                                                                                                                 |
-| Phase 2 code — add primitives                   | Done (CREW-123)                                                                                                                 |
-| Phase 2 Figma — Crew DS override layer          | Agent work complete (CREW-124); user must publish in Figma desktop                                                              |
-| Phase 2 — Code Connect                          | `.figma.tsx` mapping files landed in CREW-125; `figma connect publish` intentionally skipped (see Code Connect publish section) |
-| Phase 3 — Migrate screens                       | Partial: font fix landed in CREW-126; color binding + composite swap deferred (see followups)                                   |
-| Phase 4 — Full Crew DS coverage                 | Partial: 10 of 11 composites built (6 in CREW-119 + 4 in CREW-117); only `ErrorFallback` remains. Agents-related frames (`1:2`, `1:378`, `1:1900`) migrated 2026-05-10 (dark mode + Crew DS color bindings + StateBadge instances).        |
-| Phase 5 — Skill v1 + reconciliation tooling     | Not started (separate Epic)                                                                                                     |
+| Phase                                           | Status                                                                                                                                                                                                                              |
+| ----------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Phase 1 — Core library                          | Agent work complete (CREW-121); user must publish in Figma desktop                                                                                                                                                                  |
+| Phase 2 code — shadcn install + token migration | Done (CREW-122)                                                                                                                                                                                                                     |
+| Phase 2 code — add primitives                   | Done (CREW-123)                                                                                                                                                                                                                     |
+| Phase 2 Figma — Crew DS override layer          | Agent work complete (CREW-124); user must publish in Figma desktop                                                                                                                                                                  |
+| Phase 2 — Code Connect                          | `.figma.tsx` mapping files landed in CREW-125; `figma connect publish` intentionally skipped (see Code Connect publish section)                                                                                                     |
+| Phase 3 — Migrate screens                       | Partial: font fix landed in CREW-126; color binding + composite swap deferred (see followups)                                                                                                                                       |
+| Phase 4 — Full Crew DS coverage                 | Partial: 10 of 11 composites built (6 in CREW-119 + 4 in CREW-117); only `ErrorFallback` remains. Agents-related frames (`1:2`, `1:378`, `1:1900`) migrated 2026-05-10 (dark mode + Crew DS color bindings + StateBadge instances). |
+| Phase 5 — Skill v1 + reconciliation tooling     | Not started (separate Epic)                                                                                                                                                                                                         |
 
 ## shadcn CLI version
 
@@ -135,27 +135,27 @@ Crew DS aliases all 19 standard shadcn semantic variables and 8 state tokens **d
 
 Mapping (both light and dark modes alias to the same `tw/colors` target since `tw/colors` is single-mode / mode-invariant):
 
-| Crew semantic            | → Core tw/colors target |
-| ------------------------ | ----------------------- |
-| `background`             | `slate/950`             |
-| `foreground`             | `slate/200`             |
-| `card`                   | `slate/900`             |
-| `card-foreground`        | `slate/200`             |
-| `popover`                | `slate/900`             |
-| `popover-foreground`     | `slate/200`             |
-| `primary`                | `slate/200`             |
-| `primary-foreground`     | `slate/900`             |
-| `secondary`              | `slate/800`             |
-| `secondary-foreground`   | `slate/200`             |
-| `muted`                  | `slate/800`             |
-| `muted-foreground`       | `slate/400`             |
-| `accent`                 | `slate/800`             |
-| `accent-foreground`      | `slate/200`             |
-| `destructive`            | `red/400`               |
-| `destructive-foreground` | `slate/50`              |
+| Crew semantic            | → Core tw/colors target         |
+| ------------------------ | ------------------------------- |
+| `background`             | `slate/950`                     |
+| `foreground`             | `slate/200`                     |
+| `card`                   | `slate/900`                     |
+| `card-foreground`        | `slate/200`                     |
+| `popover`                | `slate/900`                     |
+| `popover-foreground`     | `slate/200`                     |
+| `primary`                | `slate/200`                     |
+| `primary-foreground`     | `slate/900`                     |
+| `secondary`              | `slate/800`                     |
+| `secondary-foreground`   | `slate/200`                     |
+| `muted`                  | `slate/800`                     |
+| `muted-foreground`       | `slate/400`                     |
+| `accent`                 | `slate/800`                     |
+| `accent-foreground`      | `slate/200`                     |
+| `destructive`            | `red/400`                       |
+| `destructive-foreground` | `slate/50`                      |
 | `border`                 | `white` (consumers carry alpha) |
 | `input`                  | `white` (consumers carry alpha) |
-| `ring`                   | `slate/500`             |
+| `ring`                   | `slate/500`                     |
 
 State tokens use `*-400` shades to match the dashboard's lightness ~0.7 OKLCH values:
 
@@ -173,6 +173,7 @@ State tokens use `*-400` shades to match the dashboard's lightness ~0.7 OKLCH va
 `border` and `input` alias to `white` (RGB only) — consumer fills carry the alpha (e.g. screens-file fills use opacity 0.04 / 0.06 / 0.07 / 0.12 for the white-overlay pattern). This pattern is required because Figma variable aliases don't have alpha overlay built-in.
 
 **Deferred groups (untouched, still aliased through Core's `mode` collection):**
+
 - 5 `chart-*` tokens (`chart-1` through `chart-5`)
 - 8 `sidebar-*` tokens (`sidebar`, `sidebar-foreground`, …, `sidebar-ring`)
 - 4 kit-extras (`background-color`, `semantic-background`, `semantic-border`, `semantic-foreground`)
@@ -190,23 +191,26 @@ This simpler single-collection chain means the figma-design-system-propagation s
 Three patterns cover any future palette additions. Each preserves the convention that **the Tailwind class name in code matches the variable name in Figma** — designer says "I used `bg-warning`" → developer ships `bg-warning` → no translation step.
 
 **Pattern 1 — Color already in Tailwind palette.**
-- *Code:* use `bg-blue-500` directly, or hook through a semantic via `var(--color-blue-500)`
-- *Figma:* alias from Crew Semantic Colors to `Core / tw/colors / blue/500`. Or use the primitive directly without a semantic name.
+
+- _Code:_ use `bg-blue-500` directly, or hook through a semantic via `var(--color-blue-500)`
+- _Figma:_ alias from Crew Semantic Colors to `Core / tw/colors / blue/500`. Or use the primitive directly without a semantic name.
 - No new infrastructure. Current palette correction (CREW-127) is entirely Pattern 1.
 
 **Pattern 2 — Brand-new custom color not in Tailwind.**
-- *Code:* extend `@theme` block in `packages/dashboard/src/index.css`:
+
+- _Code:_ extend `@theme` block in `packages/dashboard/src/index.css`:
   ```css
   @theme {
     --color-brand-purple: #5b21b6;
   }
   ```
   Tailwind v4 auto-generates `bg-brand-purple`, `text-brand-purple`, etc.
-- *Figma:* create a `Crew / Primitives` collection (JIT — only when first needed), add `brand-purple` variable. Optional: add a Crew Semantic Colors variable aliasing to it for semantic naming.
+- _Figma:_ create a `Crew / Primitives` collection (JIT — only when first needed), add `brand-purple` variable. Optional: add a Crew Semantic Colors variable aliasing to it for semantic naming.
 
 **Pattern 3 — Custom semantic on existing Tailwind value.**
-- *Code:* extend `@theme` block: `--color-warning: var(--color-blue-500)`
-- *Figma:* add `warning` variable to Crew Semantic Colors aliasing to `tw/colors / blue/500`. Same shape as how state tokens (`state/waiting` → `tw/colors / amber/400`) work today (added in CREW-119).
+
+- _Code:_ extend `@theme` block: `--color-warning: var(--color-blue-500)`
+- _Figma:_ add `warning` variable to Crew Semantic Colors aliasing to `tw/colors / blue/500`. Same shape as how state tokens (`state/waiting` → `tw/colors / amber/400`) work today (added in CREW-119).
 
 ## Component inventory
 
@@ -216,14 +220,14 @@ Each Crew DS composite is listed with its Figma node ID (in `DsA7QuEa2WthDATkksd
 
 All six composites live on the `Composites` page in Crew DS. The Figma builds are skeleton-fidelity — names, semantic-token bindings (where applicable), and slot structure are correct; pixel polish is opportunistic and lands during follow-on visual sweeps.
 
-| Composite        | Figma node | Dashboard counterpart                                                | Code Connect mapping                                                  |
-| ---------------- | ---------- | -------------------------------------------------------------------- | --------------------------------------------------------------------- |
-| `BrandMark`      | `19:3`     | `packages/dashboard/src/components/BrandMark.tsx`                    | `packages/dashboard/src/components/BrandMark.figma.tsx`               |
-| `StateBadge` set | `20:23`    | `packages/dashboard/src/components/StateBadge.tsx`                   | `packages/dashboard/src/components/StateBadge.figma.tsx`              |
-| `TopNav`         | `21:2`     | `packages/dashboard/src/components/TopNav.tsx`                       | `packages/dashboard/src/components/TopNav.figma.tsx`                  |
-| `AgentRow`       | `21:9`     | `packages/dashboard/src/components/AgentRow.tsx`                     | `packages/dashboard/src/components/AgentRow.figma.tsx`                |
-| `ProjectSection` | `21:21`    | `packages/dashboard/src/components/ProjectSection.tsx`               | `packages/dashboard/src/components/ProjectSection.figma.tsx`          |
-| `AgentsList`     | `21:25`    | `packages/dashboard/src/components/AgentsList.tsx`                   | `packages/dashboard/src/components/AgentsList.figma.tsx`              |
+| Composite        | Figma node | Dashboard counterpart                                  | Code Connect mapping                                         |
+| ---------------- | ---------- | ------------------------------------------------------ | ------------------------------------------------------------ |
+| `BrandMark`      | `19:3`     | `packages/dashboard/src/components/BrandMark.tsx`      | `packages/dashboard/src/components/BrandMark.figma.tsx`      |
+| `StateBadge` set | `20:23`    | `packages/dashboard/src/components/StateBadge.tsx`     | `packages/dashboard/src/components/StateBadge.figma.tsx`     |
+| `TopNav`         | `21:2`     | `packages/dashboard/src/components/TopNav.tsx`         | `packages/dashboard/src/components/TopNav.figma.tsx`         |
+| `AgentRow`       | `21:9`     | `packages/dashboard/src/components/AgentRow.tsx`       | `packages/dashboard/src/components/AgentRow.figma.tsx`       |
+| `ProjectSection` | `21:21`    | `packages/dashboard/src/components/ProjectSection.tsx` | `packages/dashboard/src/components/ProjectSection.figma.tsx` |
+| `AgentsList`     | `21:25`    | `packages/dashboard/src/components/AgentsList.tsx`     | `packages/dashboard/src/components/AgentsList.figma.tsx`     |
 
 `StateBadge` is published as a **component set** with one variant per agent state (`state=initializing | running | idle | waiting | pr-open | error | finished`); the `.figma.tsx` mapping bridges Figma's kebab `pr-open` to the dashboard's snake `pr_open` via `figma.enum`. The other five are single components — Figma variant axes will grow as future fidelity tickets surface a need (e.g. AgentRow's `state` axis, TopNav's `route` axis).
 
@@ -231,12 +235,12 @@ All six composites live on the `Composites` page in Crew DS. The Figma builds ar
 
 Four additional composites added to the `Composites` page. Same skeleton-fidelity bar as CREW-119: structural slots, semantic-token bindings on fills/strokes, and representative content; pixel polish lands later.
 
-| Composite         | Figma node | Dashboard counterpart                                  | Code Connect mapping                                          |
-| ----------------- | ---------- | ------------------------------------------------------ | ------------------------------------------------------------- |
-| `AgentBody`       | `24:2`     | `packages/dashboard/src/components/AgentBody.tsx`      | `packages/dashboard/src/components/AgentBody.figma.tsx`       |
-| `StateHistoryBar` | `25:4`     | `packages/dashboard/src/components/StateHistoryBar.tsx`| `packages/dashboard/src/components/StateHistoryBar.figma.tsx` |
-| `TokenTable`      | `26:4`     | `packages/dashboard/src/components/TokenTable.tsx`     | `packages/dashboard/src/components/TokenTable.figma.tsx`      |
-| `ViewportFrame`   | `27:4`     | `packages/dashboard/src/components/ViewportFrame.tsx`  | `packages/dashboard/src/components/ViewportFrame.figma.tsx`   |
+| Composite         | Figma node | Dashboard counterpart                                   | Code Connect mapping                                          |
+| ----------------- | ---------- | ------------------------------------------------------- | ------------------------------------------------------------- |
+| `AgentBody`       | `24:2`     | `packages/dashboard/src/components/AgentBody.tsx`       | `packages/dashboard/src/components/AgentBody.figma.tsx`       |
+| `StateHistoryBar` | `25:4`     | `packages/dashboard/src/components/StateHistoryBar.tsx` | `packages/dashboard/src/components/StateHistoryBar.figma.tsx` |
+| `TokenTable`      | `26:4`     | `packages/dashboard/src/components/TokenTable.tsx`      | `packages/dashboard/src/components/TokenTable.figma.tsx`      |
+| `ViewportFrame`   | `27:4`     | `packages/dashboard/src/components/ViewportFrame.tsx`   | `packages/dashboard/src/components/ViewportFrame.figma.tsx`   |
 
 All four are single components (no Figma variant axes). `AgentBody` composes a `StateBadge` instance in its header; the body slot is a placeholder — runtime composition (Timeline / StateHistoryBar / TokenTable mounting) is tracked separately (see followup `2026-05-08 — Wire StateHistoryBar and TokenTable into AgentBody`). The dashboard's `AgentBody.tsx` was refactored in CREW-117 to consume shadcn `Button` (variant `outline` + `ghost`, size `xs`) for the View PR / Open as page / Copy worktree-path actions, replacing inline `<a>` and `<button>` markup.
 
@@ -246,16 +250,17 @@ After CREW-117, **Phase 4 has 10 of 11 composites built** — only `ErrorFallbac
 
 Four additional composites added to the `Composites` page. Built end-to-end during the CREW-131 closeout interactive session — the dashboard code (CREW-132 + CREW-133) shipped via autonomous `crew run`, then we built the matching Crew DS composites + migrated the screens-file frames in a follow-on session.
 
-| Composite           | Figma node | Dashboard counterpart                                       | Code Connect mapping                                              |
-| ------------------- | ---------- | ----------------------------------------------------------- | ----------------------------------------------------------------- |
-| `CountBadge`        | `77:28`    | `packages/dashboard/src/components/CountBadge.tsx`          | `packages/dashboard/src/components/CountBadge.figma.tsx`          |
-| `ProjectRow`        | `79:14`    | `packages/dashboard/src/components/ProjectRow.tsx`          | `packages/dashboard/src/components/ProjectRow.figma.tsx`          |
-| `ProjectHeader`     | `82:15`    | `packages/dashboard/src/components/ProjectHeader.tsx`       | `packages/dashboard/src/components/ProjectHeader.figma.tsx`       |
-| `ProjectConfigBlock`| `83:15`    | `packages/dashboard/src/components/ProjectConfigBlock.tsx`  | `packages/dashboard/src/components/ProjectConfigBlock.figma.tsx`  |
+| Composite            | Figma node | Dashboard counterpart                                      | Code Connect mapping                                             |
+| -------------------- | ---------- | ---------------------------------------------------------- | ---------------------------------------------------------------- |
+| `CountBadge`         | `77:28`    | `packages/dashboard/src/components/CountBadge.tsx`         | `packages/dashboard/src/components/CountBadge.figma.tsx`         |
+| `ProjectRow`         | `79:14`    | `packages/dashboard/src/components/ProjectRow.tsx`         | `packages/dashboard/src/components/ProjectRow.figma.tsx`         |
+| `ProjectHeader`      | `82:15`    | `packages/dashboard/src/components/ProjectHeader.tsx`      | `packages/dashboard/src/components/ProjectHeader.figma.tsx`      |
+| `ProjectConfigBlock` | `83:15`    | `packages/dashboard/src/components/ProjectConfigBlock.tsx` | `packages/dashboard/src/components/ProjectConfigBlock.figma.tsx` |
 
 `CountBadge` is published as a **component set** with one variant per agent state (`state=initializing | running | idle | waiting | pr-open | error | finished`) — same enum mapping pattern as `StateBadge`. The other three are single components. All use the canonical mid intensity (bg 10% / border 30% / text 100%) bound to Crew Semantic tokens.
 
 Notes:
+
 - `ProjectRow` composes a `CountBadge` instance (waiting variant) for the activeCount column. Designers can swap variant per-row to indicate a different state coloring.
 - `ProjectHeader`'s Edit/Remove action buttons are inline-styled (Edit = transparent + border; Remove = canonical mid destructive). They should eventually be replaced with real shadcn `Button` instances for full design-system consistency — tracked as a polish followup.
 - `ProjectConfigBlock` wraps a TOML-formatted text node in a `card`-styled frame with `border` overlay. Padding p-6 (24px), corner radius 14px to match the dashboard's `rounded-[14px]`.
@@ -278,11 +283,11 @@ The `StateBadge` set on the Crew DS Composites page is the canonical pill treatm
 
 **Canonical opacities by intensity:**
 
-| Intensity | Bg fill           | Stroke            | Text         | Dot          |
-| --------- | ----------------- | ----------------- | ------------ | ------------ |
-| `muted`   | transparent (0%)  | `state/X` at 40%  | `state/X` ✓  | `state/X` ✓  |
-| `mid` (default) | `state/X` at **10%** | `state/X` at **30%** | `state/X` ✓ | `state/X` ✓ |
-| `loud`    | `state/X` at 100% | `state/X` at 100% | `state/foreground` (slate/950) | `state/X` ✓ |
+| Intensity       | Bg fill              | Stroke               | Text                           | Dot         |
+| --------------- | -------------------- | -------------------- | ------------------------------ | ----------- |
+| `muted`         | transparent (0%)     | `state/X` at 40%     | `state/X` ✓                    | `state/X` ✓ |
+| `mid` (default) | `state/X` at **10%** | `state/X` at **30%** | `state/X` ✓                    | `state/X` ✓ |
+| `loud`          | `state/X` at 100%    | `state/X` at 100%    | `state/foreground` (slate/950) | `state/X` ✓ |
 
 `mid` is the default and what every state pill in migrated frames + composites uses today. `muted` and `loud` exist for future use (e.g. inline status indicators, full-color destructive call-out buttons).
 

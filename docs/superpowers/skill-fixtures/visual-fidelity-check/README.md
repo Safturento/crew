@@ -2,7 +2,7 @@
 
 Calibration harness for the user-scoped `visual-fidelity-check` skill (lives at `~/.claude/skills/visual-fidelity-check/`). Each fixture captures a known UI-component implementation + its Figma source-of-truth + ground-truth findings the skill should produce.
 
-The `superpowers:writing-skills` skill drives the skill's *authoring* (frontmatter shape, description, examples, loophole-closing language). This harness covers the question writing-skills can't answer empirically: **does the skill actually detect the visual mismatches it claims to detect?**
+The `superpowers:writing-skills` skill drives the skill's _authoring_ (frontmatter shape, description, examples, loophole-closing language). This harness covers the question writing-skills can't answer empirically: **does the skill actually detect the visual mismatches it claims to detect?**
 
 ## Fixture structure
 

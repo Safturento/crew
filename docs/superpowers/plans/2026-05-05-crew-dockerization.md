@@ -14,14 +14,14 @@
 
 **Ticket carve-up** (Epic + 6 child tickets):
 
-| Ticket | Tasks | Description | Blocks |
-|---|---|---|---|
-| **A — Foundation: daemon Dockerfile + env.toml + canonical compose** | 1–4 | Brings daemon up at canonical port `7773`. Seeds env.toml. | B |
-| **B — Dashboard Dockerfile + dev profile + vite proxy** | 5–7 | Brings vite up at `5173` under `--profile dev`. Proxies `/api` to daemon. | C |
-| **C — Crew TOML self-config + `.claude/settings.json` (preflight self-opt-in)** | 8–11 | Activates the preflight + sandbox baseline for `crew run CREW-*`. | D, E |
-| **D — Worktree seed mechanism** | 12–14 | `CREW_SEED_FIXTURES` branch + `packages/daemon/seeds/dev.ts`. | F |
-| **E — Playwright harness env-awareness** | 15–16 | `playwright.config.ts` reads `CREW_APP_URL`. | F |
-| **F — Documentation + memory cleanup** | 17–20 | README, CLAUDE.md, dashboard memory paragraph removal. | — |
+| Ticket                                                                          | Tasks | Description                                                               | Blocks |
+| ------------------------------------------------------------------------------- | ----- | ------------------------------------------------------------------------- | ------ |
+| **A — Foundation: daemon Dockerfile + env.toml + canonical compose**            | 1–4   | Brings daemon up at canonical port `7773`. Seeds env.toml.                | B      |
+| **B — Dashboard Dockerfile + dev profile + vite proxy**                         | 5–7   | Brings vite up at `5173` under `--profile dev`. Proxies `/api` to daemon. | C      |
+| **C — Crew TOML self-config + `.claude/settings.json` (preflight self-opt-in)** | 8–11  | Activates the preflight + sandbox baseline for `crew run CREW-*`.         | D, E   |
+| **D — Worktree seed mechanism**                                                 | 12–14 | `CREW_SEED_FIXTURES` branch + `packages/daemon/seeds/dev.ts`.             | F      |
+| **E — Playwright harness env-awareness**                                        | 15–16 | `playwright.config.ts` reads `CREW_APP_URL`.                              | F      |
+| **F — Documentation + memory cleanup**                                          | 17–20 | README, CLAUDE.md, dashboard memory paragraph removal.                    | —      |
 
 D and E run in parallel after C merges. F closes the Epic and depends on D + E.
 
@@ -238,7 +238,7 @@ services:
     build:
       context: .
       dockerfile: packages/daemon/Dockerfile
-    command: ["npm", "run", "dev", "--workspace=crew-daemon"]
+    command: ['npm', 'run', 'dev', '--workspace=crew-daemon']
     volumes:
       # Source bind-mounts for hot-reload via tsx watch
       - ./packages/daemon/src:/app/packages/daemon/src
@@ -255,9 +255,9 @@ services:
       - CREW_PORT=7773
       - CREW_SEED_FIXTURES=${CREW_SEED_FIXTURES:-0}
     ports:
-      - "${CREW_PORT:-7773}:7773"
+      - '${CREW_PORT:-7773}:7773'
     healthcheck:
-      test: ["CMD", "curl", "-fsS", "http://localhost:7773/health"]
+      test: ['CMD', 'curl', '-fsS', 'http://localhost:7773/health']
       interval: 10s
       timeout: 5s
       retries: 5
@@ -431,22 +431,22 @@ git commit -m "feat(dashboard): env-driven /api proxy in vite config"
 Add a `dashboard` service block after the `daemon` block (before `volumes:`):
 
 ```yaml
-  dashboard:
-    profiles: [dev]
-    build:
-      context: .
-      dockerfile: packages/dashboard/Dockerfile
-    command: ["npm", "run", "dev", "--workspace=crew-dashboard"]
-    volumes:
-      - ./packages/dashboard/src:/app/packages/dashboard/src
-      - /app/node_modules
-    environment:
-      - CREW_DAEMON_URL=http://daemon:7773
-    ports:
-      - "${CREW_VITE_PORT:-5173}:5173"
-    depends_on:
-      daemon:
-        condition: service_healthy
+dashboard:
+  profiles: [dev]
+  build:
+    context: .
+    dockerfile: packages/dashboard/Dockerfile
+  command: ['npm', 'run', 'dev', '--workspace=crew-dashboard']
+  volumes:
+    - ./packages/dashboard/src:/app/packages/dashboard/src
+    - /app/node_modules
+  environment:
+    - CREW_DAEMON_URL=http://daemon:7773
+  ports:
+    - '${CREW_VITE_PORT:-5173}:5173'
+  depends_on:
+    daemon:
+      condition: service_healthy
 ```
 
 - [ ] **Step 2: Bring up canonical with the dev profile and verify both services**
@@ -598,18 +598,9 @@ Create `<repo>/.claude/settings.json`:
   "sandbox": {
     "enabled": true,
     "allowUnsandboxedCommands": false,
-    "excludedCommands": [
-      "npm run bruno:smoke",
-      "npm run test:e2e"
-    ],
+    "excludedCommands": ["npm run bruno:smoke", "npm run test:e2e"],
     "filesystem": {
-      "allowWrite": [
-        "~/.npm",
-        "~/.cache/node",
-        "~/.cache/claude-cli",
-        "~/.cache/claude",
-        "/tmp"
-      ]
+      "allowWrite": ["~/.npm", "~/.cache/node", "~/.cache/claude-cli", "~/.cache/claude", "/tmp"]
     },
     "network": {
       "allowedDomains": [
@@ -748,7 +739,7 @@ docker compose down
 
 No code commit. Add a one-liner to your PR description: "Manual preflight smoke verified on YYYY-MM-DD: Check 1/2/3 all pass for crew → CREW-99 dispatch."
 
-**Ticket C done.** Crew is now opted into its own preflight machinery. Future CREW-* dispatches gate on `excludedCommands` + URL reachability + render the sandbox-network-note in agent prompts.
+**Ticket C done.** Crew is now opted into its own preflight machinery. Future CREW-\* dispatches gate on `excludedCommands` + URL reachability + render the sandbox-network-note in agent prompts.
 
 ---
 
@@ -807,7 +798,7 @@ describe('seedFixtures', () => {
     expect(runs.length).toBeGreaterThanOrEqual(4);
     expect(toolCalls.length).toBeGreaterThanOrEqual(4);
 
-    const states = new Set(agents.map((a) => a.pr_url ? 'pr_open' : 'other'));
+    const states = new Set(agents.map((a) => (a.pr_url ? 'pr_open' : 'other')));
     expect(states.has('pr_open')).toBe(true);
 
     db.destroy();
@@ -917,10 +908,34 @@ const FIXTURE_RUNS = [
 ];
 
 const FIXTURE_TOOL_CALLS = [
-  { tool_name: 'Bash', input_summary: 'npm run test:run', output_tokens: 320, input_tokens: 12, cache_read_tokens: 0 },
-  { tool_name: 'Read', input_summary: 'packages/daemon/src/serve.ts', output_tokens: 1840, input_tokens: 45, cache_read_tokens: 0 },
-  { tool_name: 'Edit', input_summary: 'packages/daemon/src/routes/agents.ts', output_tokens: 280, input_tokens: 220, cache_read_tokens: 1500 },
-  { tool_name: 'Bash', input_summary: 'npm run test:e2e', output_tokens: 510, input_tokens: 18, cache_read_tokens: 800 },
+  {
+    tool_name: 'Bash',
+    input_summary: 'npm run test:run',
+    output_tokens: 320,
+    input_tokens: 12,
+    cache_read_tokens: 0,
+  },
+  {
+    tool_name: 'Read',
+    input_summary: 'packages/daemon/src/serve.ts',
+    output_tokens: 1840,
+    input_tokens: 45,
+    cache_read_tokens: 0,
+  },
+  {
+    tool_name: 'Edit',
+    input_summary: 'packages/daemon/src/routes/agents.ts',
+    output_tokens: 280,
+    input_tokens: 220,
+    cache_read_tokens: 1500,
+  },
+  {
+    tool_name: 'Bash',
+    input_summary: 'npm run test:e2e',
+    output_tokens: 510,
+    input_tokens: 18,
+    cache_read_tokens: 800,
+  },
 ];
 
 /**
@@ -938,11 +953,7 @@ export async function seedFixtures(db: DB): Promise<void> {
     .values(FIXTURE_AGENTS.map((a) => ({ ...a, created_at: now })))
     .execute();
 
-  const insertedRuns = await db
-    .insertInto('runs')
-    .values(FIXTURE_RUNS)
-    .returning('id')
-    .execute();
+  const insertedRuns = await db.insertInto('runs').values(FIXTURE_RUNS).returning('id').execute();
 
   // Distribute tool calls across the inserted runs round-robin.
   const toolCallRows = FIXTURE_TOOL_CALLS.map((tc, i) => ({
@@ -1064,11 +1075,11 @@ Expected: FAIL — seed isn't called.
 In `packages/daemon/src/serve.ts`, between the migration line and the `buildApp` line, insert:
 
 ```ts
-  if (env.CREW_SEED_FIXTURES === '1') {
-    const { seedFixtures } = await import('../seeds/dev.js');
-    logger.info('CREW_SEED_FIXTURES=1 — loading fixtures');
-    await seedFixtures(db);
-  }
+if (env.CREW_SEED_FIXTURES === '1') {
+  const { seedFixtures } = await import('../seeds/dev.js');
+  logger.info('CREW_SEED_FIXTURES=1 — loading fixtures');
+  await seedFixtures(db);
+}
 ```
 
 The dynamic `import('../seeds/dev.js')` keeps the seed code out of production hot paths — only loaded when explicitly enabled. The `logger` was created above; the `db` is the migrated SQLite handle.
@@ -1157,9 +1168,7 @@ Replace the top-of-file constants with:
 
 ```ts
 const baseURL =
-  process.env.PLAYWRIGHT_BASE_URL ??
-  process.env.CREW_APP_URL ??
-  'http://localhost:5173';
+  process.env.PLAYWRIGHT_BASE_URL ?? process.env.CREW_APP_URL ?? 'http://localhost:5173';
 ```
 
 Drop the `PORT` constant entirely. The rest of the file stays the same — `use.baseURL: baseURL`, `webServer.url: baseURL`, etc.
@@ -1295,10 +1304,10 @@ Visit `http://localhost:5173` for hot-reload, or `http://localhost:7773` for the
 
 ### Modes
 
-| Command | Mode | When to use |
-|---|---|---|
-| `docker compose --profile dev up -d --build` | Dev (vite + tsx watch) | Active development on crew. Hot-reload across daemon + dashboard. |
-| `docker compose up -d --build` | Stable (daemon only) | Once crew has matured. Daemon serves the pre-built SPA at `:7773`. |
+| Command                                      | Mode                   | When to use                                                        |
+| -------------------------------------------- | ---------------------- | ------------------------------------------------------------------ |
+| `docker compose --profile dev up -d --build` | Dev (vite + tsx watch) | Active development on crew. Hot-reload across daemon + dashboard.  |
+| `docker compose up -d --build`               | Stable (daemon only)   | Once crew has matured. Daemon serves the pre-built SPA at `:7773`. |
 
 ### Configuration via env.toml
 
@@ -1421,7 +1430,7 @@ Crew runs as a docker compose stack locally. See [`README.md`](./README.md) for 
 Find the existing paragraph in CLAUDE.md (it talks about per-worktree port hashing). Append:
 
 ```markdown
-This rule now applies to crew itself. Crew's `docker-compose.yml` + `env.toml` use the same port-hashing convention as Recipes, so concurrent CREW-* worktree dispatches don't collide.
+This rule now applies to crew itself. Crew's `docker-compose.yml` + `env.toml` use the same port-hashing convention as Recipes, so concurrent CREW-\* worktree dispatches don't collide.
 ```
 
 - [ ] **Step 5: Commit**

@@ -19,6 +19,7 @@
 ### Task 1.1: Add `PillBase` (internal)
 
 **Files:**
+
 - Create: `packages/dashboard/src/components/ui/pill-base.tsx`
 - Create: `packages/dashboard/src/components/ui/pill-base.test.tsx`
 
@@ -38,7 +39,11 @@ describe('PillBase', () => {
     const { rerender } = render(<PillBase shape="h-5 px-2">label</PillBase>);
     expect(screen.getByText('label').tagName).toBe('SPAN');
 
-    rerender(<PillBase as="button" shape="h-8 px-3">label</PillBase>);
+    rerender(
+      <PillBase as="button" shape="h-8 px-3">
+        label
+      </PillBase>,
+    );
     expect(screen.getByText('label').tagName).toBe('BUTTON');
   });
 
@@ -62,7 +67,9 @@ describe('PillBase', () => {
 
   it('renders the icon slot before children when icon is provided', () => {
     render(
-      <PillBase shape="h-5 px-2" icon={<svg data-testid="icon" />}>label</PillBase>,
+      <PillBase shape="h-5 px-2" icon={<svg data-testid="icon" />}>
+        label
+      </PillBase>,
     );
     const el = screen.getByText('label');
     expect(el.querySelector('[data-testid="icon"]')).not.toBeNull();
@@ -71,7 +78,11 @@ describe('PillBase', () => {
   });
 
   it('exposes data-color, data-intensity, data-slot="pill" for downstream introspection', () => {
-    render(<PillBase color="waiting" intensity="loud" shape="h-5 px-2">x</PillBase>);
+    render(
+      <PillBase color="waiting" intensity="loud" shape="h-5 px-2">
+        x
+      </PillBase>,
+    );
     const el = screen.getByText('x');
     expect(el.dataset.slot).toBe('pill');
     expect(el.dataset.color).toBe('waiting');
@@ -155,6 +166,7 @@ git commit -m "feat(dashboard): add internal PillBase for Button/Badge/Tag share
 ### Task 1.2: Rewrite `Button` on top of PillBase
 
 **Files:**
+
 - Modify: `packages/dashboard/src/components/ui/button.tsx`
 - Modify: `packages/dashboard/src/components/ui/button.test.tsx`
 
@@ -175,11 +187,14 @@ describe('Button', () => {
     expect(screen.getByRole('button').tagName).toBe('BUTTON');
   });
 
-  it.each(['xs', 'sm', 'md', 'lg'] as const)('renders size=%s with the expected height class', (size) => {
-    const expectedHeight = { xs: 'h-6', sm: 'h-8', md: 'h-9', lg: 'h-10' }[size];
-    render(<Button size={size}>x</Button>);
-    expect(screen.getByRole('button').className).toContain(expectedHeight);
-  });
+  it.each(['xs', 'sm', 'md', 'lg'] as const)(
+    'renders size=%s with the expected height class',
+    (size) => {
+      const expectedHeight = { xs: 'h-6', sm: 'h-8', md: 'h-9', lg: 'h-10' }[size];
+      render(<Button size={size}>x</Button>);
+      expect(screen.getByRole('button').className).toContain(expectedHeight);
+    },
+  );
 
   it('renders the icon slot before children', () => {
     render(<Button icon={<svg data-testid="icon" />}>Resume</Button>);
@@ -298,6 +313,7 @@ git commit -m "feat(dashboard): rewrite Button on top of PillBase, 4 sizes, icon
 ### Task 1.3: Rewrite `Badge` on top of PillBase
 
 **Files:**
+
 - Modify: `packages/dashboard/src/components/ui/badge.tsx`
 - Modify: `packages/dashboard/src/components/ui/badge.test.tsx`
 
@@ -409,6 +425,7 @@ git commit -m "feat(dashboard): rewrite Badge on top of PillBase, drop hasIcon f
 ### Task 1.4: Rewrite `Tag` on top of PillBase
 
 **Files:**
+
 - Modify: `packages/dashboard/src/components/ui/tag.tsx`
 - Modify: `packages/dashboard/src/components/ui/tag.test.tsx`
 
@@ -531,6 +548,7 @@ Below are the call sites known to need migration based on PR #188's diff and the
 ### Task 2.1: AgentRow caller migration
 
 **Files:**
+
 - Modify: `packages/dashboard/src/components/AgentRow.tsx`
 
 Two distinct migrations:
@@ -543,7 +561,13 @@ Two distinct migrations:
 Locate `packages/dashboard/src/components/AgentRow.tsx:67-69` (the existing `<Badge role="status" ... intensity="muted" hasIcon>`). Replace with:
 
 ```tsx
-<Badge role="status" aria-label={meta.label} color={agent.state} intensity="mid" icon={<StateIcon state={agent.state} />}>
+<Badge
+  role="status"
+  aria-label={meta.label}
+  color={agent.state}
+  intensity="mid"
+  icon={<StateIcon state={agent.state} />}
+>
   {meta.label}
 </Badge>
 ```
@@ -619,6 +643,7 @@ git commit -m "feat(dashboard): migrate AgentRow to new Pill contract (icon slot
 ### Task 2.2: AgentBody caller migration
 
 **Files:**
+
 - Modify: `packages/dashboard/src/components/AgentBody.tsx`
 
 Same patterns as AgentRow: state-badge `intensity="muted"` → `mid` + lucide icon, "View PR" / "Open as page" buttons get leading icons (no trailing `↗`).
@@ -644,9 +669,11 @@ git commit -m "feat(dashboard): migrate AgentBody to new Pill contract"
 ### Task 2.3: TopNav caller migration
 
 **Files:**
+
 - Modify: `packages/dashboard/src/components/TopNav.tsx`
 
 PR #188's visual-fidelity-check report found two issues here (see `docs/followups.md`):
+
 - The Clear attention button currently has `intensity="mid"` + an override className with `border-white/10`. Figma's frame has NO border — should be `intensity="ghost"`, no border override.
 - The attention count badge currently uses `intensity="loud"` (solid amber). Figma uses `intensity="mid"` (hollow with stroke).
 
@@ -691,6 +718,7 @@ git commit -m "feat(dashboard): TopNav uses ghost Clear-attention button + mid c
 ### Task 2.4: Remaining callers — ProjectRow, ProjectSection, ProjectHeader, ProjectsListPage, ui/dialog
 
 **Files:**
+
 - Modify: `packages/dashboard/src/components/ProjectRow.tsx`
 - Modify: `packages/dashboard/src/components/ProjectSection.tsx`
 - Modify: `packages/dashboard/src/components/ProjectHeader.tsx`
@@ -734,6 +762,7 @@ git commit -m "feat(dashboard): migrate remaining Button callers to new Pill con
 ### Task 3.1: Update `.figma.tsx` files to expose the `Icon` INSTANCE_SWAP
 
 **Files:**
+
 - Modify: `packages/dashboard/src/components/ui/button.figma.tsx`
 - Modify: `packages/dashboard/src/components/ui/badge.figma.tsx`
 - Modify: `packages/dashboard/src/components/ui/tag.figma.tsx`
@@ -860,6 +889,7 @@ gh pr create --base main --head CREW-135 --title "feat(dashboard): Pill primitiv
 ```
 
 PR description must include:
+
 - Summary of the contract change (PillBase + wrappers, drop hasIcon, icon slot).
 - The visual-fidelity-check report (or a summary) showing zero high-severity findings.
 - Re-dispatch note: supersedes closed PR #188 + PR #177.

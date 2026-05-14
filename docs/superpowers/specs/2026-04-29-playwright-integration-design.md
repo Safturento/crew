@@ -17,10 +17,12 @@ const visualTestingSchema = z.object({
   enabled: z.literal(true),
   app_url: z.string().min(1),
   start_command: z.string().min(1).optional(),
-  authored: z.object({
-    tests_dir: z.string().min(1),
-    test_command: z.string().min(1),
-  }).optional(),
+  authored: z
+    .object({
+      tests_dir: z.string().min(1),
+      test_command: z.string().min(1),
+    })
+    .optional(),
 });
 ```
 
@@ -40,19 +42,19 @@ When `visual_testing.enabled` is true, `crew run`:
 
 Running `npm run test:e2e` headlessly requires:
 
-| Requirement | Conflict with sandbox |
-|---|---|
-| Chromium binary at `~/.cache/ms-playwright/` | Path not in `allowWrite` → install fails |
-| `playwright.azureedge.net` reachable | Not in `allowed_domains` → install fails |
+| Requirement                                                     | Conflict with sandbox                                                                        |
+| --------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| Chromium binary at `~/.cache/ms-playwright/`                    | Path not in `allowWrite` → install fails                                                     |
+| `playwright.azureedge.net` reachable                            | Not in `allowed_domains` → install fails                                                     |
 | Apt-installed system libs (`libnss3`, `libnspr4`, `libatk*`, …) | Sandbox doesn't restrict reads, but the libs aren't installed system-wide on a fresh machine |
-| Docker socket | Not exposed (and unnecessary — see §1.3) |
-| Loopback network to running stack | Assumed allowed; verified in Phase 0 (§7) |
+| Docker socket                                                   | Not exposed (and unnecessary — see §1.3)                                                     |
+| Loopback network to running stack                               | Assumed allowed; verified in Phase 0 (§7)                                                    |
 
 The agent in KAN-35 hit several of these and reported "no Docker socket access + Chromium system libs missing". The docker-socket complaint was a symptom of the agent trying `npm run docker:up` itself rather than reusing the running stack; the chromium-libs complaint was the real gap.
 
 ### 1.3 Why the docker stack isn't a problem
 
-`crew run` already brings the docker stack up *before* launching the agent and leaves it running for the agent's lifetime when `agentNeedsAppRunning` is true. The agent doesn't need to touch docker — it just needs to point Playwright at `https://localhost:<port>`. Today's prompt fragment doesn't say this loudly enough.
+`crew run` already brings the docker stack up _before_ launching the agent and leaves it running for the agent's lifetime when `agentNeedsAppRunning` is true. The agent doesn't need to touch docker — it just needs to point Playwright at `https://localhost:<port>`. Today's prompt fragment doesn't say this loudly enough.
 
 ### 1.4 What's wrong with the schema
 
@@ -60,7 +62,7 @@ The agent in KAN-35 hit several of these and reported "no Docker socket access +
 
 ## 2. Stack & rationale
 
-The work is primarily TypeScript edits inside the existing crew packages. No new runtime dependencies. The only "stack" decision is *who installs Chromium and when*:
+The work is primarily TypeScript edits inside the existing crew packages. No new runtime dependencies. The only "stack" decision is _who installs Chromium and when_:
 
 - **Crew (one-time, machine-level):** apt deps (`libnss3` etc.) added to `crew/scripts/install.sh` next to `bwrap`/`socat`. Idempotent, run when crew itself is installed.
 - **Crew (per-run, project-level):** `npx playwright install chromium` invoked from the worktree's cwd before the agent spawns. Resolves the project's pinned `@playwright/test` version automatically. Idempotent — fast on cache hit (≈1s, hash check), downloads on miss.
@@ -68,11 +70,11 @@ The work is primarily TypeScript edits inside the existing crew packages. No new
 
 This is the cleanest split because it tracks responsibility along its natural seam: machine-wide concerns are crew's, version-pinned concerns are the project's, and crew automates the version-pinned bit by running it from the project's directory.
 
-| Concern | Owner | When |
-|---|---|---|
-| System libs (`libnss3`, etc.) | Crew via `scripts/install.sh` | Once, when crew itself is installed |
-| Browser binary | Crew via `crew run` / `crew fix-pr` preflight | Every run, from the worktree |
-| `@playwright/test`, `playwright.config.ts`, `test:e2e` script | Project | Project's own concern |
+| Concern                                                       | Owner                                         | When                                |
+| ------------------------------------------------------------- | --------------------------------------------- | ----------------------------------- |
+| System libs (`libnss3`, etc.)                                 | Crew via `scripts/install.sh`                 | Once, when crew itself is installed |
+| Browser binary                                                | Crew via `crew run` / `crew fix-pr` preflight | Every run, from the worktree        |
+| `@playwright/test`, `playwright.config.ts`, `test:e2e` script | Project                                       | Project's own concern               |
 
 There is no project-side `setup-e2e.sh`. There is no template for one to ship. The project's surface for opting into Playwright collapses to: declare `[playwright]` in the crew TOML and ensure `npm install` brings in `@playwright/test`. Everything else is automatic.
 
@@ -301,6 +303,7 @@ export function agentNeedsAppRunning(config: ProjectConfig): boolean {
 ### 6.6 Prompt fragments
 
 **Rename:**
+
 - `templates/ticket-visual-smoke.md` → `templates/ticket-playwright-smoke.md`
 - `templates/ticket-visual-authored.md` → `templates/ticket-playwright-authored.md`
 
@@ -330,23 +333,25 @@ Hypothesis: it doesn't, or it works only by accident (e.g. the MCP server caches
 **Validation:** enable `[playwright.smoke]` on a Recipes worktree, dispatch a `crew run` against a UI-touching ticket, observe whether MCP playwright invocations succeed. Record the failure mode if any.
 
 **Outcomes:**
-- *Works today:* design unchanged.
-- *Doesn't work, fixed by browser install:* design unchanged (the new `npx playwright install chromium` step covers it because it runs before the agent boots).
-- *Doesn't work, needs more:* fold the additional fix into the implementation plan as added bullets in §6.
 
-**Phase 0 finding (2026-04-30):** *partial — sandbox-level test deferred.* The MCP server (`@playwright/mcp@latest --headless`) bootstraps cleanly outside the sandbox and lists 24 tools. In-sandbox tool-call validation could not be run from the autonomous CREW-57 agent (the crew worktree itself is not sandboxed; dispatching a parallel sandboxed sub-agent would have introduced too much complexity for an empirical pass). The sandbox-level confirmation is **deferred to plan Task 16** — the first authored e2e flow in β's manual gate is the natural place where browser-driving tool calls actually exercise the sandbox. If Task 16 surfaces an MCP-specific issue, fold it in as a follow-up. See [`2026-04-29-playwright-integration-phase-0-findings.md`](./2026-04-29-playwright-integration-phase-0-findings.md) §P0.1 for evidence and rationale.
+- _Works today:_ design unchanged.
+- _Doesn't work, fixed by browser install:_ design unchanged (the new `npx playwright install chromium` step covers it because it runs before the agent boots).
+- _Doesn't work, needs more:_ fold the additional fix into the implementation plan as added bullets in §6.
+
+**Phase 0 finding (2026-04-30):** _partial — sandbox-level test deferred._ The MCP server (`@playwright/mcp@latest --headless`) bootstraps cleanly outside the sandbox and lists 24 tools. In-sandbox tool-call validation could not be run from the autonomous CREW-57 agent (the crew worktree itself is not sandboxed; dispatching a parallel sandboxed sub-agent would have introduced too much complexity for an empirical pass). The sandbox-level confirmation is **deferred to plan Task 16** — the first authored e2e flow in β's manual gate is the natural place where browser-driving tool calls actually exercise the sandbox. If Task 16 surfaces an MCP-specific issue, fold it in as a follow-up. See [`2026-04-29-playwright-integration-phase-0-findings.md`](./2026-04-29-playwright-integration-phase-0-findings.md) §P0.1 for evidence and rationale.
 
 ### 7.2 P0.2 — Does Playwright write to `~/.cache/ms-playwright` at launch-time?
 
 If yes, the agent's run-time launch of Chromium fails under the current `allowWrite` list. The fix is a one-line project-side addition to `.claude/settings.json` — outside crew's scope, but must be documented.
 
-**Validation:** with sandbox enabled, install Chromium to `~/.cache/ms-playwright` *outside* the sandbox, then run `npx playwright test` *inside* the sandbox. Watch for write-permission errors.
+**Validation:** with sandbox enabled, install Chromium to `~/.cache/ms-playwright` _outside_ the sandbox, then run `npx playwright test` _inside_ the sandbox. Watch for write-permission errors.
 
 **Outcomes:**
-- *No writes at launch:* nothing more to do.
-- *Yes writes at launch:* document the required `allowWrite` addition in the architecture doc; flag for the future "crew owns settings.json" follow-up (§10).
 
-**Phase 0 finding (2026-04-30):** *confirmed — no writes at launch.* Snapshot diff of `~/.cache/ms-playwright` before/after a Playwright launch is empty (601 files, identical). Corroborated by Chromium's launch flags: `--user-data-dir=/tmp/playwright_chromiumdev_profile-*` puts writable runtime state under `/tmp` (already in `allowWrite`). No project-side `.claude/settings.json` change required. See findings doc §P0.2.
+- _No writes at launch:_ nothing more to do.
+- _Yes writes at launch:_ document the required `allowWrite` addition in the architecture doc; flag for the future "crew owns settings.json" follow-up (§10).
+
+**Phase 0 finding (2026-04-30):** _confirmed — no writes at launch._ Snapshot diff of `~/.cache/ms-playwright` before/after a Playwright launch is empty (601 files, identical). Corroborated by Chromium's launch flags: `--user-data-dir=/tmp/playwright_chromiumdev_profile-*` puts writable runtime state under `/tmp` (already in `allowWrite`). No project-side `.claude/settings.json` change required. See findings doc §P0.2.
 
 ### 7.3 P0.3 — Does Claude Code's sandbox allow loopback network without `allowedDomains` entries?
 
@@ -355,10 +360,11 @@ Assumption: yes (`127.0.0.1`/`localhost` aren't gated on DNS allowlists). If wro
 **Validation:** with sandbox enabled, attempt a Bash-tool curl from inside the agent against `https://localhost:<port>` (using Recipes' running stack). Distinguish connection-refused (loopback works, port wrong) from sandbox-blocked.
 
 **Outcomes:**
-- *Loopback allowed:* design unchanged.
-- *Loopback blocked:* widen `[sandbox] allowed_domains` in TOML to include `localhost`, `127.0.0.1`. Small TOML doc addition.
 
-**Phase 0 finding (2026-04-30):** *partial — sandbox-level test deferred.* OS-level loopback works (`https://localhost:8489/` and `https://localhost/` both return HTTP 200). Sandbox-policy-level confirmation could not be run from the autonomous CREW-57 agent (same reason as P0.1 — the crew worktree is not sandboxed; OS-level loopback returns the same result regardless of policy). The sandbox-level confirmation is **deferred to plan Task 16** — the first authored e2e flow exercises loopback from inside a real sandboxed agent. If blocked, the documented fix (add `localhost`, `127.0.0.1` to `[sandbox] allowed_domains`) is a small TOML edit. See findings doc §P0.3.
+- _Loopback allowed:_ design unchanged.
+- _Loopback blocked:_ widen `[sandbox] allowed_domains` in TOML to include `localhost`, `127.0.0.1`. Small TOML doc addition.
+
+**Phase 0 finding (2026-04-30):** _partial — sandbox-level test deferred._ OS-level loopback works (`https://localhost:8489/` and `https://localhost/` both return HTTP 200). Sandbox-policy-level confirmation could not be run from the autonomous CREW-57 agent (same reason as P0.1 — the crew worktree is not sandboxed; OS-level loopback returns the same result regardless of policy). The sandbox-level confirmation is **deferred to plan Task 16** — the first authored e2e flow exercises loopback from inside a real sandboxed agent. If blocked, the documented fix (add `localhost`, `127.0.0.1` to `[sandbox] allowed_domains`) is a small TOML edit. See findings doc §P0.3.
 
 ### 7.4 Validation by design
 

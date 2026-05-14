@@ -29,18 +29,18 @@ When `crew run <KEY>` (or `crew fix-pr <KEY>`) dispatches an agent on a backend 
 
 ## 2. Decisions reached during brainstorming
 
-| #   | Question                                                                          | Decision                                                                                                                                                                                                                  |
-| --- | --------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1   | Which projects get bruno smoke?                                                   | Per-project opt-in via TOML `[bruno_smoke]` section.                                                                                                                                                                      |
-| 2   | Tied to `[visual_testing]`?                                                       | No. Independent opt-in, independent `base_url` (no fallback to `visual_testing.app_url` — explicit is cleaner).                                                                                                           |
-| 3   | Where does the per-worktree env file live?                                        | Inside the project's own `bruno/` collection dir, under `environments/<envName>.bru`. The collection's own `.gitignore` excludes `environments/` — no `.git/info/exclude` mechanism needed.                               |
-| 4   | How does the project's smoke runner pick up the right env?                        | Crew exports `CREW_BRUNO_ENV=<envName>` in the agent's spawn env. The project's `npm run bruno:smoke` reads it (e.g. `bru run --env "$CREW_BRUNO_ENV" ...`).                                                              |
-| 5   | What is `<envName>`?                                                              | Lowercased worktree basename — same string `writeDockerEnv` produces as `composeProjectName` (e.g. `recipes-app-kan-99` for the KAN-99 worktree, `recipes-app` for the canonical worktree). One stable name per worktree. |
-| 6   | Docker lifecycle?                                                                 | Refactor today's `stopAfterBringup = !visualTestingEnabled` into a single `agentNeedsAppRunning(config)` predicate composed from `visual_testing` OR `bruno_smoke`.                                                       |
-| 7   | One prompt fragment or two?                                                       | Two — `ticket-bruno-smoke.md` (for `crew run`) and `fix-pr-bruno-smoke.md` (for `crew fix-pr`). Each instructs the agent to run smoke and to author/update `.bru` files when endpoints change.                            |
-| 8   | Where does the "update `.bru` when touching endpoints" rule live durably?         | A small `bruno-collection-maintenance` skill at `~/.claude/skills/`, picked up by `discoverSkills()`. The skill triggers on HTTP-route authorship in any project that has a `bruno/` directory.                           |
-| 9   | Module location?                                                                  | `packages/cli/src/lib/bruno-smoke/` — parallels `packages/cli/src/lib/visual-testing/`. When `crew-shared` gets bootstrapped (Phase 1.5), this module relocates with no API change — same as the visual-testing precedent. |
-| 10  | DRY with visual-testing's `resolveAppUrl`?                                        | Reuse. `bruno-smoke` imports `resolveAppUrl` from `../visual-testing/index.js`. Generalising into a shared `url-substitution` helper is YAGNI until a third caller emerges.                                               |
+| #   | Question                                                                  | Decision                                                                                                                                                                                                                   |
+| --- | ------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | Which projects get bruno smoke?                                           | Per-project opt-in via TOML `[bruno_smoke]` section.                                                                                                                                                                       |
+| 2   | Tied to `[visual_testing]`?                                               | No. Independent opt-in, independent `base_url` (no fallback to `visual_testing.app_url` — explicit is cleaner).                                                                                                            |
+| 3   | Where does the per-worktree env file live?                                | Inside the project's own `bruno/` collection dir, under `environments/<envName>.bru`. The collection's own `.gitignore` excludes `environments/` — no `.git/info/exclude` mechanism needed.                                |
+| 4   | How does the project's smoke runner pick up the right env?                | Crew exports `CREW_BRUNO_ENV=<envName>` in the agent's spawn env. The project's `npm run bruno:smoke` reads it (e.g. `bru run --env "$CREW_BRUNO_ENV" ...`).                                                               |
+| 5   | What is `<envName>`?                                                      | Lowercased worktree basename — same string `writeDockerEnv` produces as `composeProjectName` (e.g. `recipes-app-kan-99` for the KAN-99 worktree, `recipes-app` for the canonical worktree). One stable name per worktree.  |
+| 6   | Docker lifecycle?                                                         | Refactor today's `stopAfterBringup = !visualTestingEnabled` into a single `agentNeedsAppRunning(config)` predicate composed from `visual_testing` OR `bruno_smoke`.                                                        |
+| 7   | One prompt fragment or two?                                               | Two — `ticket-bruno-smoke.md` (for `crew run`) and `fix-pr-bruno-smoke.md` (for `crew fix-pr`). Each instructs the agent to run smoke and to author/update `.bru` files when endpoints change.                             |
+| 8   | Where does the "update `.bru` when touching endpoints" rule live durably? | A small `bruno-collection-maintenance` skill at `~/.claude/skills/`, picked up by `discoverSkills()`. The skill triggers on HTTP-route authorship in any project that has a `bruno/` directory.                            |
+| 9   | Module location?                                                          | `packages/cli/src/lib/bruno-smoke/` — parallels `packages/cli/src/lib/visual-testing/`. When `crew-shared` gets bootstrapped (Phase 1.5), this module relocates with no API change — same as the visual-testing precedent. |
+| 10  | DRY with visual-testing's `resolveAppUrl`?                                | Reuse. `bruno-smoke` imports `resolveAppUrl` from `../visual-testing/index.js`. Generalising into a shared `url-substitution` helper is YAGNI until a third caller emerges.                                                |
 
 ## 3. Architecture
 
@@ -177,10 +177,7 @@ export interface BrunoSmokeUser {
   password: string;
 }
 
-export function buildEnvFileContent(opts: {
-  baseUrl: string;
-  smokeUser?: BrunoSmokeUser;
-}): string;
+export function buildEnvFileContent(opts: { baseUrl: string; smokeUser?: BrunoSmokeUser }): string;
 
 export function writeEnvFile(
   worktreePath: string,
@@ -241,8 +238,8 @@ The current renderer (`packages/cli/src/lib/prompts/render.ts`) is plain `{{var}
 
 ```ts
 export interface BrunoSmokePromptOptions {
-  baseUrl: string;     // resolved (placeholders substituted)
-  envName: string;     // exported as CREW_BRUNO_ENV
+  baseUrl: string; // resolved (placeholders substituted)
+  envName: string; // exported as CREW_BRUNO_ENV
   hasSmokeUser: boolean;
 }
 ```
@@ -256,7 +253,6 @@ The block renders to an empty string when `brunoSmoke` is `undefined`, preservin
 **Smoke fragment for `crew run` (`ticket-bruno-smoke.md`):**
 
 ```markdown
-
 ## API smoke verification (Bruno)
 
 This project has a Bruno collection at `{{collectionDir}}/`. The worktree's API runs at **{{baseUrl}}**, and crew has generated `{{collectionDir}}/environments/{{envName}}.bru` with `baseUrl`{{testUserClause}} for you. The environment is exported as `CREW_BRUNO_ENV={{envName}}` in your spawn env.
@@ -274,7 +270,6 @@ The `bruno-collection-maintenance` skill (auto-discovered) covers naming convent
 **Fix-pr fragment (`fix-pr-bruno-smoke.md`):**
 
 ```markdown
-
 ## API smoke verification (Bruno)
 
 This project has a Bruno collection at `{{collectionDir}}/`. Crew already generated `{{collectionDir}}/environments/{{envName}}.bru` (pointing at **{{baseUrl}}**) for the original run. `CREW_BRUNO_ENV={{envName}}` is set in your env.
@@ -396,7 +391,7 @@ A new "Bruno smoke tests (per project)" subsection under "Setup" in the crew REA
 
 1. CREW-bruno-α first, alone.
 2. CREW-bruno-β, CREW-bruno-γ, and CREW-bruno-skill in parallel after α merges. (γ touches `fix-pr.ts` and `fix-pr.md`; β touches `run.ts` and `ticket.md`; the skill is off-repo. No file overlap.)
-3. The two prerequisite collection tickets (Recipes + crew daemon) can run any time after α — they only gate the *value* of β/γ in their respective repos, not β/γ's own merge.
+3. The two prerequisite collection tickets (Recipes + crew daemon) can run any time after α — they only gate the _value_ of β/γ in their respective repos, not β/γ's own merge.
 
 ## 13. Open questions / things to revisit
 

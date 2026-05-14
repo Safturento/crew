@@ -11,7 +11,7 @@ The Crew dispatch agent already has a working screenshot tool (Playwright MCP in
 - A **source-of-truth reference** to compare its rendered output against
 - A **structured workflow** that forces a real comparison instead of self-graded eyeballing
 
-CREW-135 illustrates the gap. The agent ran `npm run build`, used Playwright MCP to navigate to the dashboard, screenshotted the agent drawer, and reported in the PR description: *"Visual smoke via Playwright MCP at http://localhost:23655 — agents list, agent drawer, and projects list all render correctly. Buttons + badges show the right colors per state."* User review revealed outline missing, wrong icons, off padding — visual regressions the agent had no way to detect because it had nothing to compare against.
+CREW-135 illustrates the gap. The agent ran `npm run build`, used Playwright MCP to navigate to the dashboard, screenshotted the agent drawer, and reported in the PR description: _"Visual smoke via Playwright MCP at http://localhost:23655 — agents list, agent drawer, and projects list all render correctly. Buttons + badges show the right colors per state."_ User review revealed outline missing, wrong icons, off padding — visual regressions the agent had no way to detect because it had nothing to compare against.
 
 Code Connect `.figma.tsx` files already encode `Component → Figma URL + node ID`. That mapping was authored for human-facing documentation, but it's also exactly the manifest an agent needs to fetch a per-component source-of-truth reference. This spec turns that incidental mapping into operational metadata for an agent self-verification loop.
 
@@ -118,18 +118,18 @@ If the worktree has no `.crew/visual-fidelity.json` (or the project opts out by 
     {
       "name": "type=button-sm, color=running, intensity=mid",
       "resolvedStyles": {
-        "fills": [
-          { "type": "SOLID", "tokenAlias": "tw/colors/slate/1050", "hex": "#0F172A1A" }
-        ],
-        "strokes": [
-          { "tokenAlias": "tw/colors/slate/500", "hex": "#64748B", "weight": 1 }
-        ],
+        "fills": [{ "type": "SOLID", "tokenAlias": "tw/colors/slate/1050", "hex": "#0F172A1A" }],
+        "strokes": [{ "tokenAlias": "tw/colors/slate/500", "hex": "#64748B", "weight": 1 }],
         "textColor": { "tokenAlias": "tw/colors/slate/400", "hex": "#94A3B8" }
       },
       "geometry": {
-        "height": 32, "paddingTop": 6, "paddingRight": 12,
-        "paddingBottom": 6, "paddingLeft": 12,
-        "cornerRadius": 6, "itemSpacing": 6
+        "height": 32,
+        "paddingTop": 6,
+        "paddingRight": 12,
+        "paddingBottom": 6,
+        "paddingLeft": 12,
+        "cornerRadius": 6,
+        "itemSpacing": 6
       },
       "font": { "family": "Hanken Grotesk", "weight": "Medium", "size": 14 }
     }
@@ -184,7 +184,7 @@ If a future use case needs the agent itself to call Figma (e.g., agent decides t
   "snapshotPath": ".crew/figma-snapshot",
   "dashboardUrl": "http://localhost:23655",
   "componentDir": "packages/dashboard/src/components",
-  "codeConnectGlob": "**/*.figma.tsx"
+  "codeConnectGlob": "**/*.figma.tsx",
 }
 ```
 
@@ -192,7 +192,7 @@ Resolves variables like `${DASHBOARD_URL}` from `env.toml` if present (same mate
 
 ### Skill workflow (when fired)
 
-The skill is a **mandatory pre-completion gate** for any task that touches files matching the project's `componentDir` or that creates/modifies `.figma.tsx` files. The dispatch prompt instructs the agent: *"Before claiming any UI-touching task complete, invoke the `visual-fidelity-check` skill."*
+The skill is a **mandatory pre-completion gate** for any task that touches files matching the project's `componentDir` or that creates/modifies `.figma.tsx` files. The dispatch prompt instructs the agent: _"Before claiming any UI-touching task complete, invoke the `visual-fidelity-check` skill."_
 
 Inside the skill, the agent runs through this loop:
 
@@ -208,7 +208,7 @@ Inside the skill, the agent runs through this loop:
 
 - Not a substitute for the existing `npm run typecheck`/`lint`/`test`/`build` gates — those still run first.
 - Not a pixel-diff tool. The visual check is agent-driven structural-text comparison ("does the screenshot have a visible border?"), not perceptual hashing. Tradeoff: catches the class of issues that bit CREW-135 (outline missing, wrong icons) without the operational cost of a real diff engine.
-- Not a replacement for human review. Final PR review remains the user's. The skill catches the *self-graded* false positives.
+- Not a replacement for human review. Final PR review remains the user's. The skill catches the _self-graded_ false positives.
 
 ### Skill structure
 
@@ -225,7 +225,7 @@ Inside the skill, the agent runs through this loop:
 
 ### Authoring approach
 
-The skill is authored using the `superpowers:writing-skills` skill — its conventions drive the SKILL.md frontmatter shape, description-writing rules ("loophole-closing language", positive trigger phrases that match user intent, not jargon), example structure, and the discovery process for known-good vs known-bad invocation cases. The validation harness below is an *additional* step on top of standard skill-writing, not a replacement — `writing-skills` covers "is the skill discoverable and well-shaped"; the harness covers "does the skill actually detect the visual mismatches it claims to detect".
+The skill is authored using the `superpowers:writing-skills` skill — its conventions drive the SKILL.md frontmatter shape, description-writing rules ("loophole-closing language", positive trigger phrases that match user intent, not jargon), example structure, and the discovery process for known-good vs known-bad invocation cases. The validation harness below is an _additional_ step on top of standard skill-writing, not a replacement — `writing-skills` covers "is the skill discoverable and well-shaped"; the harness covers "does the skill actually detect the visual mismatches it claims to detect".
 
 In practice this means the implementation order is:
 
@@ -237,7 +237,7 @@ In practice this means the implementation order is:
 
 ### Purpose
 
-The `superpowers:writing-skills` skill ensures the skill is well-shaped (clear trigger, good description, no loopholes that let agents skip it). What it can't tell us is whether the skill actually *works* — whether the workflow it codifies catches real visual mismatches. The harness covers that second question.
+The `superpowers:writing-skills` skill ensures the skill is well-shaped (clear trigger, good description, no loopholes that let agents skip it). What it can't tell us is whether the skill actually _works_ — whether the workflow it codifies catches real visual mismatches. The harness covers that second question.
 
 A skill's prompt is its surface; like any prompt, it can be precise or vague. Without testing, "the skill exists" doesn't mean "the skill catches the failures it's meant to catch". The harness lets us:
 
@@ -268,6 +268,7 @@ A skill's prompt is its surface; like any prompt, it can be precise or vague. Wi
 # CREW-135 fixture (T1 Pill primitives)
 
 PR #177 shipped with these regressions vs Figma:
+
 - Outline (border) missing on `<Button color="running" intensity="mid">` — code uses `border-transparent`, Figma binds `border-slate-500`
 - Icon component for close button (button-icon-sm/running/ghost) renders the default git-pull-request glyph instead of lucide/x
 - Padding on `<Button size="sm">` is 8px each side; Figma spec is 12/6
@@ -295,7 +296,7 @@ Seed the harness with the actual CREW-135 PR state. Its visual regressions are r
 ### `crew run` modifications
 
 1. **Pre-dispatch.** After env materialization and worktree prep, call `crew figma-snapshot --out <worktree>/.crew/figma-snapshot` if the worktree has `.crew/visual-fidelity.json`. Pipe output to `/tmp/crew-figma-snapshot-<KEY>.log` to match the existing `/tmp/crew-docker-<KEY>.log` + `/tmp/crew-playwright-<KEY>.log` pattern. Surface a one-line "snapshot generated (~N nodes)" or error-summary line in the `crew run` stream.
-2. **Run-prompt.** Append a "Visual verification gate" section to the dispatched agent's run prompt: *"Before claiming any UI-touching task complete (file changes under `<componentDir>`), invoke the `visual-fidelity-check` skill. The skill expects to find a snapshot at `<snapshotPath>` (already generated for this run) and project config at `<repo>/.crew/visual-fidelity.json`."*
+2. **Run-prompt.** Append a "Visual verification gate" section to the dispatched agent's run prompt: _"Before claiming any UI-touching task complete (file changes under `<componentDir>`), invoke the `visual-fidelity-check` skill. The skill expects to find a snapshot at `<snapshotPath>` (already generated for this run) and project config at `<repo>/.crew/visual-fidelity.json`."_
 
 ### `.claude/settings.json` updates
 

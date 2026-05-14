@@ -1,6 +1,6 @@
 # `crew fix-pr` — defer env prep to the dispatched agent
 
-> **Purpose.** Eliminate the residual dead-zone where `crew fix-pr` cannot bring up the docker stack against a worktree whose source is too stale to boot, blocking the agent that was supposed to fix it. Extends the design intent of [CREW-110](https://safturento.atlassian.net/browse/CREW-110), which moved the *rebase* into the agent but left the rest of `prepareAgentEnvironment` (docker bringup, playwright install, preflight) blocking pre-spawn — same wedge, different cause.
+> **Purpose.** Eliminate the residual dead-zone where `crew fix-pr` cannot bring up the docker stack against a worktree whose source is too stale to boot, blocking the agent that was supposed to fix it. Extends the design intent of [CREW-110](https://safturento.atlassian.net/browse/CREW-110), which moved the _rebase_ into the agent but left the rest of `prepareAgentEnvironment` (docker bringup, playwright install, preflight) blocking pre-spawn — same wedge, different cause.
 >
 > Read [`docs/plans/architecture.md`](../../plans/architecture.md) for system context, the [CREW-110 commit message](https://github.com/Safturento/crew/commit/2c5bd59) for the prior iteration, and [`packages/cli/src/lib/prompts/templates/rebase-preamble.md`](../../../packages/cli/src/lib/prompts/templates/rebase-preamble.md) for the current Step-0 contract this spec extends.
 >
@@ -22,22 +22,22 @@ The docker log showed `crew-crew-111-daemon-1 Error dependency daemon failed to 
 
 ### 1.2 What CREW-110 actually fixed
 
-CREW-110's commit message claims it eliminated "the dead-zone where a wrapper-side rebase hit conflicts, broke the daemon's source mid-bringup, and stranded the worktree with no agent on hand to resolve." That's true for *one* class of stranding: the wrapper used to rebase pre-spawn, which could break source mid-bringup.
+CREW-110's commit message claims it eliminated "the dead-zone where a wrapper-side rebase hit conflicts, broke the daemon's source mid-bringup, and stranded the worktree with no agent on hand to resolve." That's true for _one_ class of stranding: the wrapper used to rebase pre-spawn, which could break source mid-bringup.
 
-What it missed: the wrapper still calls `prepareAgentEnvironment` *before* spawning the agent (`packages/cli/src/commands/fix-pr.ts:198`). That function blocks on `ensureStackRunning` (`packages/cli/src/lib/run/agent-environment.ts:71-78`). If the worktree was *already* stale enough that the un-rebased source can't boot the daemon, the same stranding happens — different cause, same effect.
+What it missed: the wrapper still calls `prepareAgentEnvironment` _before_ spawning the agent (`packages/cli/src/commands/fix-pr.ts:198`). That function blocks on `ensureStackRunning` (`packages/cli/src/lib/run/agent-environment.ts:71-78`). If the worktree was _already_ stale enough that the un-rebased source can't boot the daemon, the same stranding happens — different cause, same effect.
 
 ### 1.3 Why this is a recurring class of bug
 
 `prepareAgentEnvironment` runs four worktree-state-dependent operations pre-spawn:
 
-| Operation | Why it can fail on a stale worktree | File |
-|---|---|---|
-| `ensureStackRunning` | Compose file or daemon source diverged from main | `packages/cli/src/lib/docker/ensure-stack-running.ts` |
-| `installPlaywrightBrowsers` | `package.json` deps differ from main | `packages/cli/src/lib/playwright/install.ts` |
-| `probe-app-urls` preflight | Depends on docker being up | `packages/cli/src/lib/preflight/probe-app-urls.ts` |
-| `verify-excluded-commands` preflight | `.claude/settings.json` may be stale | `packages/cli/src/lib/preflight/verify-excluded-commands.ts` |
+| Operation                            | Why it can fail on a stale worktree              | File                                                         |
+| ------------------------------------ | ------------------------------------------------ | ------------------------------------------------------------ |
+| `ensureStackRunning`                 | Compose file or daemon source diverged from main | `packages/cli/src/lib/docker/ensure-stack-running.ts`        |
+| `installPlaywrightBrowsers`          | `package.json` deps differ from main             | `packages/cli/src/lib/playwright/install.ts`                 |
+| `probe-app-urls` preflight           | Depends on docker being up                       | `packages/cli/src/lib/preflight/probe-app-urls.ts`           |
+| `verify-excluded-commands` preflight | `.claude/settings.json` may be stale             | `packages/cli/src/lib/preflight/verify-excluded-commands.ts` |
 
-All four are symptoms of "the worktree is behind main." All four would succeed after a rebase. Running them pre-spawn means *any* of them can wedge the wrapper before the agent rebases. CREW-110 fixed the rebase ordering; this spec finishes the job for the rest of `prepareAgentEnvironment`.
+All four are symptoms of "the worktree is behind main." All four would succeed after a rebase. Running them pre-spawn means _any_ of them can wedge the wrapper before the agent rebases. CREW-110 fixed the rebase ordering; this spec finishes the job for the rest of `prepareAgentEnvironment`.
 
 ## 2. Scope
 
@@ -101,16 +101,16 @@ No structural change — still includes `{{rebasePreamble}}` at the top. The new
 
 ### 3.4 Where each preflight responsibility lands
 
-| Concern | Today | After this change |
-|---|---|---|
-| Docker bringup | Wrapper, blocking, fatal | Agent (Step 0.5) |
-| Playwright install | Wrapper, blocking, fatal | Agent (Step 0.5) |
-| URL probe | Wrapper preflight, fatal | Dropped (redundant — `docker compose up --wait` proves reachability) |
-| `excludedCommands` verify | Wrapper preflight, fatal | Wrapper preflight, **non-fatal warn** |
+| Concern                   | Today                    | After this change                                                    |
+| ------------------------- | ------------------------ | -------------------------------------------------------------------- |
+| Docker bringup            | Wrapper, blocking, fatal | Agent (Step 0.5)                                                     |
+| Playwright install        | Wrapper, blocking, fatal | Agent (Step 0.5)                                                     |
+| URL probe                 | Wrapper preflight, fatal | Dropped (redundant — `docker compose up --wait` proves reachability) |
+| `excludedCommands` verify | Wrapper preflight, fatal | Wrapper preflight, **non-fatal warn**                                |
 
 ## 4. Failure-mode analysis
 
-The user's review concern: *will the agent be able to recover from every state the wrapper currently catches, or are we losing safety?* Walked through case-by-case:
+The user's review concern: _will the agent be able to recover from every state the wrapper currently catches, or are we losing safety?_ Walked through case-by-case:
 
 - **Worktree stale → docker fails** (the reproduction). Today: wrapper wedges, user blocked. After: agent rebases, runs `docker compose up`, succeeds.
 - **Worktree stale → playwright install fails** (e.g., `package.json` differs). Today: wrapper wedges. After: agent rebases first, then install picks up current deps.
@@ -119,7 +119,7 @@ The user's review concern: *will the agent be able to recover from every state t
 - **Port collision with another stack**. Today: wrapper wedges. After: agent's Step 0.5 fails; agent aborts and documents. **Same human action either way.** (Worth a separate followup: port-allocator should detect collisions at port-assignment time, not at compose-up time. Not in this spec.)
 - **Settings.json genuinely missing on a project that needs it** (not a stale-worktree issue). Today: wrapper hard-fails with a clear message. After: wrapper warns; agent's `npm run bruno:smoke` fails inside sandbox with a less-clear error. **Mild regression** in error clarity for this case. Acceptable because (a) it only happens for net-new project setup, and (b) the warning message points at the underlying check.
 
-Net: failure modes that were genuinely irrecoverable still require human action; failure modes that the agent *could* fix by rebasing now actually get fixed.
+Net: failure modes that were genuinely irrecoverable still require human action; failure modes that the agent _could_ fix by rebasing now actually get fixed.
 
 ## 5. Testing
 

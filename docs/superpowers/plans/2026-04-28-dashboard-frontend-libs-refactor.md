@@ -15,7 +15,7 @@
 
 **Out of scope (will be subsequent work, not in this plan):**
 
-- Adopting `sonner`, Radix UI, or RHF + Zod — these are documented choices for *future feature tickets*, not this refactor.
+- Adopting `sonner`, Radix UI, or RHF + Zod — these are documented choices for _future feature tickets_, not this refactor.
 - Adopting Zustand for cross-route state. Deferred per spec §4.
 - Refactoring single-axis className ternaries (`NavTab`, `useAttention`).
 - Adding new tests beyond what each refactor needs to maintain coverage and verify the new behavior (error boundary path; static-class verification).
@@ -56,6 +56,7 @@ packages/dashboard/
 ### Task A1: Install dependencies
 
 **Files:**
+
 - Modify: `packages/dashboard/package.json` — add `@tanstack/react-query`, `react-error-boundary` to `dependencies`.
 
 - [ ] **Step 1: Add dependencies**
@@ -93,6 +94,7 @@ git commit -m "chore(dashboard): add @tanstack/react-query and react-error-bound
 ### Task A2: Add a test-render helper that provides a QueryClient
 
 **Files:**
+
 - Create: `packages/dashboard/src/test/renderWithProviders.tsx`
 
 The existing tests call `render(<App ... />)` directly. Once App.tsx uses `useQuery`, every test needs a `QueryClient`. Build the helper first so subsequent tests can use it.
@@ -151,6 +153,7 @@ git commit -m "test(dashboard): add renderWithProviders helper with QueryClient"
 ### Task A3: Create the ErrorFallback component (TDD)
 
 **Files:**
+
 - Create: `packages/dashboard/src/components/ErrorFallback.tsx`
 - Create: `packages/dashboard/src/components/ErrorFallback.test.tsx`
 
@@ -205,7 +208,10 @@ export function ErrorFallback({ error, resetErrorBoundary }: FallbackProps) {
   const message = error instanceof Error ? error.message : String(error);
   return (
     <div className="mx-auto flex w-full max-w-[1240px] flex-col gap-4 p-6">
-      <div role="alert" className="rounded-[14px] border border-state-error/40 bg-state-error/10 px-6 py-8">
+      <div
+        role="alert"
+        className="rounded-[14px] border border-state-error/40 bg-state-error/10 px-6 py-8"
+      >
         <p className="font-mono text-xs text-state-error">DASHBOARD ERROR</p>
         <p className="mt-1 text-2xl font-semibold tracking-tight text-text">Something went wrong</p>
         <p className="mt-3 break-words text-sm text-text-2">{message}</p>
@@ -242,6 +248,7 @@ git commit -m "feat(dashboard): add ErrorFallback component for error boundary"
 ### Task A4: Wire QueryClientProvider at the app root
 
 **Files:**
+
 - Modify: `packages/dashboard/src/main.tsx`
 
 Production build needs a real `QueryClient` at the root. App.tsx will start using `useQuery` in Task A5, so this wiring lands first to keep the tree consistent.
@@ -316,10 +323,11 @@ git commit -m "feat(dashboard): mount QueryClientProvider at app root"
 ### Task A5: Replace App's useState/useEffect block with useQuery (TDD)
 
 **Files:**
+
 - Modify: `packages/dashboard/src/App.tsx`
 - Modify: `packages/dashboard/src/App.test.tsx`
 
-Existing App tests already assert that `kanban-api` and `KAN-31` render — those become the green test for the `useQuery` path. We update App.test.tsx to use `renderWithProviders` *first*, watch the existing assertions go red (because App still has its old data-loading code that doesn't read from React Query yet), then switch App to `useQuery`.
+Existing App tests already assert that `kanban-api` and `KAN-31` render — those become the green test for the `useQuery` path. We update App.test.tsx to use `renderWithProviders` _first_, watch the existing assertions go red (because App still has its old data-loading code that doesn't read from React Query yet), then switch App to `useQuery`.
 
 - [ ] **Step 1: Update App.test.tsx to use renderWithProviders**
 
@@ -517,10 +525,11 @@ git commit -m "refactor(dashboard): replace App fetch effect with useQuery"
 ### Task A6: Wrap App body in ErrorBoundary + add boundary test (TDD)
 
 **Files:**
+
 - Modify: `packages/dashboard/src/App.tsx`
 - Modify: `packages/dashboard/src/App.test.tsx`
 
-`throwOnError: true` is set globally in main.tsx (Task A4). The boundary needs to live *inside* `<App>` so the fallback renders inside the viewport frame and so tests can exercise it without mounting `main.tsx`.
+`throwOnError: true` is set globally in main.tsx (Task A4). The boundary needs to live _inside_ `<App>` so the fallback renders inside the viewport frame and so tests can exercise it without mounting `main.tsx`.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -575,25 +584,25 @@ import { ErrorFallback } from './components/ErrorFallback.js';
 Replace the return block in `App` to wrap the routed body:
 
 ```tsx
-  const { reset } = useQueryErrorResetBoundary();
+const { reset } = useQueryErrorResetBoundary();
 
-  return (
-    <ViewportFrame>
-      <TopNav
-        route={route}
-        attentionCount={attention.count}
-        onClearAttention={attention.clear}
-        onNewRun={() => {
-          /* New Run modal lands in a future plan */
-        }}
-      />
-      <div className="flex-1 overflow-y-auto">
-        <ErrorBoundary FallbackComponent={ErrorFallback} onReset={reset}>
-          {body}
-        </ErrorBoundary>
-      </div>
-    </ViewportFrame>
-  );
+return (
+  <ViewportFrame>
+    <TopNav
+      route={route}
+      attentionCount={attention.count}
+      onClearAttention={attention.clear}
+      onNewRun={() => {
+        /* New Run modal lands in a future plan */
+      }}
+    />
+    <div className="flex-1 overflow-y-auto">
+      <ErrorBoundary FallbackComponent={ErrorFallback} onReset={reset}>
+        {body}
+      </ErrorBoundary>
+    </div>
+  </ViewportFrame>
+);
 ```
 
 Note: `useQueryErrorResetBoundary` is called from App's body (it's a hook). The `onReset` integration ensures clicking Retry resets the query cache so the queries refetch.
@@ -641,6 +650,7 @@ npm run --workspace crew-dashboard dev
 ```
 
 In the browser:
+
 - Confirm agents list renders with the mock fixtures.
 - Confirm clicking an agent row routes to the detail placeholder.
 - Confirm Clear attention works.
@@ -670,6 +680,7 @@ git checkout -- packages/dashboard/src/data/MockDaemonClient.ts
 ### Task B1: Install cva
 
 **Files:**
+
 - Modify: `packages/dashboard/package.json`
 
 - [ ] **Step 1: Add the dependency**
@@ -707,6 +718,7 @@ git commit -m "chore(dashboard): add class-variance-authority"
 ### Task B2: Add STATE_CLASSES record to state-meta.ts (TDD)
 
 **Files:**
+
 - Modify: `packages/dashboard/src/data/state-meta.ts`
 - Create: `packages/dashboard/src/data/state-meta.test.ts`
 
@@ -741,12 +753,15 @@ describe('STATE_CLASSES', () => {
     }
   });
 
-  it.each(ALL_STATES)('uses literal class names (no template-string interpolation) for %s', (state) => {
-    const tokens = STATE_CLASSES[state];
-    for (const key of TOKEN_KEYS) {
-      expect(tokens[key], `${state}.${key}`).not.toMatch(/[$\\{}]/);
-    }
-  });
+  it.each(ALL_STATES)(
+    'uses literal class names (no template-string interpolation) for %s',
+    (state) => {
+      const tokens = STATE_CLASSES[state];
+      for (const key of TOKEN_KEYS) {
+        expect(tokens[key], `${state}.${key}`).not.toMatch(/[$\\{}]/);
+      }
+    },
+  );
 });
 ```
 
@@ -860,6 +875,7 @@ git commit -m "feat(dashboard): add STATE_CLASSES with literal Tailwind tokens"
 ### Task B3: Refactor StateBadge to cva + STATE_CLASSES
 
 **Files:**
+
 - Modify: `packages/dashboard/src/components/StateBadge.tsx`
 - Modify: `packages/dashboard/src/components/StateBadge.test.tsx`
 
@@ -895,7 +911,7 @@ it.each(STATES_AND_TOKENS)('emits literal Tailwind tokens for %s', (state, token
 npm run --workspace crew-dashboard test:run -- StateBadge
 ```
 
-Expected: the new `it.each` cases pass for the states whose color is *also* used elsewhere as a literal, **but the test design here works against either pre- or post-refactor source** — the post-refactor source produces literal tokens, and the pre-refactor source produces the same string at runtime via `text-${colorVar}`. We're not testing the JIT-visibility property at runtime (jsdom doesn't run Tailwind), we're testing the substring presence. So expect: PASS.
+Expected: the new `it.each` cases pass for the states whose color is _also_ used elsewhere as a literal, **but the test design here works against either pre- or post-refactor source** — the post-refactor source produces literal tokens, and the pre-refactor source produces the same string at runtime via `text-${colorVar}`. We're not testing the JIT-visibility property at runtime (jsdom doesn't run Tailwind), we're testing the substring presence. So expect: PASS.
 
 This step exists to lock the contract before refactoring. Subsequent edits must keep this test green.
 
@@ -1007,6 +1023,7 @@ export function StateBadge({ state, intensity = 'mid', size = 'md' }: StateBadge
 ```
 
 Key changes vs. the previous StateBadge:
+
 - Removed `SIZE_CLASSES` record + `classesForIntensity` helper.
 - All variant-class composition for the badge body lives inside one `cva` definition. `compoundVariants` covers the 7 (state) × 3 (intensity) = 21 combinations, generated mechanically from `STATE_CLASSES` + `INTENSITY_TEMPLATES` so per-state colors stay sourced from `state-meta.ts`.
 - The two helpers `PulseDot` and `Dot` collapse into a single inline `<span>` whose className comes from a second `cva` (`stateDot`) with `state` and `pulse` axes.
@@ -1041,12 +1058,13 @@ git commit -m "refactor(dashboard): StateBadge uses cva + STATE_CLASSES"
 ### Task B4: Extract QuickActionButton with cva and convert QuickAction to a data-driven map
 
 **Files:**
+
 - Modify: `packages/dashboard/src/components/AgentRow.tsx`
 - Modify: `packages/dashboard/src/components/AgentRow.test.tsx`
 
 `QuickAction` today is a five-branch switch where three branches render structurally identical buttons. Extract a `QuickActionButton` whose styling comes from `cva`, then collapse the switch into a `describeQuickAction(agent)` returning a small descriptor.
 
-The existing AgentRow tests cover: ticket/title/runtime/tokens render, state badge, "Answer" for waiting, "View PR" for pr_open, no quick action for running, onSelect on row click, onSelect *not* fired on action click, onSelect not fired on Enter on the action, and the `data-attention` attribute. All of those must keep passing.
+The existing AgentRow tests cover: ticket/title/runtime/tokens render, state badge, "Answer" for waiting, "View PR" for pr_open, no quick action for running, onSelect on row click, onSelect _not_ fired on action click, onSelect not fired on Enter on the action, and the `data-attention` attribute. All of those must keep passing.
 
 - [ ] **Step 1: Add a test for "Retry" and "Archive" labels (currently uncovered)**
 
@@ -1093,18 +1111,15 @@ interface AgentRowProps {
 
 const ACTIVE_STATES = new Set<AgentState>(['running', 'initializing']);
 
-const quickActionButton = cva(
-  'rounded-md border px-3 py-1.5 text-xs font-medium',
-  {
-    variants: {
-      variant: {
-        primary: 'border-white/10 bg-state-waiting text-slate-950 hover:opacity-90',
-        secondary: 'border-white/10 text-text hover:bg-surface-2',
-      },
+const quickActionButton = cva('rounded-md border px-3 py-1.5 text-xs font-medium', {
+  variants: {
+    variant: {
+      primary: 'border-white/10 bg-state-waiting text-slate-950 hover:opacity-90',
+      secondary: 'border-white/10 text-text hover:bg-surface-2',
     },
-    defaultVariants: { variant: 'secondary' },
   },
-);
+  defaultVariants: { variant: 'secondary' },
+});
 
 type QuickActionDescriptor =
   | { kind: 'button'; label: string; variant: 'primary' | 'secondary' }
@@ -1188,11 +1203,7 @@ function QuickAction({ agent }: { agent: Agent }) {
     );
   }
   return (
-    <button
-      type="button"
-      onClick={stop}
-      className={quickActionButton({ variant: action.variant })}
-    >
+    <button type="button" onClick={stop} className={quickActionButton({ variant: action.variant })}>
       {action.label}
     </button>
   );
@@ -1211,6 +1222,7 @@ function useLiveRuntime(startedAt: string, live: boolean): string {
 ```
 
 Key changes vs. the previous AgentRow:
+
 - Row className now reads `STATE_CLASSES[agent.state].border30` / `.bg10` (literal tokens) instead of `border-${meta.colorVar}/30 bg-${meta.colorVar}/10`.
 - Attention bar reads `STATE_CLASSES[agent.state].bg` (literal) instead of `bg-${meta.colorVar}`.
 - `QuickAction` switch returns a descriptor; `QuickActionButton` shell rendered once per kind (`button` or `link`) with `cva`-driven variant classes.
@@ -1259,6 +1271,7 @@ npm run --workspace crew-dashboard dev
 ```
 
 In the browser, compare against a `git stash`-ed baseline (or screenshot from main):
+
 - StateBadge for every state in the fixtures: same colors, same dot, same text.
 - AgentRow for `waiting` (with attention bar), `pr_open`, `error`, `finished`: same row tint, same quick action.
 - Hover state on rows: same.

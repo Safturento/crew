@@ -10,7 +10,7 @@ Diagnosis from the CREW-24 transcript at `~/.claude/projects/-home-safturento-Re
 - The agent wrote frontend code squarely in scope — `packages/dashboard/src/App.tsx`, `ErrorFallback.tsx`, `MockDaemonClient.ts` — and never invoked the skill.
 - The only `Skill` tool calls in the transcript were `using-superpowers` (session start) and `superpowers:executing-plans` (entering execution mode).
 
-The root cause is the prompt's framing: *"You are required to use **these** Superpowers skills as appropriate"*. The enumerated list reads as a closed allowlist, overriding the more general "invoke any skill whose description matches" rule from the system prompt. User-level skills under `~/.claude/skills/` and project-level skills under `<repo>/.claude/skills/` are silently excluded.
+The root cause is the prompt's framing: _"You are required to use **these** Superpowers skills as appropriate"_. The enumerated list reads as a closed allowlist, overriding the more general "invoke any skill whose description matches" rule from the system prompt. User-level skills under `~/.claude/skills/` and project-level skills under `<repo>/.claude/skills/` are silently excluded.
 
 ## Goal
 
@@ -28,8 +28,8 @@ A new module at `packages/cli/src/lib/prompts/skills.ts` owns discovery and rend
 
 ```ts
 interface DiscoveredSkill {
-  name: string;          // e.g. "reaching-for-frontend-libraries"
-  description: string;   // from SKILL.md frontmatter
+  name: string; // e.g. "reaching-for-frontend-libraries"
+  description: string; // from SKILL.md frontmatter
   source: 'user' | 'project';
 }
 

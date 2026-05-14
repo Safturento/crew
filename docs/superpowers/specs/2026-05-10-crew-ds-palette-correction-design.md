@@ -16,17 +16,17 @@ During the 2026-05-10 manual frame-migration session (resolving CREW-117/CREW-11
 
 ### Concrete mismatch
 
-| Token | Dashboard (`.dark`) | Crew DS (resolved via Core) | Match? |
-|---|---|---|---|
-| `--background` | `#05060a` | `#0a0a0a` (neutral-950) | ❌ |
-| `--foreground` | `#e7e8ec` | `#fafafa` (neutral-50) | ❌ |
-| `--card` | `#1a1c24` | `#171717` (neutral-900) | ❌ |
-| `--popover` | `#21232d` | `#262626` (neutral-800) | ❌ |
-| `--primary` | `#e7e8ec` | `#e5e5e5` (neutral-200) | ❌ (close) |
-| `--secondary` / `--muted` | `#21232d` | `#262626` (neutral-800) | ❌ |
-| `--accent` | `#292c38` | `#404040` (neutral-700) | ❌ |
-| `--border` | `rgba(255,255,255,0.07)` | `#404040` (neutral-700) — solid | ❌ structurally |
-| `--ring` | `#7e8290` | (varies) | ❌ |
+| Token                     | Dashboard (`.dark`)      | Crew DS (resolved via Core)     | Match?          |
+| ------------------------- | ------------------------ | ------------------------------- | --------------- |
+| `--background`            | `#05060a`                | `#0a0a0a` (neutral-950)         | ❌              |
+| `--foreground`            | `#e7e8ec`                | `#fafafa` (neutral-50)          | ❌              |
+| `--card`                  | `#1a1c24`                | `#171717` (neutral-900)         | ❌              |
+| `--popover`               | `#21232d`                | `#262626` (neutral-800)         | ❌              |
+| `--primary`               | `#e7e8ec`                | `#e5e5e5` (neutral-200)         | ❌ (close)      |
+| `--secondary` / `--muted` | `#21232d`                | `#262626` (neutral-800)         | ❌              |
+| `--accent`                | `#292c38`                | `#404040` (neutral-700)         | ❌              |
+| `--border`                | `rgba(255,255,255,0.07)` | `#404040` (neutral-700) — solid | ❌ structurally |
+| `--ring`                  | `#7e8290`                | (varies)                        | ❌              |
 
 The dashboard's palette is **slate (blue-tinted)**; Core's stock shadcn defaults are **neutral (pure grayscale)**. The CREW-122 assumption ("The dashboard's existing dark slate aesthetic matches Core's shadcn-default `mode/dark mode` values closely enough that a delta layer isn't needed yet") was never visually verified and is invalidated by the actual values.
 
@@ -82,49 +82,51 @@ Crew DS has **44 color variables** in `Crew / Semantic Colors`. They split into 
 
 ### 1a. Standard shadcn semantics (19) — re-alias to slate
 
-| Semantic | Old (via Core/mode → tw/colors) | New (direct → tw/colors) | Dashboard `.dark` value |
-|---|---|---|---|
-| `background` | `neutral/950` | `slate/950` | `#05060a` → `slate/950` |
-| `foreground` | `neutral/50` | `slate/200` | `#e7e8ec` → `slate/200` |
-| `card` | `neutral/900` | `slate/900` | `#1a1c24` → `slate/900` |
-| `card-foreground` | `neutral/50` | `slate/200` | `#e7e8ec` → `slate/200` |
-| `popover` | `neutral/800` | `slate/900` | `#21232d` → `slate/900` |
-| `popover-foreground` | `neutral/50` | `slate/200` | `#e7e8ec` → `slate/200` |
-| `primary` | `neutral/200` | `slate/200` | `#e7e8ec` → `slate/200` |
-| `primary-foreground` | `neutral/900` | `slate/900` | `#05060a` → `slate/900` |
-| `secondary` | `neutral/800` | `slate/800` | `#21232d` → `slate/800` |
-| `secondary-foreground` | (foreground) | `slate/200` | `#e7e8ec` → `slate/200` |
-| `muted` | `neutral/800` | `slate/800` | `#21232d` → `slate/800` |
-| `muted-foreground` | `neutral/400` | `slate/400` | `#b8bbc4` → `slate/400` |
-| `accent` | `neutral/700` | `slate/800` | `#292c38` → `slate/800` |
-| `accent-foreground` | (foreground) | `slate/200` | `#e7e8ec` → `slate/200` |
-| `destructive` | `red/400` | `red/400` (no change) | `oklch(0.704...)` → `red/400` |
-| `destructive-foreground` | `slate/50` | `slate/50` (no change) | already correct |
-| `border` | `neutral/700` | `white` (RGB only — fills carry alpha) | `rgba(255,255,255,0.07)` |
-| `input` | (border) | `white` (RGB only) | `rgba(255,255,255,0.07)` |
-| `ring` | (varies) | `slate/500` | `#7e8290` → `slate/500` |
+| Semantic                 | Old (via Core/mode → tw/colors) | New (direct → tw/colors)               | Dashboard `.dark` value       |
+| ------------------------ | ------------------------------- | -------------------------------------- | ----------------------------- |
+| `background`             | `neutral/950`                   | `slate/950`                            | `#05060a` → `slate/950`       |
+| `foreground`             | `neutral/50`                    | `slate/200`                            | `#e7e8ec` → `slate/200`       |
+| `card`                   | `neutral/900`                   | `slate/900`                            | `#1a1c24` → `slate/900`       |
+| `card-foreground`        | `neutral/50`                    | `slate/200`                            | `#e7e8ec` → `slate/200`       |
+| `popover`                | `neutral/800`                   | `slate/900`                            | `#21232d` → `slate/900`       |
+| `popover-foreground`     | `neutral/50`                    | `slate/200`                            | `#e7e8ec` → `slate/200`       |
+| `primary`                | `neutral/200`                   | `slate/200`                            | `#e7e8ec` → `slate/200`       |
+| `primary-foreground`     | `neutral/900`                   | `slate/900`                            | `#05060a` → `slate/900`       |
+| `secondary`              | `neutral/800`                   | `slate/800`                            | `#21232d` → `slate/800`       |
+| `secondary-foreground`   | (foreground)                    | `slate/200`                            | `#e7e8ec` → `slate/200`       |
+| `muted`                  | `neutral/800`                   | `slate/800`                            | `#21232d` → `slate/800`       |
+| `muted-foreground`       | `neutral/400`                   | `slate/400`                            | `#b8bbc4` → `slate/400`       |
+| `accent`                 | `neutral/700`                   | `slate/800`                            | `#292c38` → `slate/800`       |
+| `accent-foreground`      | (foreground)                    | `slate/200`                            | `#e7e8ec` → `slate/200`       |
+| `destructive`            | `red/400`                       | `red/400` (no change)                  | `oklch(0.704...)` → `red/400` |
+| `destructive-foreground` | `slate/50`                      | `slate/50` (no change)                 | already correct               |
+| `border`                 | `neutral/700`                   | `white` (RGB only — fills carry alpha) | `rgba(255,255,255,0.07)`      |
+| `input`                  | (border)                        | `white` (RGB only)                     | `rgba(255,255,255,0.07)`      |
+| `ring`                   | (varies)                        | `slate/500`                            | `#7e8290` → `slate/500`       |
 
 Rationale:
+
 - `popover`: dashboard `#21232d` is between slate/800 (`#1e293b`) and slate/900 (`#0f172a`). Picking `slate/900` keeps the convention "popover surface looks like card surface."
 - `accent`: dashboard `#292c38` is closer to slate/700 but `slate/800` keeps secondary/muted/accent on the same shade (matches the dashboard's choice to use the same hex for secondary/muted, with accent one shade off).
 - `border` / `input`: alias to `white` (RGB only) so consumer fills can carry the actual alpha. The migration captured fills with opacity 0.04 / 0.06 / 0.07 / 0.12 from the html.to.design import; those fills resolve to `white` × their captured alpha = intended white-overlay effect.
 
-### 1b. State color tokens (8) — re-alias to *-400 shades
+### 1b. State color tokens (8) — re-alias to \*-400 shades
 
-The current Crew DS state aliases use *-500 shades (added in CREW-119), but the dashboard's actual OKLCH values cluster around lightness 0.7 (which corresponds to *-400 in Tailwind v4's slate/blue/red/etc. scales).
+The current Crew DS state aliases use _-500 shades (added in CREW-119), but the dashboard's actual OKLCH values cluster around lightness 0.7 (which corresponds to _-400 in Tailwind v4's slate/blue/red/etc. scales).
 
-| State token | Old alias | New alias | Dashboard `--color-state-*` OKLCH |
-|---|---|---|---|
-| `state/initializing` | `blue/500` | `blue/400` | `oklch(0.7 0.16 250)` → `blue/400` (`oklch(0.707 0.165 254.6)`) |
-| `state/running` | `slate/400` | `slate/400` (no change) | `oklch(0.78 0.005 260)` — closest acceptable; dashboard chroma is lower but slate/400 is the right family |
-| `state/idle` | `slate/500` | `slate/500` (no change) | `oklch(0.65 0.01 260)` — closest acceptable; dashboard chroma lower |
-| `state/waiting` | `amber/400` | `amber/400` (no change) | `oklch(0.82 0.16 90)` → `amber/400` (`oklch(0.828 0.189 84.4)`) |
-| `state/pr-open` | `violet/500` | `violet/400` | `oklch(0.72 0.16 295)` → `violet/400` (`oklch(0.706 0.213 293.8)`) |
-| `state/error` | `red/500` | `red/400` | `oklch(0.7 0.16 25)` → `red/400` (`oklch(0.704 0.191 22.2)`) |
-| `state/finished` | `emerald/500` | `emerald/500` (no change) | `oklch(0.72 0.096 150)` — dashboard chroma lower than emerald, but lightness matches `emerald/500` (`oklch(0.696 0.17 162.5)`) better than `emerald/400` |
-| `state/foreground` | `slate/950` | `slate/950` (no change) | dark contrast token added 2026-05-10 — correct as-is |
+| State token          | Old alias     | New alias                 | Dashboard `--color-state-*` OKLCH                                                                                                                        |
+| -------------------- | ------------- | ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `state/initializing` | `blue/500`    | `blue/400`                | `oklch(0.7 0.16 250)` → `blue/400` (`oklch(0.707 0.165 254.6)`)                                                                                          |
+| `state/running`      | `slate/400`   | `slate/400` (no change)   | `oklch(0.78 0.005 260)` — closest acceptable; dashboard chroma is lower but slate/400 is the right family                                                |
+| `state/idle`         | `slate/500`   | `slate/500` (no change)   | `oklch(0.65 0.01 260)` — closest acceptable; dashboard chroma lower                                                                                      |
+| `state/waiting`      | `amber/400`   | `amber/400` (no change)   | `oklch(0.82 0.16 90)` → `amber/400` (`oklch(0.828 0.189 84.4)`)                                                                                          |
+| `state/pr-open`      | `violet/500`  | `violet/400`              | `oklch(0.72 0.16 295)` → `violet/400` (`oklch(0.706 0.213 293.8)`)                                                                                       |
+| `state/error`        | `red/500`     | `red/400`                 | `oklch(0.7 0.16 25)` → `red/400` (`oklch(0.704 0.191 22.2)`)                                                                                             |
+| `state/finished`     | `emerald/500` | `emerald/500` (no change) | `oklch(0.72 0.096 150)` — dashboard chroma lower than emerald, but lightness matches `emerald/500` (`oklch(0.696 0.17 162.5)`) better than `emerald/400` |
+| `state/foreground`   | `slate/950`   | `slate/950` (no change)   | dark contrast token added 2026-05-10 — correct as-is                                                                                                     |
 
 Trade-offs:
+
 - For `state/running` and `state/idle`, the dashboard uses very low chroma (near-grayscale slate); Tailwind's slate scale has slightly higher chroma. Visual will be a touch more blue-tinted than the original. Acceptable within this approach.
 - For `state/finished`, dashboard chroma 0.096 is muted; emerald-500's chroma 0.17 is more saturated. Visual will be a touch more vibrant green. Acceptable.
 - All state tokens are mode-invariant — they alias to the same primitive in both light and dark modes (state colors don't change with mode).
@@ -195,25 +197,27 @@ Currently the `:root` block uses OKLCH values that mostly match Tailwind's stock
 
 ```css
 :root {
-  --background: var(--color-white);              /* was oklch(1 0 0) */
-  --foreground: var(--color-slate-950);          /* was oklch(0.13 0.028 261.692) — close to slate/950 */
-  --card: var(--color-white);                    /* was oklch(1 0 0) */
-  --card-foreground: var(--color-slate-950);     /* matches foreground */
+  --background: var(--color-white); /* was oklch(1 0 0) */
+  --foreground: var(--color-slate-950); /* was oklch(0.13 0.028 261.692) — close to slate/950 */
+  --card: var(--color-white); /* was oklch(1 0 0) */
+  --card-foreground: var(--color-slate-950); /* matches foreground */
   --popover: var(--color-white);
   --popover-foreground: var(--color-slate-950);
-  --primary: var(--color-slate-900);             /* was oklch(0.21 0.034 264.665) — close to slate/900 */
-  --primary-foreground: var(--color-slate-50);   /* was oklch(0.985 ...) — close to slate/50 */
-  --secondary: var(--color-slate-100);           /* was oklch(0.967 0.003 264.542) — close to slate/100 */
+  --primary: var(--color-slate-900); /* was oklch(0.21 0.034 264.665) — close to slate/900 */
+  --primary-foreground: var(--color-slate-50); /* was oklch(0.985 ...) — close to slate/50 */
+  --secondary: var(--color-slate-100); /* was oklch(0.967 0.003 264.542) — close to slate/100 */
   --secondary-foreground: var(--color-slate-900);
   --muted: var(--color-slate-100);
-  --muted-foreground: var(--color-slate-500);    /* was oklch(0.551 0.027 264.364) — close to slate/500 */
+  --muted-foreground: var(
+    --color-slate-500
+  ); /* was oklch(0.551 0.027 264.364) — close to slate/500 */
   --accent: var(--color-slate-100);
   --accent-foreground: var(--color-slate-900);
-  --destructive: var(--color-red-500);           /* was oklch(0.577 0.245 27.325) — close to red/500 */
+  --destructive: var(--color-red-500); /* was oklch(0.577 0.245 27.325) — close to red/500 */
   --destructive-foreground: var(--color-slate-50);
-  --border: var(--color-slate-200);              /* was oklch(0.928 0.006 264.531) — close to slate/200 */
+  --border: var(--color-slate-200); /* was oklch(0.928 0.006 264.531) — close to slate/200 */
   --input: var(--color-slate-200);
-  --ring: var(--color-slate-400);                /* was oklch(0.707 0.022 261.325) — close to slate/400 */
+  --ring: var(--color-slate-400); /* was oklch(0.707 0.022 261.325) — close to slate/400 */
 }
 ```
 
@@ -238,11 +242,12 @@ Currently the `:root` block uses OKLCH values that mostly match Tailwind's stock
 ### Visual change to the dashboard
 
 Dark mode rendering will shift slightly:
+
 - Background `#05060a` → `slate/950` (`#020617`) — slightly lighter and bluer
 - Card `#1a1c24` → `slate/900` (`#0f172a`) — touch darker, more saturated blue
 - Popover/secondary/muted/accent → canonical slate shades
 - Borders stay at 7% white overlay (no functional change, slight color difference from previous solid mid-gray)
-- State pills: pr-open and error shift from *-500 to *-400 (slightly brighter); initializing similarly. Running/idle/waiting/finished essentially unchanged.
+- State pills: pr-open and error shift from _-500 to _-400 (slightly brighter); initializing similarly. Running/idle/waiting/finished essentially unchanged.
 
 Acceptable per chosen approach (Option 1, stock Tailwind slate). Visually verify in browser after deploy.
 
@@ -272,6 +277,7 @@ After the palette is correct, address known-defect items surfaced during the mig
 ### 4a. Inspect button styling consistency (frame `1:2`)
 
 The `Inspect` button on the latency row currently has a solid red bg + dark text (rebound to `state/foreground` during migration as a one-off fix). Should follow the canonical tinted-pill pattern documented in `docs/plans/design-system.md`'s "StateBadge visual pattern":
+
 - bg fill: `state/error` at opacity 0.18
 - stroke: `state/error` at opacity 1.0
 - text fill: `state/error` at opacity 1.0
@@ -287,6 +293,7 @@ Fix: open AgentBody in Crew DS, delete the hand-built pill, replace with a `Stat
 ### 4c. Visual audit pass
 
 Once the palette is correct and 4a/4b are resolved, screenshot all migrated frames + all 10 Crew DS composites via MCP `get_screenshot`. Walk through with the user. Surface and fix:
+
 - Any other instance-level overrides masking palette updates
 - Composites whose internal structure relies on hardcoded values that don't match the new palette
 - Anything else the user notices that wasn't on this list
@@ -368,7 +375,7 @@ E.g. wanting `warning` to map to `blue-500`.
 - [ ] Dashboard `@theme` state colors updated per Section 2c (7 tokens)
 - [ ] Crew DS published in Figma desktop
 - [ ] Cache verification per propagation skill's Trap 4 confirms latest aliases reach the screens file (sample at least 3 different tokens — e.g. `background`, `state/error`, `border`)
-- [ ] Screenshots of frames `1:2`, `1:378`, `1:1900` (via MCP `get_screenshot`) show the new slate palette rendering, with state pills showing the new *-400 mapping where applicable
+- [ ] Screenshots of frames `1:2`, `1:378`, `1:1900` (via MCP `get_screenshot`) show the new slate palette rendering, with state pills showing the new \*-400 mapping where applicable
 - [ ] Inspect button (frame `1:2`) follows tinted-bg pattern
 - [ ] AgentBody composite (Crew DS node `24:2`) embeds a real StateBadge instance, not a hand-rolled pill
 - [ ] Visual audit done; any newly-surfaced issues either fixed or explicitly deferred with a followup entry
@@ -380,13 +387,13 @@ E.g. wanting `warning` to map to `blue-500`.
 
 ## Risks + mitigations
 
-| Risk | Mitigation |
-|---|---|
-| Slate visual shift surprises the user | Spec calls out the shift in Section 2; review screenshots in browser after deploy and rollback if undesirable |
-| Re-aliasing breaks frames whose mode setup assumes Core's `mode` collection | Existing frames have explicit Core mode set already (set during migration); leaving it doesn't hurt. New frames migrated post-fix only need Crew Semantic Colors mode — captured in skill update |
-| Dashboard dev/prod render divergence | CSS change is straightforward (custom hex → Tailwind utility var); both dev and prod use the same compiled CSS, no SSR concerns |
-| Re-alias scripts hit override-stickiness on already-bound fills in screens file | Migrated frames' fills were bound BEFORE the palette correction; bindings stay valid (same variable id), only resolved value changes. No re-binding needed in consumer fills. |
-| Light mode looks wrong after slate switch | Dashboard ships dark-only; light mode is unused at runtime. Visual check happens during a future light-mode-supporting fidelity ticket. |
+| Risk                                                                            | Mitigation                                                                                                                                                                                       |
+| ------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Slate visual shift surprises the user                                           | Spec calls out the shift in Section 2; review screenshots in browser after deploy and rollback if undesirable                                                                                    |
+| Re-aliasing breaks frames whose mode setup assumes Core's `mode` collection     | Existing frames have explicit Core mode set already (set during migration); leaving it doesn't hurt. New frames migrated post-fix only need Crew Semantic Colors mode — captured in skill update |
+| Dashboard dev/prod render divergence                                            | CSS change is straightforward (custom hex → Tailwind utility var); both dev and prod use the same compiled CSS, no SSR concerns                                                                  |
+| Re-alias scripts hit override-stickiness on already-bound fills in screens file | Migrated frames' fills were bound BEFORE the palette correction; bindings stay valid (same variable id), only resolved value changes. No re-binding needed in consumer fills.                    |
+| Light mode looks wrong after slate switch                                       | Dashboard ships dark-only; light mode is unused at runtime. Visual check happens during a future light-mode-supporting fidelity ticket.                                                          |
 
 ## Open questions
 

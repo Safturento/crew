@@ -14,11 +14,11 @@
 
 **Ticket carve-up** (Epic + 3 child tickets):
 
-| Ticket | Tasks | Notes |
-|---|---|---|
-| **A — Preflight scaffold + dispatch integration** | Tasks 1–4 | Lays the orchestrator + types + wires it into `prepareAgentEnvironment`. With no checks registered yet, the orchestrator no-ops cleanly. Blocks B and C. |
-| **B — Check 1: app-URL reachability probe** | Tasks 5–8 | Probe + retry + per-URL skip rules. Wires probe into orchestrator. Independent of C. |
-| **C — Check 2 + Check 3: sandbox config awareness** | Tasks 9–13 | `excludedCommands` verifier + generalized prompt note. Independent of B. |
+| Ticket                                              | Tasks      | Notes                                                                                                                                                    |
+| --------------------------------------------------- | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **A — Preflight scaffold + dispatch integration**   | Tasks 1–4  | Lays the orchestrator + types + wires it into `prepareAgentEnvironment`. With no checks registered yet, the orchestrator no-ops cleanly. Blocks B and C. |
+| **B — Check 1: app-URL reachability probe**         | Tasks 5–8  | Probe + retry + per-URL skip rules. Wires probe into orchestrator. Independent of C.                                                                     |
+| **C — Check 2 + Check 3: sandbox config awareness** | Tasks 9–13 | `excludedCommands` verifier + generalized prompt note. Independent of B.                                                                                 |
 
 Tickets B and C run in parallel after A merges.
 
@@ -595,13 +595,13 @@ import { buildPreflightChecks } from '../preflight/build-checks.js';
 At the end of `prepareAgentEnvironment`, after the playwright install block (after current line 77), add:
 
 ```ts
-  await runPreflight({
-    config,
-    worktree,
-    checks: buildPreflightChecks(config),
-  });
+await runPreflight({
+  config,
+  worktree,
+  checks: buildPreflightChecks(config),
+});
 
-  return result;
+return result;
 ```
 
 (Replace the existing `return result;` with the block above.)
@@ -673,7 +673,9 @@ describe('probeUrl', () => {
   });
 
   it('returns reachable: true on first successful HTTP response', async () => {
-    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('', { status: 200 }));
+    const fetchSpy = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValue(new Response('', { status: 200 }));
     const result = await probeUrl('https://localhost:17253', { delays: [0] });
     expect(result.reachable).toBe(true);
     expect(result.attempts).toBe(1);
@@ -690,7 +692,8 @@ describe('probeUrl', () => {
     let calls = 0;
     vi.spyOn(globalThis, 'fetch').mockImplementation(async () => {
       calls++;
-      if (calls < 3) throw Object.assign(new Error('connect ECONNREFUSED'), { code: 'ECONNREFUSED' });
+      if (calls < 3)
+        throw Object.assign(new Error('connect ECONNREFUSED'), { code: 'ECONNREFUSED' });
       return new Response('', { status: 200 });
     });
 
@@ -816,10 +819,24 @@ const cfgWithDockerAndPlaywright = (overrides: Partial<ProjectConfig> = {}): Pro
       required_tables: [],
       exclude_tables: [],
     },
-    docker: { canonical_worktree: 'main', http_port_base: 8000, https_port_base: 8400, postgres_port_base: 15400 },
-    playwright: { app_url: 'https://localhost:17253', authored: { enabled: true, tests_dir: 'tests/e2e', test_command: 'npm run test:e2e', verify_after_run: false, verify_max_attempts: 2 } },
+    docker: {
+      canonical_worktree: 'main',
+      http_port_base: 8000,
+      https_port_base: 8400,
+      postgres_port_base: 15400,
+    },
+    playwright: {
+      app_url: 'https://localhost:17253',
+      authored: {
+        enabled: true,
+        tests_dir: 'tests/e2e',
+        test_command: 'npm run test:e2e',
+        verify_after_run: false,
+        verify_max_attempts: 2,
+      },
+    },
     ...overrides,
-  } as ProjectConfig);
+  }) as ProjectConfig;
 
 describe('probeAppUrlsCheck', () => {
   it('skips when no docker and no playwright/bruno_smoke', async () => {
@@ -833,14 +850,22 @@ describe('probeAppUrlsCheck', () => {
   });
 
   it('skips playwright url when start_command is set', async () => {
-    const probeSpy = vi.spyOn(probeUrlModule, 'probeUrl').mockResolvedValue({ reachable: true, attempts: 1 });
+    const probeSpy = vi
+      .spyOn(probeUrlModule, 'probeUrl')
+      .mockResolvedValue({ reachable: true, attempts: 1 });
     const check = probeAppUrlsCheck();
     await check.run({
       config: cfgWithDockerAndPlaywright({
         playwright: {
           app_url: 'https://localhost:17253',
           start_command: 'npm run dev',
-          authored: { enabled: true, tests_dir: 'tests/e2e', test_command: 'npm run test:e2e', verify_after_run: false, verify_max_attempts: 2 },
+          authored: {
+            enabled: true,
+            tests_dir: 'tests/e2e',
+            test_command: 'npm run test:e2e',
+            verify_after_run: false,
+            verify_max_attempts: 2,
+          },
         },
       } as Partial<ProjectConfig>),
       worktree: '/tmp/wt',
@@ -887,7 +912,11 @@ describe('probeAppUrlsCheck', () => {
     await check.run({
       config: {
         ...cfgWithDockerAndPlaywright(),
-        bruno_smoke: { enabled: true, base_url: 'https://localhost:17253', collection_dir: 'bruno' },
+        bruno_smoke: {
+          enabled: true,
+          base_url: 'https://localhost:17253',
+          collection_dir: 'bruno',
+        },
       } as ProjectConfig,
       worktree: '/tmp/wt',
     });
@@ -993,8 +1022,22 @@ describe('buildPreflightChecks — Check 1', () => {
   it('includes app-url-reachability when [docker] is configured', () => {
     const config = {
       ...baseConfig,
-      docker: { canonical_worktree: 'main', http_port_base: 8000, https_port_base: 8400, postgres_port_base: 15400 },
-      playwright: { app_url: 'https://localhost:17253', authored: { enabled: true, tests_dir: 'tests/e2e', test_command: 'npm run test:e2e', verify_after_run: false, verify_max_attempts: 2 } },
+      docker: {
+        canonical_worktree: 'main',
+        http_port_base: 8000,
+        https_port_base: 8400,
+        postgres_port_base: 15400,
+      },
+      playwright: {
+        app_url: 'https://localhost:17253',
+        authored: {
+          enabled: true,
+          tests_dir: 'tests/e2e',
+          test_command: 'npm run test:e2e',
+          verify_after_run: false,
+          verify_max_attempts: 2,
+        },
+      },
     } as ProjectConfig;
     const checks = buildPreflightChecks(config);
     expect(checks.some((c) => c.name === 'app-url-reachability')).toBe(true);
@@ -1120,16 +1163,34 @@ describe('verifyExcludedCommandsCheck', () => {
 
   const cfgWithBruno: ProjectConfig = {
     canonical_worktree: 'main',
-    db_clone: { postgres_service: 'postgres', postgres_user: 'postgres', postgres_database: 'postgres', required_tables: [], exclude_tables: [] },
+    db_clone: {
+      postgres_service: 'postgres',
+      postgres_user: 'postgres',
+      postgres_database: 'postgres',
+      required_tables: [],
+      exclude_tables: [],
+    },
     bruno_smoke: { enabled: true, base_url: 'https://localhost:17253', collection_dir: 'bruno' },
   } as ProjectConfig;
 
   const cfgWithAuthoredPlaywright: ProjectConfig = {
     canonical_worktree: 'main',
-    db_clone: { postgres_service: 'postgres', postgres_user: 'postgres', postgres_database: 'postgres', required_tables: [], exclude_tables: [] },
+    db_clone: {
+      postgres_service: 'postgres',
+      postgres_user: 'postgres',
+      postgres_database: 'postgres',
+      required_tables: [],
+      exclude_tables: [],
+    },
     playwright: {
       app_url: 'https://localhost:17253',
-      authored: { enabled: true, tests_dir: 'tests/e2e', test_command: 'npm run test:e2e', verify_after_run: false, verify_max_attempts: 2 },
+      authored: {
+        enabled: true,
+        tests_dir: 'tests/e2e',
+        test_command: 'npm run test:e2e',
+        verify_after_run: false,
+        verify_max_attempts: 2,
+      },
     },
   } as ProjectConfig;
 
@@ -1208,7 +1269,13 @@ describe('verifyExcludedCommandsCheck', () => {
     // No settings.json file present, but no checks needed either.
     const cfg: ProjectConfig = {
       canonical_worktree: 'main',
-      db_clone: { postgres_service: 'postgres', postgres_user: 'postgres', postgres_database: 'postgres', required_tables: [], exclude_tables: [] },
+      db_clone: {
+        postgres_service: 'postgres',
+        postgres_user: 'postgres',
+        postgres_database: 'postgres',
+        required_tables: [],
+        exclude_tables: [],
+      },
     } as ProjectConfig;
     const check = verifyExcludedCommandsCheck();
     await expect(check.run({ config: cfg, worktree })).resolves.toBeUndefined();
@@ -1356,7 +1423,13 @@ describe('buildPreflightChecks — Check 2', () => {
       ...baseConfig,
       playwright: {
         app_url: 'https://localhost:17253',
-        authored: { enabled: true, tests_dir: 'tests/e2e', test_command: 'npm run test:e2e', verify_after_run: false, verify_max_attempts: 2 },
+        authored: {
+          enabled: true,
+          tests_dir: 'tests/e2e',
+          test_command: 'npm run test:e2e',
+          verify_after_run: false,
+          verify_max_attempts: 2,
+        },
       },
     } as ProjectConfig;
     const checks = buildPreflightChecks(config);
@@ -1432,7 +1505,6 @@ git commit -m "feat(preflight): register verifyExcludedCommandsCheck in buildPre
 Create `packages/cli/src/lib/prompts/templates/sandbox-network-note.md`:
 
 ```md
-
 ## Sandboxed-curl is misleading
 
 Your Bash tool runs in a sandbox with its own loopback, isolated from the host's. Direct `curl` / `wget` / Node `fetch` calls from your shell to **{{appUrl}}** will always return `ECONNREFUSED` — that is **not** evidence the stack is down. Crew has whitelisted `{{whitelistedCommands}}` to run un-sandboxed, and those are the only valid reachability tests for the docker stack.
@@ -1540,7 +1612,12 @@ describe('buildTicketPrompt — sandbox-network-note', () => {
         appUrl: 'https://localhost:17253',
         authored: { testsDir: 'tests/e2e', testCommand: 'npm run test:e2e' },
       },
-      brunoSmoke: { baseUrl: 'https://localhost:17253', envName: 'KAN-17', collectionDir: 'bruno', hasSmokeUser: false },
+      brunoSmoke: {
+        baseUrl: 'https://localhost:17253',
+        envName: 'KAN-17',
+        collectionDir: 'bruno',
+        hasSmokeUser: false,
+      },
     });
     expect(out).toContain('`npm run bruno:smoke` and `npm run test:e2e`');
   });

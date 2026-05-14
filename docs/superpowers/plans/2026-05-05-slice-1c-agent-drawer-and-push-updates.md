@@ -15,6 +15,7 @@
 ## Task 1: Shared transcript schema — envelope + variant skeleton
 
 **Files:**
+
 - Create: `packages/shared/src/transcripts/schemas.ts`
 - Modify: `packages/shared/src/transcripts/types.ts` (replace existing union)
 - Test: `packages/shared/src/transcripts/parser.test.ts` (extend; `parser.ts` itself updated in Task 2)
@@ -76,6 +77,7 @@ git commit -m "feat(shared): scaffold exhaustive TranscriptEvent envelope + unio
 ## Task 2: Shared transcript schema — all variants + fixtures
 
 **Files:**
+
 - Modify: `packages/shared/src/transcripts/schemas.ts` (add the ~38 variants)
 - Modify: `packages/shared/src/transcripts/parser.ts`
 - Create: `packages/shared/src/transcripts/fixtures/<variant>.jsonl` (one per variant)
@@ -86,45 +88,57 @@ Variants and their nested discriminants come straight from spec §2 + §3.2. Pat
 - [ ] **Step 1: Add the 12 top-level variants** in `schemas.ts`. Pattern for `assistant`:
 
 ```ts
-export const toolUseContentSchema = z.object({
-  type: z.literal('tool_use'),
-  id: z.string(),
-  name: z.string(),
-  input: z.record(z.unknown()),
-}).passthrough();
+export const toolUseContentSchema = z
+  .object({
+    type: z.literal('tool_use'),
+    id: z.string(),
+    name: z.string(),
+    input: z.record(z.unknown()),
+  })
+  .passthrough();
 
-export const thinkingContentSchema = z.object({
-  type: z.literal('thinking'),
-  thinking: z.string(),
-}).passthrough();
+export const thinkingContentSchema = z
+  .object({
+    type: z.literal('thinking'),
+    thinking: z.string(),
+  })
+  .passthrough();
 
-export const textContentSchema = z.object({
-  type: z.literal('text'),
-  text: z.string(),
-}).passthrough();
+export const textContentSchema = z
+  .object({
+    type: z.literal('text'),
+    text: z.string(),
+  })
+  .passthrough();
 
 export const unknownContentSchema = z.object({ type: z.string() }).passthrough();
 
-export const assistantContentSchema = z.discriminatedUnion('type', [
-  toolUseContentSchema, thinkingContentSchema, textContentSchema,
-]).or(unknownContentSchema);
+export const assistantContentSchema = z
+  .discriminatedUnion('type', [toolUseContentSchema, thinkingContentSchema, textContentSchema])
+  .or(unknownContentSchema);
 
-export const usageBlockSchema = z.object({
-  input_tokens: z.number().optional(),
-  output_tokens: z.number().optional(),
-  cache_read_input_tokens: z.number().optional(),
-  cache_creation_input_tokens: z.number().optional(),
-}).passthrough();
+export const usageBlockSchema = z
+  .object({
+    input_tokens: z.number().optional(),
+    output_tokens: z.number().optional(),
+    cache_read_input_tokens: z.number().optional(),
+    cache_creation_input_tokens: z.number().optional(),
+  })
+  .passthrough();
 
-export const assistantEventSchema = baseEnvelopeSchema.extend({
-  type: z.literal('assistant'),
-  message: z.object({
-    id: z.string().optional(),
-    role: z.literal('assistant').optional(),
-    content: z.array(assistantContentSchema),
-    usage: usageBlockSchema.optional(),
-  }).passthrough(),
-}).passthrough();
+export const assistantEventSchema = baseEnvelopeSchema
+  .extend({
+    type: z.literal('assistant'),
+    message: z
+      .object({
+        id: z.string().optional(),
+        role: z.literal('assistant').optional(),
+        content: z.array(assistantContentSchema),
+        usage: usageBlockSchema.optional(),
+      })
+      .passthrough(),
+  })
+  .passthrough();
 ```
 
 Repeat the same envelope-extend + literal-discriminator + `.passthrough()` pattern for: `userEventSchema` (content array of `tool_result`/`text` plus the bare-string fallback at the message level), `queueOperationEventSchema` (`operation`, `content`, `timestamp`), `attachmentEventSchema` (with nested `attachment.type` discriminator over the 20 subtypes), `lastPromptEventSchema`, `permissionModeEventSchema`, `fileHistorySnapshotEventSchema`, `systemEventSchema` (with nested `subtype` discriminator over the 7 subtypes), `prLinkEventSchema`, `aiTitleEventSchema`, `customTitleEventSchema`, `agentNameEventSchema`. Field names come from the corpus walk in spec §2.
@@ -133,10 +147,18 @@ Repeat the same envelope-extend + literal-discriminator + `.passthrough()` patte
 
 ```ts
 export const transcriptEventSchema = z.discriminatedUnion('type', [
-  assistantEventSchema, userEventSchema, queueOperationEventSchema,
-  attachmentEventSchema, lastPromptEventSchema, permissionModeEventSchema,
-  fileHistorySnapshotEventSchema, systemEventSchema, prLinkEventSchema,
-  aiTitleEventSchema, customTitleEventSchema, agentNameEventSchema,
+  assistantEventSchema,
+  userEventSchema,
+  queueOperationEventSchema,
+  attachmentEventSchema,
+  lastPromptEventSchema,
+  permissionModeEventSchema,
+  fileHistorySnapshotEventSchema,
+  systemEventSchema,
+  prLinkEventSchema,
+  aiTitleEventSchema,
+  customTitleEventSchema,
+  agentNameEventSchema,
   unknownEventSchema,
 ]);
 ```
@@ -148,16 +170,24 @@ import { transcriptEventSchema, type TranscriptEvent } from './schemas.js';
 
 export function parseTranscriptLine(line: string): TranscriptEvent | null {
   let json: unknown;
-  try { json = JSON.parse(line); } catch { return null; }
+  try {
+    json = JSON.parse(line);
+  } catch {
+    return null;
+  }
 
   const result = transcriptEventSchema.safeParse(json);
   if (result.success) return result.data;
 
   const raw = json as Record<string, unknown>;
-  const reason = typeof raw?.type === 'string'
-    ? (transcriptEventSchema.options.some(s => 'shape' in s && (s as any).shape?.type?._def?.value === raw.type)
-        ? 'zod_failure' : 'unknown_top_level')
-    : 'unknown_top_level';
+  const reason =
+    typeof raw?.type === 'string'
+      ? transcriptEventSchema.options.some(
+          (s) => 'shape' in s && (s as any).shape?.type?._def?.value === raw.type,
+        )
+        ? 'zod_failure'
+        : 'unknown_top_level'
+      : 'unknown_top_level';
 
   return { type: 'unknown', raw, reason } as TranscriptEvent;
 }
@@ -223,6 +253,7 @@ git commit -m "feat(shared): exhaustive TranscriptEvent schema covering every JS
 ## Task 3: Migration 0002 — `state_transitions` table
 
 **Files:**
+
 - Create: `packages/daemon/src/migrations/0002_state_transitions.ts`
 - Test: `packages/daemon/src/migrations/0002_state_transitions.test.ts`
 
@@ -237,11 +268,16 @@ import { up as up0002 } from './0002_state_transitions.js';
 
 describe('migration 0002', () => {
   it('creates state_transitions with the expected shape', async () => {
-    const db = new Kysely<any>({ dialect: new SqliteDialect({ database: new Database(':memory:') }) });
+    const db = new Kysely<any>({
+      dialect: new SqliteDialect({ database: new Database(':memory:') }),
+    });
     await up0001(db);
     await up0002(db);
-    const cols = await db.selectFrom('sqlite_master')
-      .select('sql').where('name', '=', 'state_transitions').executeTakeFirst();
+    const cols = await db
+      .selectFrom('sqlite_master')
+      .select('sql')
+      .where('name', '=', 'state_transitions')
+      .executeTakeFirst();
     expect(cols?.sql).toMatch(/agent_key TEXT NOT NULL/);
     expect(cols?.sql).toMatch(/from_state TEXT/);
     expect(cols?.sql).toMatch(/to_state TEXT NOT NULL/);
@@ -249,7 +285,9 @@ describe('migration 0002', () => {
   });
 
   it('is idempotent', async () => {
-    const db = new Kysely<any>({ dialect: new SqliteDialect({ database: new Database(':memory:') }) });
+    const db = new Kysely<any>({
+      dialect: new SqliteDialect({ database: new Database(':memory:') }),
+    });
     await up0001(db);
     await up0002(db);
     await expect(up0002(db)).resolves.not.toThrow();
@@ -276,7 +314,9 @@ export async function up(db: Kysely<any>): Promise<void> {
       CHECK (to_state IN ('init','running','pr_open','error','finished','idle','waiting'))
     )
   `.execute(db);
-  await sql`CREATE INDEX IF NOT EXISTS state_transitions_agent_ts ON state_transitions (agent_key, ts)`.execute(db);
+  await sql`CREATE INDEX IF NOT EXISTS state_transitions_agent_ts ON state_transitions (agent_key, ts)`.execute(
+    db,
+  );
 }
 
 export async function down(db: Kysely<any>): Promise<void> {
@@ -298,6 +338,7 @@ git commit -m "feat(daemon): migration 0002 — state_transitions table (slice 1
 ## Task 4: Migration 0002 — backfill from existing runs
 
 **Files:**
+
 - Modify: `packages/daemon/src/migrations/0002_state_transitions.ts`
 - Modify: `packages/daemon/src/migrations/0002_state_transitions.test.ts`
 
@@ -307,21 +348,37 @@ The backfill walks every distinct `agent_key` in `runs`, applies the existing sl
 
 ```ts
 it('backfills transitions per agent', async () => {
-  const db = new Kysely<any>({ dialect: new SqliteDialect({ database: new Database(':memory:') }) });
+  const db = new Kysely<any>({
+    dialect: new SqliteDialect({ database: new Database(':memory:') }),
+  });
   await up0001(db);
   // seed: agent KAN-1 has 3 tool_calls, the third is a `gh pr create` Bash call
-  await db.insertInto('runs').values({
-    id: 1, agent_key: 'KAN-1', command: 'run', started_at: 1000, completed_at: null,
-  }).execute();
-  await db.insertInto('tool_calls').values([
-    { run_id: 1, tool_name: 'Read',  summary: 'a', ts: 1100, tokens: 0 },
-    { run_id: 1, tool_name: 'Edit',  summary: 'b', ts: 1200, tokens: 0 },
-    { run_id: 1, tool_name: 'Bash',  summary: 'gh pr create', ts: 1300, tokens: 0 },
-  ]).execute();
+  await db
+    .insertInto('runs')
+    .values({
+      id: 1,
+      agent_key: 'KAN-1',
+      command: 'run',
+      started_at: 1000,
+      completed_at: null,
+    })
+    .execute();
+  await db
+    .insertInto('tool_calls')
+    .values([
+      { run_id: 1, tool_name: 'Read', summary: 'a', ts: 1100, tokens: 0 },
+      { run_id: 1, tool_name: 'Edit', summary: 'b', ts: 1200, tokens: 0 },
+      { run_id: 1, tool_name: 'Bash', summary: 'gh pr create', ts: 1300, tokens: 0 },
+    ])
+    .execute();
   await up0002(db);
-  const rows = await db.selectFrom('state_transitions')
-    .where('agent_key', '=', 'KAN-1').orderBy('ts').selectAll().execute();
-  expect(rows.map(r => r.to_state)).toEqual(['init', 'running', 'pr_open']);
+  const rows = await db
+    .selectFrom('state_transitions')
+    .where('agent_key', '=', 'KAN-1')
+    .orderBy('ts')
+    .selectAll()
+    .execute();
+  expect(rows.map((r) => r.to_state)).toEqual(['init', 'running', 'pr_open']);
 });
 ```
 
@@ -330,23 +387,42 @@ it('backfills transitions per agent', async () => {
 ```ts
 const agents = await db.selectFrom('runs').select('agent_key').distinct().execute();
 for (const { agent_key } of agents) {
-  await db.transaction().execute(async trx => {
-    const calls = await trx.selectFrom('tool_calls')
-      .innerJoin('runs', 'runs.id', 'tool_calls.run_id')
-      .where('runs.agent_key', '=', agent_key)
-      .orderBy('tool_calls.ts').selectAll('tool_calls').execute();
-    let prev: string | null = null;
-    const acc: Array<{ ts: number; state: string }> = [];
-    for (let i = 0; i <= calls.length; i++) {
-      const slice = calls.slice(0, i);
-      const state = deriveState(slice);
-      if (state !== prev) { acc.push({ ts: slice.at(-1)?.ts ?? 0, state }); prev = state; }
-    }
-    if (acc.length === 0) return;
-    await trx.insertInto('state_transitions').values(
-      acc.map((a, i) => ({ agent_key, from_state: i === 0 ? null : acc[i-1].state, to_state: a.state, ts: a.ts })),
-    ).execute();
-  }).catch(err => {/* log + skip per spec §8.3; don't rethrow */});
+  await db
+    .transaction()
+    .execute(async (trx) => {
+      const calls = await trx
+        .selectFrom('tool_calls')
+        .innerJoin('runs', 'runs.id', 'tool_calls.run_id')
+        .where('runs.agent_key', '=', agent_key)
+        .orderBy('tool_calls.ts')
+        .selectAll('tool_calls')
+        .execute();
+      let prev: string | null = null;
+      const acc: Array<{ ts: number; state: string }> = [];
+      for (let i = 0; i <= calls.length; i++) {
+        const slice = calls.slice(0, i);
+        const state = deriveState(slice);
+        if (state !== prev) {
+          acc.push({ ts: slice.at(-1)?.ts ?? 0, state });
+          prev = state;
+        }
+      }
+      if (acc.length === 0) return;
+      await trx
+        .insertInto('state_transitions')
+        .values(
+          acc.map((a, i) => ({
+            agent_key,
+            from_state: i === 0 ? null : acc[i - 1].state,
+            to_state: a.state,
+            ts: a.ts,
+          })),
+        )
+        .execute();
+    })
+    .catch((err) => {
+      /* log + skip per spec §8.3; don't rethrow */
+    });
 }
 ```
 
@@ -364,6 +440,7 @@ git commit -m "feat(daemon): backfill state_transitions on migration 0002 (slice
 ## Task 5: `EventBus` service + ring buffer
 
 **Files:**
+
 - Create: `packages/daemon/src/services/EventBus.ts`
 - Create: `packages/daemon/src/services/EventBus.test.ts`
 
@@ -379,7 +456,7 @@ describe('EventBus', () => {
   it('publishes to subscribers', () => {
     const bus = new EventBus({ bufferSize: 10 });
     const seen: any[] = [];
-    bus.subscribe({ onEvent: e => seen.push(e) });
+    bus.subscribe({ onEvent: (e) => seen.push(e) });
     bus.publish({ type: 'tool_calls.changed', data: { key: 'KAN-1' } });
     expect(seen).toHaveLength(1);
     expect(seen[0]).toMatchObject({ type: 'tool_calls.changed', id: expect.any(String) });
@@ -390,8 +467,8 @@ describe('EventBus', () => {
     const e1 = bus.publish({ type: 'tool_calls.changed', data: { key: 'A' } });
     bus.publish({ type: 'tool_calls.changed', data: { key: 'B' } });
     const seen: any[] = [];
-    bus.subscribe({ lastEventId: e1.id, onEvent: e => seen.push(e) });
-    expect(seen.map(e => e.data.key)).toEqual(['B']);
+    bus.subscribe({ lastEventId: e1.id, onEvent: (e) => seen.push(e) });
+    expect(seen.map((e) => e.data.key)).toEqual(['B']);
   });
 
   it('emits cache.miss when lastEventId is evicted', () => {
@@ -400,7 +477,7 @@ describe('EventBus', () => {
     bus.publish({ type: 'tool_calls.changed', data: { key: 'B' } });
     bus.publish({ type: 'tool_calls.changed', data: { key: 'C' } });
     const seen: any[] = [];
-    bus.subscribe({ lastEventId: stale.id, onEvent: e => seen.push(e) });
+    bus.subscribe({ lastEventId: stale.id, onEvent: (e) => seen.push(e) });
     expect(seen[0]).toMatchObject({ type: 'cache.miss' });
   });
 });
@@ -414,21 +491,31 @@ describe('EventBus', () => {
 import { randomUUID } from 'node:crypto';
 
 export type SsePayload =
-  | { type: 'agent.state_changed'; data: { key: string; from: string|null; to: string; ts: number } }
-  | { type: 'tool_calls.changed';  data: { key: string } }
-  | { type: 'run.completed';       data: { key: string; ts: number } }
-  | { type: 'cache.miss';          data: Record<string, never> };
+  | {
+      type: 'agent.state_changed';
+      data: { key: string; from: string | null; to: string; ts: number };
+    }
+  | { type: 'tool_calls.changed'; data: { key: string } }
+  | { type: 'run.completed'; data: { key: string; ts: number } }
+  | { type: 'cache.miss'; data: Record<string, never> };
 
-export interface SseEvent extends SsePayload { id: string; }
+export interface SseEvent extends SsePayload {
+  id: string;
+}
 
-interface SubscribeOpts { lastEventId?: string; onEvent: (e: SseEvent) => void; }
+interface SubscribeOpts {
+  lastEventId?: string;
+  onEvent: (e: SseEvent) => void;
+}
 type Unsubscribe = () => void;
 
 export class EventBus {
   private buffer: SseEvent[] = [];
   private subs = new Set<(e: SseEvent) => void>();
   private bufferSize: number;
-  constructor(opts: { bufferSize?: number } = {}) { this.bufferSize = opts.bufferSize ?? 1000; }
+  constructor(opts: { bufferSize?: number } = {}) {
+    this.bufferSize = opts.bufferSize ?? 1000;
+  }
 
   publish(p: SsePayload): SseEvent {
     const evt: SseEvent = { ...p, id: randomUUID() };
@@ -440,7 +527,7 @@ export class EventBus {
 
   subscribe({ lastEventId, onEvent }: SubscribeOpts): Unsubscribe {
     if (lastEventId !== undefined) {
-      const idx = this.buffer.findIndex(e => e.id === lastEventId);
+      const idx = this.buffer.findIndex((e) => e.id === lastEventId);
       if (idx === -1) {
         onEvent({ id: randomUUID(), type: 'cache.miss', data: {} });
       } else {
@@ -469,6 +556,7 @@ git commit -m "feat(daemon): EventBus pub/sub + ring buffer for SSE (slice 1c)"
 ## Task 6: SSE endpoint `GET /api/events`
 
 **Files:**
+
 - Create: `packages/daemon/src/routes/events.ts`
 - Create: `packages/daemon/src/routes/events.test.ts`
 - Modify: `packages/daemon/src/server.ts` (or wherever routes are registered)
@@ -510,7 +598,7 @@ export async function eventsRoutes(app: FastifyInstance, deps: { eventBus: Event
     reply.raw.writeHead(200, {
       'Content-Type': 'text/event-stream',
       'Cache-Control': 'no-cache',
-      'Connection': 'keep-alive',
+      Connection: 'keep-alive',
     });
     const lastEventId = req.headers['last-event-id'] as string | undefined;
     const send = (e: SseEvent) => {
@@ -538,6 +626,7 @@ git commit -m "feat(daemon): GET /api/events SSE endpoint (slice 1c)"
 ## Task 7: `TimelineService` — re-parse JSONL on demand
 
 **Files:**
+
 - Create: `packages/daemon/src/services/TimelineService.ts`
 - Create: `packages/daemon/src/services/TimelineService.test.ts`
 
@@ -556,10 +645,13 @@ describe('TimelineService', () => {
   it('returns parsed events for an existing transcript', async () => {
     const dir = mkdtempSync(join(tmpdir(), 'timeline-'));
     const path = join(dir, 't.jsonl');
-    writeFileSync(path, [
-      JSON.stringify({ type: 'system', subtype: 'turn_duration', durationMs: 10 }),
-      JSON.stringify({ type: 'pr-link', url: 'https://github.com/x/y/pull/1' }),
-    ].join('\n'));
+    writeFileSync(
+      path,
+      [
+        JSON.stringify({ type: 'system', subtype: 'turn_duration', durationMs: 10 }),
+        JSON.stringify({ type: 'pr-link', url: 'https://github.com/x/y/pull/1' }),
+      ].join('\n'),
+    );
     const svc = new TimelineService({ resolveJsonlPath: () => path });
     const out = await svc.getTimeline('KAN-1');
     expect(out.events).toHaveLength(2);
@@ -585,7 +677,9 @@ import { createReadStream } from 'node:fs';
 import { createInterface } from 'node:readline';
 import { parseTranscriptLine, type TranscriptEvent } from 'crew-shared';
 
-export interface TimelineDeps { resolveJsonlPath: (agentKey: string) => string | null; }
+export interface TimelineDeps {
+  resolveJsonlPath: (agentKey: string) => string | null;
+}
 
 export class TimelineService {
   constructor(private deps: TimelineDeps) {}
@@ -627,6 +721,7 @@ git commit -m "feat(daemon): TimelineService re-parses JSONL on demand (slice 1c
 ## Task 8: `GET /api/agents/:key` — single-agent detail endpoint
 
 **Files:**
+
 - Modify: `packages/daemon/src/services/AgentsService.ts` (add `getByKey`)
 - Modify: `packages/daemon/src/routes/agents.ts`
 - Modify: `packages/daemon/src/services/AgentsService.test.ts`
@@ -687,6 +782,7 @@ git commit -m "feat(daemon): GET /api/agents/:key returns single-agent detail (s
 ## Task 9: `GET /api/agents/:key/state-history`
 
 **Files:**
+
 - Modify: `packages/daemon/src/services/AgentsService.ts` (add `getStateHistory`)
 - Modify: `packages/daemon/src/routes/agents.ts`
 - Modify: `packages/daemon/src/services/AgentsService.test.ts`
@@ -698,7 +794,7 @@ git commit -m "feat(daemon): GET /api/agents/:key returns single-agent detail (s
 it('returns transitions ordered by ts', async () => {
   const svc = makeService(); // seed: state_transitions for KAN-1: init→running→pr_open
   const out = await svc.getStateHistory('KAN-1');
-  expect(out.transitions.map(t => t.to)).toEqual(['init', 'running', 'pr_open']);
+  expect(out.transitions.map((t) => t.to)).toEqual(['init', 'running', 'pr_open']);
 });
 ```
 
@@ -729,6 +825,7 @@ git commit -m "feat(daemon): GET /api/agents/:key/state-history (slice 1c)"
 ## Task 10: `GET /api/agents/:key/timeline`
 
 **Files:**
+
 - Modify: `packages/daemon/src/routes/agents.ts`
 - Modify: `packages/daemon/src/routes/agents.test.ts`
 
@@ -760,7 +857,8 @@ it('returns 200 + empty events + warning header when transcript missing', async 
 app.get('/api/agents/:key/timeline', async (req, reply) => {
   const { key } = req.params as { key: string };
   const out = await deps.timelineService.getTimeline(key);
-  if (out.warnings.includes('transcript-missing')) reply.header('X-Crew-Warning', 'transcript-missing');
+  if (out.warnings.includes('transcript-missing'))
+    reply.header('X-Crew-Warning', 'transcript-missing');
   return { events: out.events };
 });
 ```
@@ -779,6 +877,7 @@ git commit -m "feat(daemon): GET /api/agents/:key/timeline (slice 1c)"
 ## Task 11: IngestService — write state_transitions + publish state_changed
 
 **Files:**
+
 - Modify: `packages/daemon/src/services/IngestService.ts`
 - Modify: `packages/daemon/src/services/IngestService.test.ts`
 
@@ -790,13 +889,13 @@ The ingest loop (the `for await (const event of tailTranscript(...))` block) get
 it('writes state_transitions row + publishes agent.state_changed on derived flip', async () => {
   const bus = new EventBus({ bufferSize: 10 });
   const seen: any[] = [];
-  bus.subscribe({ onEvent: e => seen.push(e) });
+  bus.subscribe({ onEvent: (e) => seen.push(e) });
   const svc = makeIngestService({ eventBus: bus });
   await svc.processEventForTest({ runId: 1, agentKey: 'KAN-1', event: assistantToolUseFixture });
   await svc.processEventForTest({ runId: 1, agentKey: 'KAN-1', event: ghPrCreateFixture });
   const rows = await db.selectFrom('state_transitions').selectAll().execute();
-  expect(rows.map(r => r.to_state)).toEqual(['running', 'pr_open']);
-  expect(seen.filter(e => e.type === 'agent.state_changed')).toHaveLength(2);
+  expect(rows.map((r) => r.to_state)).toEqual(['running', 'pr_open']);
+  expect(seen.filter((e) => e.type === 'agent.state_changed')).toHaveLength(2);
 });
 ```
 
@@ -818,6 +917,7 @@ git commit -m "feat(daemon): IngestService writes state_transitions + emits agen
 ## Task 12: IngestService — publish tool_calls.changed pings
 
 **Files:**
+
 - Modify: `packages/daemon/src/services/IngestService.ts`
 - Modify: `packages/daemon/src/services/IngestService.test.ts`
 
@@ -827,10 +927,12 @@ git commit -m "feat(daemon): IngestService writes state_transitions + emits agen
 it('publishes tool_calls.changed after each tool_calls insert', async () => {
   const bus = new EventBus({ bufferSize: 10 });
   const seen: any[] = [];
-  bus.subscribe({ onEvent: e => seen.push(e) });
+  bus.subscribe({ onEvent: (e) => seen.push(e) });
   const svc = makeIngestService({ eventBus: bus });
   await svc.processEventForTest({ runId: 1, agentKey: 'KAN-1', event: assistantToolUseFixture });
-  expect(seen.filter(e => e.type === 'tool_calls.changed' && e.data.key === 'KAN-1')).toHaveLength(1);
+  expect(
+    seen.filter((e) => e.type === 'tool_calls.changed' && e.data.key === 'KAN-1'),
+  ).toHaveLength(1);
 });
 ```
 
@@ -852,6 +954,7 @@ git commit -m "feat(daemon): IngestService publishes tool_calls.changed pings (s
 ## Task 13: IngestService — PR URL extraction from `gh pr create` tool_result
 
 **Files:**
+
 - Modify: `packages/daemon/src/services/IngestService.ts`
 - Modify: `packages/daemon/src/services/IngestService.test.ts`
 
@@ -862,21 +965,36 @@ Spec §4.3 step 2 + §8.6.
 ```ts
 it('writes runs.pr_url when tool_result contains a github PR URL', async () => {
   const svc = makeIngestService();
-  await svc.processEventForTest({ runId: 1, agentKey: 'KAN-1',
-    event: makeBashToolUse({ id: 'tu_1', input: 'gh pr create --title ...' }) });
-  await svc.processEventForTest({ runId: 1, agentKey: 'KAN-1',
-    event: makeToolResult({ tool_use_id: 'tu_1', content: 'Creating pull request for KAN-1...\nhttps://github.com/x/y/pull/42\n' }) });
-  const row = await db.selectFrom('runs').where('id','=',1).selectAll().executeTakeFirst();
+  await svc.processEventForTest({
+    runId: 1,
+    agentKey: 'KAN-1',
+    event: makeBashToolUse({ id: 'tu_1', input: 'gh pr create --title ...' }),
+  });
+  await svc.processEventForTest({
+    runId: 1,
+    agentKey: 'KAN-1',
+    event: makeToolResult({
+      tool_use_id: 'tu_1',
+      content: 'Creating pull request for KAN-1...\nhttps://github.com/x/y/pull/42\n',
+    }),
+  });
+  const row = await db.selectFrom('runs').where('id', '=', 1).selectAll().executeTakeFirst();
   expect(row?.pr_url).toBe('https://github.com/x/y/pull/42');
 });
 
 it('leaves pr_url NULL when tool_result has no URL', async () => {
   const svc = makeIngestService();
-  await svc.processEventForTest({ runId: 1, agentKey: 'KAN-1',
-    event: makeBashToolUse({ id: 'tu_1', input: 'gh pr create' }) });
-  await svc.processEventForTest({ runId: 1, agentKey: 'KAN-1',
-    event: makeToolResult({ tool_use_id: 'tu_1', content: 'error: not authenticated' }) });
-  const row = await db.selectFrom('runs').where('id','=',1).selectAll().executeTakeFirst();
+  await svc.processEventForTest({
+    runId: 1,
+    agentKey: 'KAN-1',
+    event: makeBashToolUse({ id: 'tu_1', input: 'gh pr create' }),
+  });
+  await svc.processEventForTest({
+    runId: 1,
+    agentKey: 'KAN-1',
+    event: makeToolResult({ tool_use_id: 'tu_1', content: 'error: not authenticated' }),
+  });
+  const row = await db.selectFrom('runs').where('id', '=', 1).selectAll().executeTakeFirst();
   expect(row?.pr_url).toBeNull();
 });
 ```
@@ -899,6 +1017,7 @@ git commit -m "feat(daemon): extract PR URL from gh pr create tool_result (slice
 ## Task 14: `crew finish` — daemon registration parity
 
 **Files:**
+
 - Modify: `packages/cli/src/commands/finish.ts`
 - Modify: `packages/cli/src/commands/finish.test.ts`
 
@@ -911,7 +1030,7 @@ Slice 1b's `daemon-client` already has generic `registerRun({ command, ... })` a
 - [ ] **Step 3: Add the calls** to `finish.ts`:
 
 ```ts
-const reg = await daemonClient.registerRun({ agentKey, command: 'finish', /* ... */ });
+const reg = await daemonClient.registerRun({ agentKey, command: 'finish' /* ... */ });
 const runId = reg.ok ? reg.runId : null;
 try {
   await runFinish(/* existing local logic */);
@@ -940,6 +1059,7 @@ git commit -m "feat(cli,daemon): crew finish registers/completes runs + publishe
 ## Task 15: Dashboard — `eventStream.ts` singleton with reconnect/replay
 
 **Files:**
+
 - Create: `packages/dashboard/src/data/eventStream.ts`
 - Create: `packages/dashboard/src/data/eventStream.test.ts`
 
@@ -953,25 +1073,39 @@ import { CrewEventStream } from './eventStream.js';
 
 class MockEventSource {
   static instances: MockEventSource[] = [];
-  url: string; listeners: Record<string, Array<(e: any) => void>> = {};
-  onopen: any = null; onerror: any = null;
-  constructor(url: string) { this.url = url; MockEventSource.instances.push(this); }
-  addEventListener(name: string, fn: any) { (this.listeners[name] ||= []).push(fn); }
+  url: string;
+  listeners: Record<string, Array<(e: any) => void>> = {};
+  onopen: any = null;
+  onerror: any = null;
+  constructor(url: string) {
+    this.url = url;
+    MockEventSource.instances.push(this);
+  }
+  addEventListener(name: string, fn: any) {
+    (this.listeners[name] ||= []).push(fn);
+  }
   emit(name: string, data: any, lastEventId?: string) {
-    (this.listeners[name] ?? []).forEach(fn => fn({ data: JSON.stringify(data), lastEventId }));
+    (this.listeners[name] ?? []).forEach((fn) => fn({ data: JSON.stringify(data), lastEventId }));
   }
   close() {}
 }
 
-beforeEach(() => { (globalThis as any).EventSource = MockEventSource as any; MockEventSource.instances = []; });
+beforeEach(() => {
+  (globalThis as any).EventSource = MockEventSource as any;
+  MockEventSource.instances = [];
+});
 afterEach(() => vi.useRealTimers());
 
 describe('CrewEventStream', () => {
   it('dispatches typed events to subscribers', () => {
     const stream = new CrewEventStream('http://localhost/api/events');
     const seen: any[] = [];
-    stream.on('agent.state_changed', e => seen.push(e));
-    MockEventSource.instances[0].emit('agent.state_changed', { key: 'KAN-1', from: null, to: 'init', ts: 0 }, 'evt-1');
+    stream.on('agent.state_changed', (e) => seen.push(e));
+    MockEventSource.instances[0].emit(
+      'agent.state_changed',
+      { key: 'KAN-1', from: null, to: 'init', ts: 0 },
+      'evt-1',
+    );
     expect(seen).toHaveLength(1);
   });
 
@@ -991,7 +1125,9 @@ describe('CrewEventStream', () => {
 ```ts
 type Handler = (data: any) => void;
 
-export interface CrewEventStreamOpts { onCacheMiss?: () => void; }
+export interface CrewEventStreamOpts {
+  onCacheMiss?: () => void;
+}
 
 export class CrewEventStream {
   private es: EventSource | null = null;
@@ -999,7 +1135,12 @@ export class CrewEventStream {
   private lastEventId: string | undefined;
   private retryMs = 500;
 
-  constructor(private url: string, private opts: CrewEventStreamOpts = {}) { this.connect(); }
+  constructor(
+    private url: string,
+    private opts: CrewEventStreamOpts = {},
+  ) {
+    this.connect();
+  }
 
   on(event: string, fn: Handler) {
     if (!this.handlers.has(event)) this.handlers.set(event, new Set());
@@ -1016,9 +1157,9 @@ export class CrewEventStream {
       this.lastEventId = (e as any).lastEventId ?? this.lastEventId;
       const data = JSON.parse(e.data);
       if (name === 'cache.miss') this.opts.onCacheMiss?.();
-      this.handlers.get(name)?.forEach(fn => fn(data));
+      this.handlers.get(name)?.forEach((fn) => fn(data));
     };
-    for (const t of ['agent.state_changed','tool_calls.changed','run.completed','cache.miss']) {
+    for (const t of ['agent.state_changed', 'tool_calls.changed', 'run.completed', 'cache.miss']) {
       this.es.addEventListener(t, dispatch(t));
     }
     this.es.onerror = () => {
@@ -1026,7 +1167,9 @@ export class CrewEventStream {
       setTimeout(() => this.connect(), this.retryMs);
       this.retryMs = Math.min(this.retryMs * 2, 30000);
     };
-    this.es.onopen = () => { this.retryMs = 500; };
+    this.es.onopen = () => {
+      this.retryMs = 500;
+    };
   }
 }
 ```
@@ -1057,6 +1200,7 @@ git commit -m "feat(dashboard): CrewEventStream singleton with reconnect + cache
 ## Task 16: Dashboard — `HttpDaemonClient` new methods + shared types
 
 **Files:**
+
 - Modify: `packages/dashboard/src/data/HttpDaemonClient.ts`
 - Modify: `packages/dashboard/src/data/HttpDaemonClient.test.ts`
 - Modify: `packages/dashboard/src/data/types.ts` (add `AgentDetail`, `StateTransition`)
@@ -1067,7 +1211,11 @@ git commit -m "feat(dashboard): CrewEventStream singleton with reconnect + cache
 import type { TranscriptEvent } from 'crew-shared';
 export type { TranscriptEvent };
 
-export interface StateTransition { from: string | null; to: AgentState; ts: number; }
+export interface StateTransition {
+  from: string | null;
+  to: AgentState;
+  ts: number;
+}
 
 export interface AgentDetail {
   key: string;
@@ -1077,8 +1225,19 @@ export interface AgentDetail {
   state: AgentState;
   worktree_path: string;
   pr_url: string | null;
-  runs: Array<{ id: number; command: 'run' | 'fix-pr' | 'finish'; started_at: number; completed_at: number | null }>;
-  tokens: { total: number; input: number; output: number; cache_read: number; cache_creation: number };
+  runs: Array<{
+    id: number;
+    command: 'run' | 'fix-pr' | 'finish';
+    started_at: number;
+    completed_at: number | null;
+  }>;
+  tokens: {
+    total: number;
+    input: number;
+    output: number;
+    cache_read: number;
+    cache_creation: number;
+  };
   tool_call_count: number;
 }
 ```
@@ -1124,6 +1283,7 @@ git commit -m "feat(dashboard): HttpDaemonClient.getAgent / getStateHistory / ge
 ## Task 17: Dashboard — `useAgent`, `useStateHistory`, `useTimeline` hooks
 
 **Files:**
+
 - Modify: `packages/dashboard/src/data/queries.ts`
 - Modify: `packages/dashboard/src/data/queries.test.ts`
 
@@ -1142,14 +1302,24 @@ export function useAgent(key: string) {
   useEffect(() => {
     const off1 = eventStream.on('agent.state_changed', (d: { key: string; to: string }) => {
       if (d.key !== key) return;
-      qc.setQueryData(['agent', key], (old: AgentDetail | undefined) => old && { ...old, state: d.to });
+      qc.setQueryData(
+        ['agent', key],
+        (old: AgentDetail | undefined) => old && { ...old, state: d.to },
+      );
     });
     const off2 = eventStream.on('run.completed', (d: { key: string }) => {
       if (d.key === key) qc.invalidateQueries({ queryKey: ['agent', key] });
     });
-    return () => { off1(); off2(); };
+    return () => {
+      off1();
+      off2();
+    };
   }, [key, qc]);
-  return useQuery({ queryKey: ['agent', key], queryFn: () => client.getAgent(key), refetchInterval: 30_000 });
+  return useQuery({
+    queryKey: ['agent', key],
+    queryFn: () => client.getAgent(key),
+    refetchInterval: 30_000,
+  });
 }
 // useStateHistory, useTimeline follow the same shape;
 // useTimeline subscribes to tool_calls.changed and invalidates ['agent', key, 'timeline'].
@@ -1169,6 +1339,7 @@ git commit -m "feat(dashboard): useAgent/useStateHistory/useTimeline hooks with 
 ## Task 18: Dashboard — `AgentDrawer` route shell
 
 **Files:**
+
 - Create: `packages/dashboard/src/routes/AgentDrawer.tsx`
 - Create: `packages/dashboard/src/routes/AgentDrawer.test.tsx`
 - Modify: `packages/dashboard/src/App.tsx` (or wherever routes are registered)
@@ -1179,7 +1350,11 @@ Spec §5 (header anatomy) and §7.1 (open behavior).
 
 ```tsx
 it('mounts on /agent/:key, renders header with project / ticket / state badge', async () => {
-  renderWithProviders(<MemoryRouter initialEntries={['/agent/KAN-1']}><App/></MemoryRouter>);
+  renderWithProviders(
+    <MemoryRouter initialEntries={['/agent/KAN-1']}>
+      <App />
+    </MemoryRouter>,
+  );
   await screen.findByTestId('drawer-header');
   expect(screen.getByText('KAN-1')).toBeInTheDocument();
   expect(screen.getByTestId('state-badge')).toHaveTextContent(/running|pr_open|finished/i);
@@ -1187,7 +1362,9 @@ it('mounts on /agent/:key, renders header with project / ticket / state badge', 
 
 it('closes on Esc and navigates to /', async () => {
   const { history } = renderWithProviders(
-    <MemoryRouter initialEntries={['/agent/KAN-1']}><App/></MemoryRouter>,
+    <MemoryRouter initialEntries={['/agent/KAN-1']}>
+      <App />
+    </MemoryRouter>,
   );
   await screen.findByTestId('drawer-header');
   await userEvent.keyboard('{Escape}');
@@ -1217,6 +1394,7 @@ git commit -m "feat(dashboard): AgentDrawer route shell + header (slice 1c)"
 ## Task 19: Dashboard — `AgentFullPage` route
 
 **Files:**
+
 - Create: `packages/dashboard/src/routes/AgentFullPage.tsx`
 - Create: `packages/dashboard/src/routes/AgentFullPage.test.tsx`
 - Modify: `packages/dashboard/src/App.tsx`
@@ -1241,6 +1419,7 @@ git commit -m "feat(dashboard): /agent/:key/full route (slice 1c)"
 ## Task 20: Dashboard — `TokenTable`
 
 **Files:**
+
 - Create: `packages/dashboard/src/components/TokenTable.tsx`
 - Create: `packages/dashboard/src/components/TokenTable.test.tsx`
 
@@ -1250,19 +1429,40 @@ Spec §5a. Sortable per-tool aggregation table; columns: tool name, token count,
 
 ```tsx
 it('renders one row per distinct tool, sorted by token count desc by default', () => {
-  render(<TokenTable rows={[{ tool: 'Bash', tokens: 1000 }, { tool: 'Read', tokens: 4000 }]}/>);
+  render(
+    <TokenTable
+      rows={[
+        { tool: 'Bash', tokens: 1000 },
+        { tool: 'Read', tokens: 4000 },
+      ]}
+    />,
+  );
   const rows = screen.getAllByRole('row').slice(1); // skip header
   expect(rows[0]).toHaveTextContent('Read');
   expect(rows[1]).toHaveTextContent('Bash');
 });
 
 it('renders share-of-total %', () => {
-  render(<TokenTable rows={[{ tool: 'Read', tokens: 8000 }, { tool: 'Bash', tokens: 2000 }]}/>);
+  render(
+    <TokenTable
+      rows={[
+        { tool: 'Read', tokens: 8000 },
+        { tool: 'Bash', tokens: 2000 },
+      ]}
+    />,
+  );
   expect(screen.getByText('80%')).toBeInTheDocument();
 });
 
 it('clicking a column header reverses sort', async () => {
-  render(<TokenTable rows={[{ tool: 'Bash', tokens: 1000 }, { tool: 'Read', tokens: 4000 }]}/>);
+  render(
+    <TokenTable
+      rows={[
+        { tool: 'Bash', tokens: 1000 },
+        { tool: 'Read', tokens: 4000 },
+      ]}
+    />,
+  );
   await userEvent.click(screen.getByRole('columnheader', { name: /tokens/i }));
   const rows = screen.getAllByRole('row').slice(1);
   expect(rows[0]).toHaveTextContent('Bash');
@@ -1288,6 +1488,7 @@ git commit -m "feat(dashboard): TokenTable component (slice 1c)"
 ## Task 21: Dashboard — `StateHistoryBar`
 
 **Files:**
+
 - Create: `packages/dashboard/src/components/StateHistoryBar.tsx`
 - Create: `packages/dashboard/src/components/StateHistoryBar.test.tsx`
 
@@ -1297,9 +1498,16 @@ Spec §5b.
 
 ```tsx
 it('renders transitions as inline pills with arrows between them', () => {
-  render(<StateHistoryBar transitions={[
-    { from: null, to: 'init', ts: 1 }, { from: 'init', to: 'running', ts: 2 }, { from: 'running', to: 'pr_open', ts: 3 },
-  ]} onScrollTo={() => {}} />);
+  render(
+    <StateHistoryBar
+      transitions={[
+        { from: null, to: 'init', ts: 1 },
+        { from: 'init', to: 'running', ts: 2 },
+        { from: 'running', to: 'pr_open', ts: 3 },
+      ]}
+      onScrollTo={() => {}}
+    />,
+  );
   const pills = screen.getAllByRole('button');
   expect(pills).toHaveLength(3);
   expect(pills[0]).toHaveTextContent('Initializing');
@@ -1308,7 +1516,9 @@ it('renders transitions as inline pills with arrows between them', () => {
 
 it('clicking a transition fires onScrollTo with that transition ts', async () => {
   const onScrollTo = vi.fn();
-  render(<StateHistoryBar transitions={[{ from: null, to: 'init', ts: 7 }]} onScrollTo={onScrollTo}/>);
+  render(
+    <StateHistoryBar transitions={[{ from: null, to: 'init', ts: 7 }]} onScrollTo={onScrollTo} />,
+  );
   await userEvent.click(screen.getByRole('button'));
   expect(onScrollTo).toHaveBeenCalledWith(7);
 });
@@ -1332,6 +1542,7 @@ git commit -m "feat(dashboard): StateHistoryBar component (slice 1c)"
 ## Task 22: Dashboard — `Timeline` shell + virtualization
 
 **Files:**
+
 - Create: `packages/dashboard/src/components/Timeline/Timeline.tsx`
 - Create: `packages/dashboard/src/components/Timeline/Timeline.test.tsx`
 - Modify: `packages/dashboard/package.json` (add `@tanstack/react-virtual`)
@@ -1345,13 +1556,13 @@ Spec §5c skeleton; events come from `useTimeline(key)`. The shell hosts virtual
 ```tsx
 it('renders one EventCard per event from useTimeline', () => {
   mockUseTimeline.mockReturnValue({ data: { events: [evt1, evt2, evt3] }, isLoading: false });
-  render(<Timeline agentKey="KAN-1"/>);
+  render(<Timeline agentKey="KAN-1" />);
   expect(screen.getAllByTestId('event-card')).toHaveLength(3);
 });
 
 it('shows a loading state', () => {
   mockUseTimeline.mockReturnValue({ data: undefined, isLoading: true });
-  render(<Timeline agentKey="KAN-1"/>);
+  render(<Timeline agentKey="KAN-1" />);
   expect(screen.getByTestId('timeline-loading')).toBeInTheDocument();
 });
 ```
@@ -1374,6 +1585,7 @@ git commit -m "feat(dashboard): Timeline shell + virtualization (slice 1c)"
 ## Task 23: Dashboard — `FilterChips`
 
 **Files:**
+
 - Create: `packages/dashboard/src/components/Timeline/FilterChips.tsx`
 - Create: `packages/dashboard/src/components/Timeline/FilterChips.test.tsx`
 - Modify: `packages/dashboard/src/components/Timeline/Timeline.tsx`
@@ -1384,12 +1596,15 @@ Spec §7.4 — six chip groups: Tool calls, Assistant prose, Thinking, System, H
 
 ```tsx
 it('renders six chips with curated defaults', () => {
-  render(<FilterChips visible={defaultVisibleSet} onChange={() => {}}/>);
-  ['Tool calls','Assistant prose','Thinking','System','Hooks & skills','Other']
-    .forEach(label => expect(screen.getByRole('button', { name: label })).toBeInTheDocument());
+  render(<FilterChips visible={defaultVisibleSet} onChange={() => {}} />);
+  ['Tool calls', 'Assistant prose', 'Thinking', 'System', 'Hooks & skills', 'Other'].forEach(
+    (label) => expect(screen.getByRole('button', { name: label })).toBeInTheDocument(),
+  );
 });
 
-it('clicking a chip toggles its visibility set', async () => { /* ... */ });
+it('clicking a chip toggles its visibility set', async () => {
+  /* ... */
+});
 ```
 
 - [ ] **Step 2: Run, expect FAIL**
@@ -1410,6 +1625,7 @@ git commit -m "feat(dashboard): FilterChips with curated default-visible set (sl
 ## Task 24: Dashboard — `SearchBar`
 
 **Files:**
+
 - Create: `packages/dashboard/src/components/Timeline/SearchBar.tsx`
 - Create: `packages/dashboard/src/components/Timeline/SearchBar.test.tsx`
 - Modify: `packages/dashboard/src/components/Timeline/Timeline.tsx`
@@ -1420,11 +1636,16 @@ Spec §7.5.
 
 ```tsx
 it('filters timeline events by substring against one-liner content', async () => {
-  mockUseTimeline.mockReturnValue({ data: { events: [
-    makeAssistantToolUse({ name: 'Bash', input: { command: 'npm test' } }),
-    makeAssistantToolUse({ name: 'Read', input: { file_path: '/foo.ts' } }),
-  ] }, isLoading: false });
-  render(<Timeline agentKey="KAN-1"/>);
+  mockUseTimeline.mockReturnValue({
+    data: {
+      events: [
+        makeAssistantToolUse({ name: 'Bash', input: { command: 'npm test' } }),
+        makeAssistantToolUse({ name: 'Read', input: { file_path: '/foo.ts' } }),
+      ],
+    },
+    isLoading: false,
+  });
+  render(<Timeline agentKey="KAN-1" />);
   expect(screen.getAllByTestId('event-card')).toHaveLength(2);
   await userEvent.type(screen.getByRole('searchbox'), 'npm');
   expect(screen.getAllByTestId('event-card')).toHaveLength(1);
@@ -1449,6 +1670,7 @@ git commit -m "feat(dashboard): Timeline SearchBar (slice 1c)"
 ## Task 25: Dashboard — `LiveModeToggle`
 
 **Files:**
+
 - Create: `packages/dashboard/src/components/Timeline/LiveModeToggle.tsx`
 - Create: `packages/dashboard/src/components/Timeline/LiveModeToggle.test.tsx`
 - Modify: `packages/dashboard/src/components/Timeline/Timeline.tsx`
@@ -1478,6 +1700,7 @@ git commit -m "feat(dashboard): Timeline live-mode toggle + new-events pill (sli
 ## Task 26: Dashboard — `EventCard` router + per-type renderers
 
 **Files:**
+
 - Create: `packages/dashboard/src/components/Timeline/EventCard.tsx`
 - Create: `packages/dashboard/src/components/Timeline/renderers/ToolUseCard.tsx`
 - Create: `packages/dashboard/src/components/Timeline/renderers/ThinkingCard.tsx`
@@ -1511,6 +1734,7 @@ it('clicking expands to show full input', async () => {
 ```
 
 Repeat with type-appropriate assertions for the other renderers:
+
 - `ThinkingCard` — line1 = first ~80 chars of `thinking`, expand shows full prose.
 - `TextCard` — line1 = first ~80 chars of text, expand shows full.
 - `ToolResultCard` — line1 = `[result for {tool_use_id}]`, expand shows full content; if `is_error` true, line1 prefixed with red `[error]`.
@@ -1534,6 +1758,7 @@ git commit -m "feat(dashboard): EventCard + per-type Timeline renderers (slice 1
 ## Task 27: Dashboard — empty filter state + "Show all"
 
 **Files:**
+
 - Modify: `packages/dashboard/src/components/Timeline/Timeline.tsx`
 - Modify: `packages/dashboard/src/components/Timeline/Timeline.test.tsx`
 
@@ -1543,9 +1768,16 @@ Spec §7.4 + §8.8.
 
 ```tsx
 it('renders empty state when all chips are off', async () => {
-  render(<Timeline agentKey="KAN-1"/>);
+  render(<Timeline agentKey="KAN-1" />);
   // toggle every chip off via the rendered FilterChips
-  for (const chip of ['Tool calls','Assistant prose','Thinking','System','Hooks & skills','Other']) {
+  for (const chip of [
+    'Tool calls',
+    'Assistant prose',
+    'Thinking',
+    'System',
+    'Hooks & skills',
+    'Other',
+  ]) {
     const btn = screen.getByRole('button', { name: chip });
     if (btn.getAttribute('aria-pressed') === 'true') await userEvent.click(btn);
   }
@@ -1555,13 +1787,19 @@ it('renders empty state when all chips are off', async () => {
 });
 
 it('Show all resets to defaults', async () => {
-  render(<Timeline agentKey="KAN-1"/>);
-  for (const chip of ['Tool calls','Assistant prose']) {
+  render(<Timeline agentKey="KAN-1" />);
+  for (const chip of ['Tool calls', 'Assistant prose']) {
     await userEvent.click(screen.getByRole('button', { name: chip }));
   }
   await userEvent.click(screen.getByRole('button', { name: /Show all/i }));
-  expect(screen.getByRole('button', { name: 'Tool calls' })).toHaveAttribute('aria-pressed', 'true');
-  expect(screen.getByRole('button', { name: 'Assistant prose' })).toHaveAttribute('aria-pressed', 'true');
+  expect(screen.getByRole('button', { name: 'Tool calls' })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
+  expect(screen.getByRole('button', { name: 'Assistant prose' })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
 });
 ```
 
@@ -1583,6 +1821,7 @@ git commit -m "feat(dashboard): Timeline empty-filter state + Show all (slice 1c
 ## Task 28: Dashboard — "Hide finished" toggle on `AgentsList`
 
 **Files:**
+
 - Modify: `packages/dashboard/src/components/AgentsList.tsx`
 - Modify: `packages/dashboard/src/components/AgentsList.test.tsx`
 
@@ -1592,8 +1831,13 @@ Spec §7.7.
 
 ```tsx
 it('hides finished agents by default; toggling off shows them', async () => {
-  mockUseAgents.mockReturnValue({ data: [{ key: 'A', state: 'running' }, { key: 'B', state: 'finished' }] });
-  render(<AgentsList/>);
+  mockUseAgents.mockReturnValue({
+    data: [
+      { key: 'A', state: 'running' },
+      { key: 'B', state: 'finished' },
+    ],
+  });
+  render(<AgentsList />);
   expect(screen.queryByText('B')).toBeNull();
   await userEvent.click(screen.getByRole('switch', { name: /Hide finished/i }));
   expect(screen.getByText('B')).toBeInTheDocument();
@@ -1601,7 +1845,7 @@ it('hides finished agents by default; toggling off shows them', async () => {
 
 it('persists pref to localStorage', async () => {
   mockUseAgents.mockReturnValue({ data: [{ key: 'A', state: 'finished' }] });
-  render(<AgentsList/>);
+  render(<AgentsList />);
   await userEvent.click(screen.getByRole('switch', { name: /Hide finished/i }));
   expect(localStorage.getItem('crew.dashboard.hideFinished')).toBe('false');
 });
@@ -1625,6 +1869,7 @@ git commit -m "feat(dashboard): Hide finished toggle on agents list (slice 1c)"
 ## Task 29: Bruno endpoints + flow extension
 
 **Files:**
+
 - Create: `bruno/endpoints/agents/get-agent-by-key.bru`
 - Create: `bruno/endpoints/agents/get-state-history.bru`
 - Create: `bruno/endpoints/agents/get-timeline.bru`
@@ -1683,6 +1928,7 @@ git commit -m "test(bruno): coverage for slice 1c drawer + events endpoints"
 ## Task 30: Playwright E2E spec for the agent drawer
 
 **Files:**
+
 - Create: `tests/e2e/agent-drawer.spec.ts`
 - Possibly modify: `tests/e2e/fixtures/` to add a seeded-agent helper
 
@@ -1712,9 +1958,16 @@ test.describe('Agent drawer', () => {
 
   test('empty filter state', async ({ page }) => {
     await page.goto('/agent/KAN-1');
-    for (const chip of ['Tool calls','Assistant prose','Thinking','System','Hooks & skills','Other']) {
+    for (const chip of [
+      'Tool calls',
+      'Assistant prose',
+      'Thinking',
+      'System',
+      'Hooks & skills',
+      'Other',
+    ]) {
       const btn = page.getByRole('button', { name: chip });
-      if (await btn.getAttribute('aria-pressed') === 'true') await btn.click();
+      if ((await btn.getAttribute('aria-pressed')) === 'true') await btn.click();
     }
     await expect(page.getByText(/No events match your filters/i)).toBeVisible();
     await expect(page.getByRole('button', { name: /Show all/i })).toBeVisible();
@@ -1734,9 +1987,14 @@ test.describe('Agent drawer', () => {
     // expose a window-level test hook from CrewEventStream during dev/test that injects a synthetic event
     await page.goto('/agent/KAN-1');
     const initial = await page.getByTestId('state-badge').textContent();
-    await page.evaluate(() => (window as any).__crewTestInjectEvent('agent.state_changed', {
-      key: 'KAN-1', from: 'running', to: 'pr_open', ts: Date.now(),
-    }));
+    await page.evaluate(() =>
+      (window as any).__crewTestInjectEvent('agent.state_changed', {
+        key: 'KAN-1',
+        from: 'running',
+        to: 'pr_open',
+        ts: Date.now(),
+      }),
+    );
     await expect(page.getByTestId('state-badge')).not.toHaveText(initial!);
   });
 });

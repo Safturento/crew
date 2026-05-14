@@ -17,6 +17,7 @@
 ## File Structure
 
 **Modified:**
+
 - `packages/cli/src/lib/playwright/resolve-app-url.ts` — extend `resolveAppUrl` signature with optional `envVars`; support `${VAR}` syntax alongside existing `{xxxPort}` placeholders; clearer errors when a syntax is used without its source.
 - `packages/cli/src/lib/playwright/resolve-app-url.test.ts` — add tests for `${VAR}` syntax, mixed-syntax templates, and missing-source error cases.
 - `packages/cli/src/commands/run.ts` — `BringUpWorktreeEnvResult`'s env-spec variant carries the materialized base map; `runRun` passes it as the third argument to every `resolveAppUrl` callsite. Add a clear error when env.toml is present but project TOML uses legacy `{xxxPort}` placeholders.
@@ -25,6 +26,7 @@
 - `docs/followups.md` — amend the existing `2026-04-30 — Unified crew init / crew doctor onboarding helper` entry: the wizard scaffolds project TOMLs with `${APP_URL}`-style syntax, never legacy `{httpsPort}` placeholders, even though crew still supports the legacy form.
 
 **Untouched:**
+
 - `packages/cli/src/lib/env-spec/*` — env.toml schema, parser, materializer all stay as-is. The fix is at the consumer layer.
 - `packages/cli/src/lib/docker/env.ts` (`writeDockerEnv`) — legacy path stays intact for projects without env.toml.
 
@@ -33,6 +35,7 @@
 ## Task 1: Extend `resolveAppUrl` for `${VAR}` syntax
 
 **Files:**
+
 - Modify: `packages/cli/src/lib/playwright/resolve-app-url.ts`
 - Modify: `packages/cli/src/lib/playwright/resolve-app-url.test.ts`
 
@@ -200,6 +203,7 @@ git commit -m "feat(playwright): resolveAppUrl supports \${VAR} syntax for env.t
 ## Task 2: `BringUpWorktreeEnvResult` carries the materialized base map
 
 **Files:**
+
 - Modify: `packages/cli/src/commands/run.ts:66-68` (the result type)
 - Modify: `packages/cli/src/commands/run.ts:97` (the env-spec return)
 
@@ -263,6 +267,7 @@ git commit -m "feat(run): bringUpWorktreeEnv env-spec result carries base map"
 ## Task 3: Pass `envVars` through `resolveAppUrl` callsites in `runRun`
 
 **Files:**
+
 - Modify: `packages/cli/src/commands/run.ts:246-298` (`dockerPorts` setup + `resolveAppUrl` calls)
 - Modify: `packages/cli/src/commands/run.test.ts` (integration test for env-spec → `resolveAppUrl`)
 
@@ -341,7 +346,11 @@ HTTPS_PORT = { kind = "port", default = 443 }
     // populate them) → resolveAppUrl errors with the clear migration message.
     const { resolveAppUrl } = await import('../lib/playwright/resolve-app-url.js');
     expect(() =>
-      resolveAppUrl('https://localhost:{httpsPort}', undefined, result.kind === 'env-spec' ? result.base : undefined),
+      resolveAppUrl(
+        'https://localhost:{httpsPort}',
+        undefined,
+        result.kind === 'env-spec' ? result.base : undefined,
+      ),
     ).toThrow(/should use \$\{VAR\} syntax/i);
   });
 });
@@ -459,6 +468,7 @@ git commit -m "feat(run): pass materialized envVars through resolveAppUrl callsi
 ## Task 4: Documentation + setup-wizard followup amendment
 
 **Files:**
+
 - Modify: `README.md`
 - Modify: `docs/followups.md`
 
@@ -476,14 +486,14 @@ After the "Materialization rules" subsection in `README.md`, add a new subsectio
   ```toml
   [playwright]
   app_url = "${APP_URL}"
-  
+
   [bruno_smoke]
   base_url = "${APP_URL}"
   ```
 
   Any variable declared in the project's `env.toml` (orchestration, app, files-with-`env_var`, even built-ins like `${BASE_NAME}`) can be referenced.
 
-- **`{httpPort}` / `{httpsPort}` / `{postgresPort}`** — legacy syntax for projects *without* `env.toml`. Substitutes from the fixed `writeDockerEnv` port shape. Don't use this for env.toml projects — crew can't populate the legacy ports map from a generic env.toml schema, and you'll get a clear error pointing you at the `${VAR}` form.
+- **`{httpPort}` / `{httpsPort}` / `{postgresPort}`** — legacy syntax for projects _without_ `env.toml`. Substitutes from the fixed `writeDockerEnv` port shape. Don't use this for env.toml projects — crew can't populate the legacy ports map from a generic env.toml schema, and you'll get a clear error pointing you at the `${VAR}` form.
 
 Both syntaxes can coexist in one template (e.g., `${BASE_URL}:{httpsPort}/api`), but in practice projects use one or the other. The `${VAR}` form is the modern way.
 ````

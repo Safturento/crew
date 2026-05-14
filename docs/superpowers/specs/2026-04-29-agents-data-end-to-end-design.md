@@ -8,11 +8,11 @@
 
 Unchanged from slice 1a — Fastify, Awilix, Zod, Kysely + `kysely-better-sqlite3`, pino, Vitest. New runtime dependencies added by this slice:
 
-| Concern | Pick | Notes |
-|---|---|---|
-| File watching | **chokidar** | Used narrowly: one watcher per active session JSONL, with `awaitWriteFinish` so we don't fire on the in-progress write of the first line. Not a recursive watch on `~/.claude/projects/*/`. |
-| Tail abstraction | reuse `tailTranscript` | Already exists at `packages/cli/src/lib/transcripts/tail.ts`; moves to `crew-shared` (Phase 1.5 step 2) so daemon and CLI share it. |
-| Transcript parsing | reuse `parseTranscript` / `parseToolCall` / `aggregateUsage` | Same module, same move. |
+| Concern            | Pick                                                         | Notes                                                                                                                                                                                       |
+| ------------------ | ------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| File watching      | **chokidar**                                                 | Used narrowly: one watcher per active session JSONL, with `awaitWriteFinish` so we don't fire on the in-progress write of the first line. Not a recursive watch on `~/.claude/projects/*/`. |
+| Tail abstraction   | reuse `tailTranscript`                                       | Already exists at `packages/cli/src/lib/transcripts/tail.ts`; moves to `crew-shared` (Phase 1.5 step 2) so daemon and CLI share it.                                                         |
+| Transcript parsing | reuse `parseTranscript` / `parseToolCall` / `aggregateUsage` | Same module, same move.                                                                                                                                                                     |
 
 ## 2. Scope
 
@@ -95,14 +95,14 @@ Body (Zod-validated):
 
 ```ts
 {
-  key: string;            // 'KAN-31'
-  projectName: string;    // matches a registered project's TOML name
-  ticketTitle: string;    // from Jira at start; '' if Jira lookup failed (CLI swallows the error and proceeds)
+  key: string; // 'KAN-31'
+  projectName: string; // matches a registered project's TOML name
+  ticketTitle: string; // from Jira at start; '' if Jira lookup failed (CLI swallows the error and proceeds)
   worktreePath: string;
   branch: string;
-  sessionId: string;      // claude session id (the .jsonl basename without extension)
+  sessionId: string; // claude session id (the .jsonl basename without extension)
   command: 'run' | 'fix-pr';
-  startedAt: string;      // ISO 8601
+  startedAt: string; // ISO 8601
 }
 ```
 
@@ -118,7 +118,10 @@ Behavior:
 Body:
 
 ```ts
-{ exitCode: number; completedAt: string }
+{
+  exitCode: number;
+  completedAt: string;
+}
 ```
 
 Behavior:
@@ -148,11 +151,11 @@ In `packages/cli/src/commands/fix-pr.ts`: same pattern. The `fix-pr` flow alread
 
 ```ts
 export class IngestService {
-  constructor(deps: { db: Kysely<Database>; logger: Logger; configDir: string; });
-  async start(): Promise<void>;             // called from app boot; resumes tails for any open runs
+  constructor(deps: { db: Kysely<Database>; logger: Logger; configDir: string });
+  async start(): Promise<void>; // called from app boot; resumes tails for any open runs
   attach(input: { runId: number; sessionId: string; worktreePath: string }): void;
   detach(runId: number): void;
-  async stop(): Promise<void>;              // called from Fastify's onClose; aborts all tails
+  async stop(): Promise<void>; // called from Fastify's onClose; aborts all tails
 }
 ```
 
@@ -193,13 +196,13 @@ export class IngestService {
 
 Computed live in `AgentsService.list()`. Single Kysely query joins `agents` with the latest `runs` row (`ROW_NUMBER() OVER (PARTITION BY agent_key ORDER BY id DESC) = 1`) and aggregates over all of an agent's runs/tool_calls.
 
-| Condition | State |
-|---|---|
-| Latest run is open (`completed_at IS NULL`) AND zero tool_calls | `initializing` |
-| Latest run is open AND ≥1 tool_call | `running` |
-| Latest run completed with `exit_code = 0` AND any tool_call across the agent's runs has `tool_name = 'Bash'` AND `input_summary LIKE 'gh pr create%'` | `pr_open` |
-| Latest run completed with `exit_code = 0` AND no `gh pr create` ever observed | `finished` |
-| Latest run completed with `exit_code != 0` | `error` |
+| Condition                                                                                                                                             | State          |
+| ----------------------------------------------------------------------------------------------------------------------------------------------------- | -------------- |
+| Latest run is open (`completed_at IS NULL`) AND zero tool_calls                                                                                       | `initializing` |
+| Latest run is open AND ≥1 tool_call                                                                                                                   | `running`      |
+| Latest run completed with `exit_code = 0` AND any tool_call across the agent's runs has `tool_name = 'Bash'` AND `input_summary LIKE 'gh pr create%'` | `pr_open`      |
+| Latest run completed with `exit_code = 0` AND no `gh pr create` ever observed                                                                         | `finished`     |
+| Latest run completed with `exit_code != 0`                                                                                                            | `error`        |
 
 **`idle` and `waiting` are not emitted in slice 1b.** The dashboard's `STATE_META` continues to define them (the type is unchanged), but the daemon currently has no clean signal to derive them from in headless mode:
 
@@ -224,7 +227,11 @@ const rows = await db
     (join) =>
       join
         .onRef('latest_run.agent_key', '=', 'a.key')
-        .on('latest_run.id', '=', sql`(SELECT id FROM runs r2 WHERE r2.agent_key = a.key ORDER BY id DESC LIMIT 1)`),
+        .on(
+          'latest_run.id',
+          '=',
+          sql`(SELECT id FROM runs r2 WHERE r2.agent_key = a.key ORDER BY id DESC LIMIT 1)`,
+        ),
   )
   .leftJoin(
     db
@@ -236,14 +243,31 @@ const rows = await db
       .select((eb) => eb.fn.sum<number>('tc.cache_read_tokens').as('cache_read_tokens'))
       .select((eb) => eb.fn.sum<number>('tc.cache_creation_tokens').as('cache_creation_tokens'))
       .select((eb) => eb.fn.count<number>('tc.id').as('tool_call_count'))
-      .select((eb) => eb.fn.max<number>(sql<number>`CASE WHEN tc.tool_name = 'Bash' AND tc.input_summary LIKE 'gh pr create%' THEN 1 ELSE 0 END`).as('has_pr_create'))
+      .select((eb) =>
+        eb.fn
+          .max<number>(
+            sql<number>`CASE WHEN tc.tool_name = 'Bash' AND tc.input_summary LIKE 'gh pr create%' THEN 1 ELSE 0 END`,
+          )
+          .as('has_pr_create'),
+      )
       .groupBy('r.agent_key')
       .as('totals'),
     (join) => join.onRef('totals.agent_key', '=', 'a.key'),
   )
   .selectAll('a')
-  .select(['latest_run.completed_at', 'latest_run.exit_code', 'latest_run.started_at as run_started_at'])
-  .select(['totals.output_tokens', 'totals.input_tokens', 'totals.cache_read_tokens', 'totals.cache_creation_tokens', 'totals.tool_call_count', 'totals.has_pr_create'])
+  .select([
+    'latest_run.completed_at',
+    'latest_run.exit_code',
+    'latest_run.started_at as run_started_at',
+  ])
+  .select([
+    'totals.output_tokens',
+    'totals.input_tokens',
+    'totals.cache_read_tokens',
+    'totals.cache_creation_tokens',
+    'totals.tool_call_count',
+    'totals.has_pr_create',
+  ])
   .execute();
 ```
 
@@ -264,9 +288,9 @@ Response shape:
     projectName: string;
     ticketTitle: string;
     state: 'initializing' | 'running' | 'pr_open' | 'error' | 'finished';
-    startedAt: string;          // run_started_at of the latest run (matches the dashboard's existing type)
+    startedAt: string; // run_started_at of the latest run (matches the dashboard's existing type)
     tokens: number;
-    prUrl?: string;             // present when pr_url is non-null
+    prUrl?: string; // present when pr_url is non-null
   }>;
 }
 ```
@@ -282,7 +306,9 @@ import { z } from 'zod';
 import type { DaemonClient } from './DaemonClient.js';
 import type { Agent, Project } from './types.js';
 
-const ProjectsResponseSchema = z.object({ projects: z.array(z.object({ name: z.string(), repoPath: z.string() })) });
+const ProjectsResponseSchema = z.object({
+  projects: z.array(z.object({ name: z.string(), repoPath: z.string() })),
+});
 const AgentsResponseSchema = z.object({
   agents: z.array(
     z.object({
@@ -340,20 +366,20 @@ useQuery({
 
 ## 9. Tests
 
-| Surface | Test |
-|---|---|
-| Migration | Vitest. Run the migration up against a fresh tmpdir DB; assert the tables/columns/indexes exist via `sqlite_master`. Run down; assert tables are dropped. |
-| `IngestService.ingestEvent` | Vitest. Construct with a tmpdir DB and a fixture transcript event; assert `tool_calls` rows match expectation for assistant-with-tool-use, assistant-without-tool-use (no row), non-assistant types (no row), and a `gh pr create` Bash event (row inserted, summary matches). |
-| `IngestService.attach` + JSONL tail | Vitest with a fixture JSONL file written incrementally via `fs.appendFile`. Attach, write three events with delays, assert three `tool_calls` rows land. Then call `detach`, write a fourth event, assert it does *not* land. |
-| `IngestService.start` recovery | Vitest. Pre-populate `runs` with two open rows + their JSONL files. Call `start()`. Append events to one of the files. Assert tool_calls land. |
-| `AgentsService.list` | Vitest, fixture-DB-driven. Cover each state: agent registered with no run yet (`initializing`), agent with running tool calls (`running`), `pr_open`, `finished`, `error`. Cover token aggregation across multiple runs of the same agent. |
-| `POST /api/agents/runs` route | `app.inject`. Cover: new agent (creates row + run), existing agent (updates row, creates new run), session-id collision (409), invalid project name (400 via Zod). |
-| `POST /api/agents/runs/:runId/complete` route | `app.inject`. Cover: run exists and open (204, ingest detached), run already completed (409), run not found (404). |
-| `GET /api/agents` route | `app.inject`. Cover: empty DB (returns `{ agents: [] }`), populated DB (returns the expected list including the derived state). |
-| `daemon-client/registerRun` + `completeRun` (CLI) | Vitest with a stubbed fetch. Cover: 201 response (parses agent + run), connection error (returns `{ ok: false }`, logs warning, doesn't throw). |
-| `runTicket` integration (CLI) | Extend the existing `run.test.ts` to assert the daemon client is called with the expected payload at registration time and at completion time. Use the mocked-execa harness already in place. |
-| Dashboard `HttpDaemonClient` | Vitest with `fetch` stub. Cover both methods: happy path, schema-mismatch throw, non-2xx throw. |
-| Dashboard `App.test.tsx` | Update to inject `MockDaemonClient` directly (Hybrid is gone). Existing assertions unchanged. |
+| Surface                                           | Test                                                                                                                                                                                                                                                                           |
+| ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Migration                                         | Vitest. Run the migration up against a fresh tmpdir DB; assert the tables/columns/indexes exist via `sqlite_master`. Run down; assert tables are dropped.                                                                                                                      |
+| `IngestService.ingestEvent`                       | Vitest. Construct with a tmpdir DB and a fixture transcript event; assert `tool_calls` rows match expectation for assistant-with-tool-use, assistant-without-tool-use (no row), non-assistant types (no row), and a `gh pr create` Bash event (row inserted, summary matches). |
+| `IngestService.attach` + JSONL tail               | Vitest with a fixture JSONL file written incrementally via `fs.appendFile`. Attach, write three events with delays, assert three `tool_calls` rows land. Then call `detach`, write a fourth event, assert it does _not_ land.                                                  |
+| `IngestService.start` recovery                    | Vitest. Pre-populate `runs` with two open rows + their JSONL files. Call `start()`. Append events to one of the files. Assert tool_calls land.                                                                                                                                 |
+| `AgentsService.list`                              | Vitest, fixture-DB-driven. Cover each state: agent registered with no run yet (`initializing`), agent with running tool calls (`running`), `pr_open`, `finished`, `error`. Cover token aggregation across multiple runs of the same agent.                                     |
+| `POST /api/agents/runs` route                     | `app.inject`. Cover: new agent (creates row + run), existing agent (updates row, creates new run), session-id collision (409), invalid project name (400 via Zod).                                                                                                             |
+| `POST /api/agents/runs/:runId/complete` route     | `app.inject`. Cover: run exists and open (204, ingest detached), run already completed (409), run not found (404).                                                                                                                                                             |
+| `GET /api/agents` route                           | `app.inject`. Cover: empty DB (returns `{ agents: [] }`), populated DB (returns the expected list including the derived state).                                                                                                                                                |
+| `daemon-client/registerRun` + `completeRun` (CLI) | Vitest with a stubbed fetch. Cover: 201 response (parses agent + run), connection error (returns `{ ok: false }`, logs warning, doesn't throw).                                                                                                                                |
+| `runTicket` integration (CLI)                     | Extend the existing `run.test.ts` to assert the daemon client is called with the expected payload at registration time and at completion time. Use the mocked-execa harness already in place.                                                                                  |
+| Dashboard `HttpDaemonClient`                      | Vitest with `fetch` stub. Cover both methods: happy path, schema-mismatch throw, non-2xx throw.                                                                                                                                                                                |
+| Dashboard `App.test.tsx`                          | Update to inject `MockDaemonClient` directly (Hybrid is gone). Existing assertions unchanged.                                                                                                                                                                                  |
 
 ## 10. Failure modes & open questions
 
@@ -361,7 +387,7 @@ useQuery({
 
 **JSONL file appears late:** `tailTranscript` already polls and survives the file-not-yet-existing case. `awaitWriteFinish` covers the in-progress-write case for chokidar's existence check.
 
-**Daemon restart mid-run:** crash-recovery via `IngestService.start()` — open runs resume from current file position (`startAtEnd: true` is *not* used at recovery time; we want all events since the last ingest, but on restart the tool_calls table already has what was ingested before the crash, so resuming from beginning would dedupe via the implicit "the file is append-only and ingest is idempotent on (run_id, occurred_at)" property — actually we should add a unique constraint or do a `WHERE NOT EXISTS` check; see open question below).
+**Daemon restart mid-run:** crash-recovery via `IngestService.start()` — open runs resume from current file position (`startAtEnd: true` is _not_ used at recovery time; we want all events since the last ingest, but on restart the tool_calls table already has what was ingested before the crash, so resuming from beginning would dedupe via the implicit "the file is append-only and ingest is idempotent on (run_id, occurred_at)" property — actually we should add a unique constraint or do a `WHERE NOT EXISTS` check; see open question below).
 
 **Open questions tagged for follow-up:**
 

@@ -38,6 +38,7 @@ This is the third vertical-slice ticket pair (after CREW-117 + CREW-119) and the
 ### Why parallel-safe
 
 Ticket 1 and Ticket 2 touch:
+
 - Different routes (`#/projects` vs `#/projects/:slug`)
 - Different page-component files
 - Different Figma frames
@@ -55,9 +56,9 @@ Current response is `{ projects: [{ name, repoPath }] }`. Expand to:
 const ProjectSchema = z.object({
   name: z.string(),
   repoPath: z.string(),
-  branch: z.string(),       // from project config default_branch
-  jiraKey: z.string(),      // from project config jira.project_key
-  activeCount: z.number(),  // server-derived: agents.filter(a => a.projectName === project.name).length
+  branch: z.string(), // from project config default_branch
+  jiraKey: z.string(), // from project config jira.project_key
+  activeCount: z.number(), // server-derived: agents.filter(a => a.projectName === project.name).length
 });
 ```
 
@@ -98,32 +99,32 @@ app.get('/api/projects/:slug', { schema: { ... } }, async (req) => {
 
 ### Ticket 1 — Projects list slice
 
-| File | Status | Purpose |
-|---|---|---|
-| `src/App.tsx` | modify | Add `#/projects` route case; render `<ProjectsListPage>` |
-| `src/routes/ProjectsListPage.tsx` | NEW | Route container — TanStack Query for `listProjects()`; renders ProjectsTable; mounts "+ Register project" button (stubbed) |
-| `src/components/ProjectsTable.tsx` | NEW | Wraps shadcn `Table` primitive with column headers (NAME / REPO PATH / BRANCH / JIRA / ACTIVE / chevron) + maps projects to `ProjectRow` |
-| `src/components/ProjectRow.tsx` | NEW | Single table row — name / repoPath / branch / jiraKey / `<CountBadge count={activeCount} />` / chevron link to `#/projects/:slug` |
-| `src/components/CountBadge.tsx` | NEW | Small tinted circle with number — `state/initializing` color by default. Reusable for "Clear attention" count, etc. |
-| `src/data/types.ts` | modify | Expand `Project` interface with `branch`, `jiraKey`, `activeCount` |
-| `src/data/HttpDaemonClient.ts` + `MockDaemonClient.ts` + `fixtures.ts` | modify | Mirror Project type expansion |
-| `src/components/ProjectsTable.test.tsx` + `ProjectRow.test.tsx` + `CountBadge.test.tsx` | NEW | Unit tests for rendering + chevron-link wiring |
-| `tests/e2e/projects-list.spec.ts` | NEW | Playwright e2e: navigate to `#/projects`, assert rows render, click chevron, assert URL changes |
+| File                                                                                    | Status | Purpose                                                                                                                                  |
+| --------------------------------------------------------------------------------------- | ------ | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/App.tsx`                                                                           | modify | Add `#/projects` route case; render `<ProjectsListPage>`                                                                                 |
+| `src/routes/ProjectsListPage.tsx`                                                       | NEW    | Route container — TanStack Query for `listProjects()`; renders ProjectsTable; mounts "+ Register project" button (stubbed)               |
+| `src/components/ProjectsTable.tsx`                                                      | NEW    | Wraps shadcn `Table` primitive with column headers (NAME / REPO PATH / BRANCH / JIRA / ACTIVE / chevron) + maps projects to `ProjectRow` |
+| `src/components/ProjectRow.tsx`                                                         | NEW    | Single table row — name / repoPath / branch / jiraKey / `<CountBadge count={activeCount} />` / chevron link to `#/projects/:slug`        |
+| `src/components/CountBadge.tsx`                                                         | NEW    | Small tinted circle with number — `state/initializing` color by default. Reusable for "Clear attention" count, etc.                      |
+| `src/data/types.ts`                                                                     | modify | Expand `Project` interface with `branch`, `jiraKey`, `activeCount`                                                                       |
+| `src/data/HttpDaemonClient.ts` + `MockDaemonClient.ts` + `fixtures.ts`                  | modify | Mirror Project type expansion                                                                                                            |
+| `src/components/ProjectsTable.test.tsx` + `ProjectRow.test.tsx` + `CountBadge.test.tsx` | NEW    | Unit tests for rendering + chevron-link wiring                                                                                           |
+| `tests/e2e/projects-list.spec.ts`                                                       | NEW    | Playwright e2e: navigate to `#/projects`, assert rows render, click chevron, assert URL changes                                          |
 
 **"+ Register project" button:** stub `onClick={() => { /* TODO: wire to Register modal in Epic 4 */ }}`. Visible, focusable, no-op. Same pattern as the QuickAction buttons followup from CREW-119.
 
 ### Ticket 2 — Project detail slice
 
-| File | Status | Purpose |
-|---|---|---|
-| `src/App.tsx` | modify | Add `#/projects/:slug` route case; render `<ProjectDetailPage slug={...}>` |
-| `src/routes/ProjectDetailPage.tsx` | NEW | Route container — TanStack Query for `getProject(slug)`; renders ProjectHeader + ProjectConfigBlock + filtered ProjectSection |
-| `src/components/ProjectHeader.tsx` | NEW | Back link (← Projects) + heading + config-file path subtitle + Edit / Remove buttons (stubbed) |
-| `src/components/ProjectConfigBlock.tsx` | NEW | JSON → TOML formatter for display in a Fira-Code styled card |
-| `src/components/ProjectSection.tsx` | reuse | Existing component; add a prop to filter to a single project's agents |
-| `src/data/HttpDaemonClient.ts` + `MockDaemonClient.ts` + `fixtures.ts` | modify | Add `getProject(slug)` method returning ProjectDetailResponse |
-| `src/components/ProjectHeader.test.tsx` + `ProjectConfigBlock.test.tsx` | NEW | Unit tests |
-| `tests/e2e/project-detail.spec.ts` | NEW | Playwright e2e: navigate to `#/projects/kanban-api`, assert config + agents render, click "← Projects", assert URL returns to list |
+| File                                                                    | Status | Purpose                                                                                                                            |
+| ----------------------------------------------------------------------- | ------ | ---------------------------------------------------------------------------------------------------------------------------------- |
+| `src/App.tsx`                                                           | modify | Add `#/projects/:slug` route case; render `<ProjectDetailPage slug={...}>`                                                         |
+| `src/routes/ProjectDetailPage.tsx`                                      | NEW    | Route container — TanStack Query for `getProject(slug)`; renders ProjectHeader + ProjectConfigBlock + filtered ProjectSection      |
+| `src/components/ProjectHeader.tsx`                                      | NEW    | Back link (← Projects) + heading + config-file path subtitle + Edit / Remove buttons (stubbed)                                     |
+| `src/components/ProjectConfigBlock.tsx`                                 | NEW    | JSON → TOML formatter for display in a Fira-Code styled card                                                                       |
+| `src/components/ProjectSection.tsx`                                     | reuse  | Existing component; add a prop to filter to a single project's agents                                                              |
+| `src/data/HttpDaemonClient.ts` + `MockDaemonClient.ts` + `fixtures.ts`  | modify | Add `getProject(slug)` method returning ProjectDetailResponse                                                                      |
+| `src/components/ProjectHeader.test.tsx` + `ProjectConfigBlock.test.tsx` | NEW    | Unit tests                                                                                                                         |
+| `tests/e2e/project-detail.spec.ts`                                      | NEW    | Playwright e2e: navigate to `#/projects/kanban-api`, assert config + agents render, click "← Projects", assert URL returns to list |
 
 **Edit / Remove buttons:** stub `onClick={() => { /* TODO: wire to Edit/Remove modal in Epic 4 */ }}`. Visible, focusable, no-op.
 
@@ -135,12 +136,12 @@ app.get('/api/projects/:slug', { schema: { ... } }, async (req) => {
 
 All four follow the StateBadge canonical opacity pattern (mid intensity = 10% bg + 30% border + 100% text) per `docs/plans/design-system.md`. Each composite gets a matching `.figma.tsx` Code Connect mapping (publish skipped per Pro plan).
 
-| Composite | Ticket | Crew DS structure | Code counterpart |
-|---|---|---|---|
-| `CountBadge` | 1 | Small ellipse (h-5 w-5 ish, 50% radius) + centered number. Bound to `state/initializing` for default tint. Variant axis on `state` (initializing/running/idle/waiting/pr-open/error/finished) so the badge can carry different semantic meanings. | `packages/dashboard/src/components/CountBadge.tsx` |
-| `ProjectRow` | 1 | Horizontal frame composing 5 text cells (name / repoPath / branch / jiraKey) + 1 `CountBadge` instance + 1 chevron icon. Auto-layout with consistent column widths matching the parent ProjectsTable's column distribution. | `packages/dashboard/src/components/ProjectRow.tsx` |
-| `ProjectHeader` | 2 | Vertical auto-layout: back link (← Projects) → heading → config-path subtitle (Fira Code, muted). Horizontal slot on the right for action buttons (Edit / Remove). Wrapped in a horizontal frame so heading-block + actions-block sit side-by-side. | `packages/dashboard/src/components/ProjectHeader.tsx` |
-| `ProjectConfigBlock` | 2 | Wraps shadcn `Card` instance with a TOML-formatted body in Fira Code. Padding + border per the Card primitive. Light internal padding for the code text. | `packages/dashboard/src/components/ProjectConfigBlock.tsx` |
+| Composite            | Ticket | Crew DS structure                                                                                                                                                                                                                                   | Code counterpart                                           |
+| -------------------- | ------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- |
+| `CountBadge`         | 1      | Small ellipse (h-5 w-5 ish, 50% radius) + centered number. Bound to `state/initializing` for default tint. Variant axis on `state` (initializing/running/idle/waiting/pr-open/error/finished) so the badge can carry different semantic meanings.   | `packages/dashboard/src/components/CountBadge.tsx`         |
+| `ProjectRow`         | 1      | Horizontal frame composing 5 text cells (name / repoPath / branch / jiraKey) + 1 `CountBadge` instance + 1 chevron icon. Auto-layout with consistent column widths matching the parent ProjectsTable's column distribution.                         | `packages/dashboard/src/components/ProjectRow.tsx`         |
+| `ProjectHeader`      | 2      | Vertical auto-layout: back link (← Projects) → heading → config-path subtitle (Fira Code, muted). Horizontal slot on the right for action buttons (Edit / Remove). Wrapped in a horizontal frame so heading-block + actions-block sit side-by-side. | `packages/dashboard/src/components/ProjectHeader.tsx`      |
+| `ProjectConfigBlock` | 2      | Wraps shadcn `Card` instance with a TOML-formatted body in Fira Code. Padding + border per the Card primitive. Light internal padding for the code text.                                                                                            | `packages/dashboard/src/components/ProjectConfigBlock.tsx` |
 
 **Skipping `ProjectsTable` as a Crew DS composite** — it's just a shadcn `Table` instance with header row + N `ProjectRow` instances. No design-system value in wrapping it; the Crew DS would just be a copy of the shadcn primitive.
 
@@ -148,10 +149,10 @@ All four follow the StateBadge canonical opacity pattern (mid intensity = 10% bg
 
 Apply the `figma-screen-migration` skill workflow to both frames. The skill's audit/ruleset/swap pipeline is well-tested at this point — same recipe as the 3 frames already migrated. The screens file's library cache for Crew DS is current (Crew DS published 2026-05-10).
 
-| Ticket | Frame | Estimated work |
-|---|---|---|
-| 1 | `1:2334` (Projects list) | Audit, set Crew Semantic dark mode (single-collection per CREW-127), build color ruleset (~200 fills expected), bind, swap detached pills for `ProjectRow` + `CountBadge` instances. ~30-45 min mechanical work. |
-| 2 | `1:2443` (Project detail) | Same pipeline. Compose new `ProjectHeader` + `ProjectConfigBlock` + existing `ProjectSection` instances. The agent rows inside reuse the StateBadge work already done. ~30-45 min. |
+| Ticket | Frame                     | Estimated work                                                                                                                                                                                                   |
+| ------ | ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1      | `1:2334` (Projects list)  | Audit, set Crew Semantic dark mode (single-collection per CREW-127), build color ruleset (~200 fills expected), bind, swap detached pills for `ProjectRow` + `CountBadge` instances. ~30-45 min mechanical work. |
+| 2      | `1:2443` (Project detail) | Same pipeline. Compose new `ProjectHeader` + `ProjectConfigBlock` + existing `ProjectSection` instances. The agent rows inside reuse the StateBadge work already done. ~30-45 min.                               |
 
 **Mode-set caveat:** Crew DS now uses single-collection mode resolution (Trap 2 exception). Phase 2 of the migration skill only needs `setExplicitVariableModeForCollection(crewSemantic, darkModeId)` — no Core mode collection chain-walking.
 
@@ -205,13 +206,13 @@ For each new composite, author `<ComponentName>.figma.tsx` alongside the dashboa
 
 ## Risks + mitigations
 
-| Risk | Mitigation |
-|---|---|
-| activeCount derivation is N+1 (one count query per project) on a hot path | Compute in a single pass: `agents.groupBy('projectName').count()` server-side. Cache via the agents service if it's already cached. |
-| TOML formatter doesn't handle every config edge case (e.g. nested arrays) | Inline formatter targets the current ProjectConfig schema only; if schema grows nested arrays, fall back to `@iarna/toml`. Cover with unit tests for the current schema's shape. |
-| Stub buttons land but Epic 4 slips, leaving non-functional UI in production | Each stub button gets a TODO comment referencing Epic 4. If Epic 4 hasn't shipped by next release, hide the buttons via a feature flag rather than landing dead UI. |
-| 4 new composites + 2 frame migrations + new code is more Figma+code work than CREW-117/119 — bigger ticket | Each ticket is still one focused vertical slice. Per-ticket work is bounded; if a ticket grows during execution, we split rather than mega-ticket. |
-| Crew DS still uses single-collection mode chain — agent forgets and tries to set Core mode (wasted effort, no harm) | Migration skill has the exception note for the simplified pattern. Project memory entry reinforces it. |
+| Risk                                                                                                                | Mitigation                                                                                                                                                                       |
+| ------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| activeCount derivation is N+1 (one count query per project) on a hot path                                           | Compute in a single pass: `agents.groupBy('projectName').count()` server-side. Cache via the agents service if it's already cached.                                              |
+| TOML formatter doesn't handle every config edge case (e.g. nested arrays)                                           | Inline formatter targets the current ProjectConfig schema only; if schema grows nested arrays, fall back to `@iarna/toml`. Cover with unit tests for the current schema's shape. |
+| Stub buttons land but Epic 4 slips, leaving non-functional UI in production                                         | Each stub button gets a TODO comment referencing Epic 4. If Epic 4 hasn't shipped by next release, hide the buttons via a feature flag rather than landing dead UI.              |
+| 4 new composites + 2 frame migrations + new code is more Figma+code work than CREW-117/119 — bigger ticket          | Each ticket is still one focused vertical slice. Per-ticket work is bounded; if a ticket grows during execution, we split rather than mega-ticket.                               |
+| Crew DS still uses single-collection mode chain — agent forgets and tries to set Core mode (wasted effort, no harm) | Migration skill has the exception note for the simplified pattern. Project memory entry reinforces it.                                                                           |
 
 ## Open questions
 

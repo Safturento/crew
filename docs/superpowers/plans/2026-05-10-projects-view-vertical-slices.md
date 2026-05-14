@@ -3,6 +3,7 @@
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 >
 > **REQUIRED COMPANION SKILLS:**
+>
 > - `reaching-for-backend-patterns` — Phase A1 + B1 daemon work (Fastify + Zod + Awilix DI)
 > - `reaching-for-frontend-libraries` — all dashboard component work (CVA + TanStack Query + shadcn primitives)
 > - `bruno-collection-maintenance` — Phase A4 + A5 + B3 collection updates
@@ -22,32 +23,32 @@
 
 ## File structure
 
-| File | Phase | Responsibility |
-|---|---|---|
-| `packages/daemon/src/services/ProjectsService.ts` | A | Expand `list()` to derive `branch` + `jiraKey` + `activeCount`; add `getBySlug(slug)` + `getConfigPath(name)` |
-| `packages/daemon/src/routes/projects.ts` | A, B | Expanded `ProjectSchema` for list response; new `GET /api/projects/:slug` handler |
-| `bruno/endpoints/projects/get-list.bru` | A | Updated assertions for expanded response |
-| `bruno/endpoints/projects/get-show.bru` | B | New file for the new endpoint |
-| `bruno/flows/main-smoke.bru` | A, B | Chain a list call + a show call |
-| `packages/dashboard/src/data/types.ts` | A | Expand `Project` interface (branch, jiraKey, activeCount); add `ProjectDetailResponse` |
-| `packages/dashboard/src/data/HttpDaemonClient.ts` + `MockDaemonClient.ts` + `fixtures.ts` | A, B | Mirror type expansion + add `getProject(slug)` method |
-| `packages/dashboard/src/components/CountBadge.tsx` | A | Tinted-circle badge for activeCount |
-| `packages/dashboard/src/components/ProjectsTable.tsx` | A | shadcn Table wrapper with column headers + ProjectRow per project |
-| `packages/dashboard/src/components/ProjectRow.tsx` | A | Single row: 5 cells + CountBadge + chevron link |
-| `packages/dashboard/src/routes/ProjectsListPage.tsx` | A | Route container — query, page heading, "+ Register project" stub button, ProjectsTable |
-| `packages/dashboard/src/components/ProjectHeader.tsx` | B | Detail-page header: back link + heading + config-path subtitle + Edit/Remove stubs |
-| `packages/dashboard/src/components/ProjectConfigBlock.tsx` | B | TOML-formatted Card displaying ProjectConfig |
-| `packages/dashboard/src/lib/jsonToToml.ts` | B | Inline JSON → TOML formatter (~30 lines) for ProjectConfig display |
-| `packages/dashboard/src/routes/ProjectDetailPage.tsx` | B | Route container — query, ProjectHeader, ProjectConfigBlock, filtered ProjectSection |
-| `packages/dashboard/src/components/ProjectSection.tsx` | B | Modify to accept `projectName` prop for filtering |
-| `packages/dashboard/src/App.tsx` | A, B | Add `#/projects` and `#/projects/:slug` route cases |
-| `packages/dashboard/src/routing/useHashRoute.ts` | A, B | Extend route discriminator if needed |
-| `packages/dashboard/tests/e2e/projects-list.spec.ts` | A | Playwright e2e for the list view |
-| `packages/dashboard/tests/e2e/project-detail.spec.ts` | B | Playwright e2e for the detail view |
-| Crew DS Figma file `DsA7QuEa2WthDATkksd1Bq` | A, B | New composites: CountBadge, ProjectRow, ProjectHeader, ProjectConfigBlock |
-| `*.figma.tsx` Code Connect mappings | A, B | One alongside each new component |
-| Crew Dashboard Screens `9FeJPriqdsdA4n9R5Xsrr8` | A, B | Migrate frames `1:2334` + `1:2443` |
-| `docs/plans/design-system.md` | B | Add 4 new composites to the inventory table |
+| File                                                                                      | Phase | Responsibility                                                                                                |
+| ----------------------------------------------------------------------------------------- | ----- | ------------------------------------------------------------------------------------------------------------- |
+| `packages/daemon/src/services/ProjectsService.ts`                                         | A     | Expand `list()` to derive `branch` + `jiraKey` + `activeCount`; add `getBySlug(slug)` + `getConfigPath(name)` |
+| `packages/daemon/src/routes/projects.ts`                                                  | A, B  | Expanded `ProjectSchema` for list response; new `GET /api/projects/:slug` handler                             |
+| `bruno/endpoints/projects/get-list.bru`                                                   | A     | Updated assertions for expanded response                                                                      |
+| `bruno/endpoints/projects/get-show.bru`                                                   | B     | New file for the new endpoint                                                                                 |
+| `bruno/flows/main-smoke.bru`                                                              | A, B  | Chain a list call + a show call                                                                               |
+| `packages/dashboard/src/data/types.ts`                                                    | A     | Expand `Project` interface (branch, jiraKey, activeCount); add `ProjectDetailResponse`                        |
+| `packages/dashboard/src/data/HttpDaemonClient.ts` + `MockDaemonClient.ts` + `fixtures.ts` | A, B  | Mirror type expansion + add `getProject(slug)` method                                                         |
+| `packages/dashboard/src/components/CountBadge.tsx`                                        | A     | Tinted-circle badge for activeCount                                                                           |
+| `packages/dashboard/src/components/ProjectsTable.tsx`                                     | A     | shadcn Table wrapper with column headers + ProjectRow per project                                             |
+| `packages/dashboard/src/components/ProjectRow.tsx`                                        | A     | Single row: 5 cells + CountBadge + chevron link                                                               |
+| `packages/dashboard/src/routes/ProjectsListPage.tsx`                                      | A     | Route container — query, page heading, "+ Register project" stub button, ProjectsTable                        |
+| `packages/dashboard/src/components/ProjectHeader.tsx`                                     | B     | Detail-page header: back link + heading + config-path subtitle + Edit/Remove stubs                            |
+| `packages/dashboard/src/components/ProjectConfigBlock.tsx`                                | B     | TOML-formatted Card displaying ProjectConfig                                                                  |
+| `packages/dashboard/src/lib/jsonToToml.ts`                                                | B     | Inline JSON → TOML formatter (~30 lines) for ProjectConfig display                                            |
+| `packages/dashboard/src/routes/ProjectDetailPage.tsx`                                     | B     | Route container — query, ProjectHeader, ProjectConfigBlock, filtered ProjectSection                           |
+| `packages/dashboard/src/components/ProjectSection.tsx`                                    | B     | Modify to accept `projectName` prop for filtering                                                             |
+| `packages/dashboard/src/App.tsx`                                                          | A, B  | Add `#/projects` and `#/projects/:slug` route cases                                                           |
+| `packages/dashboard/src/routing/useHashRoute.ts`                                          | A, B  | Extend route discriminator if needed                                                                          |
+| `packages/dashboard/tests/e2e/projects-list.spec.ts`                                      | A     | Playwright e2e for the list view                                                                              |
+| `packages/dashboard/tests/e2e/project-detail.spec.ts`                                     | B     | Playwright e2e for the detail view                                                                            |
+| Crew DS Figma file `DsA7QuEa2WthDATkksd1Bq`                                               | A, B  | New composites: CountBadge, ProjectRow, ProjectHeader, ProjectConfigBlock                                     |
+| `*.figma.tsx` Code Connect mappings                                                       | A, B  | One alongside each new component                                                                              |
+| Crew Dashboard Screens `9FeJPriqdsdA4n9R5Xsrr8`                                           | A, B  | Migrate frames `1:2334` + `1:2443`                                                                            |
+| `docs/plans/design-system.md`                                                             | B     | Add 4 new composites to the inventory table                                                                   |
 
 ---
 
@@ -56,6 +57,7 @@
 ### Task A1: Expand ProjectsService.list() to derive branch/jiraKey/activeCount
 
 **Files:**
+
 - Modify: `packages/daemon/src/services/ProjectsService.ts`
 - Test: `packages/daemon/src/services/ProjectsService.test.ts`
 
@@ -74,7 +76,7 @@ describe('ProjectsService.list()', () => {
       agentsByProject: { a: 3, b: 0 },
     });
     expect(svc.list()).toEqual([
-      { name: 'a', repoPath: '/a', branch: 'main',    jiraKey: 'A', activeCount: 3 },
+      { name: 'a', repoPath: '/a', branch: 'main', jiraKey: 'A', activeCount: 3 },
       { name: 'b', repoPath: '/b', branch: 'develop', jiraKey: 'B', activeCount: 0 },
     ]);
   });
@@ -105,6 +107,7 @@ git commit -m "feat(daemon): expand ProjectsService.list() with branch/jiraKey/a
 ### Task A2: Update GET /api/projects route schema + handler
 
 **Files:**
+
 - Modify: `packages/daemon/src/routes/projects.ts`
 - Test: `packages/daemon/src/routes/projects.test.ts`
 
@@ -161,6 +164,7 @@ git commit -m "feat(daemon): expand GET /api/projects response schema"
 ### Task A3: Update Bruno collection for /api/projects
 
 **Files:**
+
 - Modify: `bruno/endpoints/projects/get-list.bru`
 - Modify: `bruno/flows/main-smoke.bru`
 
@@ -199,6 +203,7 @@ git commit -m "test(bruno): assert expanded /api/projects shape"
 ### Task A4: Update dashboard Project type + fixtures
 
 **Files:**
+
 - Modify: `packages/dashboard/src/data/types.ts`
 - Modify: `packages/dashboard/src/data/fixtures.ts`
 - Modify: `packages/dashboard/src/data/MockDaemonClient.ts`
@@ -240,6 +245,7 @@ git commit -m "feat(dashboard): expand Project type with branch/jiraKey/activeCo
 ### Task A5: Build CountBadge component
 
 **Files:**
+
 - Create: `packages/dashboard/src/components/CountBadge.tsx`
 - Test: `packages/dashboard/src/components/CountBadge.test.tsx`
 
@@ -295,11 +301,7 @@ export function CountBadge({ count, state = 'initializing' }: CountBadgeProps) {
     return <span className="font-mono text-[10px] text-muted-foreground">—</span>;
   }
   const c = STATE_CLASSES[state];
-  return (
-    <span className={`${countBadge()} ${c.text} ${c.border30} ${c.bg10}`}>
-      {count}
-    </span>
-  );
+  return <span className={`${countBadge()} ${c.text} ${c.border30} ${c.bg10}`}>{count}</span>;
 }
 ```
 
@@ -318,6 +320,7 @@ git commit -m "feat(dashboard): add CountBadge component"
 ### Task A6: Build ProjectRow component
 
 **Files:**
+
 - Create: `packages/dashboard/src/components/ProjectRow.tsx`
 - Test: `packages/dashboard/src/components/ProjectRow.test.tsx`
 
@@ -339,7 +342,11 @@ const sampleProject = {
 describe('ProjectRow', () => {
   it('renders all 5 cells', () => {
     render(
-      <table><tbody><ProjectRow project={sampleProject} /></tbody></table>
+      <table>
+        <tbody>
+          <ProjectRow project={sampleProject} />
+        </tbody>
+      </table>,
     );
     expect(screen.getByText('kanban-api')).toBeInTheDocument();
     expect(screen.getByText('~/code/kanban-api')).toBeInTheDocument();
@@ -350,7 +357,11 @@ describe('ProjectRow', () => {
 
   it('row links to /projects/:slug via hash', () => {
     render(
-      <table><tbody><ProjectRow project={sampleProject} /></tbody></table>
+      <table>
+        <tbody>
+          <ProjectRow project={sampleProject} />
+        </tbody>
+      </table>,
     );
     const link = screen.getByRole('link');
     expect(link.getAttribute('href')).toBe('#/projects/kanban-api');
@@ -379,7 +390,9 @@ export function ProjectRow({ project }: { project: Project }) {
         <TableCell className="font-mono text-muted-foreground">{project.repoPath}</TableCell>
         <TableCell className="font-mono text-muted-foreground">{project.branch}</TableCell>
         <TableCell className="font-mono text-muted-foreground">{project.jiraKey}</TableCell>
-        <TableCell><CountBadge count={project.activeCount} /></TableCell>
+        <TableCell>
+          <CountBadge count={project.activeCount} />
+        </TableCell>
         <TableCell aria-hidden>›</TableCell>
       </a>
     </TableRow>
@@ -404,6 +417,7 @@ git commit -m "feat(dashboard): add ProjectRow component"
 ### Task A7: Build ProjectsTable component
 
 **Files:**
+
 - Create: `packages/dashboard/src/components/ProjectsTable.tsx`
 - Test: `packages/dashboard/src/components/ProjectsTable.test.tsx`
 
@@ -463,7 +477,9 @@ export function ProjectsTable({ projects }: { projects: Project[] }) {
         </TableRow>
       </TableHeader>
       <TableBody>
-        {projects.map((p) => <ProjectRow key={p.name} project={p} />)}
+        {projects.map((p) => (
+          <ProjectRow key={p.name} project={p} />
+        ))}
       </TableBody>
     </Table>
   );
@@ -485,6 +501,7 @@ git commit -m "feat(dashboard): add ProjectsTable component"
 ### Task A8: Build ProjectsListPage route container
 
 **Files:**
+
 - Create: `packages/dashboard/src/routes/ProjectsListPage.tsx`
 - Test: `packages/dashboard/src/routes/ProjectsListPage.test.tsx`
 
@@ -571,6 +588,7 @@ git commit -m "feat(dashboard): add ProjectsListPage route container"
 ### Task A9: Wire #/projects route in App.tsx
 
 **Files:**
+
 - Modify: `packages/dashboard/src/App.tsx`
 - Modify: `packages/dashboard/src/routing/useHashRoute.ts`
 
@@ -613,6 +631,7 @@ git commit -m "feat(dashboard): wire #/projects route"
 ### Task A10: E2E test for Projects list
 
 **Files:**
+
 - Create: `packages/dashboard/tests/e2e/projects-list.spec.ts`
 
 - [ ] **Step 1: Write the e2e test**
@@ -667,11 +686,13 @@ Expected: PASS
 ### Task A12: Build CountBadge composite in Crew DS
 
 **Files:**
+
 - Mutate: Crew DS Figma file `DsA7QuEa2WthDATkksd1Bq` (Composites page)
 
 - [ ] **Step 1: Use figma-use to create the CountBadge component**
 
 Reference: figma-use skill. Create a single-component (not a set yet — start with one variant; can add the state axis later if needed). Structure:
+
 - Frame name: `CountBadge`
 - 20×20 (h-5 w-5) frame
 - 50% corner radius
@@ -696,11 +717,13 @@ Note the new component's node ID for reference in Task A14 (Code Connect mapping
 ### Task A13: Build ProjectRow composite in Crew DS
 
 **Files:**
+
 - Mutate: Crew DS Figma file (Composites page)
 
 - [ ] **Step 1: Use figma-use to create the ProjectRow component**
 
 Structure:
+
 - Horizontal auto-layout frame
 - 5 text cells (name, repoPath, branch, jiraKey columns) + 1 CountBadge instance + 1 chevron icon (Lucide ChevronRight or similar)
 - Fonts: Fira Code where appropriate, Hanken Grotesk for the project name
@@ -715,6 +738,7 @@ Structure:
 ### Task A14: Author Code Connect mappings
 
 **Files:**
+
 - Create: `packages/dashboard/src/components/CountBadge.figma.tsx`
 - Create: `packages/dashboard/src/components/ProjectRow.figma.tsx`
 
@@ -751,11 +775,13 @@ Wait for confirmation before Task A16.
 ### Task A16: Migrate frame 1:2334 to Crew DS
 
 **Files:**
+
 - Mutate: Crew Dashboard Screens `9FeJPriqdsdA4n9R5Xsrr8` frame `1:2334`
 
 - [ ] **Step 1: Apply the figma-screen-migration skill workflow**
 
 Per the skill's 4-phase pipeline:
+
 1. Audit (count detached pills, fill stats, color buckets)
 2. Set Crew Semantic dark mode (single-collection — Trap 2 exception per CREW-127)
 3. Bind colors via context-aware ruleset (reuse the ruleset from earlier migrations — should cover ~95% of fills)
@@ -792,6 +818,7 @@ Expected: all PASS
 ### Task B1: Add ProjectsService.getBySlug + getConfigPath
 
 **Files:**
+
 - Modify: `packages/daemon/src/services/ProjectsService.ts`
 - Test: `packages/daemon/src/services/ProjectsService.test.ts`
 
@@ -800,7 +827,9 @@ Expected: all PASS
 ```ts
 describe('ProjectsService.getBySlug()', () => {
   it('returns full ProjectConfig for known slug', () => {
-    const svc = makeProjectsService({ projects: [{ name: 'kanban-api', repo_path: '/x', /* ... */ }] });
+    const svc = makeProjectsService({
+      projects: [{ name: 'kanban-api', repo_path: '/x' /* ... */ }],
+    });
     expect(svc.getBySlug('kanban-api')).toMatchObject({ name: 'kanban-api', repo_path: '/x' });
   });
 
@@ -812,7 +841,7 @@ describe('ProjectsService.getBySlug()', () => {
 
 describe('ProjectsService.getConfigPath()', () => {
   it('returns the resolved file path for a project', () => {
-    const svc = makeProjectsService({ projects: [{ name: 'a', /* ... */ }] });
+    const svc = makeProjectsService({ projects: [{ name: 'a' /* ... */ }] });
     expect(svc.getConfigPath('a')).toMatch(/\/projects\/a\.toml$/);
   });
 });
@@ -842,6 +871,7 @@ git commit -m "feat(daemon): ProjectsService.getBySlug + getConfigPath"
 ### Task B2: Add GET /api/projects/:slug route
 
 **Files:**
+
 - Modify: `packages/daemon/src/routes/projects.ts`
 - Test: `packages/daemon/src/routes/projects.test.ts`
 
@@ -875,7 +905,7 @@ Expected: FAIL
 ```ts
 // packages/daemon/src/routes/projects.ts (add to existing file)
 const ProjectDetailResponseSchema = z.object({
-  project: ProjectConfigSchema,  // import from packages/shared/src/config/schema.ts
+  project: ProjectConfigSchema, // import from packages/shared/src/config/schema.ts
   configPath: z.string(),
 });
 
@@ -910,6 +940,7 @@ git commit -m "feat(daemon): GET /api/projects/:slug endpoint"
 ### Task B3: Add Bruno endpoint for /api/projects/:slug
 
 **Files:**
+
 - Create: `bruno/endpoints/projects/get-show.bru`
 - Modify: `bruno/flows/main-smoke.bru` to chain a list call → show call
 
@@ -936,6 +967,7 @@ git commit -m "test(bruno): add /api/projects/:slug endpoint + smoke flow"
 ### Task B4: Add getProject(slug) to dashboard data layer
 
 **Files:**
+
 - Modify: `packages/dashboard/src/data/types.ts` (add ProjectDetailResponse)
 - Modify: `packages/dashboard/src/data/DaemonClient.ts` (add getProject method to interface)
 - Modify: `packages/dashboard/src/data/HttpDaemonClient.ts` (implement)
@@ -995,6 +1027,7 @@ git commit -m "feat(dashboard): add getProject(slug) to data layer"
 ### Task B5: Build jsonToToml formatter
 
 **Files:**
+
 - Create: `packages/dashboard/src/lib/jsonToToml.ts`
 - Test: `packages/dashboard/src/lib/jsonToToml.test.ts`
 
@@ -1010,13 +1043,15 @@ describe('jsonToToml', () => {
   });
 
   it('formats nested objects as [section]', () => {
-    expect(jsonToToml({ name: 'a', jira: { project_key: 'KAN' } }))
-      .toBe('name = "a"\n\n[jira]\nproject_key = "KAN"');
+    expect(jsonToToml({ name: 'a', jira: { project_key: 'KAN' } })).toBe(
+      'name = "a"\n\n[jira]\nproject_key = "KAN"',
+    );
   });
 
   it('preserves comments via leading # lines if provided', () => {
-    expect(jsonToToml({ name: 'a' }, { leadingComment: '# generated by crew' }))
-      .toBe('# generated by crew\nname = "a"');
+    expect(jsonToToml({ name: 'a' }, { leadingComment: '# generated by crew' })).toBe(
+      '# generated by crew\nname = "a"',
+    );
   });
 });
 ```
@@ -1081,6 +1116,7 @@ git commit -m "feat(dashboard): add jsonToToml formatter for ProjectConfig displ
 ### Task B6: Build ProjectConfigBlock component
 
 **Files:**
+
 - Create: `packages/dashboard/src/components/ProjectConfigBlock.tsx`
 - Test: `packages/dashboard/src/components/ProjectConfigBlock.test.tsx`
 
@@ -1092,7 +1128,12 @@ import { ProjectConfigBlock } from './ProjectConfigBlock.js';
 
 describe('ProjectConfigBlock', () => {
   it('renders config as TOML', () => {
-    const config = { name: 'kanban-api', repo_path: '~/code/kanban-api', default_branch: 'main', jira: { project_key: 'KAN' } };
+    const config = {
+      name: 'kanban-api',
+      repo_path: '~/code/kanban-api',
+      default_branch: 'main',
+      jira: { project_key: 'KAN' },
+    };
     render(<ProjectConfigBlock config={config} />);
     expect(screen.getByText(/name = "kanban-api"/)).toBeInTheDocument();
     expect(screen.getByText(/\[jira\]/)).toBeInTheDocument();
@@ -1114,7 +1155,9 @@ import { jsonToToml } from '../lib/jsonToToml.js';
 import type { ProjectConfig } from '@crew/shared/config/schema.js';
 
 export function ProjectConfigBlock({ config }: { config: ProjectConfig }) {
-  const toml = jsonToToml(config as Record<string, unknown> as never, { leadingComment: '# generated by crew' });
+  const toml = jsonToToml(config as Record<string, unknown> as never, {
+    leadingComment: '# generated by crew',
+  });
   return (
     <Card className="p-4">
       <pre className="font-mono text-sm text-muted-foreground whitespace-pre">{toml}</pre>
@@ -1138,6 +1181,7 @@ git commit -m "feat(dashboard): add ProjectConfigBlock component"
 ### Task B7: Build ProjectHeader component
 
 **Files:**
+
 - Create: `packages/dashboard/src/components/ProjectHeader.tsx`
 - Test: `packages/dashboard/src/components/ProjectHeader.test.tsx`
 
@@ -1149,7 +1193,9 @@ import { ProjectHeader } from './ProjectHeader.js';
 
 describe('ProjectHeader', () => {
   it('renders back link, name, config path, and action buttons', () => {
-    render(<ProjectHeader name="kanban-api" configPath="~/.config/crew/projects/kanban-api.toml" />);
+    render(
+      <ProjectHeader name="kanban-api" configPath="~/.config/crew/projects/kanban-api.toml" />,
+    );
     expect(screen.getByText('← Projects')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'kanban-api' })).toBeInTheDocument();
     expect(screen.getByText(/kanban-api\.toml/)).toBeInTheDocument();
@@ -1185,19 +1231,29 @@ export function ProjectHeader({ name, configPath }: ProjectHeaderProps) {
   return (
     <div className="flex items-start justify-between mb-6">
       <div>
-        <a href="#/projects" className="text-sm text-muted-foreground hover:text-foreground">← Projects</a>
+        <a href="#/projects" className="text-sm text-muted-foreground hover:text-foreground">
+          ← Projects
+        </a>
         <h1 className="text-2xl font-semibold mt-1">{name}</h1>
         <p className="text-sm text-muted-foreground font-mono mt-1">{configPath}</p>
       </div>
       <div className="flex gap-2">
         <Button
           variant="outline"
-          onClick={() => { /* TODO (Epic 4): wire to Edit modal */ }}
-        >Edit</Button>
+          onClick={() => {
+            /* TODO (Epic 4): wire to Edit modal */
+          }}
+        >
+          Edit
+        </Button>
         <Button
           variant="destructive"
-          onClick={() => { /* TODO (Epic 4): wire to Remove modal */ }}
-        >Remove</Button>
+          onClick={() => {
+            /* TODO (Epic 4): wire to Remove modal */
+          }}
+        >
+          Remove
+        </Button>
       </div>
     </div>
   );
@@ -1219,6 +1275,7 @@ git commit -m "feat(dashboard): add ProjectHeader component"
 ### Task B8: Modify ProjectSection to accept projectName filter
 
 **Files:**
+
 - Modify: `packages/dashboard/src/components/ProjectSection.tsx`
 - Modify: `packages/dashboard/src/components/ProjectSection.test.tsx`
 
@@ -1227,8 +1284,8 @@ git commit -m "feat(dashboard): add ProjectHeader component"
 ```tsx
 it('filters agents to the named project when projectName prop is set', () => {
   const agents = [
-    { key: 'a1', projectName: 'a', /* ... */ },
-    { key: 'b1', projectName: 'b', /* ... */ },
+    { key: 'a1', projectName: 'a' /* ... */ },
+    { key: 'b1', projectName: 'b' /* ... */ },
   ];
   render(<ProjectSection agents={agents} projectName="a" />);
   expect(screen.queryByText('a1')).toBeInTheDocument();
@@ -1260,6 +1317,7 @@ git commit -m "feat(dashboard): ProjectSection accepts projectName filter prop"
 ### Task B9: Build ProjectDetailPage route container
 
 **Files:**
+
 - Create: `packages/dashboard/src/routes/ProjectDetailPage.tsx`
 - Test: `packages/dashboard/src/routes/ProjectDetailPage.test.tsx`
 
@@ -1351,6 +1409,7 @@ git commit -m "feat(dashboard): add ProjectDetailPage route container"
 ### Task B10: Wire #/projects/:slug route in App.tsx
 
 **Files:**
+
 - Modify: `packages/dashboard/src/App.tsx`
 - Modify: `packages/dashboard/src/routing/useHashRoute.ts`
 
@@ -1387,6 +1446,7 @@ git commit -m "feat(dashboard): wire #/projects/:slug route"
 ### Task B11: E2E test for Project detail
 
 **Files:**
+
 - Create: `packages/dashboard/tests/e2e/project-detail.spec.ts`
 
 - [ ] **Step 1: Write the e2e test**
@@ -1437,11 +1497,13 @@ Expected: PASS
 ### Task B13: Build ProjectHeader composite in Crew DS
 
 **Files:**
+
 - Mutate: Crew DS Figma file
 
 - [ ] **Step 1: Use figma-use to create the ProjectHeader component**
 
 Structure:
+
 - Outer horizontal frame: heading-block (left) + actions-block (right, gap)
 - Heading-block: vertical auto-layout with back link → heading → config-path subtitle (Fira Code, muted-foreground)
 - Actions-block: horizontal auto-layout with Edit (outline) + Remove (destructive) Button instances
@@ -1457,11 +1519,13 @@ Use shadcn Button instances from Core (ID `73:3681` per CREW-125 mapping).
 ### Task B14: Build ProjectConfigBlock composite in Crew DS
 
 **Files:**
+
 - Mutate: Crew DS Figma file
 
 - [ ] **Step 1: Use figma-use to create the ProjectConfigBlock component**
 
 Structure:
+
 - Outer Card instance from shadcn (or styled frame): bg `card`, border `border`, padding p-4
 - Inner TEXT node: Fira Code 14pt, muted-foreground, sample TOML content (mirror the Figma frame's example)
 
@@ -1474,6 +1538,7 @@ Structure:
 ### Task B15: Author Code Connect mappings
 
 **Files:**
+
 - Create: `packages/dashboard/src/components/ProjectHeader.figma.tsx`
 - Create: `packages/dashboard/src/components/ProjectConfigBlock.figma.tsx`
 
@@ -1510,6 +1575,7 @@ Wait for confirmation.
 ### Task B17: Migrate frame 1:2443 to Crew DS
 
 **Files:**
+
 - Mutate: Crew Dashboard Screens frame `1:2443`
 
 - [ ] **Step 1: Apply figma-screen-migration skill workflow**
@@ -1527,6 +1593,7 @@ Live API screenshot of `1:2443`. Expect: rendered slate palette + composites in 
 ### Task B18: Update design-system.md inventory
 
 **Files:**
+
 - Modify: `docs/plans/design-system.md`
 
 - [ ] **Step 1: Add 4 new composites to the Component inventory section**

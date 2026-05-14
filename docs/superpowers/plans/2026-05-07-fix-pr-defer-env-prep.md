@@ -14,16 +14,16 @@
 
 **File changes summary:**
 
-| File | Change |
-| --- | --- |
-| `packages/cli/src/lib/prompts/templates/rebase-preamble.md` | Replace "Hot-reload should pick up…" paragraph with new Step 0.5 section. Add `{{playwrightInstall}}` template var. |
-| `packages/cli/src/lib/prompts/rebase-preamble.ts` | Add `playwrightEnabled: boolean` option, convert to `playwrightInstall` template string. |
-| `packages/cli/src/lib/prompts/fix-pr.ts` | Add `playwrightEnabled: boolean` option, propagate to `buildRebasePreamble`. |
-| `packages/cli/src/lib/prompts/builders.test.ts` | Tests for the new option in both builders. |
-| `packages/cli/src/lib/preflight/run-resume-preflight.ts` | New: non-fatal `verify-excluded-commands`-only preflight for fix-pr resume mode. |
-| `packages/cli/src/lib/preflight/run-resume-preflight.test.ts` | New: unit tests. |
-| `packages/cli/src/lib/preflight/index.ts` | Re-export `runResumePreflight`. |
-| `packages/cli/src/commands/fix-pr.ts` | Drop `prepareAgentEnvironment` call. Compute `resolvedAppUrl` directly, run `runResumePreflight`, pass `playwrightEnabled` to prompt builder. |
+| File                                                          | Change                                                                                                                                        |
+| ------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| `packages/cli/src/lib/prompts/templates/rebase-preamble.md`   | Replace "Hot-reload should pick up…" paragraph with new Step 0.5 section. Add `{{playwrightInstall}}` template var.                           |
+| `packages/cli/src/lib/prompts/rebase-preamble.ts`             | Add `playwrightEnabled: boolean` option, convert to `playwrightInstall` template string.                                                      |
+| `packages/cli/src/lib/prompts/fix-pr.ts`                      | Add `playwrightEnabled: boolean` option, propagate to `buildRebasePreamble`.                                                                  |
+| `packages/cli/src/lib/prompts/builders.test.ts`               | Tests for the new option in both builders.                                                                                                    |
+| `packages/cli/src/lib/preflight/run-resume-preflight.ts`      | New: non-fatal `verify-excluded-commands`-only preflight for fix-pr resume mode.                                                              |
+| `packages/cli/src/lib/preflight/run-resume-preflight.test.ts` | New: unit tests.                                                                                                                              |
+| `packages/cli/src/lib/preflight/index.ts`                     | Re-export `runResumePreflight`.                                                                                                               |
+| `packages/cli/src/commands/fix-pr.ts`                         | Drop `prepareAgentEnvironment` call. Compute `resolvedAppUrl` directly, run `runResumePreflight`, pass `playwrightEnabled` to prompt builder. |
 
 ---
 
@@ -40,38 +40,38 @@
 Append to `packages/cli/src/lib/prompts/builders.test.ts`, inside the existing `describe('buildRebasePreamble', ...)` block (around line 769 — keep the trailing `})`):
 
 ```ts
-  it('always includes Step 0.5 with `docker compose up --build --wait`', () => {
-    const out = buildRebasePreamble({ key: 'CREW-130', baseBranch: 'main' });
-    expect(out).toContain('## Step 0.5');
-    expect(out).toContain('docker compose up --build --wait');
-  });
+it('always includes Step 0.5 with `docker compose up --build --wait`', () => {
+  const out = buildRebasePreamble({ key: 'CREW-130', baseBranch: 'main' });
+  expect(out).toContain('## Step 0.5');
+  expect(out).toContain('docker compose up --build --wait');
+});
 
-  it('includes `npx playwright install chromium` in Step 0.5 when playwrightEnabled is true', () => {
-    const out = buildRebasePreamble({
-      key: 'CREW-130',
-      baseBranch: 'main',
-      playwrightEnabled: true,
-    });
-    expect(out).toContain('npx playwright install chromium');
+it('includes `npx playwright install chromium` in Step 0.5 when playwrightEnabled is true', () => {
+  const out = buildRebasePreamble({
+    key: 'CREW-130',
+    baseBranch: 'main',
+    playwrightEnabled: true,
   });
+  expect(out).toContain('npx playwright install chromium');
+});
 
-  it('omits `npx playwright install chromium` when playwrightEnabled is false (or omitted)', () => {
-    const omitted = buildRebasePreamble({ key: 'CREW-130', baseBranch: 'main' });
-    const explicit = buildRebasePreamble({
-      key: 'CREW-130',
-      baseBranch: 'main',
-      playwrightEnabled: false,
-    });
-    expect(omitted).not.toContain('npx playwright install chromium');
-    expect(explicit).not.toContain('npx playwright install chromium');
-    expect(omitted).toBe(explicit);
+it('omits `npx playwright install chromium` when playwrightEnabled is false (or omitted)', () => {
+  const omitted = buildRebasePreamble({ key: 'CREW-130', baseBranch: 'main' });
+  const explicit = buildRebasePreamble({
+    key: 'CREW-130',
+    baseBranch: 'main',
+    playwrightEnabled: false,
   });
+  expect(omitted).not.toContain('npx playwright install chromium');
+  expect(explicit).not.toContain('npx playwright install chromium');
+  expect(omitted).toBe(explicit);
+});
 
-  it('drops the old "Hot-reload should pick up" recovery paragraph in favour of Step 0.5', () => {
-    const out = buildRebasePreamble({ key: 'CREW-130', baseBranch: 'main' });
-    expect(out).not.toContain('Hot-reload should pick up');
-    expect(out).not.toContain('If the daemon stack is wedged after you finish resolving');
-  });
+it('drops the old "Hot-reload should pick up" recovery paragraph in favour of Step 0.5', () => {
+  const out = buildRebasePreamble({ key: 'CREW-130', baseBranch: 'main' });
+  expect(out).not.toContain('Hot-reload should pick up');
+  expect(out).not.toContain('If the daemon stack is wedged after you finish resolving');
+});
 ```
 
 - [ ] **Step 1.2: Run the new tests; expect all four to fail**
@@ -92,9 +92,10 @@ Replace `packages/cli/src/lib/prompts/templates/rebase-preamble.md` lines 22-28 
 ## Step 0.5: bring up the environment (do this AFTER Step 0 succeeds)
 
 Now that the source is current with `origin/{{baseBranch}}`, bring up the docker stack and any browser dependencies:
-
 ```
+
 docker compose up --build --wait{{playwrightInstall}}
+
 ```
 
 If `docker compose up` fails for environmental reasons (host docker daemon down, port collision with another stack, missing CLI tools) — i.e., a failure that rebasing would not have fixed — abort with a clear message: document the blocker in `docs/tickets/{{key}}.md` "Open questions" and exit WITHOUT applying the review feedback. Do not push.
@@ -108,9 +109,10 @@ After the edit the template's tail should be:
 ## Step 0.5: bring up the environment (do this AFTER Step 0 succeeds)
 
 Now that the source is current with `origin/{{baseBranch}}`, bring up the docker stack and any browser dependencies:
-
 ```
+
 docker compose up --build --wait{{playwrightInstall}}
+
 ```
 
 If `docker compose up` fails for environmental reasons (host docker daemon down, port collision with another stack, missing CLI tools) — i.e., a failure that rebasing would not have fixed — abort with a clear message: document the blocker in `docs/tickets/{{key}}.md` "Open questions" and exit WITHOUT applying the review feedback. Do not push.
@@ -199,31 +201,31 @@ git commit -m "feat(prompts): promote docker-up recovery to first-class Step 0.5
 Append to `packages/cli/src/lib/prompts/builders.test.ts`, inside the existing `describe('buildFixPrPrompt', ...)` block (look for it around line 430):
 
 ```ts
-  it('passes playwrightEnabled through to the rebase preamble', () => {
-    const enabled = buildFixPrPrompt({
-      key: 'KAN-23',
-      feedback: '...',
-      feedbackSource: 'stdin',
-      playwrightEnabled: true,
-    });
-    const disabled = buildFixPrPrompt({
-      key: 'KAN-23',
-      feedback: '...',
-      feedbackSource: 'stdin',
-      playwrightEnabled: false,
-    });
-    expect(enabled).toContain('npx playwright install chromium');
-    expect(disabled).not.toContain('npx playwright install chromium');
+it('passes playwrightEnabled through to the rebase preamble', () => {
+  const enabled = buildFixPrPrompt({
+    key: 'KAN-23',
+    feedback: '...',
+    feedbackSource: 'stdin',
+    playwrightEnabled: true,
   });
+  const disabled = buildFixPrPrompt({
+    key: 'KAN-23',
+    feedback: '...',
+    feedbackSource: 'stdin',
+    playwrightEnabled: false,
+  });
+  expect(enabled).toContain('npx playwright install chromium');
+  expect(disabled).not.toContain('npx playwright install chromium');
+});
 
-  it('omits the playwright install line when playwrightEnabled is undefined', () => {
-    const out = buildFixPrPrompt({
-      key: 'KAN-23',
-      feedback: '...',
-      feedbackSource: 'stdin',
-    });
-    expect(out).not.toContain('npx playwright install chromium');
+it('omits the playwright install line when playwrightEnabled is undefined', () => {
+  const out = buildFixPrPrompt({
+    key: 'KAN-23',
+    feedback: '...',
+    feedbackSource: 'stdin',
   });
+  expect(out).not.toContain('npx playwright install chromium');
+});
 ```
 
 - [ ] **Step 2.2: Run; expect failure**
@@ -356,14 +358,18 @@ describe('runResumePreflight', () => {
       sandbox: { excludedCommands: ['npm run bruno:smoke'] },
     });
 
-    await expect(runResumePreflight({ config: baseConfig, worktree: dir })).resolves.toBeUndefined();
+    await expect(
+      runResumePreflight({ config: baseConfig, worktree: dir }),
+    ).resolves.toBeUndefined();
     expect(warnSpy).not.toHaveBeenCalled();
   });
 
   it('warns to stderr but does not throw when an entry is missing', async () => {
     dir = makeWorktree({ sandbox: { excludedCommands: [] } });
 
-    await expect(runResumePreflight({ config: baseConfig, worktree: dir })).resolves.toBeUndefined();
+    await expect(
+      runResumePreflight({ config: baseConfig, worktree: dir }),
+    ).resolves.toBeUndefined();
     expect(warnSpy).toHaveBeenCalled();
     const written = warnSpy.mock.calls.map((c) => String(c[0])).join('');
     expect(written).toMatch(/excluded-commands/);
@@ -374,7 +380,9 @@ describe('runResumePreflight', () => {
   it('warns but does not throw when settings.json is missing entirely', async () => {
     dir = makeWorktree(null);
 
-    await expect(runResumePreflight({ config: baseConfig, worktree: dir })).resolves.toBeUndefined();
+    await expect(
+      runResumePreflight({ config: baseConfig, worktree: dir }),
+    ).resolves.toBeUndefined();
     expect(warnSpy).toHaveBeenCalled();
   });
 
@@ -382,7 +390,9 @@ describe('runResumePreflight', () => {
     dir = makeWorktree(null);
     const minimalConfig = { ...baseConfig, bruno_smoke: undefined } as ProjectConfig;
 
-    await expect(runResumePreflight({ config: minimalConfig, worktree: dir })).resolves.toBeUndefined();
+    await expect(
+      runResumePreflight({ config: minimalConfig, worktree: dir }),
+    ).resolves.toBeUndefined();
     expect(warnSpy).not.toHaveBeenCalled();
   });
 });
@@ -425,8 +435,7 @@ export interface RunResumePreflightOptions {
  */
 export async function runResumePreflight(opts: RunResumePreflightOptions): Promise<void> {
   const needsCheck =
-    Boolean(opts.config.bruno_smoke?.enabled) ||
-    Boolean(opts.config.playwright?.authored?.enabled);
+    Boolean(opts.config.bruno_smoke?.enabled) || Boolean(opts.config.playwright?.authored?.enabled);
   if (!needsCheck) return;
 
   const check = verifyExcludedCommandsCheck();
@@ -520,39 +529,39 @@ import { playwrightEnabled, resolveAppUrl, type DockerPorts } from '../lib/playw
 In `runFixPr` (around lines 196-214), replace:
 
 ```ts
-  let resolvedAppUrl: string | undefined;
-  if (projectConfig) {
-    const env = await prepareAgentEnvironment({
-      config: projectConfig,
-      worktree,
-      key,
-      env: process.env,
-      dockerPorts,
-      envVars,
-      mode: 'resume',
-    }).catch((err: unknown): never => {
-      if (err instanceof PreflightError) {
-        process.stderr.write(renderPreflightError(err) + '\n');
-        process.exit(1);
-      }
-      throw err;
-    });
-    resolvedAppUrl = env.resolvedAppUrl;
-  }
+let resolvedAppUrl: string | undefined;
+if (projectConfig) {
+  const env = await prepareAgentEnvironment({
+    config: projectConfig,
+    worktree,
+    key,
+    env: process.env,
+    dockerPorts,
+    envVars,
+    mode: 'resume',
+  }).catch((err: unknown): never => {
+    if (err instanceof PreflightError) {
+      process.stderr.write(renderPreflightError(err) + '\n');
+      process.exit(1);
+    }
+    throw err;
+  });
+  resolvedAppUrl = env.resolvedAppUrl;
+}
 ```
 
 with:
 
 ```ts
-  let resolvedAppUrl: string | undefined;
-  let pwEnabled = false;
-  if (projectConfig) {
-    pwEnabled = playwrightEnabled(projectConfig);
-    if (pwEnabled && projectConfig.playwright) {
-      resolvedAppUrl = resolveAppUrl(projectConfig.playwright.app_url, dockerPorts, envVars).raw;
-    }
-    await runResumePreflight({ config: projectConfig, worktree });
+let resolvedAppUrl: string | undefined;
+let pwEnabled = false;
+if (projectConfig) {
+  pwEnabled = playwrightEnabled(projectConfig);
+  if (pwEnabled && projectConfig.playwright) {
+    resolvedAppUrl = resolveAppUrl(projectConfig.playwright.app_url, dockerPorts, envVars).raw;
   }
+  await runResumePreflight({ config: projectConfig, worktree });
+}
 ```
 
 - [ ] **Step 4.3: Pass `playwrightEnabled` to the prompt builder**
@@ -560,15 +569,15 @@ with:
 In the same file, the `buildFixPrPrompt({...})` call (currently around lines 216-223) becomes:
 
 ```ts
-  const prompt = buildFixPrPrompt({
-    key,
-    feedback,
-    feedbackSource: source,
-    playwright: projectConfig ? playwrightFixPrOptsFor(projectConfig, resolvedAppUrl) : undefined,
-    brunoSmoke,
-    discoveredSkillsBlock: renderDiscoveredSkillsBlock(discoverSkills({ repoPath })),
-    playwrightEnabled: pwEnabled,
-  });
+const prompt = buildFixPrPrompt({
+  key,
+  feedback,
+  feedbackSource: source,
+  playwright: projectConfig ? playwrightFixPrOptsFor(projectConfig, resolvedAppUrl) : undefined,
+  brunoSmoke,
+  discoveredSkillsBlock: renderDiscoveredSkillsBlock(discoverSkills({ repoPath })),
+  playwrightEnabled: pwEnabled,
+});
 ```
 
 (Adds the trailing `playwrightEnabled: pwEnabled,` line. Everything else stays.)
@@ -601,7 +610,6 @@ git add packages/cli/src/commands/fix-pr.ts \
         packages/cli/src/commands/fix-pr.test.ts
 git commit -m "fix(cli): defer fix-pr resume-mode env prep to the dispatched agent (CREW-113)"
 ```
-
 
 ---
 

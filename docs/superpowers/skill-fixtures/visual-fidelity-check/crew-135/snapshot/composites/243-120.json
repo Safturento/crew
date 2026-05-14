@@ -60,7 +60,11 @@
       "type": "TEXT",
       "text": "Clear attention",
       "resolvedStyles": {
-        "textColor": { "hex": "#94A3B8", "tokenAlias": "muted-foreground -> slate/400", "opacity": 1 }
+        "textColor": {
+          "hex": "#94A3B8",
+          "tokenAlias": "muted-foreground -> slate/400",
+          "opacity": 1
+        }
       },
       "font": { "family": "Hanken Grotesk", "weight": "Regular", "size": 11.5 }
     }
