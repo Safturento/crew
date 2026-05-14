@@ -95,21 +95,41 @@ export async function runResume(key: string, opts: ResumeOptions): Promise<void>
   // updated CREW_APP_URL, etc.). Stale .mcp.json from an older crew is a real
   // footgun — the agent silently uses the old config, e.g. falls back to the
   // system chrome channel when crew now wires the bundled chromium directly.
-  if (playwrightEnabled(config) && config.playwright && smokeEnabled(config)) {
-    const resolved = resolveAppUrl(config.playwright.app_url, dockerPorts, envVars);
+  const wantsPlaywrightResume = playwrightEnabled(config) && Boolean(config.playwright) && smokeEnabled(config);
+  const wantsChromeResume = Boolean(config.visual_fidelity);
+  if (wantsPlaywrightResume || wantsChromeResume) {
+    let playwrightOpts: { appUrl: string; resolverCwd: string } | undefined;
+    let resolvedRaw: string | undefined;
+    if (wantsPlaywrightResume && config.playwright) {
+      const resolved = resolveAppUrl(config.playwright.app_url, dockerPorts, envVars);
+      resolvedRaw = resolved.raw;
+      playwrightOpts = { appUrl: resolved.raw, resolverCwd: config.repo_path };
+    }
     const writeResult = await writeMcpFile(worktree, {
-      appUrl: resolved.raw,
-      resolverCwd: config.repo_path,
+      playwright: playwrightOpts,
+      chrome: wantsChromeResume,
+      warn: (msg) => process.stderr.write(pc.yellow(`  ! ${msg}\n`)),
     });
-    process.stderr.write(
-      pc.dim(`→ refreshed ${join(worktree, '.mcp.json')} (CREW_APP_URL=${resolved.raw})\n`),
-    );
-    if (writeResult.chromiumPath) {
-      process.stderr.write(pc.dim(`    chromium: ${writeResult.chromiumPath}\n`));
+    const summary: string[] = [];
+    if (playwrightOpts) summary.push(`CREW_APP_URL=${resolvedRaw}`);
+    if (writeResult.chromeMcpPath) summary.push(`chrome MCP=${writeResult.chromeMcpPath}`);
+    if (summary.length > 0) {
+      process.stderr.write(
+        pc.dim(`→ refreshed ${join(worktree, '.mcp.json')} (${summary.join(', ')})\n`),
+      );
     } else {
       process.stderr.write(
-        pc.dim(`    chromium: <unresolved> — MCP will fall back to system chrome channel\n`),
+        pc.dim(`→ skipped ${join(worktree, '.mcp.json')} (no servers resolved)\n`),
       );
+    }
+    if (playwrightOpts) {
+      if (writeResult.chromiumPath) {
+        process.stderr.write(pc.dim(`    chromium: ${writeResult.chromiumPath}\n`));
+      } else {
+        process.stderr.write(
+          pc.dim(`    chromium: <unresolved> — MCP will fall back to system chrome channel\n`),
+        );
+      }
     }
   }
 

@@ -322,19 +322,37 @@ export async function runRun(key: string, opts: RunOptions): Promise<never> {
   // before install would emit a stale path that points at a not-yet-extracted
   // binary, and the existsSync guard would fall back to MCP's system-chrome
   // default (the bug CREW-70 fixed).
-  if (playwrightEnabled(config) && config.playwright && smokeEnabled(config)) {
-    const resolved = resolveAppUrl(config.playwright.app_url, dockerPorts, envVars);
+  const wantsPlaywright = playwrightEnabled(config) && Boolean(config.playwright) && smokeEnabled(config);
+  const wantsChrome = Boolean(config.visual_fidelity);
+  if (wantsPlaywright || wantsChrome) {
+    let playwrightOpts: { appUrl: string; resolverCwd: string } | undefined;
+    let resolvedRaw: string | undefined;
+    if (wantsPlaywright && config.playwright) {
+      const resolved = resolveAppUrl(config.playwright.app_url, dockerPorts, envVars);
+      resolvedRaw = resolved.raw;
+      playwrightOpts = { appUrl: resolved.raw, resolverCwd: config.repo_path };
+    }
     const writeResult = await writeMcpFile(worktree, {
-      appUrl: resolved.raw,
-      resolverCwd: config.repo_path,
+      playwright: playwrightOpts,
+      chrome: wantsChrome,
+      warn: (msg) => console.warn(pc.yellow(`  ! ${msg}`)),
     });
-    console.log(pc.dim(`→ wrote ${join(worktree, '.mcp.json')} (CREW_APP_URL=${resolved.raw})`));
-    if (writeResult.chromiumPath) {
-      console.log(pc.dim(`    chromium: ${writeResult.chromiumPath}`));
+    const summary: string[] = [];
+    if (playwrightOpts) summary.push(`CREW_APP_URL=${resolvedRaw}`);
+    if (writeResult.chromeMcpPath) summary.push(`chrome MCP=${writeResult.chromeMcpPath}`);
+    if (summary.length > 0) {
+      console.log(pc.dim(`→ wrote ${join(worktree, '.mcp.json')} (${summary.join(', ')})`));
     } else {
-      console.log(
-        pc.dim(`    chromium: <unresolved> — MCP will fall back to system chrome channel`),
-      );
+      console.log(pc.dim(`→ skipped ${join(worktree, '.mcp.json')} (no servers resolved)`));
+    }
+    if (playwrightOpts) {
+      if (writeResult.chromiumPath) {
+        console.log(pc.dim(`    chromium: ${writeResult.chromiumPath}`));
+      } else {
+        console.log(
+          pc.dim(`    chromium: <unresolved> — MCP will fall back to system chrome channel`),
+        );
+      }
     }
     if (writeResult.existed) {
       console.warn(pc.yellow('  ! .mcp.json already existed in worktree — overwritten'));
