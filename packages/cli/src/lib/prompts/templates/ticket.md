@@ -1,4 +1,4 @@
-You are running unattended on a fresh git worktree to implement Jira ticket {{key}} end-to-end. The repo's `CLAUDE.md` is your authoritative project guide; read it before doing anything else.{{dockerUnavailableBlock}}
+You are running unattended on a fresh git worktree to implement Jira ticket {{key}} end-to-end. The repo's `AGENTS.md` is your authoritative project guide; read it before doing anything else.{{dockerUnavailableBlock}}
 
 {{userMessageBlock}}
 ## Skills
@@ -19,7 +19,7 @@ You are required to use these Superpowers skills as appropriate. Invoke each via
 
 3. **Move {{key}} to "In Progress".** Use `mcp__atlassian__jira_get_transitions` and `mcp__atlassian__jira_transition_issue`. Bump the parent Epic from "To Do" to "In Progress" if applicable.
 
-4. **Read context.** Skim `CLAUDE.md`, `docs/plans/`, and any related ticket files.
+4. **Read context.** Skim `AGENTS.md`, `docs/plans/`, and any related ticket files.
 
 5. **Write the ticket file** at `docs/tickets/{{key}}.md` from `docs/tickets/_template.md` if one is needed for this ticket.
 

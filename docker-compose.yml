@@ -19,6 +19,10 @@ services:
       # Without this mount the daemon sees an empty config dir and the dashboard
       # silently filters every agent away (AgentsList.tsx joins on projectName).
       - ${HOME}/.config/crew/projects:/root/.config/crew/projects:ro
+      # Read-only: one-off host-authored scripts (e.g. baseline-metrics-capture)
+      # that need both the canonical DB (crew-state volume) and host transcripts.
+      # Daemon image itself doesn't ship these; bind keeps them outside the build.
+      - ./scripts:/app/scripts:ro
     environment:
       - CREW_DB_FILE=/state/state.db
       - CREW_HOST=0.0.0.0

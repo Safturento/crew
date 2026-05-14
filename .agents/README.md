@@ -1,0 +1,125 @@
+---
+description: How the .agents/ system works and how to extend it
+last_updated: 2026-05-13
+---
+
+# `.agents/` — repo-scoped topic docs for AI agents
+
+## 1. What this is
+
+Two-tier progressive disclosure for agent context. `AGENTS.md` files (root + per-package) auto-load; `.agents/<topic>.md` topic docs load on demand when referenced from an index. User-level skills (`~/.claude/skills/`) and conventions (`~/.claude/conventions/`) are orthogonal — they teach *how*; `.agents/` captures *what this repo is*.
+
+## 2. Discovery model
+
+Today, topic docs are discovered indirectly: root `AGENTS.md` and per-package `packages/<pkg>/AGENTS.md` carry "When you need it" tables that point at `.agents/<topic>.md`. An agent loads a topic doc when its work matches the index entry.
+
+Future: opt-in frontmatter triggers (`globs:`, `alwaysApply:`) will let the `crew run` prompt builder auto-inject matched docs. See the trigger system note below.
+
+## 3. Frontmatter spec
+
+Every `.agents/<topic>.md` declares:
+
+| Field | Required | Purpose |
+|-------|----------|---------|
+| `name` | yes | kebab-case slug; matches filename without `.md` |
+| `description` | yes | One-line summary; root `AGENTS.md` index cites this verbatim |
+| `last_updated` | yes | ISO date; bumped whenever the body materially changes |
+| `covers` | yes | Path globs the doc claims to govern; consumed by parity hook + future audits |
+| `globs` | reserved | AGENTS.md community trigger field; activates when hybrid trigger system lands |
+| `alwaysApply` | reserved | Same |
+
+Per-package `AGENTS.md` frontmatter is lighter (no `covers:` — path-scoped by location):
+
+```yaml
+---
+description: Patterns and rules for the `crew-cli` package
+last_updated: YYYY-MM-DD
+---
+```
+
+Root `AGENTS.md` has no frontmatter.
+
+The validator script (`scripts/validate-agents-frontmatter.ts`, wired into `npm run lint`) asserts every `.agents/*.md` has all required fields, every `covers:` glob is a valid micromatch pattern, and every `name:` matches its filename.
+
+## 4. When to add a topic file
+
+Three criteria — all must be true:
+
+1. **Repo-specific.** Universal coding/Node/git conventions belong in `~/.claude/conventions/`, not here.
+2. **Referenced by ≥2 places.** One AGENTS.md or one PR-review cycle isn't enough; that's inline-doc material.
+3. **Has a clear `covers:` scope.** You can name path globs.
+
+If any of the three doesn't hold, the content belongs somewhere else — see §10 below.
+
+## 5. When to split a topic into a folder
+
+Either:
+
+- The topic crosses ~200 lines **and** has natural subdivisions, **or**
+- One section of the topic is consistently the only part agents need.
+
+Until then, single file.
+
+## 6. Parity rule — the load-bearing one
+
+If you edit code matching a `.agents/<topic>.md`'s `covers:` glob, audit that doc in the same PR. Update or confirm-still-current. Enforced by:
+
+- **Self-audit at completion.** The `superpowers:verification-before-completion` skill scans `.agents/` for `covers:` overlap before any "I'm done" claim.
+- **Soft hook on commit/PR.** A PreToolUse hook walks the diff and warns if a `.agents/<topic>.md`'s `covers:` overlap a changed path without the doc being touched in the same commit.
+
+If the doc is still correct after your code change, just bump `last_updated`. No body edit needed.
+
+## 7. Staleness signals
+
+Freshness gauge thresholds:
+
+- **<30 days** → trust.
+- **30–90 days** → trust but verify load-bearing claims if they affect your work.
+- **>90 days** → don't trust without checking; bump the date in your PR if confirmed correct.
+
+`last_updated` is what gets compared, not git mtime.
+
+## 8. Trigger system (future)
+
+Hybrid Option-3 deferred. When it lands, opted-in docs gain `globs:` + `alwaysApply:` frontmatter; the `crew run` prompt builder walks `.agents/` triggers and auto-injects matched docs into the dispatch prompt. Until then, discovery is via the AGENTS.md indexes only.
+
+## 9. Naming conventions
+
+- kebab-case filenames.
+- No dates in filenames (`.agents/architecture.md`, never `.agents/2026-05-13-architecture.md`).
+- Filename matches `name:` frontmatter without the `.md` extension.
+
+## 10. What does NOT belong in `.agents/`
+
+Explicit taxonomy — each kind of doc has a home:
+
+| Content | Home |
+|---------|------|
+| Per-ticket work log | `docs/tickets/<KEY>.md` |
+| Design specs (point-in-time, from brainstorming) | `docs/superpowers/specs/` |
+| Implementation plans (point-in-time, from writing-plans) | `docs/superpowers/plans/` |
+| Long-form architecture/design rationale | `docs/rationale/` |
+| Mumen-tier scoping | `docs/mumen/` |
+| Project followups | `docs/followups.md` |
+| Universal coding/git/Node conventions | `~/.claude/conventions/` |
+| "How to do X" capability injection | user-level skills (`~/.claude/skills/`) |
+| Per-conversation notes / todos / in-flight state | not committed |
+
+`.agents/` is for **repo-specific, durable, agent-actionable rules**. If a doc isn't all three, it lives somewhere else above.
+
+**Pointers vs content.** The rule above is about *content* sitting in `.agents/`, not about *cross-references*. A `.agents/<topic>.md` MAY (and often SHOULD) include a brief footer pointer like `See docs/rationale/<topic>.md for the why` or `See user-level skill <name> for how`. Pointers improve discoverability without bringing narrative into the agent-actionable layer. Aim for one or two short lines; if a topic doc needs a paragraph of context from elsewhere, that's a sign the content classification was wrong.
+
+## 11. Index of current topic docs
+
+Manually maintained. Mirrored from root `AGENTS.md`.
+
+| Topic | Description |
+|-------|-------------|
+| [`architecture.md`](architecture.md) | 4-package layering rules + dependency direction |
+| [`local-dev.md`](local-dev.md) | Docker stack, env.toml, worktree isolation, sandbox baseline |
+| [`testing.md`](testing.md) | Bruno + Playwright + daemon fixtures |
+| [`dispatch.md`](dispatch.md) | crew run prompt-build, skills injection, verification gates |
+| [`security.md`](security.md) | Secrets handling, sandbox model + known limitations |
+| [`design-system.md`](design-system.md) | Crew Figma DS + Pill contract |
+| [`workflow.md`](workflow.md) | CREW-* tickets, followups, specs/plans, branching |
+| [`commands.md`](commands.md) | npm scripts cheatsheet with env-var notes |

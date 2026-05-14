@@ -325,7 +325,7 @@ echo "→ no-pr: <one-line reason>"
 `;
 
 exports[`buildTicketPrompt > PW-off snapshot still matches the CREW-19 baseline (no regression from CREW-20) 1`] = `
-"You are running unattended on a fresh git worktree to implement Jira ticket KAN-23 end-to-end. The repo's \`CLAUDE.md\` is your authoritative project guide; read it before doing anything else.
+"You are running unattended on a fresh git worktree to implement Jira ticket KAN-23 end-to-end. The repo's \`AGENTS.md\` is your authoritative project guide; read it before doing anything else.
 
 
 ## Skills
@@ -346,7 +346,7 @@ You are required to use these Superpowers skills as appropriate. Invoke each via
 
 3. **Move KAN-23 to "In Progress".** Use \`mcp__atlassian__jira_get_transitions\` and \`mcp__atlassian__jira_transition_issue\`. Bump the parent Epic from "To Do" to "In Progress" if applicable.
 
-4. **Read context.** Skim \`CLAUDE.md\`, \`docs/plans/\`, and any related ticket files.
+4. **Read context.** Skim \`AGENTS.md\`, \`docs/plans/\`, and any related ticket files.
 
 5. **Write the ticket file** at \`docs/tickets/KAN-23.md\` from \`docs/tickets/_template.md\` if one is needed for this ticket.
 
@@ -397,7 +397,7 @@ You are required to use these Superpowers skills as appropriate. Invoke each via
 `;
 
 exports[`buildTicketPrompt > appends the discoveredSkillsBlock after the curated bullets when populated 1`] = `
-"You are running unattended on a fresh git worktree to implement Jira ticket KAN-23 end-to-end. The repo's \`CLAUDE.md\` is your authoritative project guide; read it before doing anything else.
+"You are running unattended on a fresh git worktree to implement Jira ticket KAN-23 end-to-end. The repo's \`AGENTS.md\` is your authoritative project guide; read it before doing anything else.
 
 
 ## Skills
@@ -422,7 +422,7 @@ The following user-level skills are equally required when their description matc
 
 3. **Move KAN-23 to "In Progress".** Use \`mcp__atlassian__jira_get_transitions\` and \`mcp__atlassian__jira_transition_issue\`. Bump the parent Epic from "To Do" to "In Progress" if applicable.
 
-4. **Read context.** Skim \`CLAUDE.md\`, \`docs/plans/\`, and any related ticket files.
+4. **Read context.** Skim \`AGENTS.md\`, \`docs/plans/\`, and any related ticket files.
 
 5. **Write the ticket file** at \`docs/tickets/KAN-23.md\` from \`docs/tickets/_template.md\` if one is needed for this ticket.
 
@@ -473,7 +473,7 @@ The following user-level skills are equally required when their description matc
 `;
 
 exports[`buildTicketPrompt > matches the baseline snapshot when playwright is omitted 1`] = `
-"You are running unattended on a fresh git worktree to implement Jira ticket KAN-23 end-to-end. The repo's \`CLAUDE.md\` is your authoritative project guide; read it before doing anything else.
+"You are running unattended on a fresh git worktree to implement Jira ticket KAN-23 end-to-end. The repo's \`AGENTS.md\` is your authoritative project guide; read it before doing anything else.
 
 
 ## Skills
@@ -494,7 +494,7 @@ You are required to use these Superpowers skills as appropriate. Invoke each via
 
 3. **Move KAN-23 to "In Progress".** Use \`mcp__atlassian__jira_get_transitions\` and \`mcp__atlassian__jira_transition_issue\`. Bump the parent Epic from "To Do" to "In Progress" if applicable.
 
-4. **Read context.** Skim \`CLAUDE.md\`, \`docs/plans/\`, and any related ticket files.
+4. **Read context.** Skim \`AGENTS.md\`, \`docs/plans/\`, and any related ticket files.
 
 5. **Write the ticket file** at \`docs/tickets/KAN-23.md\` from \`docs/tickets/_template.md\` if one is needed for this ticket.
 
@@ -545,7 +545,7 @@ You are required to use these Superpowers skills as appropriate. Invoke each via
 `;
 
 exports[`buildTicketPrompt > renders both playwright and bruno-smoke when both are provided 1`] = `
-"You are running unattended on a fresh git worktree to implement Jira ticket KAN-23 end-to-end. The repo's \`CLAUDE.md\` is your authoritative project guide; read it before doing anything else.
+"You are running unattended on a fresh git worktree to implement Jira ticket KAN-23 end-to-end. The repo's \`AGENTS.md\` is your authoritative project guide; read it before doing anything else.
 
 
 ## Skills
@@ -566,7 +566,7 @@ You are required to use these Superpowers skills as appropriate. Invoke each via
 
 3. **Move KAN-23 to "In Progress".** Use \`mcp__atlassian__jira_get_transitions\` and \`mcp__atlassian__jira_transition_issue\`. Bump the parent Epic from "To Do" to "In Progress" if applicable.
 
-4. **Read context.** Skim \`CLAUDE.md\`, \`docs/plans/\`, and any related ticket files.
+4. **Read context.** Skim \`AGENTS.md\`, \`docs/plans/\`, and any related ticket files.
 
 5. **Write the ticket file** at \`docs/tickets/KAN-23.md\` from \`docs/tickets/_template.md\` if one is needed for this ticket.
 
@@ -657,7 +657,7 @@ A failed \`npm run test:e2e\` that produced \`ECONNREFUSED\` while the same flow
 `;
 
 exports[`buildTicketPrompt > renders the authored test section after the smoke section when both are provided 1`] = `
-"You are running unattended on a fresh git worktree to implement Jira ticket KAN-23 end-to-end. The repo's \`CLAUDE.md\` is your authoritative project guide; read it before doing anything else.
+"You are running unattended on a fresh git worktree to implement Jira ticket KAN-23 end-to-end. The repo's \`AGENTS.md\` is your authoritative project guide; read it before doing anything else.
 
 
 ## Skills
@@ -678,7 +678,7 @@ You are required to use these Superpowers skills as appropriate. Invoke each via
 
 3. **Move KAN-23 to "In Progress".** Use \`mcp__atlassian__jira_get_transitions\` and \`mcp__atlassian__jira_transition_issue\`. Bump the parent Epic from "To Do" to "In Progress" if applicable.
 
-4. **Read context.** Skim \`CLAUDE.md\`, \`docs/plans/\`, and any related ticket files.
+4. **Read context.** Skim \`AGENTS.md\`, \`docs/plans/\`, and any related ticket files.
 
 5. **Write the ticket file** at \`docs/tickets/KAN-23.md\` from \`docs/tickets/_template.md\` if one is needed for this ticket.
 
@@ -774,7 +774,7 @@ A failed \`npm run test:e2e\` that produced \`ECONNREFUSED\` while the same flow
 `;
 
 exports[`buildTicketPrompt > renders the bruno-smoke section when brunoSmoke is provided (no smoke_user) 1`] = `
-"You are running unattended on a fresh git worktree to implement Jira ticket KAN-23 end-to-end. The repo's \`CLAUDE.md\` is your authoritative project guide; read it before doing anything else.
+"You are running unattended on a fresh git worktree to implement Jira ticket KAN-23 end-to-end. The repo's \`AGENTS.md\` is your authoritative project guide; read it before doing anything else.
 
 
 ## Skills
@@ -795,7 +795,7 @@ You are required to use these Superpowers skills as appropriate. Invoke each via
 
 3. **Move KAN-23 to "In Progress".** Use \`mcp__atlassian__jira_get_transitions\` and \`mcp__atlassian__jira_transition_issue\`. Bump the parent Epic from "To Do" to "In Progress" if applicable.
 
-4. **Read context.** Skim \`CLAUDE.md\`, \`docs/plans/\`, and any related ticket files.
+4. **Read context.** Skim \`AGENTS.md\`, \`docs/plans/\`, and any related ticket files.
 
 5. **Write the ticket file** at \`docs/tickets/KAN-23.md\` from \`docs/tickets/_template.md\` if one is needed for this ticket.
 
@@ -876,7 +876,7 @@ A failed \`npm run test:e2e\` that produced \`ECONNREFUSED\` while the same flow
 `;
 
 exports[`buildTicketPrompt > renders the smoke verification section when playwright.smoke is provided (docker case) 1`] = `
-"You are running unattended on a fresh git worktree to implement Jira ticket KAN-23 end-to-end. The repo's \`CLAUDE.md\` is your authoritative project guide; read it before doing anything else.
+"You are running unattended on a fresh git worktree to implement Jira ticket KAN-23 end-to-end. The repo's \`AGENTS.md\` is your authoritative project guide; read it before doing anything else.
 
 
 ## Skills
@@ -897,7 +897,7 @@ You are required to use these Superpowers skills as appropriate. Invoke each via
 
 3. **Move KAN-23 to "In Progress".** Use \`mcp__atlassian__jira_get_transitions\` and \`mcp__atlassian__jira_transition_issue\`. Bump the parent Epic from "To Do" to "In Progress" if applicable.
 
-4. **Read context.** Skim \`CLAUDE.md\`, \`docs/plans/\`, and any related ticket files.
+4. **Read context.** Skim \`AGENTS.md\`, \`docs/plans/\`, and any related ticket files.
 
 5. **Write the ticket file** at \`docs/tickets/KAN-23.md\` from \`docs/tickets/_template.md\` if one is needed for this ticket.
 
@@ -958,7 +958,7 @@ If your change is _clearly_ backend-only (no observable user effect), say so exp
 `;
 
 exports[`buildTicketPrompt > renders the smoke verification section with start_command hint (non-docker case) 1`] = `
-"You are running unattended on a fresh git worktree to implement Jira ticket CREW-99 end-to-end. The repo's \`CLAUDE.md\` is your authoritative project guide; read it before doing anything else.
+"You are running unattended on a fresh git worktree to implement Jira ticket CREW-99 end-to-end. The repo's \`AGENTS.md\` is your authoritative project guide; read it before doing anything else.
 
 
 ## Skills
@@ -979,7 +979,7 @@ You are required to use these Superpowers skills as appropriate. Invoke each via
 
 3. **Move CREW-99 to "In Progress".** Use \`mcp__atlassian__jira_get_transitions\` and \`mcp__atlassian__jira_transition_issue\`. Bump the parent Epic from "To Do" to "In Progress" if applicable.
 
-4. **Read context.** Skim \`CLAUDE.md\`, \`docs/plans/\`, and any related ticket files.
+4. **Read context.** Skim \`AGENTS.md\`, \`docs/plans/\`, and any related ticket files.
 
 5. **Write the ticket file** at \`docs/tickets/CREW-99.md\` from \`docs/tickets/_template.md\` if one is needed for this ticket.
 
@@ -1040,7 +1040,7 @@ If your change is _clearly_ backend-only (no observable user effect), say so exp
 `;
 
 exports[`buildTicketPrompt > renders the testUser clause when hasSmokeUser is true 1`] = `
-"You are running unattended on a fresh git worktree to implement Jira ticket KAN-23 end-to-end. The repo's \`CLAUDE.md\` is your authoritative project guide; read it before doing anything else.
+"You are running unattended on a fresh git worktree to implement Jira ticket KAN-23 end-to-end. The repo's \`AGENTS.md\` is your authoritative project guide; read it before doing anything else.
 
 
 ## Skills
@@ -1061,7 +1061,7 @@ You are required to use these Superpowers skills as appropriate. Invoke each via
 
 3. **Move KAN-23 to "In Progress".** Use \`mcp__atlassian__jira_get_transitions\` and \`mcp__atlassian__jira_transition_issue\`. Bump the parent Epic from "To Do" to "In Progress" if applicable.
 
-4. **Read context.** Skim \`CLAUDE.md\`, \`docs/plans/\`, and any related ticket files.
+4. **Read context.** Skim \`AGENTS.md\`, \`docs/plans/\`, and any related ticket files.
 
 5. **Write the ticket file** at \`docs/tickets/KAN-23.md\` from \`docs/tickets/_template.md\` if one is needed for this ticket.
 

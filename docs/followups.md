@@ -310,7 +310,7 @@ The structural fix for the first two is the Plugin-API snapshot work captured in
 
 ### 2026-05-12 — Move figma-snapshot `PAGE_DIR_MAP` into project config
 
-**What:** `emit.ts` hardcodes `Composites → composites/` and `Dashboard Screens → screens/` in a module-level map. Any other page name falls through to a sanitized slug. This is crew-dashboard-specific knowledge living in a generic CLI helper — violates CLAUDE.md's "Don't hardcode project-specific knowledge" rule (originally written for `Recipes-App`, same principle applies here).
+**What:** `emit.ts` hardcodes `Composites → composites/` and `Dashboard Screens → screens/` in a module-level map. Any other page name falls through to a sanitized slug. This is crew-dashboard-specific knowledge living in a generic CLI helper — violates AGENTS.md's "Don't hardcode project-specific knowledge" rule (originally written for `Recipes-App`, same principle applies here).
 
 **Why noticed:** Self-review of CREW-139. The map matches the spec's example output structure exactly, but only because the spec was written for crew. A second project adopting the snapshot would either need to use one of these names or accept the kebab-cased fallback (e.g. "Components" → `components/`, fine; "Foundations" → `foundations/`, fine; but losing the hand-tuned mapping for nuanced layouts).
 

@@ -1,4 +1,4 @@
-# CLAUDE.md
+# AGENTS.md
 
 Conventions for agents working on `crew` itself. Universal Node + documentation conventions live in `~/.claude/conventions/`; this file covers crew-specific rules only. The full architectural design is in [`docs/plans/architecture.md`](./docs/plans/architecture.md) — read that first before any non-trivial change.
 
@@ -24,6 +24,25 @@ crew/
 
 The `--workspace` flag takes the package's `name` (e.g. `crew-cli`, `crew-daemon`), not the directory name.
 
+## When you need it
+
+| Doing                                                                 | Read                                                   |
+| --------------------------------------------------------------------- | ------------------------------------------------------ |
+| Editing daemon services/routes                                        | `.agents/architecture.md`, `packages/daemon/AGENTS.md` |
+| Adding/changing a CLI subcommand                                      | `.agents/architecture.md`, `packages/cli/AGENTS.md`    |
+| Touching dispatch flow (run/fix-pr/finish, prompts, skills injection) | `.agents/dispatch.md`                                  |
+| Adding or changing an HTTP route                                      | `.agents/architecture.md`, `.agents/testing.md`        |
+| Adding a Bruno endpoint                                               | `.agents/testing.md`                                   |
+| Sandbox / host-network / secrets behavior                             | `.agents/local-dev.md`, `.agents/security.md`          |
+| Touching `docker-compose`, `env.toml`, worktree port hashing          | `.agents/local-dev.md`                                 |
+| Working on the Figma DS or Pill components                            | `.agents/design-system.md`                             |
+| Filing followups, writing tickets/specs/plans, branching              | `.agents/workflow.md`                                  |
+| Running verification (lint/typecheck/test/bruno/visual-fidelity)      | `.agents/commands.md`                                  |
+
+See [`.agents/README.md`](.agents/README.md) for how this system works and how to extend it.
+
+> _Below this section, content is being migrated into `.agents/` during the Phase 2 rollout. Once migration completes, this file shrinks to the index above._
+
 ## Local development
 
 Crew runs as a docker compose stack locally. See [`README.md`](./README.md) for the user-facing setup. For agents working on crew code:
@@ -47,7 +66,7 @@ These flow from `docs/plans/architecture.md`:
 
 When generating a docker `.env` for a worktree, hash the worktree basename to derive non-default ports so multiple worktrees coexist without collision. The canonical worktree (`canonical_worktree` in project config) keeps the standard ports.
 
-This rule now applies to crew itself. Crew's `docker-compose.yml` + `env.toml` use the same port-hashing convention as Recipes, so concurrent CREW-* worktree dispatches don't collide.
+This rule now applies to crew itself. Crew's `docker-compose.yml` + `env.toml` use the same port-hashing convention as Recipes, so concurrent CREW-\* worktree dispatches don't collide.
 
 ## Bruno collection (`bruno/`)
 
