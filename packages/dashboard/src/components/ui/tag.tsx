@@ -23,13 +23,13 @@ function Tag({
 }: TagProps) {
   return (
     <PillBase
+      {...rest}
       as="span"
       asChild={asChild}
       color={color}
       intensity={intensity}
       icon={icon}
       shape={TAG_SHAPE}
-      {...(rest as React.HTMLAttributes<HTMLElement>)}
     >
       {children}
     </PillBase>

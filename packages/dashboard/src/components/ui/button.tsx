@@ -31,13 +31,13 @@ function Button({
 }: ButtonProps) {
   return (
     <PillBase
+      {...(rest as React.HTMLAttributes<HTMLElement>)}
       as="button"
       asChild={asChild}
       color={color}
       intensity={intensity}
       icon={icon}
       shape={BUTTON_SHAPES[size]}
-      {...(rest as React.HTMLAttributes<HTMLElement>)}
     >
       {children}
     </PillBase>

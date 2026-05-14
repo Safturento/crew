@@ -23,13 +23,13 @@ function Badge({
 }: BadgeProps) {
   return (
     <PillBase
+      {...rest}
       as="span"
       asChild={asChild}
       color={color}
       intensity={intensity}
       icon={icon}
       shape={BADGE_SHAPE}
-      {...(rest as React.HTMLAttributes<HTMLElement>)}
     >
       {children}
     </PillBase>
