@@ -2336,28 +2336,29 @@ gh pr create --title "feat: metrics pipeline + dashboard" --body "..."
 
 ---
 
-## Manual user-level task — Extend `verification-before-completion`
+## Manual user-level task — `.agents/` doc-parity at completion
 
-**Scope:** User-level skill edit at `~/.claude/skills/superpowers/verification-before-completion/SKILL.md`. **Not a ticket** — handled in-conversation per the "don't ticket user-level work" rule.
+**Scope:** User-level skill work — **not a ticket**, handled in-conversation per the "don't ticket user-level work" rule.
 
-**Goal:** Add a `.agents/` parity-check step to the verification flow.
+**Status:** Done — 2026-05-15. Delivered differently than the procedure below originally specified; see "What changed" and "As-built".
 
-**Procedure:**
+**Goal:** A completion-time self-audit so that before any "I'm done" claim, the agent scans changed files against each `.agents/<topic>.md`'s `covers:` globs and updates docs the change made stale.
 
-- [ ] Open `~/.claude/skills/superpowers/verification-before-completion/SKILL.md` (or its equivalent at the cached plugin path) in a brainstorm-and-edit session.
-- [ ] Identify where the skill currently lists verification steps (typically a checklist or workflow section).
-- [ ] Insert a new step after the existing lint/typecheck/test checks:
+**Original procedure (superseded):** Edit `~/.claude/skills/superpowers/verification-before-completion/SKILL.md` to insert a doc-parity audit step after the lint/typecheck/test checks — get changed files via `git diff`, match against each doc's `covers:` glob, update + bump `last_updated` on the docs a change affects.
 
-  > **Doc-parity audit (when working in a repo with `.agents/`):**
-  >
-  > - Get the list of changed files: `git diff --name-only main...HEAD` (or `git diff --cached --name-only` for staged work).
-  > - For each `.agents/*.md` whose `covers:` glob overlaps a changed file path, read the doc and decide: does my change require updating it?
-  > - If yes: update the doc and bump `last_updated` to today's ISO date.
-  > - If no: leave it. (The decision will surface again at PR-creation via the soft hook if you missed something.)
+**What changed:** That path does not exist. `verification-before-completion` ships inside the `superpowers` *plugin*, cached at `~/.claude/plugins/cache/claude-plugins-official/superpowers/<version>/skills/` — and edits to a cached plugin file are silently discarded on the next plugin update. Extending the plugin skill in place was not viable.
 
-- [ ] Save the skill, test by invoking it on a sample change (run with a stub `.agents/` folder).
+So the audit was delivered as a **new standalone user-level skill**, `agents-doc-parity-check` (`~/.claude/skills/agents-doc-parity-check/`), positioned as a companion to `verification-before-completion` — the same pattern `visual-fidelity-check` already uses. It is update-proof and inert in repos with no `.agents/` directory.
 
-**Done when:** invoking `superpowers:verification-before-completion` in any repo with a `.agents/` directory triggers the parity audit step before claiming complete.
+A RED-GREEN-REFACTOR pressure test (per `superpowers:writing-skills`) then surfaced a second issue: a standalone skill does not reliably *self-trigger*. A subagent finishing a task under time pressure did not invoke it even with the skill present in its menu — whereas both test agents followed an instruction carried in `~/.claude/CLAUDE.md`. The fix: an explicit trigger lives in this repo's root `AGENTS.md` (§ "Before claiming work complete"), since `AGENTS.md`/`CLAUDE.md` instructions demonstrably propagate to dispatched agents and get followed. The skill carries the *procedure*; `AGENTS.md` carries the *trigger*.
+
+**As-built:**
+
+- **Skill** — `~/.claude/skills/agents-doc-parity-check/SKILL.md`. Workflow: confirm `.agents/` exists → collect committed + staged + unstaged changes → match each against every doc's `covers:` globs via git's `:(glob)` pathspec → review and update each in-scope doc, bumping `last_updated` → gate the completion claim. Handles the overlap case (one file matched by multiple docs → update all of them).
+- **Trigger** — root `AGENTS.md` § "Before claiming work complete".
+- **Relationship to Ticket #10 (CREW-163, `doc-parity-gate.sh`):** the skill is the *completion-time* self-audit; the hook is the independent *commit/PR-time* net. Both are intended to coexist.
+
+**Done when:** working in a repo with `.agents/`, the root `AGENTS.md` trigger directs the agent to run `agents-doc-parity-check` before any completion claim. ✅
 
 ---
 

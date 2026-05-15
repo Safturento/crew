@@ -40,3 +40,7 @@ The `--workspace` flag takes the package's `name` (e.g. `crew-cli`, `crew-daemon
 | Running verification (lint/typecheck/test/bruno/visual-fidelity)      | `.agents/commands.md`                                  |
 
 See [`.agents/README.md`](.agents/README.md) for how this system works and how to extend it.
+
+## Before claiming work complete
+
+This repo's `.agents/<topic>.md` docs declare `covers:` frontmatter globs naming the paths each doc governs. Before reporting any task complete or opening a PR, run the `agents-doc-parity-check` skill: it matches your changes against every doc's `covers:` globs and flags docs that need updating. Required in addition to `superpowers:verification-before-completion`, not instead of it.
