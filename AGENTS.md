@@ -40,5 +40,3 @@ The `--workspace` flag takes the package's `name` (e.g. `crew-cli`, `crew-daemon
 | Running verification (lint/typecheck/test/bruno/visual-fidelity)      | `.agents/commands.md`                                  |
 
 See [`.agents/README.md`](.agents/README.md) for how this system works and how to extend it.
-
-> _Below this section, content is being migrated into `.agents/` during the Phase 2 rollout. Once migration completes, this file shrinks to the index above._
