@@ -8,6 +8,7 @@ import { AgentsService } from './services/AgentsService.js';
 import { IngestService } from './services/IngestService.js';
 import { EventBus } from './services/EventBus.js';
 import { TimelineService } from './services/TimelineService.js';
+import { MetricsService } from './services/MetricsService.js';
 import { resolveJsonlPathForAgent } from './services/resolveJsonlPath.js';
 
 /**
@@ -30,6 +31,7 @@ export interface DaemonCradle {
   ingestService: IngestService;
   eventBus: EventBus;
   timelineService: TimelineService;
+  metricsService: MetricsService;
 }
 
 declare module '@fastify/awilix' {
@@ -61,6 +63,7 @@ export function buildContainer(deps: BuildContainerDeps): AwilixContainer<Daemon
     // what it actually scans; if `DaemonConfig` later splits the two,
     // change this argument, not the service's parameter name.
     agentsService: asFunction(({ db }: DaemonCradle) => new AgentsService({ db })).scoped(),
+    metricsService: asFunction(({ db }: DaemonCradle) => new MetricsService({ db })).scoped(),
     projectsService: asFunction(
       ({ config, logger, agentsService }: DaemonCradle) =>
         new ProjectsService({ projectsDir: config.configDir, logger, agentsService }),
