@@ -1,6 +1,6 @@
 # AGENTS.md
 
-Conventions for agents working on `crew` itself. Universal Node + documentation conventions live in `~/.claude/conventions/`; this file covers crew-specific rules only. The full architectural design is in [`docs/plans/architecture.md`](./docs/plans/architecture.md) — read that first before any non-trivial change.
+Conventions for agents working on `crew` itself. Universal Node + documentation conventions live in `~/.claude/conventions/`; this file covers crew-specific rules only. Architectural rules live in [`.agents/architecture.md`](./.agents/architecture.md); the rationale + history is in [`docs/rationale/architecture.md`](./docs/rationale/architecture.md).
 
 ## Repo layout
 
@@ -51,16 +51,6 @@ Crew runs as a docker compose stack locally. See [`README.md`](./README.md) for 
 - **Worktree DBs are ephemeral and seeded.** `CREW_SEED_FIXTURES=1` runs `packages/daemon/seeds/dev.ts` on container start. Tests run against deterministic fixtures, not against your canonical state.
 - **`<repo>/env.toml` is the source of truth for env vars** that vary per-worktree (`APP_URL`, `DAEMON_URL`, port allocator entries, `COMPOSE_PROJECT_NAME`). Always use `${VAR}` syntax, never legacy `{httpPort}`.
 - **`<repo>/.claude/settings.json` declares the sandbox baseline.** `excludedCommands` lists `npm run bruno:smoke` and `npm run test:e2e` so they run un-sandboxed against the host loopback (where the worktree stack is reachable). Sandboxed `curl`/`fetch` calls to the app URL will always return ECONNREFUSED — see the agent's run-prompt sandbox-network-note section.
-
-## Architecture rules
-
-These flow from `docs/plans/architecture.md`:
-
-- **The CLI never embeds business logic that belongs in `shared/`.** Subcommands should be thin wrappers: parse args, call shared, render output.
-- **The daemon never reads from disk for things the CLI can pass.** State queries go through the daemon's API; the CLI passes the question.
-- **`shared/` has no CLI / daemon / dashboard imports.** It's the leaf of the dependency graph.
-- **No business logic in the dashboard.** It's a view over the daemon's API.
-- **Per-project config is the only place project-specific knowledge lives.** Don't hardcode "Recipes-App" anywhere; everything's parameterised on the loaded project config.
 
 ## Per-worktree docker isolation
 
