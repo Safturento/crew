@@ -9,7 +9,7 @@ export type SkillInjectionResult =
 export interface SkillInjectionOptions {
   worktree: string;
   config: ProjectConfig;
-  /** Filesystem path containing skill directories. Default: packages/cli/src/lib/skills/ */
+  /** Filesystem path containing skill directories. Default: `<repo>/.claude/skills/`. */
   sourceRoot: string;
   log: (msg: string) => void;
   warn: (msg: string) => void;

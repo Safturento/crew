@@ -61,4 +61,6 @@ desktop.ini
 .crew/
 
 # Per-repo agent sandbox config + secrets (gh-token, etc.)
-.claude/
+# crew commits its own skills under .claude/skills/ — keep that tracked.
+.claude/*
+!.claude/skills/

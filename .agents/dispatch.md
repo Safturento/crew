@@ -29,7 +29,7 @@ The companion commands `crew fix-pr` (resume from PR feedback) and the gate-driv
 7. **`prepareAgentEnvironment` (fresh mode).** In `lib/run/agent-environment.ts`. Resolves the playwright app URL, starts docker bringup blocking-await in fresh mode (`startDockerBringup` → `await proc`), installs Chromium via `installPlaywrightBrowsers`, then runs `runPreflight(buildPreflightChecks(config))` — see Preflight below.
 8. **MCP file write.** When `[playwright]` is enabled and smoke is on, `writeMcpFile(worktree, { appUrl, resolverCwd })` writes `<worktree>/.mcp.json`. Order matters: write happens **after** `prepareAgentEnvironment` so the Chromium binary is on disk before `--executable-path` is resolved (CREW-70 regression bug — earlier writes captured a non-existent path and MCP silently fell back to system Chrome).
 9. **Figma snapshot.** When `[visual_fidelity]` is configured: `runPreDispatchFigmaSnapshot(...)` exports `<worktree>/<snapshot_path>/` and then runs Plugin-API enrichment via a nested `claude -p` subprocess. Failures are non-fatal (returns `warning`); the visual-fidelity-check skill becomes a no-op rather than blocking dispatch.
-10. **Skill injection.** `runSkillInjection(...)` copies dispatcher-managed skills (`packages/cli/src/lib/skills/<name>/`) into `<worktree>/.claude/skills/<name>/`. See Skills below.
+10. **Skill injection.** `runSkillInjection(...)` copies dispatcher-managed skills (`<repo>/.claude/skills/<name>/`) into `<worktree>/.claude/skills/<name>/`. See Skills below.
 11. **Build prompt.** `buildTicketPrompt({ key, githubRepo, jiraSite, playwright, brunoSmoke, visualFidelity, discoveredSkillsBlock, userMessage, dockerUnavailable })`. See Prompts below.
 12. **Launch claude.** `execa('claude', ['--dangerously-skip-permissions','-p', prompt], { cwd: worktree, env: { ...childEnv, GH_TOKEN, CREW_APP_URL, PLAYWRIGHT_BASE_URL, CREW_BRUNO_ENV } })`. stdout/stderr both pipe to `/tmp/crew-run-<KEY>.log`. **stdin is `'ignore'`, not the file stream** — execa v9 rejects WriteStream stdio whose fd hasn't been assigned yet; the workaround pipes after spawn.
 13. **Transcript discovery + stream.** `findNewestTranscript(claudeProjectDirFor(worktree))` polls for the first `.jsonl` to appear; once found, `streamTranscript(...)` tails it line-by-line through `tailTranscript` and renders each event via `parseToolCall` / `parseAssistantText`. Aborted via the `AbortController` when the claude process exits (with a 400ms drain delay).
@@ -77,9 +77,9 @@ The `verifyAfterRun` flag on `playwright.authored` adds the "Crew runs `<test_co
 
 Two flavors, two contracts:
 
-**Dispatcher-managed skills** (`lib/skills/<name>/`). Copied into the worktree at dispatch time by `runSkillInjection`. The applicability rule is hardcoded in `lib/run/skill-injection.ts` — `SKILL_APPLICABILITY` lists `(name, applicable: (config) => boolean)` pairs. Today: `visual-fidelity-check` when `[visual_fidelity]` is set. Per-skill failures are non-fatal (the gate degrades naturally when the skill isn't present). Add a new dispatcher-managed skill by:
+**Dispatcher-managed skills** (`<repo>/.claude/skills/<name>/` — crew commits its owned skills there, version-controlled). Copied into the worktree at dispatch time by `runSkillInjection`. The applicability rule is hardcoded in `lib/run/skill-injection.ts` — `SKILL_APPLICABILITY` lists `(name, applicable: (config) => boolean)` pairs. Today: `visual-fidelity-check` when `[visual_fidelity]` is set. Per-skill failures are non-fatal (the gate degrades naturally when the skill isn't present). Add a new dispatcher-managed skill by:
 
-1. Author the skill at `packages/cli/src/lib/skills/<name>/SKILL.md` (+ supporting files).
+1. Author the skill at `<repo>/.claude/skills/<name>/SKILL.md` (+ supporting files).
 2. Add a row to `SKILL_APPLICABILITY` with the config gate.
 3. Add fixtures + tests at `lib/run/skill-injection.test.ts` and `lib/run/skill-injection-step.test.ts`.
 
