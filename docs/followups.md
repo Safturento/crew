@@ -7,6 +7,7 @@ Format: see the user-level `~/.claude/CLAUDE.md` "Followup detection" section.
 ## Contents
 
 - [Active](#active)
+  - [2026-05-15 — CREW-167 skill files cannot be committed from a `crew run` dispatch (`.claude/skills/` is masked)](#2026-05-15--crew-167-skill-files-cannot-be-committed-from-a-crew-run-dispatch-claudeskills-is-masked)
   - [2026-05-15 — `.agents/` topic-doc system vs native `.claude/rules/` and agents.md alignment](#2026-05-15--agents-topic-doc-system-vs-native-clauderules-and-agentsmd-alignment)
   - [2026-05-15 — `parity_violations` metric is recorded end-to-end but never computed (always null)](#2026-05-15--parity_violations-metric-is-recorded-end-to-end-but-never-computed-always-null)
   - [2026-05-14 — Per-turn metric series so cache size can be graphed over a run](#2026-05-14--per-turn-metric-series-so-cache-size-can-be-graphed-over-a-run)
@@ -89,6 +90,22 @@ Format: see the user-level `~/.claude/CLAUDE.md` "Followup detection" section.
 - [Abandoned](#abandoned)
 
 ## Active
+
+### 2026-05-15 — CREW-167 skill files cannot be committed from a `crew run` dispatch (`.claude/skills/` is masked)
+
+**Ticket:** [CREW-167](https://safturento.atlassian.net/browse/CREW-167) — *this entry tracks a re-scoping need, not new scope; resolution is "CREW-167 split + the manual half done".*
+
+**What:** CREW-167 (Task 2 of the skill-storage plan) was ticketed for an autonomous `crew run`, but its central deliverable — committing three skill directories under `<repo>/.claude/skills/` — cannot be done from a dispatch. The Claude Code harness bind-mounts `/dev/null` over `.claude/skills/` (and `.claude/agents/`, `.claude/commands/`, `.claude/settings.local.json`) so a dispatched agent cannot touch the harness's own config dirs. Writes there fail with `ENOTDIR`; `rm` fails with `Device or resource busy`. The plan applied the user-level "Don't ticket — handle manually" rule only to Part 4 (the `~/.claude/**` dotfiles layer) and missed that a *repo's own* `.claude/skills/` is masked by the identical mechanism.
+
+**Why noticed:** The `crew run CREW-167` dispatch on 2026-05-15. Probing the worktree confirmed `.claude/` itself is writable for new arbitrary paths, but `.claude/skills/` specifically is an active `/dev/null` mount. Full analysis written up in `docs/tickets/CREW-167.md`.
+
+**Anchors:** `docs/tickets/CREW-167.md` (the blocker write-up); `docs/superpowers/plans/2026-05-15-skill-storage-and-agents-autoload.md` Task 2 Steps 2–4 + 18 (the blocked steps) and Appendices A/B (the `SKILL.md` contents); `packages/cli/src/lib/skills/visual-fidelity-check/`; `packages/cli/src/lib/run/skill-injection.ts`. Sibling: the user-level `~/.claude/CLAUDE.md` "Don't ticket — handle manually" rule.
+
+**What's been considered:** A code-only partial PR was rejected — repointing `runSkillInjection` at an empty `.claude/skills/` while deleting the dynamic prompt-discovery makes every dispatch inject zero skills, and the unit tests (temp-dir fixtures) would still go green, hiding the regression in CI. So the work must split along the sandbox boundary: a **manual** commit places the three skill dirs + the `.gitignore` narrowing; a subsequent **autonomous** run does the code half (Task 2 Steps 5–17) once the files exist.
+
+**Shape of work:** (1) Manual: `git mv` `visual-fidelity-check` into `.claude/skills/`, `cp`/recreate the other two `SKILL.md` files, narrow the `.gitignore` rule, commit — all in a plain terminal, not a Claude Code session. (2) Re-dispatch (new ticket or re-run CREW-167 on the same branch after the manual commit lands) for the code rework. The code half is fully autonomous-safe.
+
+**Open questions:** Is `.claude/skills/` masking a fixed Claude Code behavior, or can the crew dispatch sandbox be configured to expose the *target repo's* `.claude/skills/` as writable? The user-level note attributes the block to Claude Code's hardcoded sensitive-file check — if so, no sandbox-config tweak lifts it and the manual split is mandatory. Worth confirming before re-scoping the ticket.
 
 ### 2026-05-15 — `.agents/` topic-doc system vs native `.claude/rules/` and agents.md alignment
 
