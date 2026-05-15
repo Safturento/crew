@@ -1,13 +1,216 @@
 ---
 name: design-system
-description: Crew Figma DS + Pill contract
-last_updated: 2026-05-13
+description: Crew Figma DS + token bindings + StateBadge contract
+last_updated: 2026-05-14
 covers:
-  - "packages/dashboard/src/components/**"
-  - "*.figma.tsx"
-  - "packages/dashboard/components.json"
+  - 'packages/dashboard/src/components/**'
+  - '*.figma.tsx'
+  - 'packages/dashboard/components.json'
+core_library_url: 'https://www.figma.com/design/UkPJj6vd7HMKcey7M0XF4N/Core-Design-System'
+project_library_url: 'https://www.figma.com/design/DsA7QuEa2WthDATkksd1Bq/Crew-Design-System'
+screens_file_url: 'https://www.figma.com/design/9FeJPriqdsdA4n9R5Xsrr8/Untitled'
+handoff_doc_root: 'docs/designs'
+sample_data:
+  project: 'kanban-api'
+  ticket: 'KAN-23'
+  user: 'kanban-api operator'
+core_kit_origin: 'https://www.figma.com/community/file/1342715840824755935 (forked 2026-05-09)'
 ---
 
 # Design system
 
-_Stub. Populated in ticket #7._
+Crew's design system is a thin override layer over a shadcn community kit ("Core"). Code lives in `packages/dashboard/`; Figma lives across three files (Core, Crew DS, Crew Dashboard Screens — URLs in frontmatter). The `design-with-figma` user-level skill reads this file's frontmatter for URLs + sample data.
+
+For per-ticket evolution, finalization steps, and the inventory snapshots, see [`docs/rationale/design-system.md`](../docs/rationale/design-system.md).
+
+## shadcn install
+
+- **Pinned CLI:** `shadcn@4.7.0`. To re-pin, run `npx -y shadcn@<new-version> init --help` from a scratch dir and check <https://ui.shadcn.com/docs/changelog> first.
+- **`packages/dashboard/components.json`** (manually authored to match v4 init output): `style: "new-york"`, `baseColor: "slate"`, `cssVariables: true`, `iconLibrary: "lucide"`, `tailwind.css: "src/index.css"`. Tailwind v4 has no separate config file — tokens live in the CSS `@theme` block. Aliases mirror the `@/*` tsconfig path.
+- **Sandbox gotcha:** `crew run` agents can't reach `ui.shadcn.com`. `shadcn init` and `shadcn add <primitive>` must run unsandboxed (locally or via a manual session).
+
+## Tokens — Crew Semantic Colors → tw/colors/slate
+
+Crew DS aliases all standard shadcn semantic variables and 8 state tokens **directly** to `Core / tw/colors / *` primitives, **bypassing Core's `mode` collection** (CREW-127, 2026-05-10). This makes the Figma color set identical to the dashboard CSS's `.dark` block. Both modes alias the same target because `tw/colors` is mode-invariant; light/dark differentiation comes from Crew DS's per-mode aliasing, and the dashboard ships dark-only.
+
+| Crew semantic            | → `Core / tw/colors`            |
+| ------------------------ | ------------------------------- |
+| `background`             | `slate/950`                     |
+| `foreground`             | `slate/200`                     |
+| `card`                   | `slate/900`                     |
+| `card-foreground`        | `slate/200`                     |
+| `popover`                | `slate/900`                     |
+| `popover-foreground`     | `slate/200`                     |
+| `primary`                | `slate/200`                     |
+| `primary-foreground`     | `slate/900`                     |
+| `secondary`              | `slate/800`                     |
+| `secondary-foreground`   | `slate/200`                     |
+| `muted`                  | `slate/800`                     |
+| `muted-foreground`       | `slate/400`                     |
+| `accent`                 | `slate/800`                     |
+| `accent-foreground`      | `slate/200`                     |
+| `destructive`            | `red/400`                       |
+| `destructive-foreground` | `slate/50`                      |
+| `border`                 | `white` (consumers carry alpha) |
+| `input`                  | `white` (consumers carry alpha) |
+| `ring`                   | `slate/500`                     |
+
+State tokens (8 total — 7 states + foreground):
+
+| State token          | → `Core / tw/colors` |
+| -------------------- | -------------------- |
+| `state/initializing` | `blue/400`           |
+| `state/running`      | `slate/400`          |
+| `state/idle`         | `slate/500`          |
+| `state/waiting`      | `amber/400`          |
+| `state/pr-open`      | `violet/400`         |
+| `state/error`        | `red/400`            |
+| `state/finished`     | `emerald/500`        |
+| `state/foreground`   | `slate/950`          |
+
+`border` and `input` alias to `white` (RGB only) — consumer fills carry the alpha (screens-file fills use opacity 0.04 / 0.06 / 0.07 / 0.12 for the white-overlay pattern). Required because Figma variable aliases don't have alpha overlay built-in.
+
+Deferred (still aliased through Core's `mode` collection, unused at runtime): 5 `chart-*`, 8 `sidebar-*`, 4 kit-extras (`background-color`, `semantic-background`, `semantic-border`, `semantic-foreground`).
+
+### Mode resolution
+
+Consumer files bind to Crew tokens. Resolution chain is `Crew / Semantic Colors → Core / tw/colors` directly. Because `tw/colors` is single-mode, consumer frames only need explicit mode on `Crew / Semantic Colors` — `figma-design-system-propagation` skill's Trap 2 (two-collection mode chain) **does not apply** to Crew DS consumers.
+
+### Extending the palette
+
+Three patterns. Each preserves the convention that **the Tailwind class name in code matches the variable name in Figma** — no translation step between designer and dev.
+
+1. **Color already in Tailwind palette** — _Code:_ use `bg-blue-500` directly, or hook through a semantic via `var(--color-blue-500)`. _Figma:_ alias from Crew Semantic Colors to `Core / tw/colors / blue/500`. No new infrastructure.
+2. **Brand-new custom color not in Tailwind** — _Code:_ extend `@theme` block in `packages/dashboard/src/index.css` (e.g. `--color-brand-purple: #5b21b6`); Tailwind v4 auto-generates `bg-brand-purple`, etc. _Figma:_ create a `Crew / Primitives` collection JIT, add the variable; optionally alias from a Crew Semantic Colors entry for semantic naming.
+3. **Custom semantic on existing Tailwind value** — _Code:_ extend `@theme` block: `--color-warning: var(--color-blue-500)`. _Figma:_ add `warning` variable to Crew Semantic Colors aliasing to `tw/colors / blue/500`. Same shape as state tokens.
+
+### Cross-library aliasing gotcha
+
+`importVariableByKeyAsync` aliases a variable but **does not** establish the formal library link between the two files. Only the Figma desktop Libraries UI does. Without the link, the alias chain dead-ends at the consumer end. Any future ticket that aliases across published Figma libraries hits this trap unless a user explicitly adds the source library via the consumer file's Libraries UI.
+
+## Core kit
+
+Forked from the Figma community file in `core_kit_origin`. We don't auto-track upstream — re-evaluate every ~6 months for meaningful additions (new shadcn primitives, lucide updates) worth manually porting.
+
+- **Designers ignore the `tokens` collection.** Core ships a `tokens` collection with 89 raw-numeric variables (`-0,8`, `640`, `1,25`, etc.) — these are component-internal helpers, not semantic tokens. Their empty `[]` scopes already hide them from most pickers. Pick from `tw/*` (primitives), `mode` (semantic light/dark aliases), or `Core / Breakpoints` instead.
+- **Layout primitives** live on a `Layout Primitives` page (Core file):
+
+  | Component   | Node id   | Auto-layout                               | Default spacing binding                                 |
+  | ----------- | --------- | ----------------------------------------- | ------------------------------------------------------- |
+  | `Stack`     | `3016:3`  | Vertical, hug width + height              | `itemSpacing` → `tw/gap / gap-4` (16px)                 |
+  | `Cluster`   | `3016:10` | Horizontal, wrap on overflow              | `itemSpacing` + `counterAxisSpacing` → `tw/gap / gap-4` |
+  | `Container` | `3016:21` | Vertical, max-width-constrained, centered | `maxWidth` → `tw/max-width / max-w-7xl` (1280px)        |
+
+  Override the bound variable on an instance to switch to a different `tw/gap` or `tw/max-width` value.
+
+## Crew DS structure
+
+`Crew / Semantic Colors` is the override collection (56 variables — 48 mirroring Core's `mode` surface + 7 state tokens + 1 state-foreground). Composites grow incrementally per fidelity ticket. The collection name keeps a `Colors` suffix for historical reasons even though it also contains FLOATs (radii, stroke-widths) so the entire Core `mode` surface is overridable from one place.
+
+### Code-shipped composites
+
+Each has a `.tsx` implementation in `packages/dashboard/src/components/`, a matching `.figma.tsx` Code Connect mapping, and a Figma counterpart in the Crew DS file. Skeleton-fidelity bar — semantic-token bindings and slot structure are correct; pixel polish is opportunistic.
+
+| Composite            | Figma node | Dashboard counterpart                                      |
+| -------------------- | ---------- | ---------------------------------------------------------- |
+| `BrandMark`          | `19:3`     | `packages/dashboard/src/components/BrandMark.tsx`          |
+| `StateBadge` set     | `20:23`    | `packages/dashboard/src/components/StateBadge.tsx`         |
+| `TopNav`             | `21:2`     | `packages/dashboard/src/components/TopNav.tsx`             |
+| `AgentRow`           | `21:9`     | `packages/dashboard/src/components/AgentRow.tsx`           |
+| `ProjectSection`     | `21:21`    | `packages/dashboard/src/components/ProjectSection.tsx`     |
+| `AgentsList`         | `21:25`    | `packages/dashboard/src/components/AgentsList.tsx`         |
+| `AgentBody`          | `24:2`     | `packages/dashboard/src/components/AgentBody.tsx`          |
+| `StateHistoryBar`    | `25:4`     | `packages/dashboard/src/components/StateHistoryBar.tsx`    |
+| `TokenTable`         | `26:4`     | `packages/dashboard/src/components/TokenTable.tsx`         |
+| `ViewportFrame`      | `27:4`     | `packages/dashboard/src/components/ViewportFrame.tsx`      |
+| `CountBadge`         | `77:28`    | `packages/dashboard/src/components/CountBadge.tsx`         |
+| `ProjectRow`         | `79:14`    | `packages/dashboard/src/components/ProjectRow.tsx`         |
+| `ProjectHeader`      | `82:15`    | `packages/dashboard/src/components/ProjectHeader.tsx`      |
+| `ProjectConfigBlock` | `83:15`    | `packages/dashboard/src/components/ProjectConfigBlock.tsx` |
+
+`StateBadge` and `CountBadge` publish as component sets (one variant per agent state); the `.figma.tsx` mappings bridge Figma's kebab `pr-open` to the dashboard's snake `pr_open` via `figma.enum`. The other twelve are single components. `ErrorFallback` is the only un-built composite from the original Phase 4 inventory; it lands alongside the next fidelity ticket that surfaces a need.
+
+> **Figma-side Pill consolidation (2026-05-12) is not reflected in code.** The Figma DS merged `Button` / `StateBadge` / `CountBadge` / `TimelineTag` into a unified `Pill` component set (192 variants), and the Crew DS moved into the dashboard file. The dashboard code still ships separate components and the `.figma.tsx` files still reference the archived standalone DS file URL + pre-consolidation node IDs. See `docs/followups.md` under "Stale `.figma.tsx` mappings" for the rebuild task and [`docs/rationale/design-system.md`](../docs/rationale/design-system.md#2026-05-12-figma-side-pill-consolidation) for the migration history.
+
+### `components/ui/` vs `components/<feature>/` split
+
+- `packages/dashboard/src/components/ui/` — **shadcn primitives only** (`button`, `badge`, `input`, `dialog`, `label`, `separator`, `form`). One file per primitive plus its `.figma.tsx` mapping. Don't put crew-specific composites here.
+- `packages/dashboard/src/components/` (top level) — **Crew composites** that compose primitives + crew logic. `AgentRow`, `ProjectSection`, etc.
+
+This is the canonical shadcn convention; the `components.json` `aliases` block maps `ui → @/components/ui`.
+
+## StateBadge visual pattern
+
+The canonical pill treatment. Figma `StateBadge` set has **21 variants** (7 states × 3 intensities); the dashboard's `StateBadge.tsx` mirrors the same axes via CVA.
+
+| Intensity       | Bg fill              | Stroke               | Text                           | Dot         |
+| --------------- | -------------------- | -------------------- | ------------------------------ | ----------- |
+| `muted`         | transparent (0%)     | `state/X` at 40%     | `state/X` ✓                    | `state/X` ✓ |
+| `mid` (default) | `state/X` at **10%** | `state/X` at **30%** | `state/X` ✓                    | `state/X` ✓ |
+| `loud`          | `state/X` at 100%    | `state/X` at 100%    | `state/foreground` (slate/950) | `state/X` ✓ |
+
+**Code-Figma parity contract:** `STATE_CLASSES` in `packages/dashboard/src/data/state-meta.ts` defines `bg10` → `bg-state-X/10` (10% bg) and `border30` → `border-state-X/30` (30% border). When changing canonical opacities, update both the Figma variants AND `STATE_CLASSES` in code — same value in both places.
+
+**Embedding rule:** when a composite needs a state pill, compose a real `StateBadge` instance — not a hand-built ellipse + text. Hand-built pills drift from canonical opacity tweaks and new state variants.
+
+**Figma Plugin API gotcha:** `inst.fills = [...]` and `inst.strokes = [...]` on a fresh instance (created via `variant.createInstance()`) **do not inherit** the variant's opacity property — instances default to opacity 1.0 even when the variant has 0.10. Always force opacity explicitly after `createInstance()` / `swapComponent()`. `setBoundVariableForPaint` silently drops the input paint's opacity for the same reason. See `figma-design-system-propagation` skill Trap 1 for the workaround.
+
+## Code Connect — intentionally not published
+
+The `figma connect publish` step is **deliberately skipped**. Code Connect publishing requires a Figma **Organization or Enterprise** team plan; crew is on Figma Pro Full, so the publish call fails with a permissions error. Decision rationale lives in [`docs/rationale/design-system.md`](../docs/rationale/design-system.md#code-connect-publish-decision-rationale).
+
+What this means in practice:
+
+- `.figma.tsx` files in `packages/dashboard/src/components/ui/` (and Crew composite siblings) **stay in code** as inert documentation of the Figma → shadcn mapping. They don't surface in Figma's Dev Mode Inspect panel, but they remain authoritative as a written contract.
+- The `design-with-figma` skill (Phase 5, separate Epic) reads them from disk directly — no Code Connect API dependency.
+- Future composites should still author the matching `.figma.tsx` file alongside each component. Same convention, just no publish at the end.
+- **No `FIGMA_ACCESS_TOKEN` setup needed.** No GitHub Actions secret for Figma publish needed.
+- CREW-125's "all 7 primitives have a `.figma.tsx` file authored" is the Definition of Done; the "publish + Inspect panel returns shadcn JSX" criterion is dropped.
+
+The decision is reversible — the file structure stays compatible with future publish if the team plan changes.
+
+### Existing Code Connect mappings
+
+These target Core's component nodes (file `UkPJj6vd7HMKcey7M0XF4N`), not Crew DS, because the screens file instances shadcn primitives directly from Core via the library link.
+
+| Code component       | Mapping file                                               | Figma component (Core)                  | Figma node id |
+| -------------------- | ---------------------------------------------------------- | --------------------------------------- | ------------- |
+| `Button`             | `packages/dashboard/src/components/ui/button.figma.tsx`    | `Buttons` set on Button page            | `73:3681`     |
+| `Badge`              | `packages/dashboard/src/components/ui/badge.figma.tsx`     | `Badge` set on Badge page               | `665:2024`    |
+| `Input`              | `packages/dashboard/src/components/ui/input.figma.tsx`     | `Default` set on Input page             | `520:3062`    |
+| `Dialog`             | `packages/dashboard/src/components/ui/dialog.figma.tsx`    | `Dialog` set on Dialog page             | `594:105`     |
+| `Label`              | `packages/dashboard/src/components/ui/label.figma.tsx`     | `Label` set on Label page               | `76:8617`     |
+| `Separator`          | `packages/dashboard/src/components/ui/separator.figma.tsx` | `Separator` component on Seperator page | `76:10202`    |
+| `FormItem` (form.\*) | `packages/dashboard/src/components/ui/form.figma.tsx`      | `Field` component on Field page         | `1188:5362`   |
+
+### Button variant mapping caveat
+
+The community kit conflates shadcn's `variant` and `size` axes into a single Figma `Type` enum (13 values: `primary`, `secondary`, `destructive`, `outline`, `hhost` (sic — upstream typo for `ghost`), `link`, `icon`, `with icon`, `loading`, `Size-small`, `Size-default`, `Size-large`, `Rounded`). The mapping reads `Type` twice — once into shadcn's `variant`, once into `size` — with every value covered in both, since unmapped Figma values silently render as `undefined`. The `hhost` typo is preserved so existing Figma instances don't break; we map it to shadcn `ghost` in code.
+
+### Skipped: text-content extraction
+
+Layer names inside kit variants are the literal text characters (the primary Button's text layer is named `Button`; the icon variant has no text layer at all), so `figma.textContent("Button")` would only land on a subset. The example snippets use placeholder strings (`Button`, `Badge`, `Email`, ...) instead.
+
+### Maintainer heads-up
+
+The `*.figma.tsx` files under `packages/dashboard/src/components/ui/` are picked up by the dashboard's `tsc -p tsconfig.json`. Renaming a shadcn primitive's prop union (e.g. dropping `'lg'` from Button's `size` type) breaks the typecheck in the matching `*.figma.tsx`. That's a feature — it forces a Code Connect mapping update in the same change.
+
+## Conventions
+
+### Sample data
+
+Use the canonical sample data in this file's frontmatter (`kanban-api` project, `KAN-23` ticket) when mocking up screens. Keeps screens consistent across the file.
+
+### Fonts
+
+Dashboard uses **Hanken Grotesk** (sans) + **Fira Code** (mono) per `packages/dashboard/src/index.css`. Earlier Figma frames imported via html.to.design substituted `Sora` because Hanken Grotesk wasn't available at capture time — CREW-126 corrected this. Any new Figma work uses Hanken Grotesk / Fira Code exclusively.
+
+### Theme
+
+Dashboard ships **dark-only** as default (`<html class="dark">` is set at app boot in `main.tsx`). Crew DS supports both light and dark modes via the inherited `Crew / Semantic Colors` collection; Crew screens default to dark canvas mode.
+
+## Verification
+
+Visual-fidelity verification for UI work is governed by the user-level **`visual-fidelity-check`** skill. The skill triggers on changes under `packages/dashboard/src/components/` or new/modified `.figma.tsx` files when the project has a `[visual_fidelity]` block in its crew TOML.
+
+**Crew is not yet dogfooding `visual-fidelity-check`.** `~/.config/crew/projects/crew.toml` has no `[visual_fidelity]` block, so dispatched agents working on crew's own dashboard don't get the skill auto-injected and aren't gated by the `visual-fidelity-pr-gate` PreToolUse hook. Wire it up when the dashboard's Figma counterpart is sufficiently stable to be a useful ground truth (currently blocked on the Pill-consolidation rebuild — see `docs/followups.md`).
