@@ -1,7 +1,9 @@
 import { describe, it, expect } from 'vitest';
+import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { pino, type Logger } from 'pino';
+import { claudeProjectDirFor } from 'crew-shared';
 import { buildApp } from '../app.js';
 import { parseDaemonConfig } from '../config.js';
 import { createDb, runMigrations } from '../db.js';
@@ -136,6 +138,73 @@ describe('POST /api/agents/runs/:runId/complete', () => {
       expect(run?.completed_at).toBe('2026-04-29T13:00:00Z');
       expect(run?.exit_code).toBe(0);
     } finally {
+      await app.close();
+      await db.destroy();
+    }
+  });
+
+  it('captures Layer-1 metrics from the transcript on completion', async () => {
+    const { app, db } = await setupApp();
+    const home = tmp();
+    const worktree = tmp();
+    const prevHome = process.env.HOME;
+    process.env.HOME = home;
+    try {
+      writeFileSync(join(worktree, 'AGENTS.md'), '# root');
+
+      const registerRes = await app.inject({
+        method: 'POST',
+        url: '/api/agents/runs',
+        payload: {
+          ...validBody,
+          worktreePath: worktree,
+          sessionId: 'metrics-session',
+        },
+      });
+      const runId = (registerRes.json() as { run: { id: number } }).run.id;
+
+      const projDir = claudeProjectDirFor(worktree, home);
+      mkdirSync(projDir, { recursive: true });
+      writeFileSync(
+        join(projDir, 'metrics-session.jsonl'),
+        [
+          JSON.stringify({
+            type: 'assistant',
+            timestamp: '2026-04-29T12:30:00Z',
+            message: {
+              content: [
+                { type: 'tool_use', id: 'a', name: 'Read', input: { file_path: join(worktree, 'AGENTS.md') } },
+              ],
+              usage: { output_tokens: 10 },
+            },
+          }),
+          JSON.stringify({
+            type: 'assistant',
+            timestamp: '2026-04-29T12:31:00Z',
+            message: {
+              content: [{ type: 'tool_use', id: 'b', name: 'Bash', input: { command: 'npm run typecheck' } }],
+              usage: { output_tokens: 10 },
+            },
+          }),
+        ].join('\n'),
+      );
+
+      const res = await app.inject({
+        method: 'POST',
+        url: `/api/agents/runs/${runId}/complete`,
+        payload: { exitCode: 0, completedAt: '2026-04-29T13:00:00Z' },
+      });
+      expect(res.statusCode).toBe(204);
+
+      const run = await db
+        .selectFrom('runs')
+        .selectAll()
+        .where('id', '=', runId)
+        .executeTakeFirstOrThrow();
+      expect(run.cleanliness_pass).toBe(1);
+      expect(run.doc_load_coverage_pct).toBe(100);
+    } finally {
+      process.env.HOME = prevHome;
       await app.close();
       await db.destroy();
     }
