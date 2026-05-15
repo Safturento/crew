@@ -1,13 +1,13 @@
 ---
 description: How the .agents/ system works and how to extend it
-last_updated: 2026-05-13
+last_updated: 2026-05-15
 ---
 
 # `.agents/` — repo-scoped topic docs for AI agents
 
 ## 1. What this is
 
-Two-tier progressive disclosure for agent context. `AGENTS.md` files (root + per-package) auto-load; `.agents/<topic>.md` topic docs load on demand when referenced from an index. User-level skills (`~/.claude/skills/`) and conventions (`~/.claude/conventions/`) are orthogonal — they teach *how*; `.agents/` captures *what this repo is*.
+Two-tier progressive disclosure for agent context. Claude Code auto-loads `CLAUDE.md`, not `AGENTS.md`; thin `CLAUDE.md` shims (`@AGENTS.md` imports) at the repo root and in each package pull the `AGENTS.md` content into context — root at launch, per-package on demand. `.agents/<topic>.md` topic docs load on demand when referenced from an index. User-level skills (`~/.claude/skills/`) and conventions (`~/.claude/conventions/`) are orthogonal — they teach *how*; `.agents/` captures *what this repo is*.
 
 ## 2. Discovery model
 
