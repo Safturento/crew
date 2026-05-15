@@ -66,6 +66,8 @@ git commit -m "fix(<KEY>): add CLAUDE.md @AGENTS.md shims so AGENTS.md auto-load
 
 crew owns three skills. They move into the crew repo at `.claude/skills/`; `runSkillInjection` is kept and repointed to copy them into dispatched worktrees; the redundant prompt-discovery is deleted and the "required skills" nudge becomes static template content.
 
+> **Execution split (added 2026-05-15).** Steps 1–4 create files under `<crew-repo>/.claude/skills/`. A Claude Code session masks the current project's `.claude/skills/` read-only inside its command sandbox, so an autonomous `crew run` dispatch cannot create them — there is no human to approve the escalated write. Steps 1–4 are therefore done in an **interactive session** (the Write tool, maintainer-approved) and are **not** part of the CREW-167 dispatch. **CREW-167 = Steps 5–19** — pure injection / prompt-discovery code, no `.claude/` write — gated on Steps 1–4 having landed (otherwise `runSkillInjection` repoints at an empty directory). See the design spec's Part 2 execution-constraint note.
+
 **Files:**
 - Modify: `.gitignore`
 - Move: `packages/cli/src/lib/skills/visual-fidelity-check/` → `.claude/skills/visual-fidelity-check/`
@@ -78,33 +80,14 @@ crew owns three skills. They move into the crew repo at `.claude/skills/`; `runS
 - Modify: `packages/cli/src/lib/prompts/templates/ticket.md`, `templates/fix-pr.md`, `templates/resume.md`
 - Modify: `packages/cli/src/lib/prompts/render.test.ts`, `builders.test.ts`, `resume.test.ts`, `packages/cli/src/commands/resume.test.ts`
 
-- [ ] **Step 1: Narrow the `.claude/` ignore rule**
+### Steps 1–4 — DONE (interactive skill-file migration, not part of CREW-167)
 
-In `.gitignore`, replace the line `.claude/` (under `# Per-repo agent sandbox config + secrets…`) with:
+> Completed outside `crew run`, in an interactive session — see the execution-split note above. The skill files now live committed at `<crew-repo>/.claude/skills/`: `visual-fidelity-check/` (moved from `packages/cli/src/lib/skills/`, git history preserved as a rename), `bruno-collection-maintenance/SKILL.md`, and `agents-doc-parity-check/SKILL.md` (both copied byte-identical from `~/.claude/skills/`). The `.gitignore` rule was narrowed to `.claude/*` + `!.claude/skills/`. Verified: `git check-ignore` reports the skills tracked while `settings.local.json` and `secrets/` stay ignored. **CREW-167's dispatch scope begins at Step 5.**
 
-```gitignore
-.claude/*
-!.claude/skills/
-```
-
-Verify: `git check-ignore -v .claude/skills/x; echo "exit=$?"` → `exit=1` (not ignored). `git check-ignore .claude/settings.local.json` → still ignored.
-
-- [ ] **Step 2: Move `visual-fidelity-check` into `.claude/skills/`**
-
-```bash
-mkdir -p .claude/skills
-git mv packages/cli/src/lib/skills/visual-fidelity-check .claude/skills/visual-fidelity-check
-```
-
-The now-empty `packages/cli/src/lib/skills/` directory should no longer exist after the move; if a stray empty dir remains, remove it.
-
-- [ ] **Step 3: Create `.claude/skills/bruno-collection-maintenance/SKILL.md`**
-
-Primary method: `cp ~/.claude/skills/bruno-collection-maintenance/SKILL.md .claude/skills/bruno-collection-maintenance/SKILL.md`. If `~/.claude/skills/` is not readable in your environment, recreate the file from **Appendix A** of this plan (byte-identical).
-
-- [ ] **Step 4: Create `.claude/skills/agents-doc-parity-check/SKILL.md`**
-
-Primary method: `cp ~/.claude/skills/agents-doc-parity-check/SKILL.md .claude/skills/agents-doc-parity-check/SKILL.md`. If `~/.claude/skills/` is not readable, recreate it from **Appendix B**.
+- [x] **Step 1: Narrow the `.claude/` ignore rule** — `.gitignore` line `.claude/` replaced with `.claude/*` + `!.claude/skills/`.
+- [x] **Step 2: Move `visual-fidelity-check` into `.claude/skills/`** — moved; `packages/cli/src/lib/skills/` no longer exists.
+- [x] **Step 3: Create `.claude/skills/bruno-collection-maintenance/SKILL.md`** — copied from `~/.claude/skills/`.
+- [x] **Step 4: Create `.claude/skills/agents-doc-parity-check/SKILL.md`** — copied from `~/.claude/skills/`.
 
 - [ ] **Step 5: Make injection unconditional over the crew-owned skill set**
 
@@ -131,10 +114,9 @@ Delete `skillsApplicableTo` and the `ProjectConfig` import if now unused. `copyS
 
 In `packages/cli/src/lib/run/skill-injection-step.ts`, change `runSkillInjection` to iterate `crewOwnedSkills()` instead of `skillsApplicableTo(opts.config)`. Remove the `config` field from `SkillInjectionOptions` if it is now unused. The `{ kind: 'skipped' }` branch (empty applicable list) can be dropped — the list is never empty.
 
-- [ ] **Step 7: Repoint the injection source and make injection unconditional in `run.ts`**
+- [ ] **Step 7: Make injection unconditional in `run.ts`**
 
-In `packages/cli/src/commands/run.ts`:
-- Update `skillsSourceRoot()` (defined near line 581) to resolve the crew repo's root `.claude/skills/` directory instead of `packages/cli/src/lib/skills/`. The repo root is two levels above `packages/cli/`; resolve it the same way the current function resolves its path.
+`skillsSourceRoot()` was already repointed to `<repo>/.claude/skills/` by the interactive skill-file migration (Steps 1–4) — it had to move in lockstep with the files, since leaving it pointing at the deleted `packages/cli/src/lib/skills/` would silently break injection on `main`. The `skill-injection-step.ts` `sourceRoot` doc-comment and `.agents/dispatch.md`'s skill-path references were corrected in that same migration. Remaining in `packages/cli/src/commands/run.ts`:
 - Move the `runSkillInjection({ ... })` call **out** of the `if (config.visual_fidelity) { ... }` block so it runs on every dispatch. Keep `runPreDispatchFigmaSnapshot` inside that block. Drop the `config` argument from the `runSkillInjection` call if Step 6 removed it.
 
 - [ ] **Step 8: Delete the dynamic prompt-discovery module**
@@ -301,11 +283,12 @@ git commit -m "feat: version ~/.claude CLAUDE.md, conventions, and personal skil
 ## Sequencing
 
 - **Task 1** is independent — land first or in parallel.
-- **Task 2** is independent of Task 1; the largest task.
+- **Task 2 Steps 1–4** (skill-file migration) run interactively and must land first — they are the gate for the rest of Task 2.
+- **Task 2 Steps 5–19** (CREW-167) is independent of Task 1; the largest dispatched task. Gated on Steps 1–4.
 - **Task 3** depends on Tasks 1–2 (its docs describe their end state).
 - **Part 4** is parallel and non-ticketed.
 
-Suggested ticketing: one Epic, three children — Task 1; Task 2; Task 3 — plus Part 4 handled manually. Final grouping confirmed at the ticketing step.
+Suggested ticketing: one Epic, three children — Task 1; Task 2 (CREW-167, Steps 5–19 only); Task 3 — plus Task 2 Steps 1–4 and Part 4 handled interactively (not ticketed). Final grouping confirmed at the ticketing step.
 
 ---
 

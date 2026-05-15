@@ -574,12 +574,14 @@ function fail(message: string): never {
 }
 
 /**
- * Filesystem root where dispatcher-managed skill directories live. The crew
- * CLI runs via tsx against the source tree (no compiled `dist/`), so we
- * resolve relative to this module's source location at runtime.
+ * Filesystem root where crew's owned skills live — committed in-repo at
+ * `<repo>/.claude/skills/`. The crew CLI runs via tsx against the source tree
+ * (no compiled `dist/`), so we resolve relative to this module's source
+ * location: run.ts sits at `packages/cli/src/commands/`, four levels below the
+ * repo root.
  */
 function skillsSourceRoot(): string {
-  return join(dirname(fileURLToPath(import.meta.url)), '..', 'lib', 'skills');
+  return join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..', '..', '.claude', 'skills');
 }
 
 interface MaybeRunE2eGateOptions {

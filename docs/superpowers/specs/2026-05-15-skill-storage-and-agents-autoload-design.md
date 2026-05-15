@@ -119,6 +119,26 @@ agents.
 
 ## Part 2 — Skill storage and injection
 
+> **Execution constraint — discovered 2026-05-15.** A Claude Code session masks
+> the *current project's* `.claude/skills/`, `.claude/agents/`, and
+> `.claude/commands/` as read-only inside its command sandbox: the harness loads
+> those directories at launch, then freezes them so a running agent cannot
+> rewrite its own active config. This is scoped per-project — user-level
+> `~/.claude/skills/` stays writable, which is where `superpowers:writing-skills`
+> operates — and it is not liftable by `--dangerously-skip-permissions`.
+> Consequence: **creating the committed skill files under
+> `<crew-repo>/.claude/skills/` cannot be done by an autonomous `crew run`
+> dispatch** — there is no human to approve the escalated write. It is done in an
+> *interactive* session instead: the Write tool, with the maintainer approving
+> the permission prompt, writes through the mask. So Part 2 splits by where the
+> work runs — **2a–2b (the skill-file migration) is interactive and not
+> ticketed**; **2c–2d (the injection / prompt-discovery code rework) is a normal
+> `crew run` ticket**, since it touches no `.claude/` path. 2c–2d is gated on
+> 2a–2b having landed first, or `runSkillInjection` would repoint at an empty
+> directory. The choice of `.claude/skills/` as the committed location is
+> unaffected — it remains correct for native discovery; only *who* creates the
+> files changed.
+
 ### 2a — Allow `.claude/skills/` to be committed
 
 `.gitignore` ignores all of `.claude/`. Git cannot re-include a path under an
@@ -254,11 +274,14 @@ Rolled through Parts 1–4:
 The crew-side work becomes one Epic. Logical groupings, refined by the plan:
 
 1. **`AGENTS.md` auto-load fix** — Part 1. Self-contained; independent.
-2. **Skill storage + injection rework** — Parts 2a–2d. The `.gitignore` change,
-   moving the skills into `.claude/skills/`, repointing `runSkillInjection`,
-   deleting the prompt-discovery, adding the static skill bullets.
+2. **Skill-file migration** — Parts 2a–2b. The `.gitignore` change and moving
+   the three skills into `.claude/skills/`. Done interactively (see the Part 2
+   execution-constraint note); not a Jira ticket. Must land before grouping 2b.
+2b. **Skill injection + prompt-discovery rework** — Parts 2c–2d. Repointing
+   `runSkillInjection`, deleting the prompt-discovery, adding the static skill
+   bullets. A `crew run` ticket; gated on grouping 2.
 3. **Personal-skill de-referencing + doc updates** — Part 2e + Part 4 + the
-   doc-update list. Depends on groupings 1–2.
+   doc-update list. Depends on groupings 1–2b.
 
 Part 3 (dotfiles) is parallel and non-ticketed.
 
