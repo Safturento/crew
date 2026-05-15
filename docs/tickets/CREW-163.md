@@ -40,10 +40,13 @@ the warning after the author states a reason.
 
 ## Notes
 
-Brace-expansion globs in `covers:` (e.g. `packages/cli/src/lib/{run,prompts}/**`
-in `dispatch.md`) are not expanded — `{}` is not glob metacharacter syntax
-inside bash `[[ == ]]`. A doc using only brace globs may miss an overlap. Since
-the hook is soft this only costs a missed warning; logged here as known.
+`covers:` patterns are single-glob-only — no brace expansion. The hook matches
+with bash `[[ == ]]`, which never expands `{...}`, so a brace glob would leave
+the hook blind for that doc. This is now enforced: `validate-agents-frontmatter`
+(run by `npm run lint:agents`) rejects any `covers:` entry containing `{` or
+`}` with a message telling the author to split it into separate list entries.
+`dispatch.md`'s former single brace entry was expanded into five plain entries
+as part of this change.
 
 ## Plan reference
 

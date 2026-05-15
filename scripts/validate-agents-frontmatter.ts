@@ -59,6 +59,12 @@ export function validateFrontmatter(content: string, filePath: string): Validati
 
     if (fm.covers && Array.isArray(fm.covers)) {
       for (const pattern of fm.covers) {
+        if (/[{}]/.test(pattern)) {
+          errors.push(
+            `covers pattern uses brace expansion, unsupported by the doc-parity hook: ${pattern} — ` +
+              `split into separate list entries`,
+          );
+        }
         try {
           micromatch.makeRe(pattern, { strictBrackets: true });
         } catch {
