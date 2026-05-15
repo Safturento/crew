@@ -1,9 +1,13 @@
 ---
 name: dispatch
 description: crew run prompt-build, skills injection, verification gates
-last_updated: 2026-05-14
+last_updated: 2026-05-15
 covers:
-  - 'packages/cli/src/lib/{run,prompts,skills,preflight,figma-snapshot}/**'
+  - 'packages/cli/src/lib/run/**'
+  - 'packages/cli/src/lib/prompts/**'
+  - 'packages/cli/src/lib/skills/**'
+  - 'packages/cli/src/lib/preflight/**'
+  - 'packages/cli/src/lib/figma-snapshot/**'
 ---
 
 # Dispatch

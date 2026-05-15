@@ -42,7 +42,9 @@ covers: ["**"]
     const result = validateFrontmatter(content, '.agents/local-dev.md');
     expect(result.ok).toBe(false);
     expect(
-      result.errors.some((e) => e.includes('name "architecture" does not match filename "local-dev"')),
+      result.errors.some((e) =>
+        e.includes('name "architecture" does not match filename "local-dev"'),
+      ),
     ).toBe(true);
   });
 
@@ -71,6 +73,20 @@ covers:
     const result = validateFrontmatter(content, '.agents/architecture.md');
     expect(result.ok).toBe(false);
     expect(result.errors.some((e) => e.includes('invalid micromatch'))).toBe(true);
+  });
+
+  it('fails when a covers glob uses brace expansion', () => {
+    const content = `---
+name: architecture
+description: x
+last_updated: 2026-05-13
+covers:
+  - "packages/cli/src/lib/{run,prompts}/**"
+---
+`;
+    const result = validateFrontmatter(content, '.agents/architecture.md');
+    expect(result.ok).toBe(false);
+    expect(result.errors.some((e) => e.includes('brace expansion'))).toBe(true);
   });
 
   it('passes a per-package AGENTS.md with the lighter schema (no covers)', () => {
