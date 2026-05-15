@@ -52,6 +52,20 @@ export interface AgentDetailRun {
   command: 'run' | 'fix-pr' | 'finish';
   started_at: string;
   completed_at: string | null;
+  // Layer-1 metrics (CREW-164) — null until the run is measured on completion.
+  doc_load_coverage_pct: number | null;
+  cleanliness_pass: number | null;
+  pr_claim_input_tokens: number | null;
+  parity_violations: number | null;
+}
+
+/** Cohort-level metrics aggregate from `GET /api/metrics`. */
+export interface AggregateMetrics {
+  runCount: number;
+  avgDocLoadCoverage: number | null;
+  cleanlinessPassRate: number;
+  avgPrClaimInputTokens: number;
+  parityViolationRate: number;
 }
 
 export interface AgentDetailTokens {

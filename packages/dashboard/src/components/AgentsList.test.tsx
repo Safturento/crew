@@ -1,9 +1,19 @@
-import { render, screen } from '@testing-library/react';
+import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { AgentsList } from './AgentsList.js';
-import type { Agent, Project } from '../data/types.js';
+import { renderWithProviders } from '../test/renderWithProviders.js';
+import { defaultClient } from '../data/queries.js';
+import type { Agent, AggregateMetrics, Project } from '../data/types.js';
+
+const ZERO_METRICS: AggregateMetrics = {
+  runCount: 0,
+  avgDocLoadCoverage: null,
+  cleanlinessPassRate: 0,
+  avgPrClaimInputTokens: 0,
+  parityViolationRate: 0,
+};
 
 const projects: Project[] = [
   {
@@ -60,16 +70,27 @@ const agents: Agent[] = [
 describe('AgentsList', () => {
   beforeEach(() => {
     localStorage.clear();
+    // The embedded MetricsTrendWidget fetches on mount — stub it so these
+    // section-rendering tests don't make real requests.
+    vi.spyOn(defaultClient, 'getMetrics').mockResolvedValue(ZERO_METRICS);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   it('renders one section per project that has agents', () => {
-    render(<AgentsList projects={projects} agents={agents} onSelectAgent={() => {}} />);
+    renderWithProviders(
+      <AgentsList projects={projects} agents={agents} onSelectAgent={() => {}} />,
+    );
     expect(screen.getByText('kanban-api')).toBeInTheDocument();
     expect(screen.getByText('recipes-app')).toBeInTheDocument();
   });
 
   it('orders agents within a project: attention-states first, then started DESC', () => {
-    render(<AgentsList projects={projects} agents={agents} onSelectAgent={() => {}} />);
+    renderWithProviders(
+      <AgentsList projects={projects} agents={agents} onSelectAgent={() => {}} />,
+    );
     const rows = screen.getAllByRole('button', { name: /KAN-/ });
     expect(rows[0]).toHaveAccessibleName(/KAN-2/);
     expect(rows[1]).toHaveAccessibleName(/KAN-1/);
@@ -80,39 +101,51 @@ describe('AgentsList', () => {
       ...projects,
       { name: 'crew', repoPath: '~/code/crew', branch: 'main', jiraKey: 'CREW', activeCount: 0 },
     ];
-    render(<AgentsList projects={projectsWithExtra} agents={agents} onSelectAgent={() => {}} />);
+    renderWithProviders(
+      <AgentsList projects={projectsWithExtra} agents={agents} onSelectAgent={() => {}} />,
+    );
     expect(screen.queryByText('crew')).not.toBeInTheDocument();
   });
 
   describe('Hide finished toggle', () => {
     it('hides finished agents by default', () => {
-      render(<AgentsList projects={projects} agents={agents} onSelectAgent={() => {}} />);
+      renderWithProviders(
+        <AgentsList projects={projects} agents={agents} onSelectAgent={() => {}} />,
+      );
       expect(screen.queryByRole('button', { name: /REC-1/ })).not.toBeInTheDocument();
       expect(screen.getByRole('button', { name: /KAN-1/ })).toBeInTheDocument();
       expect(screen.getByRole('button', { name: /REC-2/ })).toBeInTheDocument();
     });
 
     it('renders a switch labelled "Hide finished" that defaults to checked', () => {
-      render(<AgentsList projects={projects} agents={agents} onSelectAgent={() => {}} />);
+      renderWithProviders(
+        <AgentsList projects={projects} agents={agents} onSelectAgent={() => {}} />,
+      );
       const toggle = screen.getByRole('switch', { name: /hide finished/i });
       expect(toggle).toHaveAttribute('aria-checked', 'true');
     });
 
     it('reveals finished agents when toggled off', async () => {
-      render(<AgentsList projects={projects} agents={agents} onSelectAgent={() => {}} />);
+      renderWithProviders(
+        <AgentsList projects={projects} agents={agents} onSelectAgent={() => {}} />,
+      );
       await userEvent.click(screen.getByRole('switch', { name: /hide finished/i }));
       expect(screen.getByRole('button', { name: /REC-1/ })).toBeInTheDocument();
     });
 
     it('persists the off state to localStorage', async () => {
-      render(<AgentsList projects={projects} agents={agents} onSelectAgent={() => {}} />);
+      renderWithProviders(
+        <AgentsList projects={projects} agents={agents} onSelectAgent={() => {}} />,
+      );
       await userEvent.click(screen.getByRole('switch', { name: /hide finished/i }));
       expect(localStorage.getItem('crew.dashboard.hideFinished')).toBe('false');
     });
 
     it('rehydrates the off state from localStorage on mount', () => {
       localStorage.setItem('crew.dashboard.hideFinished', 'false');
-      render(<AgentsList projects={projects} agents={agents} onSelectAgent={() => {}} />);
+      renderWithProviders(
+        <AgentsList projects={projects} agents={agents} onSelectAgent={() => {}} />,
+      );
       expect(screen.getByRole('switch', { name: /hide finished/i })).toHaveAttribute(
         'aria-checked',
         'false',
@@ -121,7 +154,9 @@ describe('AgentsList', () => {
     });
 
     it('hides finished agents again after toggling back on, persisting the change', async () => {
-      render(<AgentsList projects={projects} agents={agents} onSelectAgent={() => {}} />);
+      renderWithProviders(
+        <AgentsList projects={projects} agents={agents} onSelectAgent={() => {}} />,
+      );
       const toggle = screen.getByRole('switch', { name: /hide finished/i });
       await userEvent.click(toggle);
       expect(screen.getByRole('button', { name: /REC-1/ })).toBeInTheDocument();

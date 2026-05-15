@@ -5,6 +5,7 @@ import { eventStream } from './eventStream.js';
 import { HttpDaemonClient } from './HttpDaemonClient.js';
 import type {
   AgentDetail,
+  AggregateMetrics,
   ProjectDetailResponse,
   StateTransition,
   TranscriptEvent,
@@ -76,6 +77,19 @@ export function useStateHistory(key: string): UseQueryResult<{ transitions: Stat
   return useQuery({
     queryKey: ['agent', key, 'state-history'],
     queryFn: () => defaultClient.getStateHistory(key),
+    refetchInterval: POLL_INTERVAL_MS,
+  });
+}
+
+/**
+ * Layer-1 metrics aggregate for one cohort. `baseline=true` is the
+ * pre-rollout baseline; `false` is the current cohort. Polls on the shared
+ * 30s interval — metrics shift slowly, so no SSE invalidation is wired.
+ */
+export function useMetrics(baseline: boolean): UseQueryResult<AggregateMetrics> {
+  return useQuery({
+    queryKey: ['metrics', baseline ? 'baseline' : 'current'],
+    queryFn: () => defaultClient.getMetrics(baseline),
     refetchInterval: POLL_INTERVAL_MS,
   });
 }

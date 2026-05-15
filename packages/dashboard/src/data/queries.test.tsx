@@ -22,7 +22,18 @@ const SAMPLE_DETAIL: AgentDetail = {
   state: 'running',
   worktree_path: '/repos/kanban-api-KAN-1',
   pr_url: null,
-  runs: [{ id: '1', command: 'run', started_at: '2026-04-29T12:00:00Z', completed_at: null }],
+  runs: [
+    {
+      id: '1',
+      command: 'run',
+      started_at: '2026-04-29T12:00:00Z',
+      completed_at: null,
+      doc_load_coverage_pct: null,
+      cleanliness_pass: null,
+      pr_claim_input_tokens: null,
+      parity_violations: null,
+    },
+  ],
   tokens: { total: 0, input: 0, output: 0, cache_read: 0, cache_creation: 0 },
   tool_call_count: 0,
 };

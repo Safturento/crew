@@ -4,6 +4,7 @@ import type { DaemonClient } from './DaemonClient.js';
 import type {
   Agent,
   AgentDetail,
+  AggregateMetrics,
   Project,
   ProjectDetailResponse,
   StateTransition,
@@ -68,6 +69,10 @@ const AgentDetailSchema = z.object({
       command: z.enum(['run', 'fix-pr', 'finish']),
       started_at: z.string(),
       completed_at: z.string().nullable(),
+      doc_load_coverage_pct: z.number().nullable(),
+      cleanliness_pass: z.number().nullable(),
+      pr_claim_input_tokens: z.number().nullable(),
+      parity_violations: z.number().nullable(),
     }),
   ),
   tokens: z.object({
@@ -98,6 +103,14 @@ const StateHistoryResponseSchema = z.object({
       ts: z.number(),
     }),
   ),
+});
+
+const AggregateMetricsSchema = z.object({
+  runCount: z.number(),
+  avgDocLoadCoverage: z.number().nullable(),
+  cleanlinessPassRate: z.number(),
+  avgPrClaimInputTokens: z.number(),
+  parityViolationRate: z.number(),
 });
 
 // Daemon already validates JSONL via crew-shared transcript schemas before
@@ -148,6 +161,12 @@ export class HttpDaemonClient implements DaemonClient {
     if (res.status === 404) throw new AgentNotFoundError(key);
     if (!res.ok) throw new Error(`GET /api/agents/${key}: ${res.status}`);
     return AgentDetailSchema.parse(await res.json());
+  }
+
+  async getMetrics(baseline: boolean): Promise<AggregateMetrics> {
+    const res = await fetch(`${this.baseUrl}/api/metrics?baseline=${baseline ? 'true' : 'false'}`);
+    if (!res.ok) throw new Error(`GET /api/metrics: ${res.status}`);
+    return AggregateMetricsSchema.parse(await res.json());
   }
 
   async getStateHistory(key: string): Promise<{ transitions: StateTransition[] }> {
