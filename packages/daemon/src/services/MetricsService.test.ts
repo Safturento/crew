@@ -246,11 +246,16 @@ describe('MetricsService.captureForRun', () => {
         [
           assistantToolUse('t1', 'Read', { file_path: join(worktree, 'AGENTS.md') }),
           assistantToolUse('t2', 'Bash', { command: 'npm run lint' }),
-          assistantToolUse('t3', 'Bash', { command: 'gh pr create --fill' }, {
-            input_tokens: 2000,
-            cache_read_input_tokens: 38000,
-            cache_creation_input_tokens: 0,
-          }),
+          assistantToolUse(
+            't3',
+            'Bash',
+            { command: 'gh pr create --fill' },
+            {
+              input_tokens: 2000,
+              cache_read_input_tokens: 38000,
+              cache_creation_input_tokens: 0,
+            },
+          ),
         ].join('\n'),
       );
 

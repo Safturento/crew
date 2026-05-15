@@ -1,19 +1,17 @@
 /**
- * Loose structural shape shared by the metric extractors. A transcript event
- * is parsed elsewhere into the rich `TranscriptEvent` union; the extractors
- * only reach for the tool_use items, so they accept this narrower interface
- * and tolerate any superset (including the full union).
+ * Loose structural shape the metric extractors read. A transcript event is
+ * parsed elsewhere into the rich `TranscriptEvent` union; the extractors only
+ * reach for tool_use items, so they accept this narrower interface and
+ * tolerate any superset (including the full union).
  */
 interface ToolUseItem {
   type: string;
   name?: string;
-  input?: {
-    command?: string;
-    file_path?: string;
-  };
+  input?: Record<string, unknown>;
 }
 
 interface ExtractableEvent {
+  type?: string;
   message?: {
     content?: ToolUseItem[] | string;
   };
@@ -30,9 +28,9 @@ export function extractBashCommands(events: readonly ExtractableEvent[]): string
     const content = ev.message?.content;
     if (!Array.isArray(content)) continue;
     for (const item of content) {
-      if (item.type === 'tool_use' && item.name === 'Bash' && item.input?.command) {
-        out.push(item.input.command);
-      }
+      if (item.type !== 'tool_use' || item.name !== 'Bash') continue;
+      const command = item.input?.command;
+      if (typeof command === 'string') out.push(command);
     }
   }
   return out;

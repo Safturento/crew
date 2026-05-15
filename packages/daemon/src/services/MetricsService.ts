@@ -128,12 +128,8 @@ export class MetricsService {
       };
     }
 
-    const docLoad = rows
-      .map((r) => r.doc_load_coverage_pct)
-      .filter((v): v is number => v !== null);
-    const tokens = rows
-      .map((r) => r.pr_claim_input_tokens)
-      .filter((v): v is number => v !== null);
+    const docLoad = rows.map((r) => r.doc_load_coverage_pct).filter((v): v is number => v !== null);
+    const tokens = rows.map((r) => r.pr_claim_input_tokens).filter((v): v is number => v !== null);
     const parity = rows.map((r) => r.parity_violations).filter((v): v is number => v !== null);
 
     const cleanlinessPassCount = rows.filter((r) => r.cleanliness_pass === 1).length;
@@ -166,7 +162,10 @@ async function listAgentDocs(worktree: string): Promise<string[]> {
   try {
     const pkgs = await fs.readdir(join(worktree, 'packages'), { withFileTypes: true });
     for (const pkg of pkgs) {
-      if (pkg.isDirectory() && (await fileExists(join(worktree, 'packages', pkg.name, 'AGENTS.md')))) {
+      if (
+        pkg.isDirectory() &&
+        (await fileExists(join(worktree, 'packages', pkg.name, 'AGENTS.md')))
+      ) {
         docs.push(`packages/${pkg.name}/AGENTS.md`);
       }
     }

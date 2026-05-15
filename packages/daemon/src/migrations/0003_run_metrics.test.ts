@@ -89,7 +89,7 @@ describe('migration 0003 — run_metrics', () => {
   it('rolls back cleanly — down() drops every metric column', async () => {
     const db = await freshDb();
     try {
-      await down(db);
+      await down(db as unknown as Kysely<unknown>);
       const names = await runsColumns(db);
       for (const col of METRIC_COLUMNS) {
         expect(names).not.toContain(col);

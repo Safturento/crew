@@ -33,6 +33,11 @@ const AgentDetailRunSchema = z.object({
   command: z.enum(['run', 'fix-pr', 'finish']),
   started_at: z.string(),
   completed_at: z.string().nullable(),
+  // Layer-1 metrics (CREW-164) — null until measured on run completion.
+  doc_load_coverage_pct: z.number().nullable(),
+  cleanliness_pass: z.number().nullable(),
+  pr_claim_input_tokens: z.number().nullable(),
+  parity_violations: z.number().nullable(),
 });
 
 const AgentDetailTokensSchema = z.object({

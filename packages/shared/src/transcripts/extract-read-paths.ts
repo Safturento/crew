@@ -2,12 +2,11 @@
 interface ToolUseItem {
   type: string;
   name?: string;
-  input?: {
-    file_path?: string;
-  };
+  input?: Record<string, unknown>;
 }
 
 interface ExtractableEvent {
+  type?: string;
   message?: {
     content?: ToolUseItem[] | string;
   };
@@ -24,9 +23,9 @@ export function extractReadPaths(events: readonly ExtractableEvent[]): string[] 
     const content = ev.message?.content;
     if (!Array.isArray(content)) continue;
     for (const item of content) {
-      if (item.type === 'tool_use' && item.name === 'Read' && item.input?.file_path) {
-        seen.add(item.input.file_path);
-      }
+      if (item.type !== 'tool_use' || item.name !== 'Read') continue;
+      const filePath = item.input?.file_path;
+      if (typeof filePath === 'string') seen.add(filePath);
     }
   }
   return Array.from(seen);

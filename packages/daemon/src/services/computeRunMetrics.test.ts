@@ -2,7 +2,10 @@ import { describe, it, expect } from 'vitest';
 import { computeRunMetrics, type MetricEvent } from './computeRunMetrics.js';
 
 function bash(command: string): MetricEvent {
-  return { type: 'assistant', message: { content: [{ type: 'tool_use', name: 'Bash', input: { command } }] } };
+  return {
+    type: 'assistant',
+    message: { content: [{ type: 'tool_use', name: 'Bash', input: { command } }] },
+  };
 }
 
 function read(filePath: string): MetricEvent {
@@ -56,7 +59,12 @@ describe('computeRunMetrics', () => {
       read('/work/CREW-1/src/index.ts'),
     ];
     const m = computeRunMetrics(events, {
-      agentDocRelPaths: ['AGENTS.md', '.agents/testing.md', '.agents/architecture.md', '.agents/security.md'],
+      agentDocRelPaths: [
+        'AGENTS.md',
+        '.agents/testing.md',
+        '.agents/architecture.md',
+        '.agents/security.md',
+      ],
     });
     // 2 of 4 agent docs were opened.
     expect(m.docLoadCoveragePct).toBe(50);

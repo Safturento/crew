@@ -169,6 +169,94 @@ describe('GET /api/agents/:key', () => {
   });
 });
 
+describe('GET /api/agents/:key — per-run metrics', () => {
+  it('surfaces the metric columns on each detail run', async () => {
+    const { app, db } = await setupApp();
+    try {
+      await db
+        .insertInto('agents')
+        .values({
+          key: 'KAN-5',
+          project_name: 'demo',
+          ticket_title: 'Demo',
+          worktree_path: '/work/KAN-5',
+          branch: 'KAN-5',
+          pr_url: null,
+          created_at: '2026-05-13T12:00:00Z',
+        })
+        .execute();
+      await db
+        .insertInto('runs')
+        .values({
+          agent_key: 'KAN-5',
+          command: 'run',
+          session_id: 's1',
+          started_at: '2026-05-13T12:00:00Z',
+          completed_at: '2026-05-13T13:00:00Z',
+          exit_code: 0,
+          doc_load_coverage_pct: 80,
+          cleanliness_pass: 1,
+          pr_claim_input_tokens: 42000,
+          parity_violations: 0,
+        })
+        .execute();
+
+      const res = await app.inject({ method: 'GET', url: '/api/agents/KAN-5' });
+      expect(res.statusCode).toBe(200);
+      expect(res.json().runs[0]).toMatchObject({
+        doc_load_coverage_pct: 80,
+        cleanliness_pass: 1,
+        pr_claim_input_tokens: 42000,
+        parity_violations: 0,
+      });
+    } finally {
+      await app.close();
+      await db.destroy();
+    }
+  });
+
+  it('reports null metrics for a run that has not been measured', async () => {
+    const { app, db } = await setupApp();
+    try {
+      await db
+        .insertInto('agents')
+        .values({
+          key: 'KAN-6',
+          project_name: 'demo',
+          ticket_title: 'Demo',
+          worktree_path: '/work/KAN-6',
+          branch: 'KAN-6',
+          pr_url: null,
+          created_at: '2026-05-13T12:00:00Z',
+        })
+        .execute();
+      await db
+        .insertInto('runs')
+        .values({
+          agent_key: 'KAN-6',
+          command: 'run',
+          session_id: 's1',
+          started_at: '2026-05-13T12:00:00Z',
+          completed_at: null,
+          exit_code: null,
+        })
+        .execute();
+
+      const res = await app.inject({ method: 'GET', url: '/api/agents/KAN-6' });
+      expect(res.statusCode).toBe(200);
+      expect(res.json().runs[0]).toMatchObject({
+        doc_load_coverage_pct: null,
+        cleanliness_pass: null,
+        pr_claim_input_tokens: null,
+        parity_violations: null,
+      });
+    } finally {
+      await app.close();
+      await db.destroy();
+    }
+  });
+});
+
 describe('GET /api/agents/:key/state-history', () => {
   it('returns transitions ordered by ts ascending for a seeded trail', async () => {
     const { app, db } = await setupApp();

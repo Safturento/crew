@@ -173,7 +173,12 @@ describe('POST /api/agents/runs/:runId/complete', () => {
             timestamp: '2026-04-29T12:30:00Z',
             message: {
               content: [
-                { type: 'tool_use', id: 'a', name: 'Read', input: { file_path: join(worktree, 'AGENTS.md') } },
+                {
+                  type: 'tool_use',
+                  id: 'a',
+                  name: 'Read',
+                  input: { file_path: join(worktree, 'AGENTS.md') },
+                },
               ],
               usage: { output_tokens: 10 },
             },
@@ -182,7 +187,14 @@ describe('POST /api/agents/runs/:runId/complete', () => {
             type: 'assistant',
             timestamp: '2026-04-29T12:31:00Z',
             message: {
-              content: [{ type: 'tool_use', id: 'b', name: 'Bash', input: { command: 'npm run typecheck' } }],
+              content: [
+                {
+                  type: 'tool_use',
+                  id: 'b',
+                  name: 'Bash',
+                  input: { command: 'npm run typecheck' },
+                },
+              ],
               usage: { output_tokens: 10 },
             },
           }),
