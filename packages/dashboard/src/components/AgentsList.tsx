@@ -2,6 +2,7 @@ import { useState } from 'react';
 
 import type { Agent, Project } from '../data/types.js';
 import { sortAgentsByPriority } from '../data/state-meta.js';
+import { MetricsTrendWidget } from './MetricsTrendWidget.js';
 import { ProjectSection } from './ProjectSection.js';
 import type { QuickActionKind } from './AgentRow.js';
 
@@ -53,6 +54,7 @@ export function AgentsList({
 
   return (
     <div className="mx-auto flex w-full max-w-7xl flex-col gap-4 p-6">
+      <MetricsTrendWidget />
       <div className="flex items-center justify-end">
         <button
           type="button"

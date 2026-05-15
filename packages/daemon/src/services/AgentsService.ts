@@ -19,6 +19,11 @@ export interface AgentDetailRun {
   command: 'run' | 'fix-pr' | 'finish';
   started_at: string;
   completed_at: string | null;
+  // Layer-1 metrics (CREW-164) — null until the run is measured on completion.
+  doc_load_coverage_pct: number | null;
+  cleanliness_pass: number | null;
+  pr_claim_input_tokens: number | null;
+  parity_violations: number | null;
 }
 
 export interface AgentDetailTokens {
@@ -179,7 +184,18 @@ export class AgentsService {
   async getByKey(key: string): Promise<AgentDetail | null> {
     const runRows = await this.db
       .selectFrom('runs')
-      .select(['id', 'agent_key', 'command', 'started_at', 'completed_at', 'exit_code'])
+      .select([
+        'id',
+        'agent_key',
+        'command',
+        'started_at',
+        'completed_at',
+        'exit_code',
+        'doc_load_coverage_pct',
+        'cleanliness_pass',
+        'pr_claim_input_tokens',
+        'parity_violations',
+      ])
       .where('agent_key', '=', key)
       .orderBy('id', 'asc')
       .execute();
@@ -259,6 +275,10 @@ export class AgentsService {
         command: r.command,
         started_at: r.started_at,
         completed_at: r.completed_at,
+        doc_load_coverage_pct: r.doc_load_coverage_pct,
+        cleanliness_pass: r.cleanliness_pass,
+        pr_claim_input_tokens: r.pr_claim_input_tokens,
+        parity_violations: r.parity_violations,
       })),
       tokens: {
         total: output + input + cacheRead + cacheCreation,

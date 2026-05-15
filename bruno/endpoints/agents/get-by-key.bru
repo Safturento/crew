@@ -54,6 +54,20 @@ tests {
       expect(r.completed_at === null || typeof r.completed_at === "string").to.equal(true);
     }
   });
+
+  test("each run carries the four Layer-1 metric columns (number or null)", () => {
+    const metricKeys = [
+      "doc_load_coverage_pct",
+      "cleanliness_pass",
+      "pr_claim_input_tokens",
+      "parity_violations",
+    ];
+    for (const r of res.body.runs) {
+      for (const k of metricKeys) {
+        expect(r[k] === null || typeof r[k] === "number").to.equal(true);
+      }
+    }
+  });
 }
 
 docs {

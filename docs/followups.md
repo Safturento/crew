@@ -7,6 +7,7 @@ Format: see the user-level `~/.claude/CLAUDE.md` "Followup detection" section.
 ## Contents
 
 - [Active](#active)
+  - [2026-05-15 — `parity_violations` metric is recorded end-to-end but never computed (always null)](#2026-05-15--parity_violations-metric-is-recorded-end-to-end-but-never-computed-always-null)
   - [2026-05-14 — Per-turn metric series so cache size can be graphed over a run](#2026-05-14--per-turn-metric-series-so-cache-size-can-be-graphed-over-a-run)
   - [2026-05-13 — Agent rows: code renders as table; Figma designs as cards (architectural layout drift, affects 3 screens)](#2026-05-13--agent-rows-code-renders-as-table-figma-designs-as-cards-architectural-layout-drift-affects-3-screens)
   - [2026-05-13 — Agent drawer Close button uses Unicode "X" glyph instead of `lucide/x` SVG](#2026-05-13--agent-drawer-close-button-uses-unicode-x-glyph-instead-of-lucidex-svg)
@@ -87,6 +88,23 @@ Format: see the user-level `~/.claude/CLAUDE.md` "Followup detection" section.
 - [Abandoned](#abandoned)
 
 ## Active
+
+### 2026-05-15 — `parity_violations` metric is recorded end-to-end but never computed (always null)
+
+**What:** CREW-164's `computeRunMetrics` derives three of the four Layer-1 metrics from a run's transcript (`cleanlinessPass`, `prClaimInputTokens`, `docLoadCoveragePct`). The fourth, `parityViolations`, is hard-wired to `null` — there is no transcript-only signal for `.agents/` doc-parity violations. The `runs.parity_violations` column, the `MetricsService` aggregate (`parityViolationRate`), the `/api/metrics` payload, and the dashboard widgets all carry the metric end-to-end; only the _capture_ is a stub.
+
+**Why noticed:** Building the metrics pipeline for CREW-164. Plan Step 26 ("compute the four metrics") gave no formula for parity. The Phase 3 commit/PR hook (CREW-160) is the component that detects `.agents/` parity violations, but at run-completion time it leaves nothing the daemon can read.
+
+**Anchors:** `packages/daemon/src/services/computeRunMetrics.ts` (the `parityViolations: null` line + its doc comment); `packages/daemon/src/services/MetricsService.ts` `aggregate()` → `parityViolationRate`; CREW-160 (Phase 3 hook); CREW-164.
+
+**What's been considered:** The metric is null-safe everywhere — `MetricsService.aggregate` filters nulls out of `parityViolationRate`, so a null parity column never skews the cohort. The honest stub (`null`) was chosen over a fabricated `0`.
+
+**Shape of work:** Depends on what signal the Phase 3 hook leaves behind. If the hook writes a violation count into the transcript (a `system`/`attachment` event) or a worktree sidecar file, `computeRunMetrics` gains a small extractor. If it only annotates the PR, capture moves out of the transcript path entirely. Small once the signal source exists; blocked until then.
+
+**Open questions:**
+
+- Where does the Phase 3 hook record violation counts — transcript event, worktree file, or PR comment only?
+- Is "violations introduced on this run" or "violations outstanding at run end" the right semantic?
 
 ### 2026-05-14 — Per-turn metric series so cache size can be graphed over a run
 

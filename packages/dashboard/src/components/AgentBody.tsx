@@ -4,6 +4,7 @@ import { formatDuration } from '../format/duration.js';
 import { formatTokens } from '../format/tokens.js';
 import { useAgent } from '../data/queries.js';
 import type { AgentDetail, AgentState } from '../data/types.js';
+import { RunMetrics } from './RunMetrics.js';
 import { StateBadge } from './StateBadge.js';
 import { Timeline } from './Timeline/Timeline.js';
 import { Button } from './ui/button.js';
@@ -39,6 +40,7 @@ export function AgentBody({ agentKey, mode }: AgentBodyProps) {
   return (
     <div data-testid="agent-body" className="flex h-full min-h-0 flex-col">
       <AgentHeader detail={data} mode={mode} />
+      <RunMetrics runs={data.runs} />
       <div className="min-h-0 flex-1">
         <Timeline agentKey={agentKey} agentState={data.state} />
       </div>

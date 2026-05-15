@@ -70,7 +70,18 @@ describe('App', () => {
       state: 'waiting',
       worktree_path: '/repos/kanban-api-KAN-31',
       pr_url: null,
-      runs: [{ id: '1', command: 'run', started_at: '2026-04-26T13:00:00Z', completed_at: null }],
+      runs: [
+        {
+          id: '1',
+          command: 'run',
+          started_at: '2026-04-26T13:00:00Z',
+          completed_at: null,
+          doc_load_coverage_pct: null,
+          cleanliness_pass: null,
+          pr_claim_input_tokens: null,
+          parity_violations: null,
+        },
+      ],
       tokens: { total: 1_000, input: 0, output: 0, cache_read: 0, cache_creation: 0 },
       tool_call_count: 0,
     };
@@ -93,7 +104,18 @@ describe('App', () => {
       state: 'running',
       worktree_path: '/repos/kanban-api-KAN-31',
       pr_url: null,
-      runs: [{ id: '1', command: 'run', started_at: '2026-04-26T13:00:00Z', completed_at: null }],
+      runs: [
+        {
+          id: '1',
+          command: 'run',
+          started_at: '2026-04-26T13:00:00Z',
+          completed_at: null,
+          doc_load_coverage_pct: null,
+          cleanliness_pass: null,
+          pr_claim_input_tokens: null,
+          parity_violations: null,
+        },
+      ],
       tokens: { total: 1_000, input: 0, output: 0, cache_read: 0, cache_creation: 0 },
       tool_call_count: 0,
     };

@@ -1,0 +1,39 @@
+meta {
+  name: GET /api/metrics
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/api/metrics?baseline=false
+}
+
+params:query {
+  baseline: false
+}
+
+assert {
+  res.status: eq 200
+  res.body.runCount: isNumber
+  res.body.cleanlinessPassRate: isNumber
+  res.body.avgPrClaimInputTokens: isNumber
+  res.body.parityViolationRate: isNumber
+}
+
+tests {
+  test("aggregate payload matches the /metrics Zod schema", () => {
+    expect(res.body.runCount).to.be.a("number");
+    expect(res.body.cleanlinessPassRate).to.be.a("number");
+    expect(res.body.avgPrClaimInputTokens).to.be.a("number");
+    expect(res.body.parityViolationRate).to.be.a("number");
+    // avgDocLoadCoverage is nullable — number or null, never undefined.
+    const cov = res.body.avgDocLoadCoverage;
+    expect(cov === null || typeof cov === "number").to.equal(true);
+  });
+}
+
+docs {
+  Smokes the Layer-1 metrics aggregate. `?baseline=false` is the current
+  cohort; `?baseline=true` is the pre-rollout baseline. The route's Zod
+  query parser rejects any non-boolean `baseline` value with a 400.
+}

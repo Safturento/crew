@@ -165,6 +165,10 @@ const SAMPLE_AGENT_DETAIL = {
       command: 'run',
       started_at: '2026-04-29T12:00:00Z',
       completed_at: null,
+      doc_load_coverage_pct: null,
+      cleanliness_pass: null,
+      pr_claim_input_tokens: null,
+      parity_violations: null,
     },
   ],
   tokens: {

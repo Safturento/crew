@@ -182,6 +182,10 @@ export async function registerRunsRoutes(app: DaemonApp): Promise<void> {
 
       ingest.detach(runId);
 
+      // Layer-1 metrics capture (CREW-164). Best-effort: `captureForRun`
+      // swallows its own errors, so a metrics failure never blocks the 204.
+      await req.diScope.resolve('metricsService').captureForRun(runId);
+
       // `crew finish` has no transcript tail, so the dashboard's only signal
       // that the agent has finished is this event. Publish unconditionally on
       // ok-exit so dashboards subscribed to the agent invalidate and refetch
