@@ -36,9 +36,13 @@ export interface ComputeRunMetricsOptions {
   agentDocRelPaths: readonly string[];
 }
 
-// A run "passed cleanliness" when it ran at least one verification command.
-// Matches the cleanliness sweep crew agents are told to run before a PR.
-const VERIFICATION_COMMAND = /\b(lint|typecheck|tsc|format|test)\b/;
+// A run "passed cleanliness" when it ran at least one verification command —
+// the lint/typecheck/test/format sweep crew agents run before a PR. Matched
+// either as a package-manager script (`npm run lint`, `pnpm test:run`) or a
+// direct tool invocation (`npx tsc`, `vitest run`). Deliberately narrow so an
+// incidental "test" substring (e.g. `cat test.txt`) is not mistaken for one.
+const VERIFICATION_COMMAND =
+  /\b(?:(?:npm|pnpm|yarn|bun)\s+(?:run\s+)?[\w:-]*(?:lint|typecheck|type-check|test|format)|tsc|eslint|prettier|vitest|jest|playwright)\b/;
 
 /**
  * Derives the four Layer-1 metrics for a completed run from its transcript.

@@ -28,6 +28,18 @@ describe('computeRunMetrics', () => {
     expect(m.cleanlinessPass).toBe(0);
   });
 
+  it('does not flag cleanlinessPass on incidental mentions of "test"/"format"', () => {
+    // A bare "test" substring (e.g. a filename) is not a verification run.
+    const events = [bash('cat test.txt'), bash('ls src/format')];
+    const m = computeRunMetrics(events, { agentDocRelPaths: [] });
+    expect(m.cleanlinessPass).toBe(0);
+  });
+
+  it('flags cleanlinessPass for a direct verification-tool invocation', () => {
+    const m = computeRunMetrics([bash('npx vitest run')], { agentDocRelPaths: [] });
+    expect(m.cleanlinessPass).toBe(1);
+  });
+
   it('captures prClaimInputTokens from the gh pr create turn', () => {
     const events: MetricEvent[] = [
       bash('npm run test'),
