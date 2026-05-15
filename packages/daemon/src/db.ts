@@ -28,6 +28,12 @@ export interface RunsTable {
   started_at: string;
   completed_at: string | null;
   exit_code: number | null;
+  // Layer-1 metrics — added by migration 0003 (CREW-164).
+  doc_load_coverage_pct: number | null;
+  cleanliness_pass: number | null;
+  pr_claim_input_tokens: number | null;
+  parity_violations: number | null;
+  baseline: Generated<number>; // 0 | 1; DB default 0
 }
 
 export interface ToolCallsTable {
