@@ -13,7 +13,7 @@ interface RequiredEntry {
 /**
  * Compute the excludedCommands the agent's project needs in its
  * <repo>/.claude/settings.json. Each entry corresponds to a sandbox
- * restriction documented in docs/plans/sandbox-limitations.md.
+ * restriction documented in .agents/security.md.
  *
  * Entries use the verified glob form `command*` (prefix + zero-or-more
  * trailing chars) so that flag/wrapper variants like

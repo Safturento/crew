@@ -29,7 +29,7 @@ docker compose up --build --wait{{playwrightInstall}}
 
 If `docker compose up` fails for environmental reasons (host docker daemon down, port collision with another stack, missing CLI tools) — i.e., a failure that rebasing would not have fixed — abort with a clear message: document the blocker in `docs/tickets/{{key}}.md` "Open questions" and exit WITHOUT applying the review feedback. Do not push.
 
-If `docker compose` itself returns a permission error — typically `/var/run/docker.sock` denied — that's a missing `excludedCommands` entry; see `docs/plans/sandbox-limitations.md`. Abort and ask the user to add the entry rather than trying to write the settings.json yourself.
+If `docker compose` itself returns a permission error — typically `/var/run/docker.sock` denied — that's a missing `excludedCommands` entry; see `.agents/security.md`. Abort and ask the user to add the entry rather than trying to write the settings.json yourself.
 
 **Do not reset the worktree or use any "hard" reset command** — those wipe in-progress work.
 
