@@ -1,6 +1,6 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`buildMcpConfig > serializes to stable JSON (snapshot) 1`] = `
+exports[`buildMcpConfig > serializes a both-servers config to stable JSON (snapshot) 1`] = `
 "{
   "mcpServers": {
     "playwright": {
@@ -13,26 +13,12 @@ exports[`buildMcpConfig > serializes to stable JSON (snapshot) 1`] = `
       "env": {
         "CREW_APP_URL": "http://localhost:5173"
       }
-    }
-  }
-}"
-`;
-
-exports[`buildMcpConfig > serializes with chromiumPath to stable JSON (snapshot) 1`] = `
-"{
-  "mcpServers": {
-    "playwright": {
-      "command": "npx",
+    },
+    "chrome": {
+      "command": "node",
       "args": [
-        "-y",
-        "@playwright/mcp@latest",
-        "--headless",
-        "--executable-path",
-        "/home/me/.cache/ms-playwright/chromium-1217/chrome-linux64/chrome"
-      ],
-      "env": {
-        "CREW_APP_URL": "http://localhost:5173"
-      }
+        "/plugins/sp-chrome/2.0.0/mcp/dist/index.js"
+      ]
     }
   }
 }"

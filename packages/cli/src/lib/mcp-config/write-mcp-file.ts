@@ -19,8 +19,10 @@ export async function writeMcpFile(
 
   const chromiumPath = await resolveChromiumExecutablePath(opts.resolverCwd);
   const config = buildMcpConfig({
-    appUrl: opts.appUrl,
-    chromiumPath: chromiumPath ?? undefined,
+    playwright: {
+      appUrl: opts.appUrl,
+      chromiumPath: chromiumPath ?? undefined,
+    },
   });
   writeFileSync(mcpPath, JSON.stringify(config, null, 2) + '\n');
 
