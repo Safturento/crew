@@ -147,7 +147,7 @@ APP_URL    = { kind = "template", value = "https://localhost:\${HTTPS_PORT}" }
     expect(result.base.APP_URL).toBe('https://localhost:443');
     expect(result.base.HTTPS_PORT).toBe('443');
 
-    const { resolveAppUrl } = await import('../lib/playwright/resolve-app-url.js');
+    const { resolveAppUrl } = await import('../lib/mcp-config/resolve-app-url.js');
     const resolved = resolveAppUrl('${APP_URL}/health', undefined, result.base);
     expect(resolved.raw).toBe('https://localhost:443/health');
   });
@@ -173,7 +173,7 @@ HTTPS_PORT = { kind = "port", default = 443 }
     });
     expect(result.kind).toBe('env-spec');
 
-    const { resolveAppUrl } = await import('../lib/playwright/resolve-app-url.js');
+    const { resolveAppUrl } = await import('../lib/mcp-config/resolve-app-url.js');
     expect(() =>
       resolveAppUrl(
         'https://localhost:{httpsPort}',

@@ -7,13 +7,13 @@ vi.mock('../docker/ensure-stack-running.js', () => ({
 vi.mock('../docker/start-bringup.js', () => ({
   startDockerBringup: vi.fn(),
 }));
-vi.mock('../playwright/install-browsers.js', () => ({
+vi.mock('../mcp-config/install-browsers.js', () => ({
   installPlaywrightBrowsers: vi.fn(),
 }));
 
 import { ensureStackRunning } from '../docker/ensure-stack-running.js';
 import { startDockerBringup } from '../docker/start-bringup.js';
-import { installPlaywrightBrowsers } from '../playwright/install-browsers.js';
+import { installPlaywrightBrowsers } from '../mcp-config/install-browsers.js';
 import * as buildChecksModule from '../preflight/build-checks.js';
 import { PreflightError } from '../preflight/index.js';
 import { prepareAgentEnvironment } from './agent-environment.js';

@@ -22,14 +22,14 @@ import { worktreePathFor } from '../lib/run/paths.js';
 import { streamTranscript } from '../lib/run/stream-transcript.js';
 import { readWorktreeState } from '../lib/run/worktree-state.js';
 import { checkE2eBaseline, type BaselineCheckResult } from '../lib/run/baseline.js';
-import { verifyAfterRunEnabled } from '../lib/playwright/mode-flags.js';
+import { verifyAfterRunEnabled } from '../lib/mcp-config/mode-flags.js';
 import {
   type DockerPorts,
   playwrightEnabled,
   resolveAppUrl,
   smokeEnabled,
   writeMcpFile,
-} from '../lib/playwright/index.js';
+} from '../lib/mcp-config/index.js';
 import { maybeRunE2eGate } from './run.js';
 import { join } from 'node:path';
 

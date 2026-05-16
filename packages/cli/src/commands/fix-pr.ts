@@ -24,7 +24,7 @@ import {
   streamTranscript,
 } from '../lib/run/index.js';
 import { runResumePreflight } from '../lib/preflight/index.js';
-import { playwrightEnabled, resolveAppUrl, type DockerPorts } from '../lib/playwright/index.js';
+import { playwrightEnabled, resolveAppUrl, type DockerPorts } from '../lib/mcp-config/index.js';
 
 export type FeedbackMode =
   | { kind: 'pr' }
