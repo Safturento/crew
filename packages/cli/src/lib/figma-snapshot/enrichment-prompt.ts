@@ -162,7 +162,7 @@ async function instanceEntry(node, path) {
 async function walkChildren(node, depth, path, instances, depthWarnings) {
   // Cap recursion at depth 6 per spec §1 — surface depthWarnings rather than truncating silently.
   if (depth > 6) {
-    depthWarnings.push({ depthExceeded: true, atNodeId: node.id, atName: node.name });
+    depthWarnings.push({ depthExceeded: true, depth: depth, atNodeId: node.id, atName: node.name });
     return;
   }
   if (!node || !Array.isArray(node.children)) return;

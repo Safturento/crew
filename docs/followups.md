@@ -7,6 +7,7 @@ Format: see the user-level `~/.claude/CLAUDE.md` "Followup detection" section.
 ## Contents
 
 - [Active](#active)
+  - [2026-05-16 — figma-snapshot `resolvedStylesFor` text-color heuristic picks the first TEXT descendant](#2026-05-16--figma-snapshot-resolvedstylesfor-text-color-heuristic-picks-the-first-text-descendant)
   - [2026-05-15 — `crew fix-pr` does not refresh `.mcp.json` — `[visual_fidelity]` chrome wiring goes stale on resume](#2026-05-15--crew-fix-pr-does-not-refresh-mcpjson--visual_fidelity-chrome-wiring-goes-stale-on-resume)
   - [2026-05-15 — `.agents/` topic-doc system vs native `.claude/rules/` and agents.md alignment](#2026-05-15--agents-topic-doc-system-vs-native-clauderules-and-agentsmd-alignment)
   - [2026-05-15 — `parity_violations` metric is recorded end-to-end but never computed (always null)](#2026-05-15--parity_violations-metric-is-recorded-end-to-end-but-never-computed-always-null)
@@ -90,6 +91,20 @@ Format: see the user-level `~/.claude/CLAUDE.md` "Followup detection" section.
 - [Abandoned](#abandoned)
 
 ## Active
+
+### 2026-05-16 — figma-snapshot `resolvedStylesFor` text-color heuristic picks the first TEXT descendant
+
+**What:** The nested-instance enrichment walk added in CREW-150 resolves each instance's `resolvedStyles.textColor` via `node.findOne((n) => n.type === 'TEXT')` — the first text node in document order anywhere in the subtree. For a single-label primitive (a Pill) that is the right node. For a composite instance with multiple text descendants it may grab the wrong glyph's color, and the skill's Step 4 `resolvedStyles.textColor` diff would then silently compare the caller against the wrong text run.
+
+**Why noticed:** Code review of CREW-150 (Phase 2 of the render-frame-anchor plan). The enrichment script's embedded comment ("single primary text child") already acknowledges the assumption; the reviewer flagged that Phase 4's fixture refresh and future multi-text composites could expose it.
+
+**Anchors:** `resolvedStylesFor` in `packages/cli/src/lib/figma-snapshot/enrichment-prompt.ts` (the `node.findOne` text-node lookup); CREW-150; CREW-152 (Phase 4, consumes this data shape); `docs/superpowers/plans/2026-05-13-visual-fidelity-render-frame-anchor.md` §1.
+
+**What's been considered:** Acceptable for the current Pill-centric fixture — every fixture instance touched today has at most one text child. A more robust heuristic would prefer the text node bound to the instance's `Label` component property, or the largest/topmost text run, rather than document-order-first.
+
+**Shape of work:** Small — a targeted change to the `resolvedStylesFor` text-node selection inside the embedded enrichment script, plus a fixture case with a multi-text composite to lock the behavior. Best sized once Phase 4 surfaces a real multi-text composite.
+
+**Open questions:** Should text-color resolution be tied to the `Label` INSTANCE/TEXT property specifically (deterministic, but skips decorative text), or stay structural with a better tie-breaker?
 
 ### 2026-05-15 — `crew fix-pr` does not refresh `.mcp.json` — `[visual_fidelity]` chrome wiring goes stale on resume
 
