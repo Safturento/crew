@@ -10,7 +10,7 @@ Thin command-line wrapper. Subcommands parse args, call `shared/`, render output
 ## Rules specific to this package
 
 - Each subcommand in `src/commands/<name>.ts` is a thin wrapper. Business logic lives in `src/lib/` or `packages/shared/`.
-- Lib subdirs (`run/`, `prompts/`, `skills/`, `preflight/`, `figma-snapshot/`, `bruno-smoke/`, `db-clone/`, `jira/`, `github/`, `playwright/`) each own one concern. Don't cross-import between sibling lib subdirs without explicit reason.
+- Lib subdirs (`run/`, `prompts/`, `skills/`, `preflight/`, `figma-snapshot/`, `bruno-smoke/`, `db-clone/`, `jira/`, `github/`, `mcp-config/`) each own one concern. Don't cross-import between sibling lib subdirs without explicit reason.
 - New subcommands register in `src/index.ts`; the command shape is `crew <name>`.
 
 ## When you need it
