@@ -5,7 +5,6 @@ import {
   buildRebasePreamble,
   buildResumePrompt,
 } from './index.js';
-import { renderDiscoveredSkillsBlock } from './skills.js';
 
 describe('buildTicketPrompt', () => {
   it('substitutes the ticket key throughout', () => {
@@ -101,31 +100,6 @@ describe('buildTicketPrompt', () => {
       userMessage: undefined,
     });
     expect(a).toBe(b);
-  });
-
-  it('appends the discoveredSkillsBlock after the curated bullets when populated', () => {
-    const discoveredSkillsBlock = renderDiscoveredSkillsBlock([
-      {
-        name: 'reaching-for-backend-patterns',
-        description: 'Use when implementing Node backend code that handles HTTP requests.',
-        source: 'user',
-      },
-    ]);
-    const prompt = buildTicketPrompt({
-      key: 'KAN-23',
-      githubRepo: 'Safturento/Recipes',
-      jiraSite: 'https://safturento.atlassian.net',
-      discoveredSkillsBlock,
-    });
-
-    const curatedBulletIdx = prompt.indexOf('`superpowers:requesting-code-review`');
-    const userParaIdx = prompt.indexOf('user-level skills');
-    expect(curatedBulletIdx).toBeGreaterThan(-1);
-    expect(userParaIdx).toBeGreaterThan(curatedBulletIdx);
-    expect(prompt).toContain(
-      '- **`reaching-for-backend-patterns`** — Use when implementing Node backend code that handles HTTP requests.',
-    );
-    expect(prompt).toMatchSnapshot();
   });
 
   it('renders the smoke verification section when playwright.smoke is provided (docker case)', () => {
@@ -314,7 +288,11 @@ describe('buildTicketPrompt', () => {
       },
     });
     expect(prompt).toContain('api-tests/');
-    expect(prompt).not.toContain('`bruno/`');
+    // The custom collection dir must reach every path reference in the smoke
+    // fragment. (The `bruno/` literal in the static skill bullets is unrelated
+    // and expected — assert against the path-shaped references instead.)
+    expect(prompt).not.toContain('bruno/endpoints');
+    expect(prompt).not.toContain('bruno/environments');
   });
 
   it('mandates the final-report echo contract (CREW-73)', () => {
@@ -426,7 +404,9 @@ describe('buildTicketPrompt — visual-fidelity gate', () => {
       jiraSite: 'https://safturento.atlassian.net',
     });
     expect(prompt).not.toContain('Visual fidelity gate');
-    expect(prompt).not.toContain('visual-fidelity-check');
+    // The static skill bullet always names visual-fidelity-check; the gate
+    // block is what must be absent — assert on its invocation phrase.
+    expect(prompt).not.toContain('Invoke the `visual-fidelity-check` skill');
   });
 
   it('renders identically when visualFidelity is undefined as when omitted', () => {
@@ -575,22 +555,6 @@ describe('buildFixPrPrompt', () => {
     });
     expect(prompt).toContain('git fetch origin develop');
     expect(prompt).toContain('git rebase origin/develop');
-  });
-
-  it('renders the discovered skills block under the curated Skills list', () => {
-    const prompt = buildFixPrPrompt({
-      key: 'KAN-23',
-      feedback: 'Some feedback',
-      feedbackSource: 'manual test',
-      discoveredSkillsBlock:
-        "\n\nThe following user-level skills are equally required when their description matches what you're about to do — invoke them via the `Skill` tool the same way:\n\n- **`reaching-for-frontend-libraries`** — Use when implementing frontend features.",
-    });
-
-    expect(prompt).toContain('superpowers:requesting-code-review');
-    expect(prompt).toContain('reaching-for-frontend-libraries');
-    const curatedIdx = prompt.indexOf('superpowers:requesting-code-review');
-    const discoveredIdx = prompt.indexOf('reaching-for-frontend-libraries');
-    expect(discoveredIdx).toBeGreaterThan(curatedIdx);
   });
 
   it('renders identically when brunoSmoke is undefined as when omitted', () => {

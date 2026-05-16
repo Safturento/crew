@@ -23,7 +23,6 @@ import {
 import { emit, loadEnvSpec, materialize, parseEnvFile } from '../lib/env-spec/index.js';
 import { crewDaemonClientFromEnv } from '../lib/daemon-client/index.js';
 import { buildTicketPrompt } from '../lib/prompts/index.js';
-import { discoverSkills, renderDiscoveredSkillsBlock } from '../lib/prompts/skills.js';
 import {
   authoredEnabled,
   playwrightEnabled,
@@ -349,21 +348,17 @@ export async function runRun(key: string, opts: RunOptions): Promise<never> {
       log: (msg) => console.log(pc.dim(`    ${msg}`)),
       warn: (msg) => console.warn(pc.yellow(`  ! ${msg}`)),
     });
-
-    console.log(pc.dim('→ injecting dispatcher-managed skills into the worktree…'));
-    await runSkillInjection({
-      worktree,
-      config,
-      sourceRoot: skillsSourceRoot(),
-      log: (msg) => console.log(pc.dim(`    ${msg}`)),
-      warn: (msg) => console.warn(pc.yellow(`  ! ${msg}`)),
-    });
   }
 
+  console.log(pc.dim('→ injecting dispatcher-managed skills into the worktree…'));
+  await runSkillInjection({
+    worktree,
+    sourceRoot: skillsSourceRoot(),
+    log: (msg) => console.log(pc.dim(`    ${msg}`)),
+    warn: (msg) => console.warn(pc.yellow(`  ! ${msg}`)),
+  });
+
   const ghToken = readFileSync(ghTokenDest, 'utf8').trim();
-  const discoveredSkillsBlock = renderDiscoveredSkillsBlock(
-    discoverSkills({ repoPath: config.repo_path }),
-  );
   const prompt = buildTicketPrompt({
     key,
     githubRepo: config.github.repo,
@@ -401,7 +396,6 @@ export async function runRun(key: string, opts: RunOptions): Promise<never> {
           componentDir: config.visual_fidelity.component_dir,
         }
       : undefined,
-    discoveredSkillsBlock,
   });
 
   const logPath = runLogPathFor(key);

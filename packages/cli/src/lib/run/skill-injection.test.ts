@@ -2,31 +2,15 @@ import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import type { ProjectConfig } from 'crew-shared';
-import { copySkillIntoWorktree, skillsApplicableTo } from './skill-injection.js';
+import { copySkillIntoWorktree, crewOwnedSkills } from './skill-injection.js';
 
-const baseConfig: ProjectConfig = {
-  name: 'crew',
-  repo_path: '/tmp/repo',
-  default_branch: 'main',
-  github: { repo: 'foo/bar' },
-  jira: { site: 'https://x.atlassian.net', project_key: 'CREW' },
-} as ProjectConfig;
-
-describe('skillsApplicableTo', () => {
-  it('returns no skills when no per-skill config is set', () => {
-    expect(skillsApplicableTo(baseConfig)).toEqual([]);
-  });
-
-  it('returns visual-fidelity-check when visual_fidelity is configured', () => {
-    const config = {
-      ...baseConfig,
-      visual_fidelity: {
-        snapshot_path: '.crew/snap',
-        component_dir: 'packages/dashboard/src/components',
-      },
-    } as ProjectConfig;
-    expect(skillsApplicableTo(config)).toEqual(['visual-fidelity-check']);
+describe('crewOwnedSkills', () => {
+  it('returns the three crew-owned skill names, injected unconditionally', () => {
+    expect([...crewOwnedSkills()]).toEqual([
+      'agents-doc-parity-check',
+      'bruno-collection-maintenance',
+      'visual-fidelity-check',
+    ]);
   });
 });
 

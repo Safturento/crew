@@ -15,7 +15,6 @@ import {
   spawnClaudeResume,
 } from '../lib/index.js';
 import { crewDaemonClientFromEnv } from '../lib/daemon-client/index.js';
-import { discoverSkills, renderDiscoveredSkillsBlock } from '../lib/prompts/skills.js';
 import {
   brunoSmokeOptionsFor,
   needsDockerPorts,
@@ -208,7 +207,6 @@ async function runFixPr(key: string, flags: FixPrFlags): Promise<void> {
     feedbackSource: source,
     playwright: projectConfig ? playwrightFixPrOptsFor(projectConfig, resolvedAppUrl) : undefined,
     brunoSmoke,
-    discoveredSkillsBlock: renderDiscoveredSkillsBlock(discoverSkills({ repoPath })),
     playwrightEnabled: pwEnabled,
   });
 

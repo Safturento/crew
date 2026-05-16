@@ -11,7 +11,6 @@ describe('render', () => {
       brunoSmokeBlock: '',
       visualFidelityBlock: '',
       sandboxNetworkBlock: '',
-      discoveredSkillsBlock: '',
       userMessageBlock: '',
       dockerUnavailableBlock: '',
     });
@@ -30,7 +29,6 @@ describe('render', () => {
       brunoSmokeBlock: '',
       visualFidelityBlock: '',
       sandboxNetworkBlock: '',
-      discoveredSkillsBlock: '',
       userMessageBlock: '',
       dockerUnavailableBlock: '',
     });
@@ -45,10 +43,10 @@ describe('render', () => {
       render('ticket', {
         key: 'ZZZ-9',
         // intentionally omitting githubRepo, jiraSite, playwrightBlock,
-        // brunoSmokeBlock, discoveredSkillsBlock, userMessageBlock
+        // brunoSmokeBlock, userMessageBlock
       }),
     ).toThrow(
-      /githubRepo|jiraSite|playwrightBlock|brunoSmokeBlock|visualFidelityBlock|sandboxNetworkBlock|discoveredSkillsBlock|userMessageBlock|dockerUnavailableBlock/,
+      /githubRepo|jiraSite|playwrightBlock|brunoSmokeBlock|visualFidelityBlock|sandboxNetworkBlock|userMessageBlock|dockerUnavailableBlock/,
     );
   });
 

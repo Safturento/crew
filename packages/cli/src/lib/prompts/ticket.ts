@@ -37,7 +37,6 @@ export interface BuildTicketPromptOptions {
   playwright?: PlaywrightPromptOptions;
   brunoSmoke?: BrunoSmokePromptOptions;
   visualFidelity?: VisualFidelityPromptOptions;
-  discoveredSkillsBlock?: string;
   userMessage?: string;
   /** When true, render a one-line disclosure telling the agent the docker
    * stack is unavailable so they call out the gap in the PR description
@@ -59,7 +58,6 @@ export function buildTicketPrompt(opts: BuildTicketPromptOptions): string {
       hasBrunoSmoke: Boolean(opts.brunoSmoke),
       authoredTestCommand: opts.playwright?.authored?.testCommand,
     }),
-    discoveredSkillsBlock: opts.discoveredSkillsBlock ?? '',
     userMessageBlock: renderUserMessageBlock(opts.userMessage),
     dockerUnavailableBlock: opts.dockerUnavailable
       ? '\n\n> **Docker stack is not available for this run.** The application is not reachable, so any verification that needs the running stack (e2e, bruno smoke, manual checks) cannot run. Surface this gap in the PR description as an uncompleted test item rather than silently shipping.'

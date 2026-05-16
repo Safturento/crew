@@ -8,7 +8,6 @@ import { findLatestSession } from '../lib/sessions/index.js';
 import { spawnClaudeFresh, spawnClaudeResume } from '../lib/claude/spawn.js';
 import { buildResumePrompt } from '../lib/prompts/resume.js';
 import { buildTicketPrompt } from '../lib/prompts/ticket.js';
-import { discoverSkills, renderDiscoveredSkillsBlock } from '../lib/prompts/skills.js';
 import {
   brunoSmokeOptionsFor,
   needsDockerPorts,
@@ -114,9 +113,6 @@ export async function runResume(key: string, opts: ResumeOptions): Promise<void>
   }
 
   const session = findLatestSession({ worktree });
-  const discoveredSkillsBlock = renderDiscoveredSkillsBlock(
-    discoverSkills({ repoPath: config.repo_path }),
-  );
   const brunoSmoke = brunoSmokeOptionsFor(config, worktree, dockerPorts, envVars);
   const logFile = `/tmp/crew-resume-${key}.log`;
   const claudeEnv = env.resolvedAppUrl ? { CREW_APP_URL: env.resolvedAppUrl } : undefined;
@@ -150,7 +146,6 @@ export async function runResume(key: string, opts: ResumeOptions): Promise<void>
       userMessage: opts.message,
       playwright: playwrightFixPrOptsFor(config, env.resolvedAppUrl),
       brunoSmoke,
-      discoveredSkillsBlock,
     });
     process.stderr.write(
       `→ Resuming session for ${key}\n` +
@@ -190,7 +185,6 @@ export async function runResume(key: string, opts: ResumeOptions): Promise<void>
     userMessage: opts.message,
     playwright: playwrightTicketOptsFor(config, env.resolvedAppUrl, gateWillRun),
     brunoSmoke,
-    discoveredSkillsBlock,
   });
   const projectDir = claudeProjectDirFor(worktree);
   process.stderr.write(
