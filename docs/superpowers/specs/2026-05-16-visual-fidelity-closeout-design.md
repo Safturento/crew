@@ -40,6 +40,20 @@ state is a *demonstrably working end-to-end workflow*.
   "PR #193's CREW-135 branch." Re-dispatching CREW-135 fresh (see below) force-pushes the
   `CREW-135` branch and destroys PR #193's commits. The diff must be frozen first.
 
+### Verified: how the Figma token is used
+
+`crew run` on a `[visual_fidelity]` project generates the Figma snapshot **host-side, before
+dispatch** — `runPreDispatchFigmaSnapshot` → `runFigmaSnapshot`, and `figma-snapshot/client.ts`
+reads `FIGMA_API_TOKEN` from the host `crew run` process environment. The snapshot is written
+into the worktree; the sandboxed agent only *reads* it. The agent never runs
+`crew figma-snapshot` and never needs a token.
+
+CREW-147's PR framed this as a "verification gap" because it tried to run `crew figma-snapshot`
+*as the dispatched agent* — the wrong layer. There is no token problem for dispatches: the
+only prerequisite is that the host shell running `crew run` has `FIGMA_API_TOKEN` exported,
+identical to every other `[visual_fidelity]` dispatch. This resolves the CREW-152 autonomy
+question (WS1) and is documented for contributors by WS3.
+
 ## Decisions
 
 1. **Close CREW-149 as obsolete.** Task 1.1 shipped via CREW-169; Tasks 1.2–1.4 (delete the
@@ -73,13 +87,13 @@ state is a *demonstrably working end-to-end workflow*.
   (`workflow.md` Step 4 + Step 5, `SKILL.md`, findings example). Mark interactive (not
   `crew run`). Drop the `is blocked by CREW-149` link. Migrate CREW-146 PR B's three
   acceptance criteria into it.
-- **CREW-152** → re-scope Task 4.2: apply PR #193's *frozen patch artifact* (see WS4) to a
-  base worktree instead of checking out a live branch. The known-answer calibration is
-  otherwise unchanged. **Open question:** Task 4.1 refreshes the fixture via
-  `crew figma-snapshot`, which needs a `FIGMA_API_TOKEN` — the same constraint CREW-147's
-  PR found blocks autonomous dispatches. Confirm whether CREW-152 can run via `crew run` or
-  must be interactive (or split: autonomous validation, interactive snapshot refresh)
-  before finalizing its re-scope.
+- **CREW-152** → re-scope Tasks 4.1 and 4.2; stays `crew run`-autonomous.
+  - *Task 4.2:* apply PR #193's *frozen patch artifact* (see WS4) to a base worktree instead
+    of checking out a live branch. Known-answer calibration otherwise unchanged.
+  - *Task 4.1:* consume the snapshot crew already generated **host-side pre-dispatch** in the
+    worktree (`.crew/figma-snapshot/`) and copy its composites into the fixture directory.
+    The dispatched agent must *not* invoke `crew figma-snapshot` itself — it has no
+    `FIGMA_API_TOKEN` and does not need one (see "Verified: how the Figma token is used").
 - **P5 (new CREW-148 child)** → "Workstream sign-off: validate visual-fidelity-check across
   CREW-134." Interactive. Blocked by CREW-151 + CREW-152. `relates-to` CREW-134. DoD: CREW-135
   (fresh re-dispatch), CREW-136, and CREW-137 each complete correctly through the workflow —
@@ -101,7 +115,7 @@ Edit `docs/superpowers/plans/2026-05-13-visual-fidelity-render-frame-anchor.md`:
 Phase 1 (obsolete — see decision 1), path-check Phases 2–4 against post-CREW-169 reality,
 note Phase 3 now also carries the Step 5 live-DOM rewrite absorbed from CREW-146 PR B.
 
-### WS3 — Skill-injection rationale docs
+### WS3 — Rationale & clarification docs
 
 The CREW-149 near-miss — a planned "optimization" that would have deleted load-bearing code
 — must be recorded so it is not repeated.
@@ -115,6 +129,10 @@ The CREW-149 near-miss — a planned "optimization" that would have deleted load
 - **`docs/rationale/architecture.md`** — add a fuller history entry: the dynamic-discovery
   origin, the CREW-167 unconditional-injection model, and the CREW-149 near-miss as the
   cautionary tale.
+- **`docs/visual-fidelity-setup.md`** — add a short "how the token is used" note: the
+  `FIGMA_API_TOKEN` is consumed host-side by `crew run` pre-dispatch; the dispatched agent
+  only reads the snapshot and needs no token. Prevents the layer confusion that produced
+  CREW-147's "verification gap" framing.
 
 ### WS4 — followups.md + fixture freeze
 
@@ -154,8 +172,8 @@ Then, user-triggered:
   crew run CREW-150          (autonomous — figma-snapshot enrichment)
   CREW-151                   (interactive skill-content pass — WS5)
         ↓ (CREW-152 blocked by CREW-150 + CREW-151)
-  CREW-152                   (fixture refresh + frozen-patch validation —
-                              autonomous vs interactive: see WS1 open question)
+  crew run CREW-152          (autonomous — fixture refresh from the pre-dispatch
+                              snapshot + frozen-patch validation)
         ↓ (P5 blocked by CREW-151 + CREW-152)
   Re-dispatch CREW-135 fresh, then CREW-136 + CREW-137, through the workflow
   P5 sign-off                (interactive — workstream closes)
@@ -173,7 +191,7 @@ independent and can start at any point.
   sequence.
 - `2026-05-13-visual-fidelity-render-frame-anchor.md` Phase 1 struck; Phases 2–4 path-checked.
 - `.agents/dispatch.md` and `docs/rationale/architecture.md` carry the injection-is-load-bearing
-  rationale.
+  rationale; `docs/visual-fidelity-setup.md` carries the host-side-token note.
 - followups.md entries 284 / 316 carry `**Ticket:**` lines; the 2026-05-11 Timeline followup
   is annotated.
 - `pr-193.patch` committed to the CREW-135 fixture directory.
