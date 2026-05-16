@@ -321,18 +321,40 @@ export async function runRun(key: string, opts: RunOptions): Promise<never> {
   // before install would emit a stale path that points at a not-yet-extracted
   // binary, and the existsSync guard would fall back to MCP's system-chrome
   // default (the bug CREW-70 fixed).
-  if (playwrightEnabled(config) && config.playwright && smokeEnabled(config)) {
-    const resolved = resolveAppUrl(config.playwright.app_url, dockerPorts, envVars);
+  const wantsPlaywright =
+    playwrightEnabled(config) && config.playwright != null && smokeEnabled(config);
+  const wantsChrome = Boolean(config.visual_fidelity);
+  if (wantsPlaywright || wantsChrome) {
+    const playwrightOpts =
+      wantsPlaywright && config.playwright
+        ? {
+            appUrl: resolveAppUrl(config.playwright.app_url, dockerPorts, envVars).raw,
+            resolverCwd: config.repo_path,
+          }
+        : undefined;
     const writeResult = await writeMcpFile(worktree, {
-      appUrl: resolved.raw,
-      resolverCwd: config.repo_path,
+      playwright: playwrightOpts,
+      chrome: wantsChrome ? {} : undefined,
+      warn: (msg) => console.warn(pc.yellow(`  ! ${msg}`)),
     });
-    console.log(pc.dim(`→ wrote ${join(worktree, '.mcp.json')} (CREW_APP_URL=${resolved.raw})`));
-    if (writeResult.chromiumPath) {
-      console.log(pc.dim(`    chromium: ${writeResult.chromiumPath}`));
-    } else {
+    console.log(pc.dim(`→ wrote ${join(worktree, '.mcp.json')}`));
+    if (playwrightOpts) {
+      console.log(pc.dim(`    CREW_APP_URL=${playwrightOpts.appUrl}`));
       console.log(
-        pc.dim(`    chromium: <unresolved> — MCP will fall back to system chrome channel`),
+        pc.dim(
+          writeResult.chromiumPath
+            ? `    chromium: ${writeResult.chromiumPath}`
+            : `    chromium: <unresolved> — MCP will fall back to system chrome channel`,
+        ),
+      );
+    }
+    if (wantsChrome) {
+      console.log(
+        pc.dim(
+          writeResult.chromeMcpPath
+            ? `    chrome MCP: ${writeResult.chromeMcpPath}`
+            : `    chrome MCP: <unresolved> — superpowers-chrome not installed`,
+        ),
       );
     }
     if (writeResult.existed) {

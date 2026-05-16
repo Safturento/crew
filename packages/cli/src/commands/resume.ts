@@ -94,20 +94,40 @@ export async function runResume(key: string, opts: ResumeOptions): Promise<void>
   // updated CREW_APP_URL, etc.). Stale .mcp.json from an older crew is a real
   // footgun — the agent silently uses the old config, e.g. falls back to the
   // system chrome channel when crew now wires the bundled chromium directly.
-  if (playwrightEnabled(config) && config.playwright && smokeEnabled(config)) {
-    const resolved = resolveAppUrl(config.playwright.app_url, dockerPorts, envVars);
+  const wantsPlaywright =
+    playwrightEnabled(config) && config.playwright != null && smokeEnabled(config);
+  const wantsChrome = Boolean(config.visual_fidelity);
+  if (wantsPlaywright || wantsChrome) {
+    const playwrightOpts =
+      wantsPlaywright && config.playwright
+        ? {
+            appUrl: resolveAppUrl(config.playwright.app_url, dockerPorts, envVars).raw,
+            resolverCwd: config.repo_path,
+          }
+        : undefined;
     const writeResult = await writeMcpFile(worktree, {
-      appUrl: resolved.raw,
-      resolverCwd: config.repo_path,
+      playwright: playwrightOpts,
+      chrome: wantsChrome ? {} : undefined,
+      warn: (msg) => process.stderr.write(pc.yellow(`  ! ${msg}\n`)),
     });
-    process.stderr.write(
-      pc.dim(`→ refreshed ${join(worktree, '.mcp.json')} (CREW_APP_URL=${resolved.raw})\n`),
-    );
-    if (writeResult.chromiumPath) {
-      process.stderr.write(pc.dim(`    chromium: ${writeResult.chromiumPath}\n`));
-    } else {
+    process.stderr.write(pc.dim(`→ refreshed ${join(worktree, '.mcp.json')}\n`));
+    if (playwrightOpts) {
+      process.stderr.write(pc.dim(`    CREW_APP_URL=${playwrightOpts.appUrl}\n`));
       process.stderr.write(
-        pc.dim(`    chromium: <unresolved> — MCP will fall back to system chrome channel\n`),
+        pc.dim(
+          writeResult.chromiumPath
+            ? `    chromium: ${writeResult.chromiumPath}\n`
+            : `    chromium: <unresolved> — MCP will fall back to system chrome channel\n`,
+        ),
+      );
+    }
+    if (wantsChrome) {
+      process.stderr.write(
+        pc.dim(
+          writeResult.chromeMcpPath
+            ? `    chrome MCP: ${writeResult.chromeMcpPath}\n`
+            : `    chrome MCP: <unresolved> — superpowers-chrome not installed\n`,
+        ),
       );
     }
   }
