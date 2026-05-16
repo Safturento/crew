@@ -1050,6 +1050,11 @@ acceptance criteria from the spec before claiming done.
 
 # PR B — Interactive (Tasks 7–8)
 
+> **RE-HOMED 2026-05-16.** PR B (Tasks 7–8) is absorbed into CREW-151 as part of the
+> visual-fidelity close-out. Its task content now lives in Phase 3 of
+> `docs/superpowers/plans/2026-05-13-visual-fidelity-render-frame-anchor.md` (Tasks 3.4–3.5).
+> CREW-146 ships as PR A only. See `docs/superpowers/specs/2026-05-16-visual-fidelity-closeout-design.md`.
+
 > Authored in an interactive session. The dispatch sandbox masks `<repo>/.claude/skills/`
 > read-only, so this cannot run via `crew run`.
 
