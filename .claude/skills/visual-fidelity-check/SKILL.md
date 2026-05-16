@@ -47,7 +47,7 @@ Detailed step-by-step procedure lives in **`workflow.md`** — read it when invo
 3. Map each to a Figma node via the matching `.figma.tsx`
 4. **Structural check** — what classes does the code emit per variant? Compare to Figma's resolved tokens
 5. **Caller check** — what props do call sites pass? Compare to Figma's variant choices for the same context
-6. **Visual check** (optional) — render + screenshot + compare to Figma screen
+6. **Live DOM check** (required when `dashboardUrl` is set and chrome is wired) — open the dashboard via the chrome MCP, read computed styles + rendered SVG, compare to the Figma snapshot enrichment
 7. Compile the findings report (markdown, grouped by severity)
 8. **Decide whether to claim done** — any high-severity = stop, fix, re-run
 
@@ -104,3 +104,4 @@ The mechanical version of this rule lives in `workflow.md` Step 4. The rule live
 
 - `superpowers:writing-skills` — for iterating this skill
 - `figma:figma-use` — only if you need to fetch live Figma data (the on-disk snapshot covers normal runs)
+- `browsing` — drives the running dashboard via Chrome DevTools Protocol (`mcp__chrome__use_browser`); required by Step 5's live-DOM inspection
