@@ -1,7 +1,7 @@
 ---
 name: dispatch
 description: crew run prompt-build, skills injection, verification gates
-last_updated: 2026-05-15
+last_updated: 2026-05-16
 covers:
   - 'packages/cli/src/lib/run/**'
   - 'packages/cli/src/lib/prompts/**'
@@ -89,6 +89,20 @@ Add a new crew-owned skill by:
 2. Add its name to `CREW_OWNED_SKILLS` in `lib/run/skill-injection.ts`.
 3. Add it as a static bullet in the `## Skills` section of `templates/ticket.md`, `templates/fix-pr.md`, and `templates/resume.md`.
 4. Add fixtures + tests at `lib/run/skill-injection.test.ts` and `lib/run/skill-injection-step.test.ts`.
+
+### Why injection is load-bearing
+
+`runSkillInjection` can look redundant — skills are committed in `<repo>/.claude/skills/` and
+Claude Code discovers them natively, so why copy? Because crew is a *dispatcher*: a `crew run`
+targets a worktree of whatever project the ticket belongs to, and a non-crew target (e.g. the
+Recipes repo) has no copy of crew's skills. Injection is the only path that carries crew-owned
+gates into a foreign worktree. Native discovery finds the skills *after* injection puts them
+there — it does not replace injection.
+
+Do not "optimize" this away. CREW-149 was planned to delete this module on the native-discovery
+reasoning above; it was closed obsolete instead. CREW-167 made injection unconditional and
+CREW-146 extended it (the `browsing` branch) — it is built on, not removed. Full history:
+`docs/rationale/architecture.md`.
 
 ## Figma snapshot
 

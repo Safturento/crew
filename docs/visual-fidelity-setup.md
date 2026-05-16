@@ -35,6 +35,12 @@ jq '.enrichment | keys' .crew/figma-snapshot/composites/$(ls .crew/figma-snapsho
 
 The `enrichment` keys should include at least `boundVariables` and `componentProperties`. If they're absent on a node that should have them, the snapshot fell back to REST-only mode — investigate `crew figma-snapshot`'s stderr.
 
+## How the token is used
+
+`crew run` generates the Figma snapshot **on the host, before the agent is dispatched**: the pre-dispatch hook reads `FIGMA_API_TOKEN` from the environment of the `crew run` process and writes the snapshot into the worktree. The dispatched (sandboxed) agent only *reads* that snapshot — it never runs `crew figma-snapshot` and never needs the token.
+
+So `FIGMA_API_TOKEN` must be exported in the shell where *you* run `crew run`, not inside any dispatch. The manual `crew figma-snapshot` in the Verify section above is a contributor convenience for confirming your token and config resolve correctly; it is not a step any dispatch performs.
+
 ## Why this isn't committed to the repo
 
 The project config (`crew.toml`) lives in `~/.config/crew/projects/` rather than the repo because individual contributors may run with different Figma file forks, snapshot paths, or environments. The `figma_file_key` above points at the canonical Crew design file and is safe to share, but the broader pattern is "crew config in `~/.config/crew/`, not in the repo." This doc is the bridge — it carries the paste-ready snippet so each contributor's local config lines up with the canonical setup without having to commit a per-machine file.

@@ -298,6 +298,8 @@ Format: see the user-level `~/.claude/CLAUDE.md` "Followup detection" section.
 
 ### 2026-05-13 — visual-fidelity-check calibration: pattern accuracy ≠ specific accuracy + planned screenshot-vs-Figma ultimate test
 
+**Ticket:** [CREW-148](https://safturento.atlassian.net/browse/CREW-148) — resolution gated on Epic CREW-148 completion.
+
 **What:** Two calibration runs of the `visual-fidelity-check` skill against the CREW-135 fixture (`docs/superpowers/skill-fixtures/visual-fidelity-check/crew-135/runs/`) plus user-in-the-loop review revealed a consistent pattern: the skill catches the _type_ of every visual regression (caller-side intensity choice, wrong helper shade, icon primitive mismatch) but produces _specifically wrong_ fixes when the snapshot lacks per-instance `componentProperties`. Three concrete examples from CREW-135:
 
 - **View PR icon.** Skill recommended `lucide/arrow-up-right`. Real Figma instance: `lucide/git-pull-request`. (Open as page genuinely uses arrow-up-right — different icon per surface; skill couldn't distinguish without per-instance data.)
@@ -329,6 +331,8 @@ The structural fix for the first two is the Plugin-API snapshot work captured in
 - Does Figma's `lucide/circle` set-level default actually render as "outlined ring" or "filled circle"? The screenshot confirmed outlined-ring in this case but the lucide library has multiple circle variants (`circle`, `circle-dot`, `circle-fill`?) — verify before recommending the import.
 
 ### 2026-05-13 — figma-snapshot omits instance `componentProperties` (REST API limitation) — needed for caller-check accuracy
+
+**Ticket:** [CREW-148](https://safturento.atlassian.net/browse/CREW-148) — resolution gated on Epic CREW-148 completion.
 
 **What:** The `crew figma-snapshot` CLI shipped in CREW-139 (PR #180) uses the Figma REST API. The REST `/v1/files/{key}` endpoint returns the node tree but **does not expose `componentProperties` on `INSTANCE` nodes** (the props that tell you which variant of the parent component the instance is using — e.g. `intensity: "mid"` on a Pill instance, `color: "waiting"`). Variable bindings on paint properties are similarly absent. That data is only available via the Figma Plugin API. As a result, the per-screen `<id>.json` emitted by the snapshot tells you "there's a Pill instance here" but not "it's the `mid/waiting` variant" — the agent's caller-check step (per `visual-fidelity-check` workflow.md Step 4) has to fall back to text-narrative inference instead of mechanical comparison.
 
@@ -558,6 +562,8 @@ User picked **(a)**, to be tackled as a two-step process: phase 1 brings DS up t
 ### 2026-05-11 — Agent activity timeline + Bash event-tag components missing from Crew DS
 
 **Re-audited 2026-05-13 (CREW-147):** Confirmed via `mcp__plugin_figma_figma__get_metadata` + `search_design_system` against `9FeJPriqdsdA4n9R5Xsrr8` that the Composites page (the only page in the file today) still has no `Timeline`, `EventCard`, `FilterChips`, `LiveModeToggle`, or `SearchBar` component. The CREW-147 spec called for `.figma.tsx` gap-fills on these five — they cannot be authored against a non-existent counterpart, so the gap-fill blocks on this followup. Same audit found no counterparts for `ColumnHeaderRow` / `ProjectsTable` either; those weren't expected to exist per the spec's audit-rather-than-author treatment.
+
+**2026-05-16 (visual-fidelity close-out):** CREW-147 closed; its Timeline `.figma.tsx` criterion was retired as a false premise (no Timeline composites exist). When this followup's design work builds the Timeline composites, it must also author the `.figma.tsx` Code Connect files for each — that authoring is part of *this* followup's scope, not a separate ticket. Until then, `visual-fidelity-check` correctly degrades to "no Code Connect mapping" for Timeline components, which does not block the visual-fidelity workstream.
 
 **Partially resolved 2026-05-12:** The **leaf event-tag pills** are now real components — the `TimelineTag` COMPONENT_SET (7 tool variants) was built in the Composites page of the consolidated Crew file and all 22 detached timeline pills swapped to instances. The **timeline container itself** (collapsible state-header + list-of-events composition wrapping each event row) remains a freehand structure on Dashboard Screens with no Crew DS counterpart — that part of the followup is still active. State-color bindings on the pills are now correctly routed through the localized `state/X` + `{color}-1050` vars; no orphaned references remain. See the now-resolved leaf-tag followup below for component details.
 
