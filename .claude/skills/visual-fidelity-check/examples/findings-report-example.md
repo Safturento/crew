@@ -3,7 +3,7 @@
 **Branch:** CREW-135
 **Base:** main
 **Touched components:** 6 — `ui/button.tsx`, `ui/badge.tsx`, `ui/tag.tsx`, `lib/pill-variants.ts`, `AgentRow.tsx`, `AgentBody.tsx`, `TopNav.tsx`
-**Findings:** 3 high, 2 medium, 0 low (0 pre-existing, 5 from this PR)
+**Findings:** 4 high, 1 medium, 0 low (0 pre-existing, 5 from this PR)
 
 ## High-severity findings
 
@@ -19,7 +19,7 @@
     {meta.label}
   </Badge>
   ```
-- **Figma reference:** snapshot node `1:756` (agent drawer screen) shows pill with visible 1px stroke in state color. Pill set's `intensity=muted` variant in `snapshot/composites/272-120.json` has `strokes: []`; `intensity=mid` adds `stroke: slate/500` (and equivalent per color).
+- **Figma reference:** `composites/212-910.json` (AgentRow) variant `"state=waiting"` → `enrichment.componentInstances` entry matching the state-badge slot: `variantOverrides: "type=pill, color=waiting, intensity=mid"`, `resolvedStyles.strokes: [{ hex: "#F59E0B", tokenAlias: "amber/500" }]`. The Pill set's `intensity=mid` general definition (in `composites/272-120.json`) is a secondary reference — the **AgentRow render composite** is what makes `intensity="mid"` the right call here.
 - **Diff:** code passes `intensity="muted"` → emits `bg-slate-1050 text-slate-400` (no border class). Figma intends `intensity="mid"` → should emit `bg-slate-1050 border border-slate-500 text-slate-400`.
 - **Fix:** change `intensity="muted"` to `intensity="mid"` in both files (AgentRow.tsx:67 + AgentBody.tsx:65).
 
@@ -56,25 +56,33 @@
 - **Diff:** code's `intensity="loud"` emits solid amber-400 bg with dark text — visually a different treatment. Figma's `intensity="mid"` is the hollow look with stroke.
 - **Fix:** change `intensity="loud"` to `intensity="mid"`.
 
-## Medium-severity findings
+### Finding 4: "New Run" button uses wrong Pill variant entirely
 
-### Finding 4: `pillSurfaceClasses('white', 'loud')` uses `bg-neutral-200` (#E5E5E5) where Figma uses `zinc/50` (#FAFAFA)
-
-- **Kind:** structural (helper-level)
-- **File(s):** `packages/dashboard/src/lib/pill-variants.ts:9-13`
+- **Kind:** caller (encoding error)
+- **Severity:** HIGH
+- **File:** `packages/dashboard/src/components/TopNav.tsx:53-60`
 - **Code:**
-  ```ts
-  const WHITE_CLASSES: StateClassTokens = {
-    text: 'text-slate-950',
-    bg: 'bg-neutral-200', // ← #E5E5E5
-    border: 'border-slate-500',
-    solidBg: 'bg-neutral-200', // ← #E5E5E5
-    solidBorder: 'border-slate-500',
-  };
+  ```tsx
+  <Button color="white" intensity="loud" size="xs" icon={<Plus />}>
+    New Run
+  </Button>
   ```
-- **Figma reference:** `snapshot/composites/272-120.json` variant `type=button-sm, color=white, intensity=loud` has `fills: [{ hex: "#FAFAFA", tokenAlias: "zinc/50" }]`. Notably dimmer in code (~6.5% reflectance delta — visible).
-- **Diff:** code's neutral-200 is darker than Figma's zinc-50. The "+ New Run" button in the dashboard appears subtly dim.
-- **Fix:** change `WHITE_CLASSES.solidBg` from `'bg-neutral-200'` to `'bg-zinc-50'`. Optionally also align `WHITE_CLASSES.text` from `'text-slate-950'` to `'text-zinc-950'` (Figma uses zinc/950 #09090B; slate/950 #020617 is visually indistinguishable — acceptable substitution).
+- **Render composite:** `composites/245-133.json` variant `"Active Tab=agents"` → `enrichment.componentInstances` entry where `componentPropertyOverrides.Label === "New Run"`:
+  - `variantOverrides: "type=button-sm, color=idle, intensity=loud"`
+  - `resolvedStyles.fills[0]: { hex: "#64748B", tokenAlias: "state/idle", opacity: 1 }`
+  - `resolvedStyles.textColor: { hex: "#020617", tokenAlias: "state/foreground" }`
+  - `resolvedStyles.strokes: []`
+- **Diff:** code chose `white / loud / xs` (white CTA, h-6, 12px font, 12px icon). Figma renders `idle / loud / sm` (slate-500 CTA, h-8, 14px font, 16px icon). Three axes wrong: `color`, `size`, and the consequent geometry/typography.
+- **Fix:**
+  ```tsx
+  <Button color="idle" intensity="loud" size="sm" icon={<Plus />}>
+    New Run
+  </Button>
+  ```
+  Drop any `font-semibold` className override — `font-medium` is the Button default and matches Figma's Hanken Grotesk Medium.
+- **Why high-severity:** caller chose a variant Figma doesn't use at this call-site. Not a token delta — wrong variant entirely. Per SKILL.md "set vs composite" anti-loophole: never reach this conclusion by diffing against the Pill set's white-loud variant.
+
+## Medium-severity findings
 
 ### Finding 5: View PR / Open as page use Unicode arrow instead of `lucide/arrow-up-right` SVG
 

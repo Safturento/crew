@@ -67,53 +67,88 @@ For each (component, variant) pair the code can produce:
 
 Repeat for every (variant, property) combination the code can produce. Skip variants the code can't reach (e.g., if `Button` only accepts `xs | sm | default | lg`, don't check `button-icon-*` variants against Button's source).
 
-## Step 4: Caller check
+## Step 4 — Caller check (render-frame anchored)
 
-For each touched component, also check its callers:
+For every caller in the touched-files diff, walk:
 
-1. `grep -rn '<ComponentName' <componentDir>` (exclude `.test.tsx` and `.figma.tsx`).
-2. For each caller, extract the props passed: `<Button color="X" intensity="Y" size="Z">...</Button>`.
-3. Look up the Figma file's Dashboard Screens snapshot for instances of the same component in the same screen / context. Read `<snapshotPath>/screens/<node>.json`. **The enrichment field is load-bearing here** — it's how you learn what variant the Figma design _actually_ uses, not just what set the instance points at:
-   - **With `enrichment.componentProperties`** (preferred): the instance's variant config is read directly: `enrichment.componentProperties.{ type, color, intensity, Icon, Label, ... }`. INSTANCE_SWAP properties like `Icon` resolve to `{ id, name }` (e.g. `Icon: { id: "lucide/circle", name: "lucide/circle" }`) — read the specific lucide glyph name directly, no inference.
-   - **With `enrichment.mainComponent.name`**: the resolved master variant is named (e.g. `"type=pill, color=waiting, intensity=mid"`) — parse the variant key=value pairs out of the name as a confirmation cross-check.
-   - **REST-only fallback**: you only have the parent component ID; you must guess the variant from the instance's resolved styles. Note this as a verification gap.
-4. Compare caller's chosen variant to Figma's variant for that instance:
-   - Same → no finding
-   - Different → finding. Cite (with enrichment data):
-     - Caller file:line: `<Badge intensity="muted">`
-     - Figma instance at `1:756` (agent drawer): `componentProperties.intensity = "mid"` (per `<snapshotPath>/screens/1-756.json` enrichment)
-     - Diff: intensity should be `mid`, not `muted`
+1. **Find the render composite.** Open `<caller>.figma.tsx` in the same directory (or the nearest `.figma.tsx` that references the caller). Resolve its `figma.connect(...)` URL to a `{fileKey, nodeId}`. The composite JSON lives at `<fixture-root>/snapshot/composites/<safe-id>.json` (where `safe-id` is nodeId with `:` replaced by `-`).
 
-**When recommending a fix that names a specific lucide icon or other specific Figma resource, ALWAYS pull the exact name from `enrichment.componentProperties.{prop}.name`.** Do not infer or extrapolate from set-level defaults — set-level defaults are often unrelated to what individual instances actually use (the Pill set's default Icon is `lucide/git-pull-request`, but state-badge instances use `lucide/circle`, View PR instances use `lucide/git-pull-request`, Open as page uses `lucide/arrow-up-right` — all different per instance).
+2. **Bail if the composite is missing.** If the file does not exist, surface as:
+   > **HIGH (missing-data, blocking):** caller `<file>:<line>` references render frame `<nodeId>`; composite JSON `<path>` not in fixture. Run `crew figma-snapshot` (or scope-extend the existing run) to capture before proceeding.
 
-Also check for **content-level mismatches**:
+   Do **not** fall back to diffing against the component set. Falling back is the regression this rule closes.
 
-- **Icon mismatches — ALWAYS a flag, never a judgment call.** Icons carry visual identity; treat them as first-class findings. Three sub-cases:
-  - **Wrong primitive (Unicode vs SVG):** caller passes `↗`, `✓`, `×`, or any other Unicode glyph in text content where Figma's component property declares an `Icon` INSTANCE_SWAP. Flag with severity ≥ medium.
-  - **Wrong specific icon:** caller passes an SVG, but it's a different lucide / icon-set glyph than what the Figma reference shows. (Even if it's "close" — a circle outline vs filled circle, an arrow-up vs arrow-up-right.) Flag with severity ≥ medium.
-  - **Wrong icon shape (CSS approximation):** code renders a CSS-only span (e.g. `<span class="rounded-full h-1.5 w-1.5">`) as a stand-in for what Figma defines as an actual SVG icon component. Flag with severity ≥ medium — visually similar but a different primitive, and breaks the moment Figma's icon changes.
-  - **Naming the right icon is part of the fix.** Don't write "use an SVG" — write "use `lucide/arrow-up-right` (per the Figma reference's `Icon` property)." If the snapshot's per-instance JSON doesn't tell you which icon (REST API limitation — see `docs/followups.md`), check the set-level default in the Pill set JSON's `componentPropertyDefinitions[Icon].defaultValue` for a starting guess, AND state explicitly that the icon was inferred, not directly read from the instance.
-- **Stale className overrides** that fight the system: a `className="border-..."` after passing `intensity="ghost"` — the className probably overrides the intensity's intent. Flag for review.
-- **Children content shape:** `<Button asChild><a>X ↗</a></Button>` patterns where Figma uses `<Button hasIcon><a>X</a></Button>` instead.
+3. **Find the relevant nested instance.** Inside the composite's `enrichment.componentInstances` array, match against the caller by:
+   1. **Label first.** If the caller renders a Pill labelled `"New Run"`, find the entry where `componentPropertyOverrides.Label === "New Run"`.
+   2. **Path next.** If no Label match (or multiple matches), use the `path` breadcrumb to disambiguate by position in the composite tree.
+   3. **Position last.** If neither resolves, fall back to "the Nth instance of this mainComponentSetId in the composite", matching to the Nth call site in the caller's JSX.
 
-> **Anti-loophole:** If a finding maps to "the rendered visual doesn't match the Figma icon", do NOT downgrade it to a judgment-call / "visually similar enough" note. Icon mismatches are real bugs even when small. The user notices.
+   If no match resolves, surface as:
+   > **MEDIUM (verification-gap):** caller `<file>:<line>` renders `<Primitive>` but no matching instance found in composite `<nodeId>`. Manual disambiguation required.
 
-## Step 5: Visual check (optional, requires dashboardUrl)
+4. **Diff caller props vs `entry.variantOverrides`.**
+   - Any mismatch on a variant axis (`color`, `intensity`, `size`, `type`) → **HIGH (encoding error)**.
+   - Example: caller has `<Button color="white" intensity="loud" size="xs">` but `entry.variantOverrides == "type=button-sm, color=idle, intensity=loud"`. Wrong variant entirely — the bug is in the code or the upstream spec, not in token deltas.
 
-If `dashboardUrl` is set in project config AND the dashboard is reachable:
+5. **Diff `entry.componentPropertyOverrides` vs caller's prop values.**
+   - Icon name mismatch (caller passes `<Plus />`, override is `lucide/check`) → **HIGH (encoding error)**.
+   - `Has Icon` mismatch (caller passes `icon` prop when override is `false`, or vice versa) → **MEDIUM**.
+   - `Label` mismatch (caller's children text doesn't match override) → **LOW** (often expected — components accept text via children regardless).
 
-1. Open the dashboard via Playwright MCP (or whatever browser-control MCP is wired up).
-2. For each touched component, navigate to a screen that exercises it (agent drawer, projects page, etc. — use the component's known usage sites).
-3. Screenshot the relevant region.
-4. Compare to Figma's screen-level screenshot from `<snapshotPath>/screens/`. Describe what you see in both, side-by-side. Look for:
-   - Missing borders or fills
-   - Wrong icon glyphs
-   - Padding / spacing differences
-   - Text size or weight differences
-   - Color shift (even small ones)
-5. For each visual mismatch, flag as a finding. If the structural / caller checks already caught it, link them in the visual finding instead of duplicating.
+6. **Diff `entry.resolvedStyles` vs the surface classes the caller's props would emit.**
+   - Variant axes all match but `resolvedStyles` carries a fill/stroke override that the caller's surface classes don't reproduce (rare — instance-level style override on top of the variant) → **MEDIUM**.
+   - Tag with hex + tokenAlias from `resolvedStyles` so the fix is unambiguous.
 
-If the dashboard is unreachable: skip step 5, note the gap in the report, proceed (visual check is optional, structural + caller are required).
+This sub-flow is mechanical. Follow it as a checklist — no judgment calls about "what counts as the right reference." The render composite is the right reference. Always.
+
+### Step 4 severity rules (anti-loophole summary)
+
+| Finding | Severity |
+|---|---|
+| Caller's variant axis prop ≠ `entry.variantOverrides` | **HIGH (encoding error)** |
+| Render composite missing for a touched caller | **HIGH (missing-data, blocking)** |
+| Icon name mismatch (`componentPropertyOverrides.Icon`) | **HIGH (encoding error)** |
+| `Has Icon` mismatch | **MEDIUM** |
+| Instance-level style override not reproduced by caller's classes | **MEDIUM** |
+| Verification gap (no matching nested instance found) | **MEDIUM** |
+| `Label` text mismatch | **LOW** (usually expected) |
+
+**Never** diff against a component **set** variant when a render composite exists. If a finding's "Figma reference" line names `composites/272-120.json` (or any other set's JSON) instead of a render composite, the diff target is wrong — re-do Step 4 with the proper composite.
+
+## Step 5: Live DOM check (required when `dashboardUrl` is set and chrome is wired)
+
+Steps 3–4 read code and callers; neither reads the _rendered_ DOM. Step 5 opens the running dashboard via the chrome MCP server and inspects live elements — computed styles and rendered SVG — against the Figma snapshot's `enrichment` data. This catches runtime-only failures the static checks cannot: purged Tailwind classes, CSS specificity wars, theme overrides, and icons where the source looks right but the rendered glyph is wrong.
+
+**When this step runs:**
+
+- `dashboardUrl` set **and** the `chrome` MCP server is wired (`mcp__chrome__use_browser` available) → Step 5 is **required**.
+- `dashboardUrl` set but chrome is **not** wired (the `superpowers-chrome` plugin is not installed on this machine) → log a verification gap, skip 5.1–5.5, and record the gap in the report so the user can decide to install the plugin or accept partial coverage.
+- `dashboardUrl` **not** set → skip Step 5 (consistent with Steps 1–4 behavior).
+
+**Step 5.1 — Open the dashboard.** Call `mcp__chrome__use_browser` with `action: "navigate"` to the resolved `dashboardUrl`. Wait for a known ready-state element (`await_element` on a landing-page selector). If chrome is unreachable or navigate fails, log `verification gap: chrome unreachable` and skip 5.2–5.5.
+
+**Step 5.2 — Navigate to a screen exercising each touched component.** For each `(component, variant)` the code can produce, identify the dashboard URL or in-app navigation that surfaces an instance of that variant. Reuse the caller map from Step 4 to pick a screen.
+
+**Step 5.3 — Color-property check.** For each touched `(component, variant)`:
+
+1. Query the live element via CSS selector. **Selector identification is the agent's responsibility:** prefer `data-*` attributes if present, fall back to component-name class signatures, fall back to structural selectors as a last resort. If the project's components expose no stable selectors and you must use fragile structural ones, surface that as a verification-gap note in the report.
+2. Use `mcp__chrome__use_browser` `action: "eval"` to read `getComputedStyle(el)`'s `backgroundColor`, `borderColor`, `color`. CDP returns these as `rgb(...)`.
+3. Convert each to `#RRGGBB`.
+4. Compare to `enrichment.boundVariables.resolvedHex` for the corresponding paint role from the Figma snapshot.
+5. On mismatch: finding. Severity per the existing rules (large hex delta = high, near-identical = low). Cite both sides plus the live element's selector.
+
+**Step 5.4 — Icon check.** For each touched component with an `Icon` INSTANCE_SWAP property in Figma (`enrichment.componentProperties.Icon`):
+
+1. Query the icon slot via selector.
+2. Use `action: "eval"` to read `el.querySelector('svg, span')?.outerHTML` and `el.textContent`.
+3. If it is an `<svg>`, read the lucide name (`data-lucide` / class signature / known marker) and compare to `enrichment.componentProperties.Icon.name`. Mismatch → finding, severity ≥ medium.
+4. If it is a `<span>` standing in for an icon, or a Unicode text node, → finding, severity ≥ medium. Name the expected lucide glyph in the fix.
+
+Step 5.4 is the runtime counterpart to Step 4's caller-side icon check — it catches cases where the source looks right but the rendered DOM disagrees (className override, conditional rendering, prop-forwarding bug).
+
+**Step 5.5 — Screenshot cross-reference.** `use_browser` auto-captures a viewport PNG on every action. Cite the most recent capture path in the report and cross-reference it with `<snapshotPath>/screens/<screen-node>.png` from the Figma snapshot. If 5.1–5.4 already surfaced findings, link the screenshot pair as supporting evidence rather than re-describing it in prose.
+
+**Failure mode:** if chrome is wired but the dashboard is unreachable (docker stack down, port mismatch), Step 5 fails closed — log `verification gap: dashboard unreachable at <url>` and surface it in the report. Do **not** treat dashboard-unreachable as "Step 5 passed."
 
 ## Step 6: Compile findings report
 
