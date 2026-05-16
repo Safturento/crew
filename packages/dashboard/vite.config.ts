@@ -13,6 +13,7 @@ export default defineConfig({
   server: {
     host: '0.0.0.0',
     port: 5173,
+    allowedHosts: ['.tail82463c.ts.net'],
     proxy: {
       '/api': {
         target: process.env.CREW_DAEMON_URL ?? 'http://localhost:7773',
