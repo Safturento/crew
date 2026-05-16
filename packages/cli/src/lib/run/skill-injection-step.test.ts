@@ -51,6 +51,66 @@ describe('runSkillInjection', () => {
     expect(result.kind).toBe('warning');
     expect(warn).toHaveBeenCalled();
   });
+
+  it('also injects browsing when browsingSkillSource is supplied', async () => {
+    const sourceRoot = makeSourceRoot(crewOwnedSkills());
+    // A separate root standing in for the plugin cache's `skills/` dir.
+    const browsingSkillSource = makeSourceRoot(['browsing']);
+    const worktree = makeWorktree();
+    const log = vi.fn();
+    const warn = vi.fn();
+
+    const result = await runSkillInjection({
+      worktree,
+      sourceRoot,
+      browsingSkillSource,
+      log,
+      warn,
+    });
+
+    expect(result.kind).toBe('ok');
+    expect(result.skillsInjected).toContain('browsing');
+    expect(readFileSync(join(worktree, '.claude/skills/browsing/SKILL.md'), 'utf8')).toBe(
+      '# browsing\n',
+    );
+    expect(warn).not.toHaveBeenCalled();
+  });
+
+  it('does not inject browsing when browsingSkillSource is omitted', async () => {
+    const sourceRoot = makeSourceRoot(crewOwnedSkills());
+    const worktree = makeWorktree();
+
+    const result = await runSkillInjection({
+      worktree,
+      sourceRoot,
+      log: vi.fn(),
+      warn: vi.fn(),
+    });
+
+    expect(result.skillsInjected).not.toContain('browsing');
+    expect(existsSync(join(worktree, '.claude/skills/browsing'))).toBe(false);
+  });
+
+  it('warns but does not fail when browsing copy fails', async () => {
+    const sourceRoot = makeSourceRoot(crewOwnedSkills());
+    // browsingSkillSource points at a dir with no `browsing/` subdir.
+    const browsingSkillSource = makeSourceRoot([]);
+    const worktree = makeWorktree();
+    const log = vi.fn();
+    const warn = vi.fn();
+
+    const result = await runSkillInjection({
+      worktree,
+      sourceRoot,
+      browsingSkillSource,
+      log,
+      warn,
+    });
+
+    expect(result.kind).toBe('warning');
+    expect(result.skillsInjected).not.toContain('browsing');
+    expect(warn).toHaveBeenCalled();
+  });
 });
 
 describe('runSkillInjection — end-to-end', () => {

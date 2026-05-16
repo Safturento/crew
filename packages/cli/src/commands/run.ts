@@ -27,6 +27,7 @@ import {
   authoredEnabled,
   playwrightEnabled,
   resolveAppUrl,
+  resolveSuperpowersChrome,
   smokeEnabled,
   verifyAfterRunEnabled,
   writeMcpFile,
@@ -373,9 +374,17 @@ export async function runRun(key: string, opts: RunOptions): Promise<never> {
   }
 
   console.log(pc.dim('→ injecting dispatcher-managed skills into the worktree…'));
+  // browsing is plugin-sourced, not crew-owned: inject it from the
+  // superpowers-chrome plugin cache, but only for [visual_fidelity] projects
+  // (the chrome MCP it drives is only wired for those). Plugin-absent is
+  // already warned about by writeMcpFile above — stay silent here.
+  const browsingSkillSource = config.visual_fidelity
+    ? resolveSuperpowersChrome()?.skillsRoot
+    : undefined;
   await runSkillInjection({
     worktree,
     sourceRoot: skillsSourceRoot(),
+    browsingSkillSource,
     log: (msg) => console.log(pc.dim(`    ${msg}`)),
     warn: (msg) => console.warn(pc.yellow(`  ! ${msg}`)),
   });

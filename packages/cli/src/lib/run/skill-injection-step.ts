@@ -6,8 +6,12 @@ export type SkillInjectionResult =
 
 export interface SkillInjectionOptions {
   worktree: string;
-  /** Filesystem path containing skill directories. Default: `<repo>/.claude/skills/`. */
+  /** Filesystem path containing crew-owned skill directories. Default: `<repo>/.claude/skills/`. */
   sourceRoot: string;
+  /** Filesystem path containing the plugin-sourced `browsing/` skill directory.
+   *  When set, `browsing` is injected alongside the crew-owned skills. Omit to
+   *  skip it (plugin absent, or project has no [visual_fidelity]). */
+  browsingSkillSource?: string;
   log: (msg: string) => void;
   warn: (msg: string) => void;
 }
@@ -34,6 +38,22 @@ export async function runSkillInjection(
       const reason = err instanceof Error ? err.message : String(err);
       failures.push(`${name}: ${reason}`);
       opts.warn(`skill-injection: failed to inject ${name} — ${reason}`);
+    }
+  }
+
+  if (opts.browsingSkillSource) {
+    try {
+      const { destDir } = copySkillIntoWorktree(
+        opts.worktree,
+        'browsing',
+        opts.browsingSkillSource,
+      );
+      injected.push('browsing');
+      opts.log(`skill-injection: browsing → ${destDir}`);
+    } catch (err) {
+      const reason = err instanceof Error ? err.message : String(err);
+      failures.push(`browsing: ${reason}`);
+      opts.warn(`skill-injection: failed to inject browsing — ${reason}`);
     }
   }
 
