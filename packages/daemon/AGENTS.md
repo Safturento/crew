@@ -1,6 +1,6 @@
 ---
 description: Patterns and rules for the crew-daemon package
-last_updated: 2026-05-13
+last_updated: 2026-05-15
 ---
 
 # crew-daemon
@@ -17,12 +17,12 @@ Long-running state-tracking process. Watches transcripts, persists run state to 
 
 ## When you need it
 
-| Doing                                        | Read                                                                        |
-| -------------------------------------------- | --------------------------------------------------------------------------- |
-| Writing a new route or service               | `.agents/architecture.md`, user-level `reaching-for-backend-patterns` skill |
-| Adding a Bruno endpoint to cover a new route | `.agents/testing.md`, `bruno-collection-maintenance` skill                  |
-| Schema changes / new migration               | `.agents/architecture.md`                                                   |
-| Running verification                         | `.agents/commands.md`                                                       |
+| Doing                                        | Read                                                       |
+| -------------------------------------------- | ---------------------------------------------------------- |
+| Writing a new route or service               | `.agents/architecture.md`                                  |
+| Adding a Bruno endpoint to cover a new route | `.agents/testing.md`, `bruno-collection-maintenance` skill |
+| Schema changes / new migration               | `.agents/architecture.md`                                  |
+| Running verification                         | `.agents/commands.md`                                      |
 
 ## Common gotchas
 
