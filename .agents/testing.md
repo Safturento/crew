@@ -1,7 +1,7 @@
 ---
 name: testing
 description: Bruno + Playwright + daemon fixtures
-last_updated: 2026-05-14
+last_updated: 2026-05-15
 covers:
   - "bruno/**"
   - "packages/*/src/**/*.test.ts"
@@ -33,7 +33,7 @@ Smokes the daemon's HTTP API.
 
 Whenever you add, rename, or change the request/response shape of an HTTP route in `packages/daemon/`, update the matching `bruno/endpoints/<group>/<verb>-<name>.bru` (and any `flows/*.bru` that exercises it) in the **same commit**. Coverage drifts silently the moment a route changes without its `.bru`.
 
-The user-level `bruno-collection-maintenance` skill at `~/.claude/skills/bruno-collection-maintenance/` is the authority on naming, the `vars:post-response` chaining pattern, and the full list of triggering events. Don't duplicate that content here — the skill is auto-loaded for any agent dispatched into this repo via `crew run`.
+The `bruno-collection-maintenance` skill — a crew-owned skill committed at `<repo>/.claude/skills/bruno-collection-maintenance/` and injected into every dispatched worktree — is the authority on naming, the `vars:post-response` chaining pattern, and the full list of triggering events. Don't duplicate that content here; Claude Code discovers the injected skill natively for any agent dispatched into this repo via `crew run`.
 
 ## Dashboard e2e (Playwright)
 
@@ -106,6 +106,6 @@ See [`commands.md`](commands.md) for the full per-script reference.
 
 ## See also
 
-- `~/.claude/skills/bruno-collection-maintenance/` — file-naming, `vars:post-response`, trigger events.
+- `.claude/skills/bruno-collection-maintenance/` — crew-owned, in-repo skill: file-naming, `vars:post-response`, trigger events.
 - [`local-dev.md`](local-dev.md) — sandbox baseline, ECONNREFUSED gotcha, worktree `.env` materialization.
 - [`commands.md`](commands.md) — npm script reference.

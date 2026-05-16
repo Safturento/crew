@@ -99,6 +99,19 @@ This is opt-in. If you don't run it, the docker stack starts with a fresh empty 
 
 A few one-time setup items before `crew` can do everything it's meant to.
 
+### Required Claude Code plugins (once per machine)
+
+Crew's agent prompts and skills reference a handful of Claude Code plugins. These are plugin-manager installs — crew can't vendor them — so install them once per machine:
+
+| Plugin               | Why crew needs it                                                                 |
+| -------------------- | --------------------------------------------------------------------------------- |
+| `superpowers`        | The dispatch prompts require `superpowers:*` skills (TDD, verification, planning). |
+| `figma`              | `figma:*` skills back the design-to-code and Figma-snapshot workflows.            |
+| `claude-mem`         | Cross-session memory the agent draws on for prior-work recall.                    |
+| `superpowers-chrome` | Browser control for the visual-verification step.                                 |
+
+Crew is otherwise **self-contained**: its own three skills (`agents-doc-parity-check`, `bruno-collection-maintenance`, `visual-fidelity-check`) ship in-repo at `.claude/skills/` and are injected into every dispatched worktree — no external dotfiles clone is needed for crew itself to function.
+
 ### Atlassian MCP (once per machine)
 
 Crew's agent prompts call Jira tools via the prefix `mcp__atlassian__*`, which resolves to the [`sooperset/mcp-atlassian`](https://github.com/sooperset/mcp-atlassian) community server running in Docker. The server name in your Claude Code config **must be `atlassian`** — the prefix is hardcoded in the prompt templates.
@@ -223,7 +236,7 @@ Once these are in place, `crew run` against a backend ticket will do the rest.
 
 **During `crew fix-pr`.** The same rules apply: the agent must run `npm run bruno:smoke` before pushing, and must update `.bru` files in the same set of fix-up commits if the fix touches an HTTP endpoint. `crew fix-pr` does not bring docker up itself — if smoke fails with a connection error, the worktree's stack isn't running.
 
-**The `bruno-collection-maintenance` skill.** The agent automatically picks up the user-scope `bruno-collection-maintenance` skill at `~/.claude/skills/bruno-collection-maintenance/`. The skill teaches the file-naming conventions, the `vars:post-response` chaining pattern, and the "update `.bru` when touching endpoints" rule.
+**The `bruno-collection-maintenance` skill.** `bruno-collection-maintenance` is a crew-owned skill, committed in-repo at `.claude/skills/bruno-collection-maintenance/`. `crew run` injects it into every dispatched worktree's `.claude/skills/`, where Claude Code discovers it natively. The skill teaches the file-naming conventions, the `vars:post-response` chaining pattern, and the "update `.bru` when touching endpoints" rule.
 
 ### Visual-fidelity verification (per project, optional)
 

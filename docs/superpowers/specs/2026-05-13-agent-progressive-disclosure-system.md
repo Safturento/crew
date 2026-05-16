@@ -341,7 +341,7 @@ Outside Epic:
 
 | Risk                                                              | Mitigation                                                                                                             |
 | ----------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| `CLAUDE.md → AGENTS.md` rename breaks Claude Code session loading | Verified by research: Claude Code reads `AGENTS.md` natively. Smoke-test one session before the Phase 1 PR merges.     |
+| `CLAUDE.md → AGENTS.md` rename breaks Claude Code session loading | Verified by research: Claude Code reads `AGENTS.md` natively. Smoke-test one session before the Phase 1 PR merges. **[Correction, 2026-05-15: false — Claude Code reads `CLAUDE.md`, not `AGENTS.md`. Fixed via `CLAUDE.md`→`@AGENTS.md` shims; see `docs/superpowers/specs/2026-05-15-skill-storage-and-agents-autoload-design.md`.]** |
 | `covers:` globs authored inconsistently → metrics garbage         | Validator script in Phase 1 + meta-doc parity rule.                                                                    |
 | Per-package AGENTS.md duplicates topic content                    | Per-package template is explicit: rules-specific-to-this-package + index + gotchas. Topic content stays in `.agents/`. |
 | Old `docs/plans/*.md` orphaned as ghost docs                      | Phase 2 tickets delete originals; sweep of inbound refs in Phase 1 catches links.                                      |
