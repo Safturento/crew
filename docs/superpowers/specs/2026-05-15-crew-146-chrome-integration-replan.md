@@ -116,7 +116,9 @@ the same condition to avoid a double-warning.
 
 ### Change 4 — `.mcp.json` write gate in the dispatch commands
 
-> **Project-specific:** `packages/cli/src/commands/run.ts`, `resume.ts`, `fix-pr.ts`.
+> **Project-specific:** `packages/cli/src/commands/run.ts` and `resume.ts`. `fix-pr.ts`
+> does not write `.mcp.json` today and is not changed by this re-plan beyond the Change 6
+> import-path rename.
 
 Today `.mcp.json` is written only when `[playwright]` is enabled and smoke is on. Extend the
 gate so the file is also written when `[visual_fidelity]` is configured — chrome-only is a
@@ -136,9 +138,10 @@ if (wantsMcp) {
 }
 ```
 
-The `resume.ts` / `fix-pr.ts` paths get the same gate, so chrome survives a feedback-driven
-resume of a `[visual_fidelity]` project (the worktree already exists, but `.mcp.json` is
-re-asserted). Ordering relative to `prepareAgentEnvironment` is unchanged — the MCP write still
+`resume.ts` already refreshes `.mcp.json` on every resume (so a resume picks up config-shape
+changes shipped by newer crew code); it gets the same extended gate, so chrome survives a
+feedback-driven resume of a `[visual_fidelity]` project. Ordering relative to
+`prepareAgentEnvironment` is unchanged — the MCP write still
 happens after the environment is prepared (see `.agents/dispatch.md` step 8 and the CREW-70
 note on Chromium-path resolution timing).
 
@@ -174,12 +177,17 @@ log, warn }`. Extend `SkillInjectionOptions` accordingly.
 
 ### Change 6 — rename `lib/playwright/` → `lib/mcp-config/`
 
-> **Project-specific:** directory rename plus the re-export bump in
-> `packages/cli/src/lib/index.ts` and every importer.
+> **Project-specific:** directory rename. `lib/playwright/` is not re-exported from
+> `packages/cli/src/lib/index.ts`; importers reference `../lib/playwright/index.js` (and a
+> couple of deep files) directly. The importers are: `lib/prompts/ticket.ts`,
+> `lib/preflight/{run-preflight,probe-app-urls,types}.ts`,
+> `lib/run/{app-lifecycle,agent-options,agent-environment}.ts`, and
+> `commands/{run,resume,fix-pr}.ts` (plus `commands/run.test.ts`).
 
 Once chrome resolution lives alongside playwright config, the `playwright/` directory name
-lies. Rename it to `mcp-config/` and update all imports. This is a contained one-pass edit and
-is in scope for the autonomous PR — the name should not mislead the next reader.
+lies. Rename the directory to `mcp-config/` and update every importer's path. This is a
+contained one-pass edit and is in scope for the autonomous PR — the name should not mislead
+the next reader.
 
 ### Change 7 — rewrite `visual-fidelity-check` Step 5 as live-DOM inspection
 
@@ -249,7 +257,7 @@ but interactive-first is cleanest.
       and the plugin resolves; it is absent when the plugin does not resolve.
 - [ ] `browsing` is **not** present in `CREW_OWNED_SKILLS`.
 - [ ] `packages/cli/src/lib/playwright/` is renamed to `packages/cli/src/lib/mcp-config/` with
-      all imports and the `lib/index.ts` re-export updated; typecheck and lint are clean.
+      every importer's path updated; typecheck and lint are clean.
 - [ ] `.agents/dispatch.md` reflects chrome wiring and the `browsing` injection branch, and its
       `covers:` glob includes `packages/cli/src/lib/mcp-config/**`.
 - [ ] Unit tests:
