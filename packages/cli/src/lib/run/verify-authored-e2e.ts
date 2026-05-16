@@ -6,7 +6,6 @@ import { spawnClaudeResume } from '../claude/spawn.js';
 import { discoverProjectConfig } from '../discover-project-config.js';
 import { findLatestSession } from '../sessions/index.js';
 import { buildFixPrPrompt } from '../prompts/fix-pr.js';
-import { discoverSkills, renderDiscoveredSkillsBlock } from '../prompts/skills.js';
 import {
   brunoSmokeOptionsFor,
   needsDockerPorts,
@@ -267,7 +266,6 @@ async function spawnAndStreamFixPr(opts: SpawnAndStreamFixPrOptions): Promise<vo
     feedbackSource: 'crew e2e gate',
     playwright: playwrightFixPrOptsFor(projectConfig, opts.resolvedAppUrl),
     brunoSmoke: brunoSmokeOptionsFor(projectConfig, opts.worktree, dockerPorts),
-    discoveredSkillsBlock: renderDiscoveredSkillsBlock(discoverSkills({ repoPath })),
   });
 
   const sub = spawnClaudeResume({

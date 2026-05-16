@@ -15,7 +15,6 @@ export interface BuildResumePromptOptions {
   userMessage?: string;
   playwright?: PlaywrightFixPrOptions;
   brunoSmoke?: BrunoSmokePromptOptions;
-  discoveredSkillsBlock?: string;
 }
 
 export function buildResumePrompt(opts: BuildResumePromptOptions): string {
@@ -34,7 +33,6 @@ export function buildResumePrompt(opts: BuildResumePromptOptions): string {
       hasBrunoSmoke: Boolean(opts.brunoSmoke),
       authoredTestCommand: opts.playwright?.authored?.testCommand,
     }),
-    discoveredSkillsBlock: opts.discoveredSkillsBlock ?? '',
   });
 }
 

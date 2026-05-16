@@ -15,7 +15,6 @@ export interface BuildFixPrPromptOptions {
   baseBranch?: string;
   playwright?: PlaywrightFixPrOptions;
   brunoSmoke?: BrunoSmokePromptOptions;
-  discoveredSkillsBlock?: string;
   playwrightEnabled?: boolean;
 }
 
@@ -39,7 +38,6 @@ export function buildFixPrPrompt(opts: BuildFixPrPromptOptions): string {
       hasBrunoSmoke: Boolean(opts.brunoSmoke),
       authoredTestCommand: opts.playwright?.authored?.testCommand,
     }),
-    discoveredSkillsBlock: opts.discoveredSkillsBlock ?? '',
   });
 }
 

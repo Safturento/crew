@@ -81,19 +81,6 @@ describe('buildResumePrompt', () => {
     expect(prompt).toContain('recipes-kan-23');
   });
 
-  it('renders the discoveredSkillsBlock when provided', () => {
-    const prompt = buildResumePrompt({
-      key: 'KAN-23',
-      branch: 'KAN-23',
-      commitsAhead: 0,
-      uncommittedCount: 0,
-      defaultBranch: 'main',
-      discoveredSkillsBlock:
-        '\n\nUser-level skills:\n- **`reaching-for-backend-patterns`** — Use when implementing Node backend code.',
-    });
-    expect(prompt).toContain('reaching-for-backend-patterns');
-  });
-
   it('mandates the final-report echo contract (CREW-73)', () => {
     const prompt = buildResumePrompt({
       key: 'KAN-23',
@@ -108,19 +95,4 @@ describe('buildResumePrompt', () => {
     expect(prompt).toContain('→ no-pr:');
   });
 
-  it('keeps the Final report section as the prompt tail even when discoveredSkillsBlock is set', () => {
-    const prompt = buildResumePrompt({
-      key: 'KAN-23',
-      branch: 'KAN-23',
-      commitsAhead: 0,
-      uncommittedCount: 0,
-      defaultBranch: 'main',
-      discoveredSkillsBlock:
-        '\n\nUser-level skills:\n- **`reaching-for-backend-patterns`** — Use when implementing Node backend code.',
-    });
-    const skillsIdx = prompt.indexOf('reaching-for-backend-patterns');
-    const finalReportIdx = prompt.indexOf('Final report');
-    expect(skillsIdx).toBeGreaterThan(-1);
-    expect(finalReportIdx).toBeGreaterThan(skillsIdx);
-  });
 });

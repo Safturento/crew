@@ -1,14 +1,11 @@
-import type { ProjectConfig } from 'crew-shared';
-import { copySkillIntoWorktree, skillsApplicableTo } from './skill-injection.js';
+import { copySkillIntoWorktree, crewOwnedSkills } from './skill-injection.js';
 
 export type SkillInjectionResult =
-  | { kind: 'skipped' }
   | { kind: 'ok'; skillsInjected: string[] }
   | { kind: 'warning'; reason: string; skillsInjected: string[] };
 
 export interface SkillInjectionOptions {
   worktree: string;
-  config: ProjectConfig;
   /** Filesystem path containing skill directories. Default: `<repo>/.claude/skills/`. */
   sourceRoot: string;
   log: (msg: string) => void;
@@ -16,7 +13,7 @@ export interface SkillInjectionOptions {
 }
 
 /**
- * Pre-dispatch step that copies each applicable skill from sourceRoot into
+ * Pre-dispatch step that copies each crew-owned skill from sourceRoot into
  * the worktree's `.claude/skills/<name>/`. Per-skill failures are non-fatal —
  * the dispatched agent's discovery still succeeds for any skills that did
  * land, and the missing skill's gate degrades naturally (e.g. visual-fidelity
@@ -25,13 +22,10 @@ export interface SkillInjectionOptions {
 export async function runSkillInjection(
   opts: SkillInjectionOptions,
 ): Promise<SkillInjectionResult> {
-  const applicable = skillsApplicableTo(opts.config);
-  if (applicable.length === 0) return { kind: 'skipped' };
-
   const injected: string[] = [];
   const failures: string[] = [];
 
-  for (const name of applicable) {
+  for (const name of crewOwnedSkills()) {
     try {
       const { destDir } = copySkillIntoWorktree(opts.worktree, name, opts.sourceRoot);
       injected.push(name);

@@ -5,7 +5,7 @@ last_updated: 2026-05-15
 covers:
   - 'packages/cli/src/lib/run/**'
   - 'packages/cli/src/lib/prompts/**'
-  - 'packages/cli/src/lib/skills/**'
+  - '.claude/skills/**'
   - 'packages/cli/src/lib/preflight/**'
   - 'packages/cli/src/lib/figma-snapshot/**'
 ---
@@ -30,7 +30,7 @@ The companion commands `crew fix-pr` (resume from PR feedback) and the gate-driv
 8. **MCP file write.** When `[playwright]` is enabled and smoke is on, `writeMcpFile(worktree, { appUrl, resolverCwd })` writes `<worktree>/.mcp.json`. Order matters: write happens **after** `prepareAgentEnvironment` so the Chromium binary is on disk before `--executable-path` is resolved (CREW-70 regression bug — earlier writes captured a non-existent path and MCP silently fell back to system Chrome).
 9. **Figma snapshot.** When `[visual_fidelity]` is configured: `runPreDispatchFigmaSnapshot(...)` exports `<worktree>/<snapshot_path>/` and then runs Plugin-API enrichment via a nested `claude -p` subprocess. Failures are non-fatal (returns `warning`); the visual-fidelity-check skill becomes a no-op rather than blocking dispatch.
 10. **Skill injection.** `runSkillInjection(...)` copies dispatcher-managed skills (`<repo>/.claude/skills/<name>/`) into `<worktree>/.claude/skills/<name>/`. See Skills below.
-11. **Build prompt.** `buildTicketPrompt({ key, githubRepo, jiraSite, playwright, brunoSmoke, visualFidelity, discoveredSkillsBlock, userMessage, dockerUnavailable })`. See Prompts below.
+11. **Build prompt.** `buildTicketPrompt({ key, githubRepo, jiraSite, playwright, brunoSmoke, visualFidelity, userMessage, dockerUnavailable })`. See Prompts below.
 12. **Launch claude.** `execa('claude', ['--dangerously-skip-permissions','-p', prompt], { cwd: worktree, env: { ...childEnv, GH_TOKEN, CREW_APP_URL, PLAYWRIGHT_BASE_URL, CREW_BRUNO_ENV } })`. stdout/stderr both pipe to `/tmp/crew-run-<KEY>.log`. **stdin is `'ignore'`, not the file stream** — execa v9 rejects WriteStream stdio whose fd hasn't been assigned yet; the workaround pipes after spawn.
 13. **Transcript discovery + stream.** `findNewestTranscript(claudeProjectDirFor(worktree))` polls for the first `.jsonl` to appear; once found, `streamTranscript(...)` tails it line-by-line through `tailTranscript` and renders each event via `parseToolCall` / `parseAssistantText`. Aborted via the `AbortController` when the claude process exits (with a 400ms drain delay).
 14. **Daemon registration.** `crewDaemonClientFromEnv(process.env).registerRun({...})` / `completeRun(runId, ...)` brackets the streaming window so the dashboard can show the run.
@@ -65,7 +65,6 @@ In resume mode (`runResumePreflight`), only `verify-excluded-commands` runs and 
 | `brunoSmokeBlock`        | `templates/ticket-bruno-smoke.md`                                                  | `[bruno_smoke].enabled`                                                                                           |
 | `sandboxNetworkBlock`    | `buildSandboxNetworkBlock` → `templates/sandbox-network-note.md`                   | bruno OR authored playwright present                                                                              |
 | `visualFidelityBlock`    | `templates/ticket-visual-fidelity.md`                                              | `[visual_fidelity]` present                                                                                       |
-| `discoveredSkillsBlock`  | `renderDiscoveredSkillsBlock(discoverSkills(...))`                                 | user-level (`~/.claude/skills/`) + project-level (`<repo>/.claude/skills/`) SKILL.md files with valid frontmatter |
 
 The sandbox-network block is the load-bearing one for sandbox-aware behavior: it tells the agent which commands are crew-whitelisted (`excludedCommands`), and why a sandboxed `curl localhost:<port>` returns `ECONNREFUSED` (the sandbox has its own loopback, isolated from the host's). Edit `templates/sandbox-network-note.md` when adding a new whitelisted command.
 
@@ -75,17 +74,18 @@ The `verifyAfterRun` flag on `playwright.authored` adds the "Crew runs `<test_co
 
 ## Skills
 
-Two flavors, two contracts:
+crew owns three skills, committed in-repo at `<repo>/.claude/skills/<name>/` and version-controlled: `agents-doc-parity-check`, `bruno-collection-maintenance`, `visual-fidelity-check`. The list is the hardcoded `CREW_OWNED_SKILLS` constant in `lib/run/skill-injection.ts`, exposed via `crewOwnedSkills()`.
 
-**Dispatcher-managed skills** (`<repo>/.claude/skills/<name>/` — crew commits its owned skills there, version-controlled). Copied into the worktree at dispatch time by `runSkillInjection`. The applicability rule is hardcoded in `lib/run/skill-injection.ts` — `SKILL_APPLICABILITY` lists `(name, applicable: (config) => boolean)` pairs. Today: `visual-fidelity-check` when `[visual_fidelity]` is set. Per-skill failures are non-fatal (the gate degrades naturally when the skill isn't present). Add a new dispatcher-managed skill by:
+`runSkillInjection` (`lib/run/skill-injection-step.ts`) copies all three — unconditionally, on every dispatch — from `<repo>/.claude/skills/<name>/` into `<worktree>/.claude/skills/<name>/`. There is no per-skill config gate: each skill self-gates via its own `description`, so injecting a non-applicable one is harmless. Per-skill copy failures are non-fatal (the gate degrades naturally when the skill isn't present).
 
-1. Author the skill at `<repo>/.claude/skills/<name>/SKILL.md` (+ supporting files).
-2. Add a row to `SKILL_APPLICABILITY` with the config gate.
-3. Add fixtures + tests at `lib/run/skill-injection.test.ts` and `lib/run/skill-injection-step.test.ts`.
+Claude Code discovers `.claude/skills/` natively (cwd-relative), so the injected skills are available to the dispatched agent with no prompt plumbing. The dispatch templates (`templates/ticket.md`, `templates/fix-pr.md`, `templates/resume.md`) list the three crew-owned skills as static required bullets in their `## Skills` section, alongside the `superpowers:*` skills.
 
-**Discovered skills.** `discoverSkills({ repoPath })` walks `~/.claude/skills/` (source `user`) and `<repo>/.claude/skills/` (source `project`), reads each `SKILL.md`'s frontmatter via `gray-matter`, and emits a `{ name, description, source }` list. `renderDiscoveredSkillsBlock` renders these as two paragraph-grouped bullet lists ("user-level" and "project-level") inlined into the dispatch prompt — the agent treats them as equally required when their description matches what it's about to do. Skills with malformed frontmatter or no `description` are skipped with a `console.warn` (the dispatch keeps going).
+Add a new crew-owned skill by:
 
-The two flavors are independent: a dispatcher-managed skill that lives at `<worktree>/.claude/skills/<name>/SKILL.md` will _also_ be picked up by discovery from the agent's side, which is intentional — the agent invokes it by name without needing to know how it got there.
+1. Author the skill at `<repo>/.claude/skills/<name>/SKILL.md` (+ supporting files). Do this **interactively** — a `crew run` dispatch cannot write the current project's `.claude/skills/` (the command sandbox masks it read-only).
+2. Add its name to `CREW_OWNED_SKILLS` in `lib/run/skill-injection.ts`.
+3. Add it as a static bullet in the `## Skills` section of `templates/ticket.md`, `templates/fix-pr.md`, and `templates/resume.md`.
+4. Add fixtures + tests at `lib/run/skill-injection.test.ts` and `lib/run/skill-injection-step.test.ts`.
 
 ## Figma snapshot
 
@@ -133,7 +133,7 @@ Historical context — read when the above isn't enough:
 
 - `docs/superpowers/specs/2026-05-03-agent-dispatch-preflight-design.md` — original preflight + structured-error design.
 - `docs/superpowers/specs/2026-05-07-sandbox-limitations-and-docker-compose-exclusion-design.md` — `excludedCommands` glob shape, the empirical probe matrix, wrapper-defeated matches.
-- `docs/superpowers/specs/2026-04-28-dynamic-skill-discovery-design.md` — why discovered skills are inlined into the prompt rather than referenced by path.
+- `docs/superpowers/specs/2026-04-28-dynamic-skill-discovery-design.md` — the original dynamic-discovery design (`discoverSkills` / `renderDiscoveredSkillsBlock`). Superseded: that prompt-rendering half was removed once Claude Code's native `.claude/skills/` discovery was confirmed; see `docs/superpowers/specs/2026-05-15-skill-storage-and-agents-autoload-design.md`.
 - `docs/superpowers/specs/2026-05-12-agent-visual-verification-design.md` — visual-fidelity-check skill + pre-dispatch snapshot pipeline.
 - `docs/superpowers/specs/2026-05-13-figma-snapshot-plugin-api-enrichment-design.md` — REST+Plugin-API two-stage snapshot rationale.
 - `docs/superpowers/specs/2026-05-13-visual-fidelity-skill-enforcement.md` — the PreToolUse hook design.

@@ -1,24 +1,17 @@
 import { cpSync, existsSync, mkdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
-import type { ProjectConfig } from 'crew-shared';
 
-/**
- * Skills the dispatcher injects into the worktree's `.claude/skills/` based
- * on per-project config. Adding a new dispatcher-managed skill: add its name
- * here, paired with the config field that gates it.
- */
-const SKILL_APPLICABILITY: ReadonlyArray<{
-  name: string;
-  applicable: (config: ProjectConfig) => boolean;
-}> = [
-  {
-    name: 'visual-fidelity-check',
-    applicable: (config) => Boolean(config.visual_fidelity),
-  },
-];
+/** Skills crew owns and injects into every dispatched worktree. Source of
+ * truth: <crew-repo>/.claude/skills/<name>/. Each skill self-gates via its
+ * own description, so injecting a non-applicable one is harmless. */
+const CREW_OWNED_SKILLS = [
+  'agents-doc-parity-check',
+  'bruno-collection-maintenance',
+  'visual-fidelity-check',
+] as const;
 
-export function skillsApplicableTo(config: ProjectConfig): string[] {
-  return SKILL_APPLICABILITY.filter((entry) => entry.applicable(config)).map((entry) => entry.name);
+export function crewOwnedSkills(): readonly string[] {
+  return CREW_OWNED_SKILLS;
 }
 
 export interface CopySkillResult {

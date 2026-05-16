@@ -71,11 +71,6 @@ vi.mock('../lib/run/stream-transcript.js', () => ({
   })),
 }));
 
-vi.mock('../lib/prompts/skills.js', () => ({
-  discoverSkills: vi.fn(() => []),
-  renderDiscoveredSkillsBlock: vi.fn(() => ''),
-}));
-
 import { existsSync } from 'node:fs';
 import { discoverProjectConfig } from '../lib/discover-project-config.js';
 import { findLatestSession } from '../lib/sessions/index.js';
