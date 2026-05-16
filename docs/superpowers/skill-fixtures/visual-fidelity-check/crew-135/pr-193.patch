@@ -1,0 +1,1510 @@
+diff --git a/packages/dashboard/src/components/AgentBody.tsx b/packages/dashboard/src/components/AgentBody.tsx
+index b4eb0de..74fca7f 100644
+--- a/packages/dashboard/src/components/AgentBody.tsx
++++ b/packages/dashboard/src/components/AgentBody.tsx
+@@ -1,10 +1,20 @@
+ import { useEffect, useState } from 'react';
++import {
++  AlertCircle,
++  AlertOctagon,
++  ArrowUpRight,
++  Check,
++  Circle,
++  GitPullRequest,
++  Loader2,
++} from 'lucide-react';
+ 
+ import { formatDuration } from '../format/duration.js';
+ import { formatTokens } from '../format/tokens.js';
+ import { useAgent } from '../data/queries.js';
+ import type { AgentDetail, AgentState } from '../data/types.js';
+-import { StateBadge } from './StateBadge.js';
++import { STATE_META } from '../data/state-meta.js';
++import { Badge } from './ui/badge.js';
+ import { Timeline } from './Timeline/Timeline.js';
+ import { Button } from './ui/button.js';
+ 
+@@ -50,6 +60,7 @@ function AgentHeader({ detail, mode }: { detail: AgentDetail; mode: AgentBodyMod
+   const startedAt = detail.runs[0]?.started_at;
+   const live = ACTIVE_STATES.has(detail.state);
+   const runtime = useLiveRuntime(startedAt, live);
++  const meta = STATE_META[detail.state];
+ 
+   return (
+     <div
+@@ -61,7 +72,15 @@ function AgentHeader({ detail, mode }: { detail: AgentDetail; mode: AgentBodyMod
+           {detail.project}
+         </span>
+         <span className="font-mono text-xs text-muted-foreground">{detail.ticket_key}</span>
+-        <StateBadge state={detail.state} />
++        <Badge
++          role="status"
++          aria-label={meta.label}
++          color={detail.state}
++          intensity="mid"
++          icon={<StateIcon state={detail.state} />}
++        >
++          {meta.label}
++        </Badge>
+         {runtime && (
+           <span className="font-mono text-xs tabular-nums text-muted-foreground">{runtime}</span>
+         )}
+@@ -75,15 +94,27 @@ function AgentHeader({ detail, mode }: { detail: AgentDetail; mode: AgentBodyMod
+       <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+         <WorktreePathLink path={detail.worktree_path} />
+         {detail.pr_url && (
+-          <Button variant="outline" size="xs" asChild>
++          <Button
++            color="running"
++            intensity="mid"
++            size="xs"
++            icon={<GitPullRequest aria-hidden />}
++            asChild
++          >
+             <a href={detail.pr_url} target="_blank" rel="noreferrer">
+-              View PR ↗
++              View PR
+             </a>
+           </Button>
+         )}
+         {mode === 'drawer' && (
+-          <Button variant="outline" size="xs" asChild>
+-            <a href={`#/agent/${encodeURIComponent(detail.key)}/full`}>↗ Open as page</a>
++          <Button
++            color="running"
++            intensity="mid"
++            size="xs"
++            icon={<ArrowUpRight aria-hidden />}
++            asChild
++          >
++            <a href={`#/agent/${encodeURIComponent(detail.key)}/full`}>Open as page</a>
+           </Button>
+         )}
+       </div>
+@@ -91,6 +122,25 @@ function AgentHeader({ detail, mode }: { detail: AgentDetail; mode: AgentBodyMod
+   );
+ }
+ 
++function StateIcon({ state }: { state: AgentState }) {
++  switch (state) {
++    case 'running':
++    case 'initializing':
++      return <Loader2 className="animate-spin" aria-hidden />;
++    case 'waiting':
++      return <AlertCircle aria-hidden />;
++    case 'pr_open':
++      return <GitPullRequest aria-hidden />;
++    case 'error':
++      return <AlertOctagon aria-hidden />;
++    case 'finished':
++      return <Check aria-hidden />;
++    case 'idle':
++    default:
++      return <Circle className="fill-current" aria-hidden />;
++  }
++}
++
+ function WorktreePathLink({ path }: { path: string }) {
+   const [copied, setCopied] = useState(false);
+ 
+@@ -105,11 +155,12 @@ function WorktreePathLink({ path }: { path: string }) {
+     <span className="inline-flex items-center gap-1.5 rounded-md border border-white/10 px-2 py-1">
+       <span className="font-mono text-xs text-muted-foreground">{path}</span>
+       <Button
+-        variant="ghost"
++        color="running"
++        intensity="ghost"
+         size="xs"
+         onClick={onCopy}
+         aria-label="Copy worktree path"
+-        className="h-auto px-1 py-0 text-xs uppercase tracking-wide text-muted-foreground hover:text-foreground hover:bg-transparent"
++        className="h-auto px-1 py-0 text-xs uppercase tracking-wide"
+       >
+         {copied ? 'Copied' : 'Copy'}
+       </Button>
+diff --git a/packages/dashboard/src/components/AgentRow.tsx b/packages/dashboard/src/components/AgentRow.tsx
+index 865b281..15f7fbb 100644
+--- a/packages/dashboard/src/components/AgentRow.tsx
++++ b/packages/dashboard/src/components/AgentRow.tsx
+@@ -1,10 +1,20 @@
+ import { useEffect, useState } from 'react';
+ import type { MouseEvent, ReactNode } from 'react';
+ import { cva } from 'class-variance-authority';
++import {
++  AlertCircle,
++  AlertOctagon,
++  ArrowRight,
++  Check,
++  Circle,
++  GitPullRequest,
++  Loader2,
++  Play,
++} from 'lucide-react';
+ 
+ import type { Agent, AgentState } from '../data/types.js';
+ import { STATE_CLASSES, STATE_META } from '../data/state-meta.js';
+-import { StateBadge } from './StateBadge.js';
++import { Badge } from './ui/badge.js';
+ import { Button } from './ui/button.js';
+ import { formatDuration } from '../format/duration.js';
+ import { formatTokens } from '../format/tokens.js';
+@@ -64,7 +74,15 @@ export function AgentRow({ agent, onSelect, onAction }: AgentRowProps) {
+           className={`absolute inset-y-1.5 left-0 w-1 rounded-full ${stateClasses.solidBg} animate-att-pulse`}
+         />
+       )}
+-      <StateBadge state={agent.state} />
++      <Badge
++        role="status"
++        aria-label={meta.label}
++        color={agent.state}
++        intensity="mid"
++        icon={<StateIcon state={agent.state} />}
++      >
++        {meta.label}
++      </Badge>
+       <span className="font-mono text-xs text-muted-foreground">{agent.key}</span>
+       <span className="text-right font-mono text-xs tabular-nums text-muted-foreground">
+         {runtime}
+@@ -78,6 +96,25 @@ export function AgentRow({ agent, onSelect, onAction }: AgentRowProps) {
+   );
+ }
+ 
++function StateIcon({ state }: { state: AgentState }) {
++  switch (state) {
++    case 'running':
++    case 'initializing':
++      return <Loader2 className="animate-spin" aria-hidden />;
++    case 'waiting':
++      return <AlertCircle aria-hidden />;
++    case 'pr_open':
++      return <GitPullRequest aria-hidden />;
++    case 'error':
++      return <AlertOctagon aria-hidden />;
++    case 'finished':
++      return <Check aria-hidden />;
++    case 'idle':
++    default:
++      return <Circle className="fill-current" aria-hidden />;
++  }
++}
++
+ function QuickActions({
+   agent,
+   onAction,
+@@ -95,10 +132,16 @@ function QuickActions({
+     case 'idle':
+       return (
+         <QaGroup>
+-          <Button variant="outline" size="xs" onClick={fire('resume')}>
++          <Button
++            color="running"
++            intensity="mid"
++            size="xs"
++            icon={<Play aria-hidden />}
++            onClick={fire('resume')}
++          >
+             Resume
+           </Button>
+-          <Button variant="ghost" size="xs" onClick={fire('finish')}>
++          <Button color="running" intensity="ghost" size="xs" onClick={fire('finish')}>
+             Finish
+           </Button>
+         </QaGroup>
+@@ -107,10 +150,11 @@ function QuickActions({
+       return (
+         <SingleAction>
+           <Button
+-            variant="default"
++            color="waiting"
++            intensity="loud"
+             size="xs"
++            icon={<ArrowRight aria-hidden />}
+             onClick={fire('provide-input')}
+-            className="bg-amber-400 text-slate-950 hover:bg-amber-400/90"
+           >
+             Provide input
+           </Button>
+@@ -119,12 +163,18 @@ function QuickActions({
+     case 'pr_open':
+       return (
+         <QaGroup>
+-          <Button variant="outline" size="xs" asChild>
++          <Button
++            color="running"
++            intensity="mid"
++            size="xs"
++            icon={<GitPullRequest aria-hidden />}
++            asChild
++          >
+             <a href={agent.prUrl ?? '#'} target="_blank" rel="noreferrer" onClick={stop}>
+-              View PR ↗
++              View PR
+             </a>
+           </Button>
+-          <Button variant="ghost" size="xs" onClick={fire('finish')}>
++          <Button color="running" intensity="ghost" size="xs" onClick={fire('finish')}>
+             Finish
+           </Button>
+         </QaGroup>
+@@ -133,10 +183,11 @@ function QuickActions({
+       return (
+         <SingleAction>
+           <Button
+-            variant="default"
++            color="error"
++            intensity="loud"
+             size="xs"
++            icon={<AlertCircle aria-hidden />}
+             onClick={fire('inspect')}
+-            className="bg-red-400 text-slate-950 hover:bg-red-400/90"
+           >
+             Inspect
+           </Button>
+diff --git a/packages/dashboard/src/components/CountBadge.figma.tsx b/packages/dashboard/src/components/CountBadge.figma.tsx
+deleted file mode 100644
+index 10653ba..0000000
+--- a/packages/dashboard/src/components/CountBadge.figma.tsx
++++ /dev/null
+@@ -1,24 +0,0 @@
+-import { figma } from '@figma/code-connect';
+-
+-import { CountBadge } from '@/components/CountBadge';
+-
+-figma.connect(
+-  CountBadge,
+-  'https://www.figma.com/design/DsA7QuEa2WthDATkksd1Bq/Crew-Design-System?node-id=77-28',
+-  {
+-    props: {
+-      // The Figma component set's `state` variant uses kebab `pr-open`; the dashboard's
+-      // AgentState uses snake `pr_open`. Mapping bridges the two.
+-      state: figma.enum('state', {
+-        initializing: 'initializing',
+-        running: 'running',
+-        idle: 'idle',
+-        waiting: 'waiting',
+-        'pr-open': 'pr_open',
+-        error: 'error',
+-        finished: 'finished',
+-      }),
+-    },
+-    example: ({ state }) => <CountBadge count={6} state={state} />,
+-  },
+-);
+diff --git a/packages/dashboard/src/components/CountBadge.test.tsx b/packages/dashboard/src/components/CountBadge.test.tsx
+deleted file mode 100644
+index 98f7533..0000000
+--- a/packages/dashboard/src/components/CountBadge.test.tsx
++++ /dev/null
+@@ -1,28 +0,0 @@
+-import { render, screen } from '@testing-library/react';
+-import { describe, expect, it } from 'vitest';
+-
+-import { CountBadge } from './CountBadge.js';
+-
+-describe('CountBadge', () => {
+-  it('renders the count', () => {
+-    render(<CountBadge count={6} />);
+-    expect(screen.getByText('6')).toBeInTheDocument();
+-  });
+-
+-  it('renders a muted "0" when count is zero', () => {
+-    render(<CountBadge count={0} />);
+-    expect(screen.getByText('0')).toBeInTheDocument();
+-  });
+-
+-  it('exposes the state as a data attribute when count > 0', () => {
+-    const { container } = render(<CountBadge count={1} state="error" />);
+-    const badge = container.querySelector('[data-state="error"]');
+-    expect(badge).not.toBeNull();
+-  });
+-
+-  it('defaults to the initializing state when none is given', () => {
+-    const { container } = render(<CountBadge count={3} />);
+-    const badge = container.querySelector('[data-state="initializing"]');
+-    expect(badge).not.toBeNull();
+-  });
+-});
+diff --git a/packages/dashboard/src/components/CountBadge.tsx b/packages/dashboard/src/components/CountBadge.tsx
+deleted file mode 100644
+index ac4f354..0000000
+--- a/packages/dashboard/src/components/CountBadge.tsx
++++ /dev/null
+@@ -1,27 +0,0 @@
+-import type { AgentState } from '../data/types.js';
+-import { STATE_CLASSES } from '../data/state-meta.js';
+-
+-interface CountBadgeProps {
+-  count: number;
+-  state?: AgentState;
+-}
+-
+-export function CountBadge({ count, state = 'initializing' }: CountBadgeProps) {
+-  if (count === 0) {
+-    return (
+-      <span data-state={state} className="font-mono text-xs text-muted-foreground">
+-        0
+-      </span>
+-    );
+-  }
+-
+-  const c = STATE_CLASSES[state];
+-  return (
+-    <span
+-      data-state={state}
+-      className={`inline-flex h-4 w-fit items-center justify-center rounded-full border px-2 font-mono text-xs leading-4 ${c.text} ${c.border} ${c.bg}`}
+-    >
+-      {count}
+-    </span>
+-  );
+-}
+diff --git a/packages/dashboard/src/components/ProjectHeader.tsx b/packages/dashboard/src/components/ProjectHeader.tsx
+index a88f260..0811604 100644
+--- a/packages/dashboard/src/components/ProjectHeader.tsx
++++ b/packages/dashboard/src/components/ProjectHeader.tsx
+@@ -20,7 +20,8 @@ export function ProjectHeader({ name, configPath }: ProjectHeaderProps) {
+       </div>
+       <div className="flex shrink-0 items-center gap-2">
+         <Button
+-          variant="outline"
++          color="white"
++          intensity="mid"
+           size="sm"
+           onClick={() => {
+             /* TODO (Epic 4): wire to Edit modal */
+@@ -29,7 +30,8 @@ export function ProjectHeader({ name, configPath }: ProjectHeaderProps) {
+           Edit
+         </Button>
+         <Button
+-          variant="destructive"
++          color="error"
++          intensity="loud"
+           size="sm"
+           onClick={() => {
+             /* TODO (Epic 4): wire to Remove modal */
+diff --git a/packages/dashboard/src/components/ProjectRow.tsx b/packages/dashboard/src/components/ProjectRow.tsx
+index 25faba5..4de4147 100644
+--- a/packages/dashboard/src/components/ProjectRow.tsx
++++ b/packages/dashboard/src/components/ProjectRow.tsx
+@@ -1,7 +1,7 @@
+ import { ChevronRight } from 'lucide-react';
+ 
+ import type { Project } from '../data/types.js';
+-import { CountBadge } from './CountBadge.js';
++import { Badge } from './ui/badge.js';
+ 
+ interface ProjectRowProps {
+   project: Project;
+@@ -22,7 +22,13 @@ export function ProjectRow({ project }: ProjectRowProps) {
+       <span className="truncate font-mono text-xs text-muted-foreground">{project.repoPath}</span>
+       <span className="truncate font-mono text-xs text-muted-foreground">{project.branch}</span>
+       <span className="truncate font-mono text-xs text-muted-foreground">{project.jiraKey}</span>
+-      <CountBadge count={project.activeCount} />
++      {project.activeCount > 0 ? (
++        <Badge color="initializing" intensity="mid">
++          {project.activeCount}
++        </Badge>
++      ) : (
++        <span className="font-mono text-xs text-muted-foreground">0</span>
++      )}
+       <ChevronRight className="h-4 w-4 text-muted-foreground" aria-hidden />
+     </a>
+   );
+diff --git a/packages/dashboard/src/components/ProjectSection.tsx b/packages/dashboard/src/components/ProjectSection.tsx
+index a532d71..db736d0 100644
+--- a/packages/dashboard/src/components/ProjectSection.tsx
++++ b/packages/dashboard/src/components/ProjectSection.tsx
+@@ -58,15 +58,15 @@ export function ProjectSection({
+           </span>
+           {onOpenProject && (
+             <Button
+-              variant="ghost"
+-              size="icon-xs"
++              color="running"
++              intensity="ghost"
++              size="xs"
++              icon={<ExternalLink aria-hidden />}
+               aria-label="Open project page"
+               title="Open project page"
+               onClick={handleOpenProject}
+               className="opacity-0 transition-opacity group-hover/header:opacity-100 focus-visible:opacity-100"
+-            >
+-              <ExternalLink aria-hidden />
+-            </Button>
++            />
+           )}
+           <span className="text-xs text-muted-foreground">
+             {active} active · {agents.length} total
+diff --git a/packages/dashboard/src/components/StateBadge.figma.tsx b/packages/dashboard/src/components/StateBadge.figma.tsx
+deleted file mode 100644
+index 8883fe3..0000000
+--- a/packages/dashboard/src/components/StateBadge.figma.tsx
++++ /dev/null
+@@ -1,24 +0,0 @@
+-import { figma } from '@figma/code-connect';
+-
+-import { StateBadge } from '@/components/StateBadge';
+-
+-figma.connect(
+-  StateBadge,
+-  'https://www.figma.com/design/DsA7QuEa2WthDATkksd1Bq/Crew-Design-System?node-id=20-23',
+-  {
+-    props: {
+-      // The Figma component set's `state` variant uses kebab `pr-open`; the dashboard's
+-      // CVA uses snake `pr_open`. Mapping bridges the two.
+-      state: figma.enum('state', {
+-        initializing: 'initializing',
+-        running: 'running',
+-        idle: 'idle',
+-        waiting: 'waiting',
+-        'pr-open': 'pr_open',
+-        error: 'error',
+-        finished: 'finished',
+-      }),
+-    },
+-    example: ({ state }) => <StateBadge state={state} />,
+-  },
+-);
+diff --git a/packages/dashboard/src/components/StateBadge.test.tsx b/packages/dashboard/src/components/StateBadge.test.tsx
+deleted file mode 100644
+index 427d607..0000000
+--- a/packages/dashboard/src/components/StateBadge.test.tsx
++++ /dev/null
+@@ -1,54 +0,0 @@
+-import { render, screen } from '@testing-library/react';
+-import { describe, expect, it } from 'vitest';
+-
+-import { StateBadge } from './StateBadge.js';
+-import type { AgentState } from '../data/types.js';
+-
+-describe('StateBadge', () => {
+-  it('renders the human label for each state', () => {
+-    render(<StateBadge state="waiting" />);
+-    expect(screen.getByText('Waiting')).toBeInTheDocument();
+-  });
+-
+-  it('exposes the state via aria-label so it is queryable accessibly', () => {
+-    render(<StateBadge state="pr_open" />);
+-    expect(screen.getByRole('status')).toHaveAccessibleName('PR open');
+-  });
+-
+-  it('applies the mid intensity by default', () => {
+-    render(<StateBadge state="running" />);
+-    expect(screen.getByRole('status')).toHaveAttribute('data-intensity', 'mid');
+-  });
+-
+-  it('applies the requested intensity', () => {
+-    render(<StateBadge state="error" intensity="loud" />);
+-    expect(screen.getByRole('status')).toHaveAttribute('data-intensity', 'loud');
+-  });
+-
+-  it('renders an animated dot for running and initializing', () => {
+-    render(<StateBadge state="running" />);
+-    expect(screen.getByTestId('state-badge-pulse')).toBeInTheDocument();
+-  });
+-
+-  it('renders a static dot for non-active states', () => {
+-    render(<StateBadge state="finished" />);
+-    expect(screen.queryByTestId('state-badge-pulse')).not.toBeInTheDocument();
+-    expect(screen.getByTestId('state-badge-dot')).toBeInTheDocument();
+-  });
+-
+-  const STATES_AND_TOKENS: Array<[AgentState, string]> = [
+-    ['waiting', 'text-amber-400'],
+-    ['running', 'text-slate-400'],
+-    ['error', 'text-red-400'],
+-    ['pr_open', 'text-violet-400'],
+-    ['finished', 'text-emerald-500'],
+-    ['initializing', 'text-blue-400'],
+-    ['idle', 'text-slate-500'],
+-  ];
+-
+-  it.each(STATES_AND_TOKENS)('emits literal Tailwind tokens for %s', (state, token) => {
+-    render(<StateBadge state={state} />);
+-    const badge = screen.getByRole('status');
+-    expect(badge.className).toContain(token);
+-  });
+-});
+diff --git a/packages/dashboard/src/components/StateBadge.tsx b/packages/dashboard/src/components/StateBadge.tsx
+deleted file mode 100644
+index c336646..0000000
+--- a/packages/dashboard/src/components/StateBadge.tsx
++++ /dev/null
+@@ -1,113 +0,0 @@
+-import { cva } from 'class-variance-authority';
+-
+-import type { AgentState } from '@/data/types';
+-import { STATE_CLASSES, STATE_META, type StateClassTokens } from '@/data/state-meta';
+-
+-export type StateIntensity = 'muted' | 'mid' | 'loud';
+-export type StateSize = 'sm' | 'md';
+-
+-interface StateBadgeProps {
+-  state: AgentState;
+-  intensity?: StateIntensity;
+-  size?: StateSize;
+-}
+-
+-const ALL_STATES: AgentState[] = [
+-  'initializing',
+-  'running',
+-  'idle',
+-  'waiting',
+-  'pr_open',
+-  'error',
+-  'finished',
+-];
+-
+-const INTENSITY_TEMPLATES: Record<StateIntensity, (c: StateClassTokens) => string> = {
+-  muted: (c) => `${c.text} ${c.bg}`,
+-  mid: (c) => `${c.text} border ${c.border} ${c.bg}`,
+-  loud: (c) => `text-slate-950 border ${c.solidBorder} ${c.solidBg}`,
+-};
+-
+-const stateBadge = cva(
+-  'inline-flex w-fit items-center gap-1.5 rounded-full font-mono leading-none whitespace-nowrap',
+-  {
+-    variants: {
+-      size: {
+-        sm: 'h-5 px-1.5 text-xs',
+-        md: 'h-6 px-2 text-xs',
+-      },
+-      state: {
+-        initializing: '',
+-        running: '',
+-        idle: '',
+-        waiting: '',
+-        pr_open: '',
+-        error: '',
+-        finished: '',
+-      },
+-      intensity: {
+-        muted: '',
+-        mid: '',
+-        loud: '',
+-      },
+-    },
+-    compoundVariants: ALL_STATES.flatMap((state) =>
+-      (Object.keys(INTENSITY_TEMPLATES) as StateIntensity[]).map((intensity) => ({
+-        state,
+-        intensity,
+-        class: INTENSITY_TEMPLATES[intensity](STATE_CLASSES[state]),
+-      })),
+-    ),
+-    defaultVariants: { size: 'md', intensity: 'mid' } as const,
+-  },
+-);
+-
+-const stateDot = cva('inline-block h-1.5 w-1.5 rounded-full', {
+-  variants: {
+-    state: {
+-      initializing: '',
+-      running: '',
+-      idle: '',
+-      waiting: '',
+-      pr_open: '',
+-      error: '',
+-      finished: '',
+-    },
+-    intensity: {
+-      muted: '',
+-      mid: '',
+-      loud: 'bg-slate-950',
+-    },
+-    pulse: { true: 'animate-pulse-dot' },
+-  },
+-  compoundVariants: ALL_STATES.flatMap((state) =>
+-    (['muted', 'mid'] as StateIntensity[]).map((intensity) => ({
+-      state,
+-      intensity,
+-      class: STATE_CLASSES[state].solidBg,
+-    })),
+-  ),
+-});
+-
+-const ACTIVE_STATES = new Set<AgentState>(['running', 'initializing']);
+-
+-export function StateBadge({ state, intensity = 'mid', size = 'md' }: StateBadgeProps) {
+-  const meta = STATE_META[state];
+-  const pulse = ACTIVE_STATES.has(state);
+-  return (
+-    <span
+-      role="status"
+-      aria-label={meta.label}
+-      data-intensity={intensity}
+-      data-state={state}
+-      className={stateBadge({ state, intensity, size })}
+-    >
+-      <span
+-        data-testid={pulse ? 'state-badge-pulse' : 'state-badge-dot'}
+-        className={stateDot({ state, intensity, pulse })}
+-        aria-hidden
+-      />
+-      {meta.label}
+-    </span>
+-  );
+-}
+diff --git a/packages/dashboard/src/components/TopNav.tsx b/packages/dashboard/src/components/TopNav.tsx
+index 91ec979..d0d7155 100644
+--- a/packages/dashboard/src/components/TopNav.tsx
++++ b/packages/dashboard/src/components/TopNav.tsx
+@@ -3,6 +3,7 @@ import { Plus } from 'lucide-react';
+ 
+ import type { Route } from '../routing/parseRoute.js';
+ import { BrandMark } from './BrandMark.js';
++import { Badge } from './ui/badge.js';
+ import { Button } from './ui/button.js';
+ 
+ interface TopNavProps {
+@@ -35,26 +36,29 @@ export function TopNav({ route, attentionCount, onClearAttention, onNewRun }: To
+       </div>
+       <div className="flex items-center gap-2">
+         <Button
+-          variant="outline"
++          color="running"
++          intensity="ghost"
+           size="xs"
+           onClick={onClearAttention}
+           disabled={attentionCount === 0}
+-          className="border-white/10 text-muted-foreground hover:bg-popover disabled:opacity-40"
++          className="disabled:opacity-40"
+         >
+           Clear attention
+           {attentionCount > 0 && (
+-            <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-amber-400 px-1.5 text-xs font-semibold text-slate-950">
++            <Badge color="waiting" intensity="mid" className="ml-1">
+               {attentionCount}
+-            </span>
++            </Badge>
+           )}
+         </Button>
+         <Button
+-          variant="default"
++          color="white"
++          intensity="loud"
+           size="xs"
++          icon={<Plus aria-hidden />}
+           onClick={onNewRun}
+-          className="bg-foreground font-semibold text-background hover:bg-foreground/90"
++          className="font-semibold"
+         >
+-          <Plus aria-hidden /> New Run
++          New Run
+         </Button>
+       </div>
+     </header>
+diff --git a/packages/dashboard/src/components/ui/badge.figma.tsx b/packages/dashboard/src/components/ui/badge.figma.tsx
+index bf3e26f..0b5fd29 100644
+--- a/packages/dashboard/src/components/ui/badge.figma.tsx
++++ b/packages/dashboard/src/components/ui/badge.figma.tsx
+@@ -2,22 +2,31 @@ import { figma } from '@figma/code-connect';
+ 
+ import { Badge } from '@/components/ui/badge';
+ 
+-figma.connect(
+-  Badge,
+-  'https://www.figma.com/design/UkPJj6vd7HMKcey7M0XF4N/Core-Design-System?node-id=665-2024',
+-  {
+-    props: {
+-      variant: figma.enum('Type', {
+-        default: 'default',
+-        secondary: 'secondary',
+-        destructive: 'destructive',
+-        outline: 'outline',
+-        secondary_icon: 'secondary',
+-        default_number: 'default',
+-        secondary_number: 'secondary',
+-        destructive_number: 'destructive',
+-      }),
+-    },
+-    example: ({ variant }) => <Badge variant={variant}>Badge</Badge>,
++figma.connect(Badge, 'https://www.figma.com/design/9FeJPriqdsdA4n9R5Xsrr8/Crew?node-id=272-120', {
++  variant: { type: 'pill' },
++  props: {
++    label: figma.string('Label'),
++    icon: figma.instance('Icon'),
++    color: figma.enum('color', {
++      idle: 'idle',
++      initializing: 'initializing',
++      running: 'running',
++      waiting: 'waiting',
++      'pr-open': 'pr_open',
++      error: 'error',
++      finished: 'finished',
++      white: 'white',
++    }),
++    intensity: figma.enum('intensity', {
++      ghost: 'ghost',
++      muted: 'muted',
++      mid: 'mid',
++      loud: 'loud',
++    }),
+   },
+-);
++  example: ({ label, color, intensity, icon }) => (
++    <Badge color={color} intensity={intensity} icon={icon}>
++      {label}
++    </Badge>
++  ),
++});
+diff --git a/packages/dashboard/src/components/ui/badge.test.tsx b/packages/dashboard/src/components/ui/badge.test.tsx
+new file mode 100644
+index 0000000..7d47916
+--- /dev/null
++++ b/packages/dashboard/src/components/ui/badge.test.tsx
+@@ -0,0 +1,37 @@
++import { render, screen } from '@testing-library/react';
++import { describe, expect, it } from 'vitest';
++
++import { Badge } from './badge';
++
++describe('Badge', () => {
++  it('renders a native <span>', () => {
++    render(<Badge>label</Badge>);
++    expect(screen.getByText('label').tagName).toBe('SPAN');
++  });
++
++  it('has the static shape (rounded-full, h-5, font-mono, text-xs)', () => {
++    render(<Badge>label</Badge>);
++    const el = screen.getByText('label');
++    expect(el.className).toContain('rounded-full');
++    expect(el.className).toContain('h-5');
++    expect(el.className).toContain('font-mono');
++    expect(el.className).toContain('text-xs');
++  });
++
++  it('renders the icon slot when provided', () => {
++    render(<Badge icon={<svg data-testid="icon" />}>Waiting</Badge>);
++    expect(screen.getByText('Waiting').querySelector('[data-testid="icon"]')).not.toBeNull();
++  });
++
++  it('does NOT accept hasIcon prop (removed from the type)', () => {
++    // @ts-expect-error — hasIcon was replaced by `icon`.
++    render(<Badge hasIcon>label</Badge>);
++  });
++
++  it('defaults to color="running" intensity="mid"', () => {
++    render(<Badge>x</Badge>);
++    const el = screen.getByText('x');
++    expect(el.dataset.color).toBe('running');
++    expect(el.dataset.intensity).toBe('mid');
++  });
++});
+diff --git a/packages/dashboard/src/components/ui/badge.tsx b/packages/dashboard/src/components/ui/badge.tsx
+index 6e0a314..9459177 100644
+--- a/packages/dashboard/src/components/ui/badge.tsx
++++ b/packages/dashboard/src/components/ui/badge.tsx
+@@ -1,46 +1,39 @@
+ import * as React from 'react';
+-import { cva, type VariantProps } from 'class-variance-authority';
+-import { Slot } from 'radix-ui';
+ 
+-import { cn } from '@/lib/utils';
++import { PillBase } from './pill-base';
++import type { PillColor, PillIntensity } from '@/lib/pill-variants';
+ 
+-const badgeVariants = cva(
+-  'inline-flex w-fit shrink-0 items-center justify-center gap-1 overflow-hidden rounded-full border border-transparent px-2 py-0.5 text-xs font-medium whitespace-nowrap transition-[color,box-shadow] focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 [&>svg]:pointer-events-none [&>svg]:size-3',
+-  {
+-    variants: {
+-      variant: {
+-        default: 'bg-primary text-primary-foreground [a&]:hover:bg-primary/90',
+-        secondary: 'bg-secondary text-secondary-foreground [a&]:hover:bg-secondary/90',
+-        destructive:
+-          'bg-destructive text-white focus-visible:ring-destructive/20 dark:bg-destructive/60 dark:focus-visible:ring-destructive/40 [a&]:hover:bg-destructive/90',
+-        outline:
+-          'border-border text-foreground [a&]:hover:bg-accent [a&]:hover:text-accent-foreground',
+-        ghost: '[a&]:hover:bg-accent [a&]:hover:text-accent-foreground',
+-        link: 'text-primary underline-offset-4 [a&]:hover:underline',
+-      },
+-    },
+-    defaultVariants: {
+-      variant: 'default',
+-    },
+-  },
+-);
++const BADGE_SHAPE =
++  "h-5 gap-1.5 rounded-full px-2 py-0.5 font-mono text-xs leading-none [&_svg:not([class*='size-'])]:size-3";
++
++type BadgeProps = Omit<React.HTMLAttributes<HTMLSpanElement>, 'color'> & {
++  color?: PillColor;
++  intensity?: PillIntensity;
++  icon?: React.ReactNode;
++  asChild?: boolean;
++};
+ 
+ function Badge({
+-  className,
+-  variant = 'default',
++  color = 'running',
++  intensity = 'mid',
++  icon,
+   asChild = false,
+-  ...props
+-}: React.ComponentProps<'span'> & VariantProps<typeof badgeVariants> & { asChild?: boolean }) {
+-  const Comp = asChild ? Slot.Root : 'span';
+-
++  children,
++  ...rest
++}: BadgeProps) {
+   return (
+-    <Comp
+-      data-slot="badge"
+-      data-variant={variant}
+-      className={cn(badgeVariants({ variant }), className)}
+-      {...props}
+-    />
++    <PillBase
++      {...rest}
++      as="span"
++      asChild={asChild}
++      color={color}
++      intensity={intensity}
++      icon={icon}
++      shape={BADGE_SHAPE}
++    >
++      {children}
++    </PillBase>
+   );
+ }
+ 
+-export { Badge, badgeVariants };
++export { Badge };
+diff --git a/packages/dashboard/src/components/ui/button.figma.tsx b/packages/dashboard/src/components/ui/button.figma.tsx
+index 48c7906..678cd7d 100644
+--- a/packages/dashboard/src/components/ui/button.figma.tsx
++++ b/packages/dashboard/src/components/ui/button.figma.tsx
+@@ -2,46 +2,36 @@ import { figma } from '@figma/code-connect';
+ 
+ import { Button } from '@/components/ui/button';
+ 
+-figma.connect(
+-  Button,
+-  'https://www.figma.com/design/UkPJj6vd7HMKcey7M0XF4N/Core-Design-System?node-id=73-3681',
+-  {
+-    props: {
+-      variant: figma.enum('Type', {
+-        primary: 'default',
+-        secondary: 'secondary',
+-        destructive: 'destructive',
+-        outline: 'outline',
+-        hhost: 'ghost',
+-        link: 'link',
+-        icon: 'default',
+-        'with icon': 'default',
+-        loading: 'default',
+-        'Size-small': 'default',
+-        'Size-default': 'default',
+-        'Size-large': 'default',
+-        Rounded: 'default',
+-      }),
+-      size: figma.enum('Type', {
+-        primary: 'default',
+-        secondary: 'default',
+-        destructive: 'default',
+-        outline: 'default',
+-        hhost: 'default',
+-        link: 'default',
+-        icon: 'icon',
+-        'with icon': 'default',
+-        loading: 'default',
+-        'Size-small': 'sm',
+-        'Size-default': 'default',
+-        'Size-large': 'lg',
+-        Rounded: 'default',
+-      }),
+-    },
+-    example: ({ variant, size }) => (
+-      <Button variant={variant} size={size}>
+-        Button
+-      </Button>
+-    ),
++figma.connect(Button, 'https://www.figma.com/design/9FeJPriqdsdA4n9R5Xsrr8/Crew?node-id=272-120', {
++  props: {
++    label: figma.string('Label'),
++    icon: figma.instance('Icon'),
++    color: figma.enum('color', {
++      idle: 'idle',
++      initializing: 'initializing',
++      running: 'running',
++      waiting: 'waiting',
++      'pr-open': 'pr_open',
++      error: 'error',
++      finished: 'finished',
++      white: 'white',
++    }),
++    intensity: figma.enum('intensity', {
++      ghost: 'ghost',
++      muted: 'muted',
++      mid: 'mid',
++      loud: 'loud',
++    }),
++    size: figma.enum('type', {
++      'button-xs': 'xs',
++      'button-sm': 'sm',
++      'button-default': 'md',
++      'button-lg': 'lg',
++    }),
+   },
+-);
++  example: ({ label, color, intensity, size, icon }) => (
++    <Button color={color} intensity={intensity} size={size} icon={icon}>
++      {label}
++    </Button>
++  ),
++});
+diff --git a/packages/dashboard/src/components/ui/button.test.tsx b/packages/dashboard/src/components/ui/button.test.tsx
+new file mode 100644
+index 0000000..38daa6f
+--- /dev/null
++++ b/packages/dashboard/src/components/ui/button.test.tsx
+@@ -0,0 +1,50 @@
++import { render, screen } from '@testing-library/react';
++import { describe, expect, it } from 'vitest';
++
++import { Button } from './button';
++
++describe('Button', () => {
++  it('renders a native <button> by default', () => {
++    render(<Button>hi</Button>);
++    expect(screen.getByRole('button').tagName).toBe('BUTTON');
++  });
++
++  it.each(['xs', 'sm', 'md', 'lg'] as const)(
++    'renders size=%s with the expected height class',
++    (size) => {
++      const expectedHeight = { xs: 'h-6', sm: 'h-8', md: 'h-9', lg: 'h-10' }[size];
++      render(<Button size={size}>x</Button>);
++      expect(screen.getByRole('button').className).toContain(expectedHeight);
++    },
++  );
++
++  it('renders the icon slot before children', () => {
++    render(<Button icon={<svg data-testid="icon" />}>Resume</Button>);
++    const btn = screen.getByRole('button', { name: 'Resume' });
++    expect(btn.querySelector('[data-testid="icon"]')).not.toBeNull();
++    expect(btn.firstElementChild?.getAttribute('data-testid')).toBe('icon');
++  });
++
++  it('renders icon-only when no children are passed', () => {
++    render(<Button icon={<svg data-testid="icon" />} aria-label="Close" />);
++    const btn = screen.getByRole('button', { name: 'Close' });
++    expect(btn.querySelector('[data-testid="icon"]')).not.toBeNull();
++    expect(btn.textContent).toBe('');
++  });
++
++  it('does not accept "default" as a size value (removed from the type)', () => {
++    // @ts-expect-error — `default` is no longer a valid size.
++    render(<Button size="default">x</Button>);
++  });
++
++  it('exposes data-color and data-intensity for downstream introspection', () => {
++    render(
++      <Button color="error" intensity="loud">
++        Inspect
++      </Button>,
++    );
++    const btn = screen.getByRole('button', { name: 'Inspect' });
++    expect(btn.dataset.color).toBe('error');
++    expect(btn.dataset.intensity).toBe('loud');
++  });
++});
+diff --git a/packages/dashboard/src/components/ui/button.tsx b/packages/dashboard/src/components/ui/button.tsx
+index aec5bdc..56c0ef1 100644
+--- a/packages/dashboard/src/components/ui/button.tsx
++++ b/packages/dashboard/src/components/ui/button.tsx
+@@ -1,62 +1,47 @@
+ import * as React from 'react';
+-import { cva, type VariantProps } from 'class-variance-authority';
+-import { Slot } from 'radix-ui';
+ 
+-import { cn } from '@/lib/utils';
++import { PillBase } from './pill-base';
++import type { PillColor, PillIntensity } from '@/lib/pill-variants';
+ 
+-const buttonVariants = cva(
+-  "inline-flex shrink-0 items-center justify-center gap-2 rounded-md text-sm font-medium whitespace-nowrap transition-all outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+-  {
+-    variants: {
+-      variant: {
+-        default: 'bg-primary text-primary-foreground hover:bg-primary/90',
+-        destructive:
+-          'bg-destructive text-white hover:bg-destructive/90 focus-visible:ring-destructive/20 dark:bg-destructive/60 dark:focus-visible:ring-destructive/40',
+-        outline:
+-          'border bg-background shadow-xs hover:bg-accent hover:text-accent-foreground dark:border-input dark:bg-input/30 dark:hover:bg-input/50',
+-        secondary: 'bg-secondary text-secondary-foreground hover:bg-secondary/80',
+-        ghost: 'hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50',
+-        link: 'text-primary underline-offset-4 hover:underline',
+-      },
+-      size: {
+-        default: 'h-9 px-4 py-2 has-[>svg]:px-3',
+-        xs: "h-6 gap-1 rounded-md px-2 text-xs has-[>svg]:px-1.5 [&_svg:not([class*='size-'])]:size-3",
+-        sm: 'h-8 gap-1.5 rounded-md px-3 has-[>svg]:px-2.5',
+-        lg: 'h-10 rounded-md px-6 has-[>svg]:px-4',
+-        icon: 'size-9',
+-        'icon-xs': "size-6 rounded-md [&_svg:not([class*='size-'])]:size-3",
+-        'icon-sm': 'size-8',
+-        'icon-lg': 'size-10',
+-      },
+-    },
+-    defaultVariants: {
+-      variant: 'default',
+-      size: 'default',
+-    },
+-  },
+-);
++export type ButtonSize = 'xs' | 'sm' | 'md' | 'lg';
++
++const BUTTON_SHAPES: Record<ButtonSize, string> = {
++  xs: "h-6 gap-1 rounded-md px-2 text-xs font-medium has-[>svg]:px-1.5 [&_svg:not([class*='size-'])]:size-3",
++  sm: "h-8 gap-1.5 rounded-md px-3 text-sm font-medium has-[>svg]:px-2.5 [&_svg:not([class*='size-'])]:size-4",
++  md: "h-9 gap-2 rounded-md px-4 text-sm font-medium has-[>svg]:px-3 [&_svg:not([class*='size-'])]:size-4",
++  lg: "h-10 gap-2 rounded-md px-6 text-sm font-medium has-[>svg]:px-4 [&_svg:not([class*='size-'])]:size-4",
++};
++
++type ButtonProps = Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, 'color'> & {
++  color?: PillColor;
++  intensity?: PillIntensity;
++  size?: ButtonSize;
++  icon?: React.ReactNode;
++  asChild?: boolean;
++};
+ 
+ function Button({
+-  className,
+-  variant = 'default',
+-  size = 'default',
++  color = 'white',
++  intensity = 'loud',
++  size = 'md',
++  icon,
+   asChild = false,
+-  ...props
+-}: React.ComponentProps<'button'> &
+-  VariantProps<typeof buttonVariants> & {
+-    asChild?: boolean;
+-  }) {
+-  const Comp = asChild ? Slot.Root : 'button';
+-
++  children,
++  ...rest
++}: ButtonProps) {
+   return (
+-    <Comp
+-      data-slot="button"
+-      data-variant={variant}
+-      data-size={size}
+-      className={cn(buttonVariants({ variant, size, className }))}
+-      {...props}
+-    />
++    <PillBase
++      {...(rest as React.HTMLAttributes<HTMLElement>)}
++      as="button"
++      asChild={asChild}
++      color={color}
++      intensity={intensity}
++      icon={icon}
++      shape={BUTTON_SHAPES[size]}
++    >
++      {children}
++    </PillBase>
+   );
+ }
+ 
+-export { Button, buttonVariants };
++export { Button };
+diff --git a/packages/dashboard/src/components/ui/dialog.figma.tsx b/packages/dashboard/src/components/ui/dialog.figma.tsx
+index f0a2354..a954b92 100644
+--- a/packages/dashboard/src/components/ui/dialog.figma.tsx
++++ b/packages/dashboard/src/components/ui/dialog.figma.tsx
+@@ -18,7 +18,9 @@ figma.connect(
+     example: () => (
+       <Dialog>
+         <DialogTrigger asChild>
+-          <Button variant="outline">Open Dialog</Button>
++          <Button color="white" intensity="mid">
++            Open Dialog
++          </Button>
+         </DialogTrigger>
+         <DialogContent>
+           <DialogHeader>
+@@ -29,8 +31,12 @@ figma.connect(
+             </DialogDescription>
+           </DialogHeader>
+           <DialogFooter>
+-            <Button variant="outline">Cancel</Button>
+-            <Button variant="destructive">Delete</Button>
++            <Button color="white" intensity="mid">
++              Cancel
++            </Button>
++            <Button color="error" intensity="loud">
++              Delete
++            </Button>
+           </DialogFooter>
+         </DialogContent>
+       </Dialog>
+diff --git a/packages/dashboard/src/components/ui/dialog.tsx b/packages/dashboard/src/components/ui/dialog.tsx
+index 081d551..e8ba262 100644
+--- a/packages/dashboard/src/components/ui/dialog.tsx
++++ b/packages/dashboard/src/components/ui/dialog.tsx
+@@ -98,7 +98,9 @@ function DialogFooter({
+       {children}
+       {showCloseButton && (
+         <DialogPrimitive.Close asChild>
+-          <Button variant="outline">Close</Button>
++          <Button color="white" intensity="mid">
++            Close
++          </Button>
+         </DialogPrimitive.Close>
+       )}
+     </div>
+diff --git a/packages/dashboard/src/components/ui/pill-base.test.tsx b/packages/dashboard/src/components/ui/pill-base.test.tsx
+new file mode 100644
+index 0000000..801dfee
+--- /dev/null
++++ b/packages/dashboard/src/components/ui/pill-base.test.tsx
+@@ -0,0 +1,71 @@
++import { render, screen } from '@testing-library/react';
++import { describe, expect, it } from 'vitest';
++
++import { PillBase } from './pill-base';
++
++describe('PillBase', () => {
++  it('renders the supplied element tag (span by default, button when as="button")', () => {
++    const { rerender } = render(<PillBase shape="h-5 px-2">label</PillBase>);
++    expect(screen.getByText('label').tagName).toBe('SPAN');
++
++    rerender(
++      <PillBase as="button" shape="h-8 px-3">
++        label
++      </PillBase>,
++    );
++    expect(screen.getByText('label').tagName).toBe('BUTTON');
++  });
++
++  it('applies shape, surface, and base layout classes', () => {
++    render(
++      <PillBase color="running" intensity="mid" shape="h-5 rounded-full px-2 font-mono text-xs">
++        running
++      </PillBase>,
++    );
++    const el = screen.getByText('running');
++    expect(el.className).toContain('inline-flex');
++    expect(el.className).toContain('items-center');
++    expect(el.className).toContain('h-5');
++    expect(el.className).toContain('rounded-full');
++    expect(el.className).toMatch(/bg-slate-\d+/);
++    expect(el.className).toMatch(/border-slate-\d+/);
++  });
++
++  it('renders the icon slot before children when icon is provided', () => {
++    render(
++      <PillBase shape="h-5 px-2" icon={<svg data-testid="icon" />}>
++        label
++      </PillBase>,
++    );
++    const el = screen.getByText('label');
++    expect(el.querySelector('[data-testid="icon"]')).not.toBeNull();
++    expect(el.firstElementChild?.getAttribute('data-testid')).toBe('icon');
++  });
++
++  it('exposes data-color, data-intensity, data-slot="pill" for downstream introspection', () => {
++    render(
++      <PillBase color="waiting" intensity="loud" shape="h-5 px-2">
++        x
++      </PillBase>,
++    );
++    const el = screen.getByText('x');
++    expect(el.dataset.slot).toBe('pill');
++    expect(el.dataset.color).toBe('waiting');
++    expect(el.dataset.intensity).toBe('loud');
++  });
++
++  it('asChild composes icon slot + class string onto the wrapped child element', () => {
++    render(
++      <PillBase asChild shape="h-6 px-2" icon={<svg data-testid="icon" />}>
++        <a href="/x">View PR</a>
++      </PillBase>,
++    );
++    const link = screen.getByRole('link', { name: /View PR/ });
++    expect(link.getAttribute('href')).toBe('/x');
++    // The merged className lands on the anchor itself, not on a wrapper.
++    expect(link.className).toContain('h-6');
++    expect(link.className).toContain('inline-flex');
++    // The icon is rendered as a sibling of the anchor's text, inside the anchor.
++    expect(link.querySelector('[data-testid="icon"]')).not.toBeNull();
++  });
++});
+diff --git a/packages/dashboard/src/components/ui/pill-base.tsx b/packages/dashboard/src/components/ui/pill-base.tsx
+new file mode 100644
+index 0000000..c246577
+--- /dev/null
++++ b/packages/dashboard/src/components/ui/pill-base.tsx
+@@ -0,0 +1,62 @@
++import * as React from 'react';
++import { Slot } from 'radix-ui';
++
++import { cn } from '@/lib/utils';
++import { pillSurfaceClasses, type PillColor, type PillIntensity } from '@/lib/pill-variants';
++
++export type PillBaseProps = Omit<React.HTMLAttributes<HTMLElement>, 'color'> & {
++  color?: PillColor;
++  intensity?: PillIntensity;
++  icon?: React.ReactNode;
++  shape: string;
++  as?: 'button' | 'span';
++  asChild?: boolean;
++};
++
++export function PillBase({
++  color = 'running',
++  intensity = 'mid',
++  icon,
++  shape,
++  as = 'span',
++  asChild = false,
++  className,
++  children,
++  ...rest
++}: PillBaseProps) {
++  const mergedClassName = cn(
++    'inline-flex w-fit items-center whitespace-nowrap',
++    shape,
++    pillSurfaceClasses(color, intensity),
++    className,
++  );
++
++  if (asChild) {
++    return (
++      <Slot.Root
++        data-slot="pill"
++        data-color={color}
++        data-intensity={intensity}
++        className={mergedClassName}
++        {...(rest as React.HTMLAttributes<HTMLElement>)}
++      >
++        {icon}
++        <Slot.Slottable>{children}</Slot.Slottable>
++      </Slot.Root>
++    );
++  }
++
++  const Comp = as as 'button' | 'span';
++  return (
++    <Comp
++      data-slot="pill"
++      data-color={color}
++      data-intensity={intensity}
++      className={mergedClassName}
++      {...(rest as React.HTMLAttributes<HTMLElement>)}
++    >
++      {icon}
++      {children}
++    </Comp>
++  );
++}
+diff --git a/packages/dashboard/src/components/ui/tag.figma.tsx b/packages/dashboard/src/components/ui/tag.figma.tsx
+new file mode 100644
+index 0000000..3529991
+--- /dev/null
++++ b/packages/dashboard/src/components/ui/tag.figma.tsx
+@@ -0,0 +1,32 @@
++import { figma } from '@figma/code-connect';
++
++import { Tag } from '@/components/ui/tag';
++
++figma.connect(Tag, 'https://www.figma.com/design/9FeJPriqdsdA4n9R5Xsrr8/Crew?node-id=272-120', {
++  variant: { type: 'tag' },
++  props: {
++    label: figma.string('Label'),
++    icon: figma.instance('Icon'),
++    color: figma.enum('color', {
++      idle: 'idle',
++      initializing: 'initializing',
++      running: 'running',
++      waiting: 'waiting',
++      'pr-open': 'pr_open',
++      error: 'error',
++      finished: 'finished',
++      white: 'white',
++    }),
++    intensity: figma.enum('intensity', {
++      ghost: 'ghost',
++      muted: 'muted',
++      mid: 'mid',
++      loud: 'loud',
++    }),
++  },
++  example: ({ label, color, intensity, icon }) => (
++    <Tag color={color} intensity={intensity} icon={icon}>
++      {label}
++    </Tag>
++  ),
++});
+diff --git a/packages/dashboard/src/components/ui/tag.test.tsx b/packages/dashboard/src/components/ui/tag.test.tsx
+new file mode 100644
+index 0000000..afe0ac7
+--- /dev/null
++++ b/packages/dashboard/src/components/ui/tag.test.tsx
+@@ -0,0 +1,28 @@
++import { render, screen } from '@testing-library/react';
++import { describe, expect, it } from 'vitest';
++
++import { Tag } from './tag';
++
++describe('Tag', () => {
++  it('renders a span with 17px height + 4px radius + Fira Code 11', () => {
++    render(<Tag>label</Tag>);
++    const el = screen.getByText('label');
++    expect(el.tagName).toBe('SPAN');
++    expect(el.className).toContain('h-[17px]');
++    expect(el.className).toContain('rounded-[4px]');
++    expect(el.className).toContain('text-[11px]');
++    expect(el.className).toContain('font-mono');
++  });
++
++  it('renders the icon slot when provided', () => {
++    render(<Tag icon={<svg data-testid="icon" />}>tool_call</Tag>);
++    expect(screen.getByText('tool_call').querySelector('[data-testid="icon"]')).not.toBeNull();
++  });
++
++  it('defaults to color="running" intensity="mid"', () => {
++    render(<Tag>x</Tag>);
++    const el = screen.getByText('x');
++    expect(el.dataset.color).toBe('running');
++    expect(el.dataset.intensity).toBe('mid');
++  });
++});
+diff --git a/packages/dashboard/src/components/ui/tag.tsx b/packages/dashboard/src/components/ui/tag.tsx
+new file mode 100644
+index 0000000..227689d
+--- /dev/null
++++ b/packages/dashboard/src/components/ui/tag.tsx
+@@ -0,0 +1,39 @@
++import * as React from 'react';
++
++import { PillBase } from './pill-base';
++import type { PillColor, PillIntensity } from '@/lib/pill-variants';
++
++const TAG_SHAPE =
++  "h-[17px] gap-1 rounded-[4px] px-1.5 font-mono text-[11px] leading-none [&_svg:not([class*='size-'])]:size-2.5";
++
++type TagProps = Omit<React.HTMLAttributes<HTMLSpanElement>, 'color'> & {
++  color?: PillColor;
++  intensity?: PillIntensity;
++  icon?: React.ReactNode;
++  asChild?: boolean;
++};
++
++function Tag({
++  color = 'running',
++  intensity = 'mid',
++  icon,
++  asChild = false,
++  children,
++  ...rest
++}: TagProps) {
++  return (
++    <PillBase
++      {...rest}
++      as="span"
++      asChild={asChild}
++      color={color}
++      intensity={intensity}
++      icon={icon}
++      shape={TAG_SHAPE}
++    >
++      {children}
++    </PillBase>
++  );
++}
++
++export { Tag };
+diff --git a/packages/dashboard/src/lib/pill-variants.ts b/packages/dashboard/src/lib/pill-variants.ts
+new file mode 100644
+index 0000000..9f097d8
+--- /dev/null
++++ b/packages/dashboard/src/lib/pill-variants.ts
+@@ -0,0 +1,60 @@
++import { STATE_CLASSES } from '@/data/state-meta';
++import type { AgentState } from '@/data/types';
++
++export type PillColor = AgentState | 'white';
++
++export type PillIntensity = 'ghost' | 'muted' | 'mid' | 'loud';
++
++interface PillTokens {
++  text: string;
++  textOnSolid: string;
++  bg: string;
++  border: string;
++  solidBg: string;
++  solidBorder: string;
++}
++
++// Source-of-truth for the 7 state colors is STATE_CLASSES in data/state-meta.ts.
++// Pill adds: `textOnSolid` (the dark text on a solid surface, identical across
++// states) and the extra `white` color used by neutral CTAs.
++const STATE_PILL_TOKENS = Object.fromEntries(
++  (Object.entries(STATE_CLASSES) as [AgentState, (typeof STATE_CLASSES)[AgentState]][]).map(
++    ([state, c]) => [
++      state,
++      {
++        text: c.text,
++        textOnSolid: 'text-slate-950',
++        bg: c.bg,
++        border: c.border,
++        solidBg: c.solidBg,
++        solidBorder: c.solidBorder,
++      },
++    ],
++  ),
++) as Record<AgentState, PillTokens>;
++
++const PILL_TOKENS: Record<PillColor, PillTokens> = {
++  ...STATE_PILL_TOKENS,
++  white: {
++    text: 'text-foreground',
++    textOnSolid: 'text-slate-950',
++    bg: 'bg-white/5',
++    border: 'border-white/10',
++    solidBg: 'bg-white',
++    solidBorder: 'border-white',
++  },
++};
++
++export function pillSurfaceClasses(color: PillColor, intensity: PillIntensity): string {
++  const t = PILL_TOKENS[color];
++  switch (intensity) {
++    case 'ghost':
++      return `${t.text} bg-transparent`;
++    case 'muted':
++      return `${t.text} ${t.bg}`;
++    case 'mid':
++      return `${t.text} ${t.bg} border ${t.border}`;
++    case 'loud':
++      return `${t.textOnSolid} ${t.solidBg} border ${t.solidBorder}`;
++  }
++}
+diff --git a/packages/dashboard/src/routes/ProjectsListPage.tsx b/packages/dashboard/src/routes/ProjectsListPage.tsx
+index 4d09efc..d0b1130 100644
+--- a/packages/dashboard/src/routes/ProjectsListPage.tsx
++++ b/packages/dashboard/src/routes/ProjectsListPage.tsx
+@@ -14,14 +14,15 @@ export function ProjectsListPage({ projects }: ProjectsListPageProps) {
+       <div className="mb-6 flex items-center justify-between gap-4">
+         <h1 className="text-2xl font-semibold tracking-tight text-foreground">Projects</h1>
+         <Button
+-          variant="outline"
++          color="white"
++          intensity="mid"
+           size="xs"
++          icon={<Plus aria-hidden />}
+           onClick={() => {
+             /* Register modal lands in Epic 4 (project ops) */
+           }}
+-          className="border-white/10 text-muted-foreground hover:bg-popover"
+         >
+-          <Plus aria-hidden /> Register project
++          Register project
+         </Button>
+       </div>
+       <ProjectsTable projects={projects} />
