@@ -101,6 +101,16 @@ The web UI. Phase 2's REST + SSE endpoints provided everything it needed.
 3. Once shims were stable, `scripts/` was deleted entirely; CLAUDE.md's "Scripts" section shrank to "Use `crew --help`."
 4. The Recipes-App project config (`~/.config/crew/projects/recipes-app.toml`) encodes everything that used to be hardcoded in the bash scripts.
 
+## Skill injection — why it's load-bearing
+
+crew owns three skills — `visual-fidelity-check`, `agents-doc-parity-check`, `bruno-collection-maintenance` — that act as gates every dispatched agent should honour. `runSkillInjection` copies them, pre-dispatch, from crew's own `.claude/skills/` into the target worktree's `.claude/skills/`.
+
+This looks redundant once skills are committed and Claude Code discovers `.claude/skills/` natively — and that perception nearly cost the project. CREW-149 (a child of the visual-fidelity render-frame epic) was planned to _delete_ the injection module on exactly that reasoning: skills now live in `.claude/skills/`, native discovery finds them, so the copy is dead weight.
+
+The reasoning holds only for crew dispatching against _itself_. crew is a dispatcher: a `crew run` targets a worktree of whatever project the ticket belongs to. A non-crew target — the Recipes repo, say — has no copy of crew's skills in its checkout. Injection is the only mechanism that carries crew-owned gates into a foreign project's worktree. Native discovery finds them _after_ injection has put them there; it is not a substitute for injection.
+
+CREW-149 was closed obsolete rather than executed. CREW-167 had already made injection unconditional (every dispatch, no per-skill config gate); CREW-146 then extended the same module to also inject the plugin-sourced `browsing` skill. The module is actively built _on_, not removed. Do not re-attempt this optimization. The dynamic-discovery experiment that preceded unconditional injection is recorded in `docs/superpowers/specs/2026-04-28-dynamic-skill-discovery-design.md` (superseded).
+
 ## Settled questions
 
 A few open questions from the original design have since been resolved:
