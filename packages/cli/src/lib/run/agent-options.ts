@@ -10,7 +10,7 @@ import {
   smokeEnabled,
   verifyAfterRunEnabled,
   type DockerPorts,
-} from '../playwright/index.js';
+} from '../mcp-config/index.js';
 import type {
   BrunoSmokePromptOptions,
   PlaywrightFixPrOptions,

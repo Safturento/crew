@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { execaSync } from 'execa';
 import { mkdirSync, mkdtempSync, readFileSync, writeFileSync, existsSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -48,10 +48,23 @@ function plantFakeChromiumBinary(): string {
   return path;
 }
 
+// Build a fake home dir containing a built superpowers-chrome plugin.
+function makeHomeWithChrome(version = '2.0.0'): string {
+  const home = mkdtempSync(join(tmpdir(), 'crew-mcp-test-home-'));
+  const versionDir = join(
+    home, '.claude', 'plugins', 'cache', 'superpowers-marketplace',
+    'superpowers-chrome', version,
+  );
+  mkdirSync(join(versionDir, 'mcp', 'dist'), { recursive: true });
+  writeFileSync(join(versionDir, 'mcp', 'dist', 'index.js'), '// server\n');
+  mkdirSync(join(versionDir, 'skills', 'browsing'), { recursive: true });
+  return home;
+}
+
 describe('writeMcpFile', () => {
   it('writes .mcp.json with the supplied config', async () => {
     const repo = makeRealRepo();
-    await writeMcpFile(repo, { appUrl: 'https://localhost:18443', resolverCwd: repo });
+    await writeMcpFile(repo, { playwright: { appUrl: 'https://localhost:18443', resolverCwd: repo } });
     const written = JSON.parse(readFileSync(join(repo, '.mcp.json'), 'utf8'));
     expect(written.mcpServers.playwright.env.CREW_APP_URL).toBe('https://localhost:18443');
   });
@@ -60,7 +73,7 @@ describe('writeMcpFile', () => {
     const repo = makeRealRepo();
     const wt = makeRealWorktree(repo);
 
-    await writeMcpFile(wt, { appUrl: 'http://localhost:5173', resolverCwd: repo });
+    await writeMcpFile(wt, { playwright: { appUrl: 'http://localhost:5173', resolverCwd: repo } });
 
     const mainExclude = readFileSync(join(repo, '.git', 'info', 'exclude'), 'utf8');
     expect(mainExclude).toMatch(/^\.mcp\.json$/m);
@@ -75,15 +88,15 @@ describe('writeMcpFile', () => {
 
   it('on a regular checkout, writes to .git/info/exclude in that checkout', async () => {
     const repo = makeRealRepo();
-    await writeMcpFile(repo, { appUrl: 'http://localhost:5173', resolverCwd: repo });
+    await writeMcpFile(repo, { playwright: { appUrl: 'http://localhost:5173', resolverCwd: repo } });
     const exclude = readFileSync(join(repo, '.git', 'info', 'exclude'), 'utf8');
     expect(exclude).toMatch(/^\.mcp\.json$/m);
   });
 
   it('is idempotent — second call does not duplicate the exclude line', async () => {
     const repo = makeRealRepo();
-    await writeMcpFile(repo, { appUrl: 'http://localhost:5173', resolverCwd: repo });
-    await writeMcpFile(repo, { appUrl: 'http://localhost:5173', resolverCwd: repo });
+    await writeMcpFile(repo, { playwright: { appUrl: 'http://localhost:5173', resolverCwd: repo } });
+    await writeMcpFile(repo, { playwright: { appUrl: 'http://localhost:5173', resolverCwd: repo } });
     const exclude = readFileSync(join(repo, '.git', 'info', 'exclude'), 'utf8');
     const matches = exclude.match(/^\.mcp\.json$/gm) ?? [];
     expect(matches.length).toBe(1);
@@ -92,7 +105,7 @@ describe('writeMcpFile', () => {
   it('preserves pre-existing exclude entries', async () => {
     const repo = makeRealRepo();
     writeFileSync(join(repo, '.git', 'info', 'exclude'), 'something-else.txt\n');
-    await writeMcpFile(repo, { appUrl: 'http://localhost:5173', resolverCwd: repo });
+    await writeMcpFile(repo, { playwright: { appUrl: 'http://localhost:5173', resolverCwd: repo } });
     const exclude = readFileSync(join(repo, '.git', 'info', 'exclude'), 'utf8');
     expect(exclude).toContain('something-else.txt');
     expect(exclude).toMatch(/^\.mcp\.json$/m);
@@ -101,7 +114,9 @@ describe('writeMcpFile', () => {
   it('returns { existed: true } when overwriting a pre-existing .mcp.json', async () => {
     const repo = makeRealRepo();
     writeFileSync(join(repo, '.mcp.json'), '{"mcpServers":{}}\n');
-    const result = await writeMcpFile(repo, { appUrl: 'http://localhost:5173', resolverCwd: repo });
+    const result = await writeMcpFile(repo, {
+      playwright: { appUrl: 'http://localhost:5173', resolverCwd: repo },
+    });
     expect(result.existed).toBe(true);
     expect(existsSync(join(repo, '.mcp.json'))).toBe(true);
   });
@@ -116,8 +131,7 @@ describe('writeMcpFile', () => {
     plantFakePlaywrightTest(repo, chromiumPath);
 
     const result = await writeMcpFile(wt, {
-      appUrl: 'http://localhost:5173',
-      resolverCwd: repo,
+      playwright: { appUrl: 'http://localhost:5173', resolverCwd: repo },
     });
 
     expect(result.chromiumPath).toBe(chromiumPath);
@@ -134,12 +148,60 @@ describe('writeMcpFile', () => {
     const wt = makeRealWorktree(repo);
 
     const result = await writeMcpFile(wt, {
-      appUrl: 'http://localhost:5173',
-      resolverCwd: repo,
+      playwright: { appUrl: 'http://localhost:5173', resolverCwd: repo },
     });
 
     expect(result.chromiumPath).toBeNull();
     const written = JSON.parse(readFileSync(join(wt, '.mcp.json'), 'utf8'));
     expect(written.mcpServers.playwright.args).not.toContain('--executable-path');
+  });
+
+  it('emits a chrome server entry when the plugin resolves', async () => {
+    const repo = makeRealRepo();
+    const home = makeHomeWithChrome();
+    const warn = vi.fn();
+
+    const result = await writeMcpFile(repo, {
+      chrome: { homeDir: home },
+      warn,
+    });
+
+    const written = JSON.parse(readFileSync(join(repo, '.mcp.json'), 'utf8'));
+    expect(written.mcpServers.chrome.command).toBe('node');
+    expect(written.mcpServers.chrome.args[0]).toContain(
+      join('superpowers-chrome', '2.0.0', 'mcp', 'dist', 'index.js'),
+    );
+    expect(result.chromeMcpPath).toContain('index.js');
+    expect(warn).not.toHaveBeenCalled();
+  });
+
+  it('warns and omits the chrome entry when the plugin is absent', async () => {
+    const repo = makeRealRepo();
+    const emptyHome = mkdtempSync(join(tmpdir(), 'crew-mcp-test-nohome-'));
+    const warn = vi.fn();
+
+    const result = await writeMcpFile(repo, {
+      chrome: { homeDir: emptyHome },
+      warn,
+    });
+
+    const written = JSON.parse(readFileSync(join(repo, '.mcp.json'), 'utf8'));
+    expect(written.mcpServers.chrome).toBeUndefined();
+    expect(result.chromeMcpPath).toBeNull();
+    expect(warn).toHaveBeenCalledOnce();
+    expect(warn.mock.calls[0][0]).toMatch(/superpowers-chrome plugin not found/i);
+  });
+
+  it('emits both playwright and chrome servers in one file', async () => {
+    const repo = makeRealRepo();
+    const home = makeHomeWithChrome();
+
+    await writeMcpFile(repo, {
+      playwright: { appUrl: 'http://localhost:5173', resolverCwd: repo },
+      chrome: { homeDir: home },
+    });
+
+    const written = JSON.parse(readFileSync(join(repo, '.mcp.json'), 'utf8'));
+    expect(Object.keys(written.mcpServers).sort()).toEqual(['chrome', 'playwright']);
   });
 });

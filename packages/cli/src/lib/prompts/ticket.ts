@@ -1,4 +1,4 @@
-import { startCommandHint } from '../playwright/index.js';
+import { startCommandHint } from '../mcp-config/index.js';
 import { render } from './render.js';
 import { buildSandboxNetworkBlock } from './sandbox-network-note.js';
 import { renderUserMessageBlock } from './user-message.js';

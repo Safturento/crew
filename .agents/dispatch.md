@@ -5,6 +5,7 @@ last_updated: 2026-05-15
 covers:
   - 'packages/cli/src/lib/run/**'
   - 'packages/cli/src/lib/prompts/**'
+  - 'packages/cli/src/lib/mcp-config/**'
   - '.claude/skills/**'
   - 'packages/cli/src/lib/preflight/**'
   - 'packages/cli/src/lib/figma-snapshot/**'
@@ -27,7 +28,7 @@ The companion commands `crew fix-pr` (resume from PR feedback) and the gate-driv
 5. **Env materialization.** `bringUpWorktreeEnv()` in `commands/run.ts`. Prefers `env.toml` via `env-spec/` (`loadEnvSpec` → `materialize` → `emit`); falls back to legacy `writeDockerEnv` when no `env.toml` exists. Output is `<worktree>/.env` consumed by docker-compose; the resolved `base` map is also returned for downstream URL resolution.
 6. **Bruno env write.** When `[bruno_smoke].enabled`, `writeBrunoEnvFile()` writes `bruno/environments/crew-<key-lower>.bru` with `baseUrl` (resolved from `APP_URL` / docker ports) and (if configured) a `smokeUser` block. `CREW_BRUNO_ENV` is passed to the agent's env.
 7. **`prepareAgentEnvironment` (fresh mode).** In `lib/run/agent-environment.ts`. Resolves the playwright app URL, starts docker bringup blocking-await in fresh mode (`startDockerBringup` → `await proc`), installs Chromium via `installPlaywrightBrowsers`, then runs `runPreflight(buildPreflightChecks(config))` — see Preflight below.
-8. **MCP file write.** When `[playwright]` is enabled and smoke is on, `writeMcpFile(worktree, { appUrl, resolverCwd })` writes `<worktree>/.mcp.json`. Order matters: write happens **after** `prepareAgentEnvironment` so the Chromium binary is on disk before `--executable-path` is resolved (CREW-70 regression bug — earlier writes captured a non-existent path and MCP silently fell back to system Chrome).
+8. **MCP file write.** `writeMcpFile(worktree, { playwright?, chrome?, warn })` writes `<worktree>/.mcp.json` when `[playwright]` is enabled and smoke is on, **or** when `[visual_fidelity]` is configured (chrome-only is a valid configuration). The file carries a `playwright` server entry (when playwright wiring is on), a `chrome` server entry (when `[visual_fidelity]` is set — resolved from the `superpowers-chrome` plugin cache via `resolveSuperpowersChrome`, code under `lib/mcp-config/`), or both. A missing `superpowers-chrome` plugin emits exactly one yellow warning and omits the `chrome` entry; the dispatch continues. Order matters: write happens **after** `prepareAgentEnvironment` so the Chromium binary is on disk before `--executable-path` is resolved (CREW-70 regression bug — earlier writes captured a non-existent path and MCP silently fell back to system Chrome).
 9. **Figma snapshot.** When `[visual_fidelity]` is configured: `runPreDispatchFigmaSnapshot(...)` exports `<worktree>/<snapshot_path>/` and then runs Plugin-API enrichment via a nested `claude -p` subprocess. Failures are non-fatal (returns `warning`); the visual-fidelity-check skill becomes a no-op rather than blocking dispatch.
 10. **Skill injection.** `runSkillInjection(...)` copies dispatcher-managed skills (`<repo>/.claude/skills/<name>/`) into `<worktree>/.claude/skills/<name>/`. See Skills below.
 11. **Build prompt.** `buildTicketPrompt({ key, githubRepo, jiraSite, playwright, brunoSmoke, visualFidelity, userMessage, dockerUnavailable })`. See Prompts below.
@@ -77,6 +78,8 @@ The `verifyAfterRun` flag on `playwright.authored` adds the "Crew runs `<test_co
 crew owns three skills, committed in-repo at `<repo>/.claude/skills/<name>/` and version-controlled: `agents-doc-parity-check`, `bruno-collection-maintenance`, `visual-fidelity-check`. The list is the hardcoded `CREW_OWNED_SKILLS` constant in `lib/run/skill-injection.ts`, exposed via `crewOwnedSkills()`.
 
 `runSkillInjection` (`lib/run/skill-injection-step.ts`) copies all three — unconditionally, on every dispatch — from `<repo>/.claude/skills/<name>/` into `<worktree>/.claude/skills/<name>/`. There is no per-skill config gate: each skill self-gates via its own `description`, so injecting a non-applicable one is harmless. Per-skill copy failures are non-fatal (the gate degrades naturally when the skill isn't present).
+
+`runSkillInjection` also injects the plugin-sourced `browsing` skill — copied from the installed `superpowers-chrome` plugin cache (via `resolveSuperpowersChrome().skillsRoot`), **not** from `<repo>/.claude/skills/` — when the project has `[visual_fidelity]` set and the plugin resolves. `browsing` is deliberately absent from `CREW_OWNED_SKILLS`: it is borrowed from a plugin rather than owned by crew, has a different source root, and is gated on plugin presence. A failed or skipped `browsing` copy is non-fatal — `writeMcpFile` has already warned about a missing plugin (step 8), so the injection branch stays silent on that condition to avoid a double warning.
 
 Claude Code discovers `.claude/skills/` natively (cwd-relative), so the injected skills are available to the dispatched agent with no prompt plumbing. The dispatch templates (`templates/ticket.md`, `templates/fix-pr.md`, `templates/resume.md`) list the three crew-owned skills as static required bullets in their `## Skills` section, alongside the `superpowers:*` skills.
 

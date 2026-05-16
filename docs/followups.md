@@ -7,6 +7,7 @@ Format: see the user-level `~/.claude/CLAUDE.md` "Followup detection" section.
 ## Contents
 
 - [Active](#active)
+  - [2026-05-15 — `crew fix-pr` does not refresh `.mcp.json` — `[visual_fidelity]` chrome wiring goes stale on resume](#2026-05-15--crew-fix-pr-does-not-refresh-mcpjson--visual_fidelity-chrome-wiring-goes-stale-on-resume)
   - [2026-05-15 — `.agents/` topic-doc system vs native `.claude/rules/` and agents.md alignment](#2026-05-15--agents-topic-doc-system-vs-native-clauderules-and-agentsmd-alignment)
   - [2026-05-15 — `parity_violations` metric is recorded end-to-end but never computed (always null)](#2026-05-15--parity_violations-metric-is-recorded-end-to-end-but-never-computed-always-null)
   - [2026-05-14 — Per-turn metric series so cache size can be graphed over a run](#2026-05-14--per-turn-metric-series-so-cache-size-can-be-graphed-over-a-run)
@@ -89,6 +90,20 @@ Format: see the user-level `~/.claude/CLAUDE.md` "Followup detection" section.
 - [Abandoned](#abandoned)
 
 ## Active
+
+### 2026-05-15 — `crew fix-pr` does not refresh `.mcp.json` — `[visual_fidelity]` chrome wiring goes stale on resume
+
+**What:** `crew fix-pr` resumes an agent into an existing worktree but never (re)writes `.mcp.json` or re-runs `runSkillInjection`. After CREW-146 PR A, `crew run` and `crew resume` write a `chrome` MCP server entry (and inject the `browsing` skill) for `[visual_fidelity]` projects, but `fix-pr` does not. A `fix-pr` on a `[visual_fidelity]` project whose original `crew run` predated CREW-146 dispatches an agent into a worktree with no `chrome` entry — silently losing visual-fidelity Step 5's live-DOM capability.
+
+**Why noticed:** Code review of CREW-146 PR A. The re-plan **spec** (Change 4) names three files for the widened `.mcp.json` write gate — `run.ts`, `resume.ts`, **and `fix-pr.ts`** — with the rationale "chrome survives a feedback-driven resume of a `[visual_fidelity]` project." The **plan** (Task 4) scoped the gate to only `run.ts` + `resume.ts`. PR A followed the plan (the authoritative driver), so `fix-pr.ts` was left untouched. `fix-pr.ts` writes no `.mcp.json` at all today, so wiring it is genuinely new scope rather than a one-line gate widening.
+
+**Anchors:** `packages/cli/src/commands/fix-pr.ts`; the write-gate block in `packages/cli/src/commands/resume.ts` (the shape to mirror); `docs/superpowers/specs/2026-05-15-crew-146-chrome-integration-replan.md` Change 4; `docs/superpowers/plans/2026-05-15-crew-146-chrome-integration.md` Task 4; `docs/tickets/CREW-146.md` (Decisions section records this divergence).
+
+**What's been considered:** Two paths. (a) Add the `resume.ts`-style write-gate block to `fix-pr.ts` before `spawnClaudeResume` — also consider re-running `runSkillInjection` there, since `browsing` has the same staleness exposure. (b) Decide `fix-pr` deliberately never refreshes `.mcp.json` and reconcile the spec to match. The "stale `.mcp.json` is a real footgun" comment in `resume.ts` argues for (a). Note `fix-pr.ts` also already skips `runSkillInjection`, so today the two omissions are at least self-consistent.
+
+**Shape of work:** Small — one write-gate block plus possibly one `runSkillInjection` call in `fix-pr.ts`, mirroring `resume.ts`; or a doc-only spec reconciliation. Either way, fold a command-layer test asserting a `[visual_fidelity]` `fix-pr` produces the `chrome` entry.
+
+**Open questions:** Does `fix-pr` resume into a worktree fresh enough that re-asserting `.mcp.json` is always safe (it is for `resume.ts`)? Should `browsing` skill re-injection ride along, or is the worktree's existing copy trusted on resume?
 
 ### 2026-05-15 — `.agents/` topic-doc system vs native `.claude/rules/` and agents.md alignment
 

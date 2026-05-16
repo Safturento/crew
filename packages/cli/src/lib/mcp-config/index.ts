@@ -13,3 +13,7 @@ export {
   type InstallBrowsersOptions,
   type InstallBrowsersResult,
 } from './install-browsers.js';
+export {
+  resolveSuperpowersChrome,
+  type SuperpowersChromePaths,
+} from './resolve-superpowers-chrome.js';
