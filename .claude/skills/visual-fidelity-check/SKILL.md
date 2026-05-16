@@ -24,6 +24,20 @@ A mandatory pre-completion gate for UI work in projects with a Figma source of t
 | "Snapshot isn't there / I can't find it"      | Fail closed — surface as blocker, don't proceed.                          |
 | "I'll re-check after the user reviews the PR" | The user's time isn't a fallback for self-verification. Run the gate.     |
 
+## Before authoring specs that touch shared UI primitives
+
+This skill exists because spec-encoding errors keep slipping into UI primitives (Pill, Input, Switch, Modal, etc.) — typically as "what variant does this caller use?" guesses made from set-variant reasoning. Catching them after the spec ships is expensive; preventing them at authoring time is cheap.
+
+**Before writing a spec or plan that touches a shared UI primitive, do this:**
+
+1. **Verify the fixture covers every caller in scope.** Open `<fixture-root>/snapshot/composites/` and confirm a render composite exists for each page/component the spec will modify. If any caller has no render composite, expand the snapshot (or scope-extend an existing run) before continuing.
+
+2. **Read each composite's `componentInstances` array.** For the primitives you're going to touch, copy the `variantOverrides` and `componentPropertyOverrides` for each call-site. These are what the spec's caller→variant mapping must encode.
+
+3. **Encode bottom-up from the renders, not top-down from the set.** Don't author "default → white-loud"-style mappings from "what's possible in the Pill set?" reasoning. That's how the same regression keeps slipping back in. Every caller→variant line in the spec must trace back to a specific composite + nested-instance entry.
+
+This rule is asymmetric: skipping it at authoring time is what causes the gate to need to fire later. A spec author who follows this section produces specs the gate trivially passes.
+
 ## Workflow
 
 Detailed step-by-step procedure lives in **`workflow.md`** — read it when invoking the skill. It covers:
@@ -62,6 +76,12 @@ If `enrichment` is absent on a node you need to check, log a verification gap an
 ### Icon findings are NEVER judgment calls
 
 If code's icon (Unicode glyph, wrong lucide variant, CSS-only span standing in for an SVG) doesn't match the Figma reference's icon, flag it. Severity ≥ medium. Naming the _specific_ expected icon is part of the fix — write "use `lucide/arrow-up-right`" not "use an SVG." Read the specific name from `enrichment.componentProperties.Icon.name` — set-level defaults are unreliable (the Pill set's default Icon is `lucide/git-pull-request`, but individual instances use `lucide/circle`, `lucide/x`, `lucide/arrow-up-right`, `lucide/plus`, etc. depending on the instance's `Icon` INSTANCE_SWAP override). See workflow.md Step 4 for sub-cases.
+
+### The "set vs composite" rule
+
+A component **set** (e.g., the Pill set at `272:120`) defines what variants are *possible*. A render **composite** (e.g., TopNav at `245:133`, AgentRow at `212:910`) shows what variant Figma *actually uses* at a specific call-site. **Never diff against a set variant when a render composite exists for the call-site.** If a caller's render composite is missing from the fixture, surface it as a fixture gap (HIGH, blocking) — do not silently fall back to set-only diffing. Set-only diffs are valid only when the caller has no render-composite reference (e.g., a primitives demonstration page or a standalone-component test fixture).
+
+The mechanical version of this rule lives in `workflow.md` Step 4. The rule lives here at the why layer so workflow reorganizations can't accidentally undo the discipline.
 
 ## Rationalizations to counter
 
