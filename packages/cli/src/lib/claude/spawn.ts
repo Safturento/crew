@@ -3,6 +3,30 @@ import { createWriteStream } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 
+/**
+ * The flag every crew-spawned `claude` must pass. A non-interactive
+ * `claude -p` cannot answer a permission prompt, so without this any MCP
+ * tool call (e.g. the Figma plugin) the subprocess is asked to make is
+ * silently denied. Single source of truth — see CREW-172 for the bug a
+ * divergent spawn that omitted it caused.
+ */
+export const CLAUDE_PERMISSION_FLAG = '--dangerously-skip-permissions';
+
+/**
+ * Build the env for a crew-spawned `claude`: merges `extra` on top of
+ * `process.env` and guarantees `~/.local/bin` is on PATH (claude is
+ * commonly installed there and a non-interactive shell may not have it).
+ *
+ * The PATH augmentation is applied last so callers cannot override it.
+ */
+export function claudeSpawnEnv(extra?: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
+  return {
+    ...process.env,
+    ...(extra ?? {}),
+    PATH: ensureLocalBinOnPath(process.env.PATH),
+  };
+}
+
 export interface SpawnClaudeResumeOptions {
   sessionId: string;
   prompt: string;
@@ -27,21 +51,14 @@ export interface SpawnClaudeResumeOptions {
  * in the background, piping all stdio to `logFile`. Returns the execa
  * subprocess so the caller can `await` it for completion or wire signal
  * handling (SIGINT) to it.
- *
- * Prepends `~/.local/bin` to PATH if missing — claude is commonly
- * installed there and a non-interactive shell may not have it.
  */
 export function spawnClaudeResume(opts: SpawnClaudeResumeOptions): ResultPromise {
   const sub = execa(
     'claude',
-    ['--dangerously-skip-permissions', '--resume', opts.sessionId, '-p', opts.prompt],
+    [CLAUDE_PERMISSION_FLAG, '--resume', opts.sessionId, '-p', opts.prompt],
     {
       cwd: opts.cwd,
-      env: {
-        ...process.env,
-        ...(opts.env ?? {}),
-        PATH: ensureLocalBinOnPath(process.env.PATH),
-      },
+      env: claudeSpawnEnv(opts.env),
     },
   );
   const log = createWriteStream(opts.logFile);
@@ -65,13 +82,9 @@ export interface SpawnClaudeFreshOptions {
  * `spawnClaudeResume`; identical PATH augmentation + env merge.
  */
 export function spawnClaudeFresh(opts: SpawnClaudeFreshOptions): ResultPromise {
-  const sub = execa('claude', ['--dangerously-skip-permissions', '-p', opts.prompt], {
+  const sub = execa('claude', [CLAUDE_PERMISSION_FLAG, '-p', opts.prompt], {
     cwd: opts.cwd,
-    env: {
-      ...process.env,
-      ...(opts.env ?? {}),
-      PATH: ensureLocalBinOnPath(process.env.PATH),
-    },
+    env: claudeSpawnEnv(opts.env),
   });
   const log = createWriteStream(opts.logFile);
   sub.stdout?.pipe(log);
