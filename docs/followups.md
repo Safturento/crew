@@ -7,6 +7,7 @@ Format: see the user-level `~/.claude/CLAUDE.md` "Followup detection" section.
 ## Contents
 
 - [Active](#active)
+  - [2026-05-17 — figma-snapshot `index.json` `screenshotPath` can point at a PNG that was never written](#2026-05-17--figma-snapshot-indexjson-screenshotpath-can-point-at-a-png-that-was-never-written)
   - [2026-05-16 — figma-snapshot `resolvedStylesFor` text-color heuristic picks the first TEXT descendant](#2026-05-16--figma-snapshot-resolvedstylesfor-text-color-heuristic-picks-the-first-text-descendant)
   - [2026-05-15 — `crew fix-pr` does not refresh `.mcp.json` — `[visual_fidelity]` chrome wiring goes stale on resume](#2026-05-15--crew-fix-pr-does-not-refresh-mcpjson--visual_fidelity-chrome-wiring-goes-stale-on-resume)
   - [2026-05-15 — `.agents/` topic-doc system vs native `.claude/rules/` and agents.md alignment](#2026-05-15--agents-topic-doc-system-vs-native-clauderules-and-agentsmd-alignment)
@@ -91,6 +92,20 @@ Format: see the user-level `~/.claude/CLAUDE.md` "Followup detection" section.
 - [Abandoned](#abandoned)
 
 ## Active
+
+### 2026-05-17 — figma-snapshot `index.json` `screenshotPath` can point at a PNG that was never written
+
+**What:** `emitSnapshot` writes an `index.json` entry with a `screenshotPath` for every exported node, but the PNG at that path may not exist — when the node's image URL is `null`, when the image download fails, or (after CREW-171) when the whole image pass fails non-fatally. `screenshotPath` is a *claimed* path, not a guarantee.
+
+**Why noticed:** Raised in CREW-171 code review. CREW-171 made the image pass non-fatal (metadata is written before images, image failures warn and skip the PNG), which widens how often a `screenshotPath` entry can lack its file. The reviewer flagged that `index.json` consumers could trip on this. Investigated: the sole consumer is the `visual-fidelity-check` skill (`.claude/skills/visual-fidelity-check/workflow.md`), which is agent-followed Markdown, not brittle code — a missing screenshot just becomes an observed gap the agent flags ("snapshot is incomplete for this component"). So no crash today, and the unconditional `screenshotPath` predates CREW-171 (it was already emitted for `null`-image nodes). Not a CREW-171 regression; logged rather than fixed in that PR.
+
+**Anchors:** `packages/cli/src/lib/figma-snapshot/emit.ts` (`IndexEntry`, the metadata-write loop ~line 78), `.claude/skills/visual-fidelity-check/workflow.md` Step 2 ("Look up the node ID in `index.json`"), CREW-171.
+
+**What's been considered:** Two options surfaced. (a) Make `screenshotPath` honest — write `index.json` *after* the image pass with the field omitted/null for nodes whose PNG didn't land. Downside: reintroduces the "index lost when images fail" problem CREW-171 deliberately fixed unless the index is written twice. (b) Leave `index.json` as-is and add an explicit per-entry `hasScreenshot: boolean` (or `screenshotPath: string | null`) populated after the image pass, so consumers can branch without an `existsSync` probe. (b) keeps the metadata-first guarantee and is the leaning recommendation.
+
+**Shape of work:** Small change in `emit.ts` — restructure so the image pass back-fills a screenshot-present flag into the already-written index, then rewrites `index.json` once at the end. Touches the `IndexEntry` shape, so the `visual-fidelity-check` skill doc + any snapshot-schema notes need a matching update. One ticket.
+
+**Open questions:** Should `index.json` be written once (at the end, after images) or twice (once early as the metadata guarantee, once after images with screenshot flags)? Writing once at the end is simpler but means a crash *between* metadata JSON writes and the final index write loses the index — though the per-node JSON files would still be on disk. Decide before ticketing.
 
 ### 2026-05-16 — figma-snapshot `resolvedStylesFor` text-color heuristic picks the first TEXT descendant
 
