@@ -58,5 +58,22 @@ export async function runPreDispatchFigmaSnapshot(
   opts.log(
     `figma-snapshot: exported ${nodesExported} nodes${result.outDir ? ` → ${result.outDir}` : ''}`,
   );
+
+  // Surface the Plugin-API enrichment outcome. A skipped/degraded enrichment
+  // still leaves a usable REST-only snapshot — the run continues — but the
+  // visual-fidelity enrichment tier (componentProperties, boundVariables,
+  // componentInstances) is missing, so it must not pass silently. (CREW-172.)
+  const enrichment = result.enrichment;
+  if (enrichment) {
+    if (enrichment.kind === 'ok') {
+      opts.log(`figma-snapshot: enrichment populated ${enrichment.enrichedNodeCount} nodes`);
+    } else {
+      opts.warn(
+        `figma-snapshot: enrichment ${enrichment.kind} (${enrichment.reason}) — ` +
+          'snapshot is REST-only, enrichment tier unavailable',
+      );
+    }
+  }
+
   return { kind: 'ok', nodesExported, outDir: result.outDir };
 }
