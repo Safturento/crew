@@ -23,6 +23,8 @@ export function claudeSpawnEnv(extra?: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
   return {
     ...process.env,
     ...(extra ?? {}),
+    // Applied last, from process.env (not the merged value), so a caller
+    // cannot override crew's PATH handling — see the JSDoc above.
     PATH: ensureLocalBinOnPath(process.env.PATH),
   };
 }
