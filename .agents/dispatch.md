@@ -1,7 +1,7 @@
 ---
 name: dispatch
 description: crew run prompt-build, skills injection, verification gates
-last_updated: 2026-05-16
+last_updated: 2026-05-17
 covers:
   - 'packages/cli/src/lib/run/**'
   - 'packages/cli/src/lib/prompts/**'
@@ -108,7 +108,7 @@ CREW-146 extended it (the `browsing` branch) — it is built on, not removed. Fu
 
 `runPreDispatchFigmaSnapshot` (in `lib/run/figma-snapshot-step.ts`) delegates to `runFigmaSnapshot` (in `commands/figma-snapshot.ts`). The pipeline:
 
-1. **REST emit** (`figma-snapshot/emit.ts`): `FigmaRestClient` fetches per-page node trees and images; `emitSnapshot` writes `index.json` + per-component PNG/JSON files under `<worktree>/<visual_fidelity.snapshot_path>/`.
+1. **REST emit** (`figma-snapshot/emit.ts`): `FigmaRestClient` fetches per-page node trees and images; `emitSnapshot` writes `index.json` + per-component PNG/JSON files under `<worktree>/<visual_fidelity.snapshot_path>/`. Per-node JSON + `index.json` are written **before** the image pass, and the image pass is non-fatal: a failed download just skips that PNG, so a snapshot always lands with complete metadata. `getImages` chunks ids into small `/images` batches (Figma's render endpoint times out on large multi-frame requests) and, on a render timeout, retries by halving the batch down to size 1.
 2. **Plugin-API enrichment** (`figma-snapshot/plugin-api-enrichment.ts`): spawns a nested `claude -p <enrichment_prompt>` subprocess (default 90s timeout) with no sandbox restrictions. The subprocess uses the figma-MCP Plugin API (the _REST_ API doesn't expose component property metadata or computed effects) to enrich each node's JSON in place. Output: a trailing JSON line on stdout containing `{ enrichedNodeCount, errors[] }`.
 
 All failures are non-fatal — `runFigmaSnapshot` returns `{ ok: true, enrichment: { kind: 'warning' | 'skipped' } }` rather than throwing. The downstream visual-fidelity-check skill reads the snapshot from disk and degrades to "could not run" when the snapshot is incomplete.
