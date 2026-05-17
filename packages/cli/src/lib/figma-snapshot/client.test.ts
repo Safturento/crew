@@ -142,4 +142,18 @@ describe('FigmaRestClient', () => {
     const client = new FigmaRestClient({ token: 't', fetch: fetchMock });
     await expect(client.getImages('FILEKEY', ['1:1'], 2)).rejects.toThrow(/403.*Invalid token/);
   });
+
+  it('throws (does not split-retry) on a 400 from /images that is not a render timeout', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 400,
+      text: async () => '{"err":"Invalid parameter: ids"}',
+    });
+    const client = new FigmaRestClient({ token: 't', fetch: fetchMock });
+    await expect(client.getImages('FILEKEY', ['1:1', '2:2'], 2)).rejects.toThrow(
+      /400.*Invalid parameter/,
+    );
+    // A non-timeout error is fatal — only the first batch request is attempted.
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
 });

@@ -68,13 +68,17 @@ export class FigmaRestClient {
     this.fetchFn = opts.fetch ?? (globalThis.fetch as unknown as FetchLike);
   }
 
-  private async req<T>(path: string): Promise<T> {
-    const res = await this.fetchFn(`https://api.figma.com/v1${path}`, {
+  /** Issue an authenticated GET against the Figma v1 API. The caller owns response handling. */
+  private get(path: string) {
+    return this.fetchFn(`https://api.figma.com/v1${path}`, {
       headers: { 'X-Figma-Token': this.token },
     });
+  }
+
+  private async req<T>(path: string): Promise<T> {
+    const res = await this.get(path);
     if (!res.ok) {
-      const body = res.text ? await res.text() : '';
-      throw new Error(`Figma API ${res.status ?? '?'} for ${path}: ${body}`);
+      throw new Error(`Figma API ${res.status ?? '?'} for ${path}: ${await readBody(res)}`);
     }
     return (await res.json()) as T;
   }
@@ -137,11 +141,9 @@ export class FigmaRestClient {
       format: 'png',
     });
     const path = `/images/${encodeURIComponent(fileKey)}?${params.toString()}`;
-    const res = await this.fetchFn(`https://api.figma.com/v1${path}`, {
-      headers: { 'X-Figma-Token': this.token },
-    });
+    const res = await this.get(path);
     if (!res.ok) {
-      const body = res.text ? await res.text() : '';
+      const body = await readBody(res);
       if (/render timeout/i.test(body)) {
         throw new FigmaRenderTimeoutError(`Figma render timeout for ${ids.length} id(s)`);
       }
@@ -149,4 +151,9 @@ export class FigmaRestClient {
     }
     return (await res.json()) as FigmaImagesResponse;
   }
+}
+
+/** Read a response body as text, tolerating the minimal {@link FetchLike} shape used in tests. */
+async function readBody(res: { text?: () => Promise<string> }): Promise<string> {
+  return res.text ? await res.text() : '';
 }
