@@ -41,6 +41,17 @@ The `enrichment` keys should include at least `boundVariables` and `componentPro
 
 So `FIGMA_API_TOKEN` must be exported in the shell where *you* run `crew run`, not inside any dispatch. The manual `crew figma-snapshot` in the Verify section above is a contributor convenience for confirming your token and config resolve correctly; it is not a step any dispatch performs.
 
+## Why a REST token — and the alternative if it's annoying
+
+`crew figma-snapshot` runs in two stages, and they authenticate differently:
+
+- **Bulk export** — fetches the file's node tree and screenshots via Figma's **REST API**, which authenticates only with a personal access token. This is the `FIGMA_API_TOKEN` stage.
+- **Enrichment** — adds the per-instance variant data (`componentProperties`, `boundVariables`) the REST API can't expose. This stage already runs through the **Figma MCP / Plugin API** — no token.
+
+So the token covers only the bulk-export half. It's REST there because a plain HTTP fetch is cheap and deterministic; keeping it on REST means only the enrichment-that-REST-can't-do pays the cost of an LLM-driven `claude -p` subprocess.
+
+**If managing a separate Figma token becomes a burden:** the bulk export *could* be moved onto the Plugin-API path too — the enrichment stage already drives it headlessly, so there's no fundamental blocker — dropping `FIGMA_API_TOKEN` entirely. It hasn't been, because that would make *every* pre-dispatch snapshot an LLM-subprocess operation: slower, costlier, and more failure-prone than a REST fetch. Revisit that tradeoff if token management across machines turns into real friction. It's a contained refactor of `packages/cli/src/lib/figma-snapshot/` — replacing the `FigmaRestClient` usage in `emit.ts` with a Plugin-API-backed export.
+
 ## Why this isn't committed to the repo
 
 The project config (`crew.toml`) lives in `~/.config/crew/projects/` rather than the repo because individual contributors may run with different Figma file forks, snapshot paths, or environments. The `figma_file_key` above points at the canonical Crew design file and is safe to share, but the broader pattern is "crew config in `~/.config/crew/`, not in the repo." This doc is the bridge — it carries the paste-ready snippet so each contributor's local config lines up with the canonical setup without having to commit a per-machine file.
