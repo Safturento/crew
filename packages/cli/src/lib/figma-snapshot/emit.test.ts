@@ -168,6 +168,67 @@ describe('emitSnapshot', () => {
     expect(existsSync(join(outDir, 'escape-hatch/2-0.json'))).toBe(true);
   });
 
+  it('writes all per-node JSON + index.json even when the image pass fails entirely', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const client = {
+      getFile: vi.fn().mockResolvedValue(fileResponse),
+      getImages: vi.fn().mockRejectedValue(new Error('Figma API 403 for /images: Invalid token')),
+    };
+    const fetchImage = vi.fn();
+
+    const result = await emitSnapshot({
+      fileKey: 'FILEKEY',
+      pages: ['Composites', 'Dashboard Screens'],
+      outDir,
+      client: client as never,
+      fetchImage,
+    });
+
+    expect(result.nodesExported).toBe(3);
+    // Every per-node JSON + the index were written despite the image failure.
+    expect(existsSync(join(outDir, 'composites/272-120.json'))).toBe(true);
+    expect(existsSync(join(outDir, 'composites/300-1.json'))).toBe(true);
+    expect(existsSync(join(outDir, 'screens/1-756.json'))).toBe(true);
+    expect(existsSync(join(outDir, 'index.json'))).toBe(true);
+    const index = JSON.parse(readFileSync(join(outDir, 'index.json'), 'utf8'));
+    expect(index['272:120']).toMatchObject({ name: 'Pill', page: 'Composites' });
+    // No PNGs, fetchImage never reached, warning emitted, no throw.
+    expect(existsSync(join(outDir, 'composites/272-120.png'))).toBe(false);
+    expect(fetchImage).not.toHaveBeenCalled();
+    expect(warn).toHaveBeenCalled();
+    warn.mockRestore();
+  });
+
+  it('skips a single PNG whose image fetch fails and still completes the snapshot', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const client = {
+      getFile: vi.fn().mockResolvedValue(fileResponse),
+      getImages: vi.fn().mockResolvedValue(imagesResponse),
+    };
+    const fetchImage = vi.fn().mockImplementation(async (url: string) => {
+      if (url === 'https://cdn.figma.com/pill.png') throw new Error('image fetch 500');
+      return Buffer.from(`bytes:${url}`);
+    });
+
+    const result = await emitSnapshot({
+      fileKey: 'FILEKEY',
+      pages: ['Composites', 'Dashboard Screens'],
+      outDir,
+      client: client as never,
+      fetchImage,
+    });
+
+    expect(result.nodesExported).toBe(3);
+    // The failed image is skipped; its metadata is still present.
+    expect(existsSync(join(outDir, 'composites/272-120.png'))).toBe(false);
+    expect(existsSync(join(outDir, 'composites/272-120.json'))).toBe(true);
+    // The other images were still written.
+    expect(existsSync(join(outDir, 'composites/300-1.png'))).toBe(true);
+    expect(existsSync(join(outDir, 'screens/1-756.png'))).toBe(true);
+    expect(warn).toHaveBeenCalled();
+    warn.mockRestore();
+  });
+
   it('still writes metadata when a node has no image URL (null in images response)', async () => {
     const client = {
       getFile: vi.fn().mockResolvedValue({

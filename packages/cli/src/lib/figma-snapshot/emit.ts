@@ -73,38 +73,51 @@ export async function emitSnapshot(opts: EmitSnapshotOptions): Promise<EmitSnaps
 
   const index: Record<string, IndexEntry> = {};
 
-  if (targets.length > 0) {
-    const ids = targets.map((t) => t.node.id);
-    const images = await opts.client.getImages(opts.fileKey, ids, opts.imageScale ?? 2);
-
-    for (const t of targets) {
-      const id = safeId(t.node.id);
-      const pngPath = join(t.dir, `${id}.png`);
-      const jsonPath = join(t.dir, `${id}.json`);
-      const cdnUrl = images.images[t.node.id];
-      if (cdnUrl) {
-        const buf = await fetchImage(cdnUrl);
-        await writeFile(join(opts.outDir, pngPath), buf);
-      }
-      await writeFile(
-        join(opts.outDir, jsonPath),
-        `${JSON.stringify(
-          { id: t.node.id, name: t.node.name, type: t.node.type, page: t.page, raw: t.node },
-          null,
-          2,
-        )}\n`,
-      );
-      index[t.node.id] = {
-        name: t.node.name,
-        type: t.node.type,
-        page: t.page,
-        screenshotPath: pngPath,
-        metadataPath: jsonPath,
-      };
-    }
+  // Write per-node metadata + index.json first, so a failing image pass can
+  // never cost us the metadata the downstream validation depends on.
+  for (const t of targets) {
+    const id = safeId(t.node.id);
+    const pngPath = join(t.dir, `${id}.png`);
+    const jsonPath = join(t.dir, `${id}.json`);
+    await writeFile(
+      join(opts.outDir, jsonPath),
+      `${JSON.stringify(
+        { id: t.node.id, name: t.node.name, type: t.node.type, page: t.page, raw: t.node },
+        null,
+        2,
+      )}\n`,
+    );
+    index[t.node.id] = {
+      name: t.node.name,
+      type: t.node.type,
+      page: t.page,
+      screenshotPath: pngPath,
+      metadataPath: jsonPath,
+    };
   }
 
   await writeFile(join(opts.outDir, 'index.json'), `${JSON.stringify(index, null, 2)}\n`);
+
+  // Image pass — non-fatal. A render timeout or a failed download warns and
+  // skips the PNG; the snapshot still succeeds with complete metadata.
+  if (targets.length > 0) {
+    try {
+      const ids = targets.map((t) => t.node.id);
+      const images = await opts.client.getImages(opts.fileKey, ids, opts.imageScale ?? 2);
+      for (const t of targets) {
+        const cdnUrl = images.images[t.node.id];
+        if (!cdnUrl) continue;
+        try {
+          const buf = await fetchImage(cdnUrl);
+          await writeFile(join(opts.outDir, t.dir, `${safeId(t.node.id)}.png`), buf);
+        } catch (err) {
+          console.warn(`figma-snapshot: image fetch failed for ${t.node.id}: ${String(err)}`);
+        }
+      }
+    } catch (err) {
+      console.warn(`figma-snapshot: image pass failed, snapshot has metadata only: ${String(err)}`);
+    }
+  }
 
   return { nodesExported: targets.length };
 }
