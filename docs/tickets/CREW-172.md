@@ -30,7 +30,7 @@ output, and a test exercises the real argv.
   two call sites genuinely diverge in shape (`spawn*` pipe stdio to a log file
   and return the live subprocess; `defaultRunner` captures stdout as a string
   with a 90s timeout). Forcing them through one function would mean a
-  union-typed grab-bag. Extracting just the *contract that must not drift* —
+  union-typed grab-bag. Extracting just the _contract that must not drift_ —
   the permission flag + PATH augmentation — keeps one source of truth without
   contorting either caller. This is the cross-import the cli `AGENTS.md` warns
   about; the explicit reason is the ticket's single-source mandate.
