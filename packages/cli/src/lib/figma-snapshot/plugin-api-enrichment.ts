@@ -1,5 +1,10 @@
 import { execa } from 'execa';
 import { which } from '../which.js';
+// Cross-imports the sibling `claude/` lib subdir on purpose: the
+// `--dangerously-skip-permissions` flag + PATH augmentation must stay
+// single-sourced with `lib/claude/spawn.ts`. A divergent spawn here that
+// omitted the flag is the bug CREW-172 fixes — see that ticket.
+import { CLAUDE_PERMISSION_FLAG, claudeSpawnEnv } from '../claude/spawn.js';
 import { buildEnrichmentPrompt } from './enrichment-prompt.js';
 
 export type ClaudeProbe = () => Promise<string | null>;
@@ -44,9 +49,18 @@ const defaultProbe: ClaudeProbe = async () => {
   return found ?? null;
 };
 
-const defaultRunner: ClaudeRunner = async ({ claudePath, prompt, cwd, timeoutMs }) => {
-  const result = await execa(claudePath, ['-p', prompt], {
+/**
+ * Spawn the enrichment `claude` subprocess. Exported so a test can exercise
+ * the real argv (the injected `runClaude` seam never reaches it).
+ *
+ * Unlike `spawnClaude{Fresh,Resume}` this captures `stdout` as a string (the
+ * caller parses the JSON summary line) and enforces a timeout — but it shares
+ * the spawn contract via `CLAUDE_PERMISSION_FLAG` + `claudeSpawnEnv()`.
+ */
+export const defaultRunner: ClaudeRunner = async ({ claudePath, prompt, cwd, timeoutMs }) => {
+  const result = await execa(claudePath, [CLAUDE_PERMISSION_FLAG, '-p', prompt], {
     cwd,
+    env: claudeSpawnEnv(),
     timeout: timeoutMs,
     reject: false,
   });

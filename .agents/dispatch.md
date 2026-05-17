@@ -58,14 +58,14 @@ In resume mode (`runResumePreflight`), only `verify-excluded-commands` runs and 
 
 `buildTicketPrompt(opts)` in `lib/prompts/ticket.ts` composes the dispatch prompt by stitching these blocks into `templates/ticket.md`:
 
-| Slot                     | Source                                                                             | Renders when                                                                                                      |
-| ------------------------ | ---------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| `userMessageBlock`       | `lib/prompts/user-message.ts`                                                      | `-m` flag passed                                                                                                  |
-| `dockerUnavailableBlock` | inline string in `ticket.ts`                                                       | docker daemon probe failed pre-dispatch                                                                           |
-| `playwrightBlock`        | `templates/ticket-playwright-smoke.md` + `templates/ticket-playwright-authored.md` | `[playwright]` enabled (smoke/authored independently)                                                             |
-| `brunoSmokeBlock`        | `templates/ticket-bruno-smoke.md`                                                  | `[bruno_smoke].enabled`                                                                                           |
-| `sandboxNetworkBlock`    | `buildSandboxNetworkBlock` → `templates/sandbox-network-note.md`                   | bruno OR authored playwright present                                                                              |
-| `visualFidelityBlock`    | `templates/ticket-visual-fidelity.md`                                              | `[visual_fidelity]` present                                                                                       |
+| Slot                     | Source                                                                             | Renders when                                          |
+| ------------------------ | ---------------------------------------------------------------------------------- | ----------------------------------------------------- |
+| `userMessageBlock`       | `lib/prompts/user-message.ts`                                                      | `-m` flag passed                                      |
+| `dockerUnavailableBlock` | inline string in `ticket.ts`                                                       | docker daemon probe failed pre-dispatch               |
+| `playwrightBlock`        | `templates/ticket-playwright-smoke.md` + `templates/ticket-playwright-authored.md` | `[playwright]` enabled (smoke/authored independently) |
+| `brunoSmokeBlock`        | `templates/ticket-bruno-smoke.md`                                                  | `[bruno_smoke].enabled`                               |
+| `sandboxNetworkBlock`    | `buildSandboxNetworkBlock` → `templates/sandbox-network-note.md`                   | bruno OR authored playwright present                  |
+| `visualFidelityBlock`    | `templates/ticket-visual-fidelity.md`                                              | `[visual_fidelity]` present                           |
 
 The sandbox-network block is the load-bearing one for sandbox-aware behavior: it tells the agent which commands are crew-whitelisted (`excludedCommands`), and why a sandboxed `curl localhost:<port>` returns `ECONNREFUSED` (the sandbox has its own loopback, isolated from the host's). Edit `templates/sandbox-network-note.md` when adding a new whitelisted command.
 
@@ -93,10 +93,10 @@ Add a new crew-owned skill by:
 ### Why injection is load-bearing
 
 `runSkillInjection` can look redundant — skills are committed in `<repo>/.claude/skills/` and
-Claude Code discovers them natively, so why copy? Because crew is a *dispatcher*: a `crew run`
+Claude Code discovers them natively, so why copy? Because crew is a _dispatcher_: a `crew run`
 targets a worktree of whatever project the ticket belongs to, and a non-crew target (e.g. the
 Recipes repo) has no copy of crew's skills. Injection is the only path that carries crew-owned
-gates into a foreign worktree. Native discovery finds the skills *after* injection puts them
+gates into a foreign worktree. Native discovery finds the skills _after_ injection puts them
 there — it does not replace injection.
 
 Do not "optimize" this away. CREW-149 was planned to delete this module on the native-discovery
@@ -109,9 +109,9 @@ CREW-146 extended it (the `browsing` branch) — it is built on, not removed. Fu
 `runPreDispatchFigmaSnapshot` (in `lib/run/figma-snapshot-step.ts`) delegates to `runFigmaSnapshot` (in `commands/figma-snapshot.ts`). The pipeline:
 
 1. **REST emit** (`figma-snapshot/emit.ts`): `FigmaRestClient` fetches per-page node trees and images; `emitSnapshot` writes `index.json` + per-component PNG/JSON files under `<worktree>/<visual_fidelity.snapshot_path>/`. Per-node JSON + `index.json` are written **before** the image pass, and the image pass is non-fatal: a failed download just skips that PNG, so a snapshot always lands with complete metadata. `getImages` chunks ids into small `/images` batches (Figma's render endpoint times out on large multi-frame requests) and, on a render timeout, retries by halving the batch down to size 1.
-2. **Plugin-API enrichment** (`figma-snapshot/plugin-api-enrichment.ts`): spawns a nested `claude -p <enrichment_prompt>` subprocess (default 90s timeout) with no sandbox restrictions. The subprocess uses the figma-MCP Plugin API (the _REST_ API doesn't expose component property metadata or computed effects) to enrich each node's JSON in place. Output: a trailing JSON line on stdout containing `{ enrichedNodeCount, errors[] }`.
+2. **Plugin-API enrichment** (`figma-snapshot/plugin-api-enrichment.ts`): spawns a nested `claude -p <enrichment_prompt>` subprocess (default 90s timeout). The spawn (`defaultRunner`) **must** carry `--dangerously-skip-permissions` — a non-interactive `claude -p` cannot answer a permission prompt, so without it the enrichment prompt's `mcp__plugin_figma_figma__use_figma` call is silently denied and enrichment never runs. That flag + the `~/.local/bin` PATH augmentation are single-sourced as `CLAUDE_PERMISSION_FLAG` / `claudeSpawnEnv()` in `lib/claude/spawn.ts` (CREW-172 — a divergent spawn that omitted the flag shipped REST-only snapshots undetected). The subprocess uses the figma-MCP Plugin API (the _REST_ API doesn't expose component property metadata or computed effects) to enrich each node's JSON in place. Output: a trailing JSON line on stdout containing `{ enrichedNodeCount, errors[] }`.
 
-All failures are non-fatal — `runFigmaSnapshot` returns `{ ok: true, enrichment: { kind: 'warning' | 'skipped' } }` rather than throwing. The downstream visual-fidelity-check skill reads the snapshot from disk and degrades to "could not run" when the snapshot is incomplete.
+All failures are non-fatal — `runFigmaSnapshot` returns `{ ok: true, enrichment: { kind: 'warning' | 'skipped' } }` rather than throwing. `runPreDispatchFigmaSnapshot` inspects that `enrichment.kind` and surfaces it in `crew run` output — the enriched node count on `ok`, a visible warning on `skipped`/`warning` — so a degraded (REST-only) snapshot can't pass as healthy. The downstream visual-fidelity-check skill reads the snapshot from disk and degrades to "could not run" when the snapshot is incomplete.
 
 `skip_snapshot=true` in `[visual_fidelity]` short-circuits both stages — useful for projects that have a manually-curated snapshot or for crew's own dogfooding before the snapshot pipeline is fully wired.
 

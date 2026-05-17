@@ -1,9 +1,13 @@
 import { describe, it, expect, vi } from 'vitest';
+import { execa } from 'execa';
 import {
   enrichSnapshotWithPluginApi,
+  defaultRunner,
   type ClaudeRunner,
   type ClaudeProbe,
 } from './plugin-api-enrichment.js';
+
+vi.mock('execa', () => ({ execa: vi.fn() }));
 
 describe('enrichSnapshotWithPluginApi', () => {
   const baseOpts = {
@@ -109,6 +113,34 @@ describe('enrichSnapshotWithPluginApi', () => {
     if (result.kind === 'warning') {
       expect(result.reason).toMatch(/TimeoutError/);
     }
+  });
+
+  describe('defaultRunner (real argv)', () => {
+    it('invokes claude with --dangerously-skip-permissions so MCP calls are not denied', async () => {
+      vi.mocked(execa).mockResolvedValueOnce({
+        exitCode: 0,
+        stdout: '{"enrichedNodeCount":0,"errors":[]}',
+        stderr: '',
+      } as never);
+
+      await defaultRunner({
+        claudePath: '/usr/local/bin/claude',
+        prompt: 'enrich the snapshot',
+        cwd: '/tmp/snap',
+        timeoutMs: 90_000,
+      });
+
+      expect(execa).toHaveBeenCalledWith(
+        '/usr/local/bin/claude',
+        ['--dangerously-skip-permissions', '-p', 'enrich the snapshot'],
+        expect.objectContaining({
+          cwd: '/tmp/snap',
+          timeout: 90_000,
+          reject: false,
+          env: expect.objectContaining({ PATH: expect.any(String) }),
+        }),
+      );
+    });
   });
 
   it('passes the built prompt to the runner via the -p flag pattern', async () => {

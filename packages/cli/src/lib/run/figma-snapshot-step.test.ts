@@ -105,6 +105,63 @@ describe('runPreDispatchFigmaSnapshot', () => {
     expect(warnings.some((m) => /network blew up/.test(m))).toBe(true);
   });
 
+  it('logs the enriched node count when the snapshotter reports kind=ok enrichment', async () => {
+    const snapshotter = vi.fn().mockResolvedValue({
+      ok: true,
+      nodesExported: 12,
+      outDir: '/tmp/wt/.crew/figma-snapshot',
+      enrichment: { kind: 'ok', enrichedNodeCount: 12, errors: [] },
+    });
+    const logs: string[] = [];
+    const result = await runPreDispatchFigmaSnapshot({
+      worktree: '/tmp/wt',
+      config: withVisualFidelity(),
+      log: (m) => logs.push(m),
+      warn: () => {},
+      snapshotter,
+    });
+    expect(result.kind).toBe('ok');
+    expect(logs.some((m) => /enrich/i.test(m) && /12/.test(m))).toBe(true);
+  });
+
+  it('emits a visible warning when enrichment was skipped (snapshot stays REST-only)', async () => {
+    const snapshotter = vi.fn().mockResolvedValue({
+      ok: true,
+      nodesExported: 12,
+      outDir: '/tmp/wt/.crew/figma-snapshot',
+      enrichment: { kind: 'skipped', reason: 'claude not on PATH' },
+    });
+    const warnings: string[] = [];
+    const result = await runPreDispatchFigmaSnapshot({
+      worktree: '/tmp/wt',
+      config: withVisualFidelity(),
+      log: () => {},
+      warn: (m) => warnings.push(m),
+      snapshotter,
+    });
+    expect(result.kind).toBe('ok');
+    expect(warnings.some((m) => /enrich/i.test(m) && /claude not on PATH/.test(m))).toBe(true);
+  });
+
+  it('emits a visible warning when enrichment degraded to a warning', async () => {
+    const snapshotter = vi.fn().mockResolvedValue({
+      ok: true,
+      nodesExported: 12,
+      outDir: '/tmp/wt/.crew/figma-snapshot',
+      enrichment: { kind: 'warning', reason: 'subprocess timed out' },
+    });
+    const warnings: string[] = [];
+    const result = await runPreDispatchFigmaSnapshot({
+      worktree: '/tmp/wt',
+      config: withVisualFidelity(),
+      log: () => {},
+      warn: (m) => warnings.push(m),
+      snapshotter,
+    });
+    expect(result.kind).toBe('ok');
+    expect(warnings.some((m) => /enrich/i.test(m) && /subprocess timed out/.test(m))).toBe(true);
+  });
+
   it('returns kind=ok with nodesExported=0 when snapshotter signals a no-op (skip_snapshot)', async () => {
     const snapshotter = vi.fn().mockResolvedValue({
       ok: true,
