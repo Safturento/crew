@@ -16216,11 +16216,1122 @@
   },
   "enrichment": {
     "source": "plugin-api",
-    "capturedAt": "2026-05-18T14:36:23.795Z",
+    "capturedAt": "2026-05-18T15:23:55.052Z",
     "componentProperties": null,
     "mainComponent": null,
     "boundVariables": [],
-    "componentInstances": [],
+    "componentInstances": [
+      {
+        "id": "281:155",
+        "name": "Pill",
+        "path": [
+          "state=initializing",
+          "state-slot",
+          "Pill"
+        ],
+        "mainComponentSetId": "272:120",
+        "variantOverrides": "type=pill, color=initializing, intensity=mid",
+        "componentPropertyOverrides": {
+          "Icon": "lucide/circle",
+          "Has Icon": true,
+          "Label": "Initializing",
+          "type": "pill",
+          "color": "initializing",
+          "intensity": "mid"
+        },
+        "resolvedStyles": {
+          "fills": [
+            {
+              "hex": "#17253F",
+              "tokenAlias": "blue-1050",
+              "opacity": 1
+            }
+          ],
+          "strokes": [
+            {
+              "hex": "#3B82F6",
+              "tokenAlias": "blue/500",
+              "opacity": 1
+            }
+          ],
+          "textColor": {
+            "hex": "#60A5FA",
+            "tokenAlias": "state/initializing"
+          }
+        }
+      },
+      {
+        "id": "I281:155;276:331",
+        "name": "icon",
+        "path": [
+          "state=initializing",
+          "state-slot",
+          "Pill",
+          "icon"
+        ],
+        "mainComponentSetId": "277:120",
+        "variantOverrides": null,
+        "componentPropertyOverrides": {},
+        "resolvedStyles": {
+          "fills": [],
+          "strokes": [],
+          "textColor": null
+        }
+      },
+      {
+        "id": "212:918",
+        "name": "lucide/hash",
+        "path": [
+          "state=initializing",
+          "content",
+          "metadata",
+          "KAN-23",
+          "lucide/hash"
+        ],
+        "mainComponentSetId": "202:130",
+        "variantOverrides": null,
+        "componentPropertyOverrides": {},
+        "resolvedStyles": {
+          "fills": [],
+          "strokes": [],
+          "textColor": null
+        }
+      },
+      {
+        "id": "212:922",
+        "name": "lucide/clock",
+        "path": [
+          "state=initializing",
+          "content",
+          "metadata",
+          "21m 04s",
+          "lucide/clock"
+        ],
+        "mainComponentSetId": "202:132",
+        "variantOverrides": null,
+        "componentPropertyOverrides": {},
+        "resolvedStyles": {
+          "fills": [],
+          "strokes": [],
+          "textColor": null
+        }
+      },
+      {
+        "id": "212:926",
+        "name": "lucide/currency",
+        "path": [
+          "state=initializing",
+          "content",
+          "metadata",
+          "48.2k",
+          "lucide/currency"
+        ],
+        "mainComponentSetId": "202:134",
+        "variantOverrides": null,
+        "componentPropertyOverrides": {},
+        "resolvedStyles": {
+          "fills": [],
+          "strokes": [],
+          "textColor": null
+        }
+      },
+      {
+        "id": "281:160",
+        "name": "Pill",
+        "path": [
+          "state=running",
+          "state-slot",
+          "Pill"
+        ],
+        "mainComponentSetId": "272:120",
+        "variantOverrides": "type=pill, color=running, intensity=mid",
+        "componentPropertyOverrides": {
+          "Icon": "lucide/circle",
+          "Has Icon": true,
+          "Label": "Running",
+          "type": "pill",
+          "color": "running",
+          "intensity": "mid"
+        },
+        "resolvedStyles": {
+          "fills": [
+            {
+              "hex": "#1C2538",
+              "tokenAlias": "slate-1050",
+              "opacity": 1
+            }
+          ],
+          "strokes": [
+            {
+              "hex": "#64748B",
+              "tokenAlias": "slate/500",
+              "opacity": 1
+            }
+          ],
+          "textColor": {
+            "hex": "#94A3B8",
+            "tokenAlias": "state/running"
+          }
+        }
+      },
+      {
+        "id": "I281:160;276:343",
+        "name": "icon",
+        "path": [
+          "state=running",
+          "state-slot",
+          "Pill",
+          "icon"
+        ],
+        "mainComponentSetId": "277:120",
+        "variantOverrides": null,
+        "componentPropertyOverrides": {},
+        "resolvedStyles": {
+          "fills": [],
+          "strokes": [],
+          "textColor": null
+        }
+      },
+      {
+        "id": "212:937",
+        "name": "lucide/hash",
+        "path": [
+          "state=running",
+          "content",
+          "metadata",
+          "KAN-23",
+          "lucide/hash"
+        ],
+        "mainComponentSetId": "202:130",
+        "variantOverrides": null,
+        "componentPropertyOverrides": {},
+        "resolvedStyles": {
+          "fills": [],
+          "strokes": [],
+          "textColor": null
+        }
+      },
+      {
+        "id": "212:941",
+        "name": "lucide/clock",
+        "path": [
+          "state=running",
+          "content",
+          "metadata",
+          "21m 04s",
+          "lucide/clock"
+        ],
+        "mainComponentSetId": "202:132",
+        "variantOverrides": null,
+        "componentPropertyOverrides": {},
+        "resolvedStyles": {
+          "fills": [],
+          "strokes": [],
+          "textColor": null
+        }
+      },
+      {
+        "id": "212:945",
+        "name": "lucide/currency",
+        "path": [
+          "state=running",
+          "content",
+          "metadata",
+          "48.2k",
+          "lucide/currency"
+        ],
+        "mainComponentSetId": "202:134",
+        "variantOverrides": null,
+        "componentPropertyOverrides": {},
+        "resolvedStyles": {
+          "fills": [],
+          "strokes": [],
+          "textColor": null
+        }
+      },
+      {
+        "id": "281:165",
+        "name": "Pill",
+        "path": [
+          "state=idle",
+          "state-slot",
+          "Pill"
+        ],
+        "mainComponentSetId": "272:120",
+        "variantOverrides": "type=pill, color=idle, intensity=mid",
+        "componentPropertyOverrides": {
+          "Icon": "lucide/circle",
+          "Has Icon": true,
+          "Label": "Idle",
+          "type": "pill",
+          "color": "idle",
+          "intensity": "mid"
+        },
+        "resolvedStyles": {
+          "fills": [
+            {
+              "hex": "#172134",
+              "tokenAlias": "slate-1100",
+              "opacity": 1
+            }
+          ],
+          "strokes": [
+            {
+              "hex": "#475569",
+              "tokenAlias": "slate/600",
+              "opacity": 1
+            }
+          ],
+          "textColor": {
+            "hex": "#64748B",
+            "tokenAlias": "state/idle"
+          }
+        }
+      },
+      {
+        "id": "I281:165;276:319",
+        "name": "icon",
+        "path": [
+          "state=idle",
+          "state-slot",
+          "Pill",
+          "icon"
+        ],
+        "mainComponentSetId": "277:120",
+        "variantOverrides": null,
+        "componentPropertyOverrides": {},
+        "resolvedStyles": {
+          "fills": [],
+          "strokes": [],
+          "textColor": null
+        }
+      },
+      {
+        "id": "212:956",
+        "name": "lucide/hash",
+        "path": [
+          "state=idle",
+          "content",
+          "metadata",
+          "KAN-23",
+          "lucide/hash"
+        ],
+        "mainComponentSetId": "202:130",
+        "variantOverrides": null,
+        "componentPropertyOverrides": {},
+        "resolvedStyles": {
+          "fills": [],
+          "strokes": [],
+          "textColor": null
+        }
+      },
+      {
+        "id": "212:960",
+        "name": "lucide/clock",
+        "path": [
+          "state=idle",
+          "content",
+          "metadata",
+          "21m 04s",
+          "lucide/clock"
+        ],
+        "mainComponentSetId": "202:132",
+        "variantOverrides": null,
+        "componentPropertyOverrides": {},
+        "resolvedStyles": {
+          "fills": [],
+          "strokes": [],
+          "textColor": null
+        }
+      },
+      {
+        "id": "212:964",
+        "name": "lucide/currency",
+        "path": [
+          "state=idle",
+          "content",
+          "metadata",
+          "48.2k",
+          "lucide/currency"
+        ],
+        "mainComponentSetId": "202:134",
+        "variantOverrides": null,
+        "componentPropertyOverrides": {},
+        "resolvedStyles": {
+          "fills": [],
+          "strokes": [],
+          "textColor": null
+        }
+      },
+      {
+        "id": "278:1529",
+        "name": "Pill",
+        "path": [
+          "state=idle",
+          "action",
+          "Pill"
+        ],
+        "mainComponentSetId": "272:120",
+        "variantOverrides": "type=button-xs, color=running, intensity=mid",
+        "componentPropertyOverrides": {
+          "Icon": "lucide/git-pull-request",
+          "Has Icon": false,
+          "Label": "Resume",
+          "type": "button-xs",
+          "color": "running",
+          "intensity": "mid"
+        },
+        "resolvedStyles": {
+          "fills": [
+            {
+              "hex": "#1C2538",
+              "tokenAlias": "slate-1050",
+              "opacity": 1
+            }
+          ],
+          "strokes": [
+            {
+              "hex": "#64748B",
+              "tokenAlias": "slate/500",
+              "opacity": 1
+            }
+          ],
+          "textColor": {
+            "hex": "#94A3B8",
+            "tokenAlias": "state/running"
+          }
+        }
+      },
+      {
+        "id": "I278:1529;276:439",
+        "name": "icon",
+        "path": [
+          "state=idle",
+          "action",
+          "Pill",
+          "icon"
+        ],
+        "mainComponentSetId": "199:106",
+        "variantOverrides": null,
+        "componentPropertyOverrides": {},
+        "resolvedStyles": {
+          "fills": [],
+          "strokes": [],
+          "textColor": null
+        }
+      },
+      {
+        "id": "278:1534",
+        "name": "Pill",
+        "path": [
+          "state=idle",
+          "action",
+          "Pill"
+        ],
+        "mainComponentSetId": "272:120",
+        "variantOverrides": "type=button-xs, color=running, intensity=ghost",
+        "componentPropertyOverrides": {
+          "Has Icon": false,
+          "Icon": "lucide/git-pull-request",
+          "Label": "Finish",
+          "type": "button-xs",
+          "color": "running",
+          "intensity": "ghost"
+        },
+        "resolvedStyles": {
+          "fills": [],
+          "strokes": [],
+          "textColor": {
+            "hex": "#94A3B8",
+            "tokenAlias": "state/running"
+          }
+        }
+      },
+      {
+        "id": "I278:1534;276:433",
+        "name": "icon",
+        "path": [
+          "state=idle",
+          "action",
+          "Pill",
+          "icon"
+        ],
+        "mainComponentSetId": "199:106",
+        "variantOverrides": null,
+        "componentPropertyOverrides": {},
+        "resolvedStyles": {
+          "fills": [],
+          "strokes": [],
+          "textColor": null
+        }
+      },
+      {
+        "id": "281:175",
+        "name": "Pill",
+        "path": [
+          "state=waiting",
+          "state-slot",
+          "Pill"
+        ],
+        "mainComponentSetId": "272:120",
+        "variantOverrides": "type=pill, color=waiting, intensity=mid",
+        "componentPropertyOverrides": {
+          "Icon": "lucide/circle",
+          "Has Icon": true,
+          "Label": "Waiting",
+          "type": "pill",
+          "color": "waiting",
+          "intensity": "mid"
+        },
+        "resolvedStyles": {
+          "fills": [
+            {
+              "hex": "#26282A",
+              "tokenAlias": "amber-1050",
+              "opacity": 1
+            }
+          ],
+          "strokes": [
+            {
+              "hex": "#F59E0B",
+              "tokenAlias": "amber/500",
+              "opacity": 1
+            }
+          ],
+          "textColor": {
+            "hex": "#FBBF24",
+            "tokenAlias": "state/waiting"
+          }
+        }
+      },
+      {
+        "id": "I281:175;276:355",
+        "name": "icon",
+        "path": [
+          "state=waiting",
+          "state-slot",
+          "Pill",
+          "icon"
+        ],
+        "mainComponentSetId": "277:120",
+        "variantOverrides": null,
+        "componentPropertyOverrides": {},
+        "resolvedStyles": {
+          "fills": [],
+          "strokes": [],
+          "textColor": null
+        }
+      },
+      {
+        "id": "212:977",
+        "name": "lucide/hash",
+        "path": [
+          "state=waiting",
+          "content",
+          "metadata",
+          "KAN-23",
+          "lucide/hash"
+        ],
+        "mainComponentSetId": "202:130",
+        "variantOverrides": null,
+        "componentPropertyOverrides": {},
+        "resolvedStyles": {
+          "fills": [],
+          "strokes": [],
+          "textColor": null
+        }
+      },
+      {
+        "id": "212:981",
+        "name": "lucide/clock",
+        "path": [
+          "state=waiting",
+          "content",
+          "metadata",
+          "21m 04s",
+          "lucide/clock"
+        ],
+        "mainComponentSetId": "202:132",
+        "variantOverrides": null,
+        "componentPropertyOverrides": {},
+        "resolvedStyles": {
+          "fills": [],
+          "strokes": [],
+          "textColor": null
+        }
+      },
+      {
+        "id": "212:985",
+        "name": "lucide/currency",
+        "path": [
+          "state=waiting",
+          "content",
+          "metadata",
+          "48.2k",
+          "lucide/currency"
+        ],
+        "mainComponentSetId": "202:134",
+        "variantOverrides": null,
+        "componentPropertyOverrides": {},
+        "resolvedStyles": {
+          "fills": [],
+          "strokes": [],
+          "textColor": null
+        }
+      },
+      {
+        "id": "278:1539",
+        "name": "Pill",
+        "path": [
+          "state=waiting",
+          "action",
+          "Pill"
+        ],
+        "mainComponentSetId": "272:120",
+        "variantOverrides": "type=button-xs, color=waiting, intensity=loud",
+        "componentPropertyOverrides": {
+          "Has Icon": false,
+          "Icon": "lucide/git-pull-request",
+          "Label": "Provide input",
+          "type": "button-xs",
+          "color": "waiting",
+          "intensity": "loud"
+        },
+        "resolvedStyles": {
+          "fills": [
+            {
+              "hex": "#FBBF24",
+              "tokenAlias": "state/waiting",
+              "opacity": 1
+            }
+          ],
+          "strokes": [],
+          "textColor": {
+            "hex": "#020617",
+            "tokenAlias": "state/foreground"
+          }
+        }
+      },
+      {
+        "id": "I278:1539;276:454",
+        "name": "icon",
+        "path": [
+          "state=waiting",
+          "action",
+          "Pill",
+          "icon"
+        ],
+        "mainComponentSetId": "199:106",
+        "variantOverrides": null,
+        "componentPropertyOverrides": {},
+        "resolvedStyles": {
+          "fills": [],
+          "strokes": [],
+          "textColor": null
+        }
+      },
+      {
+        "id": "281:182",
+        "name": "Pill",
+        "path": [
+          "state=pr-open",
+          "state-slot",
+          "Pill"
+        ],
+        "mainComponentSetId": "272:120",
+        "variantOverrides": "type=pill, color=pr-open, intensity=mid",
+        "componentPropertyOverrides": {
+          "Has Icon": true,
+          "Icon": "lucide/circle",
+          "Label": "PR open",
+          "type": "pill",
+          "color": "pr-open",
+          "intensity": "mid"
+        },
+        "resolvedStyles": {
+          "fills": [
+            {
+              "hex": "#1E233F",
+              "tokenAlias": "violet-1050",
+              "opacity": 1
+            }
+          ],
+          "strokes": [
+            {
+              "hex": "#8B5CF6",
+              "tokenAlias": "violet/500",
+              "opacity": 1
+            }
+          ],
+          "textColor": {
+            "hex": "#A78BFA",
+            "tokenAlias": "state/pr-open"
+          }
+        }
+      },
+      {
+        "id": "I281:182;276:367",
+        "name": "icon",
+        "path": [
+          "state=pr-open",
+          "state-slot",
+          "Pill",
+          "icon"
+        ],
+        "mainComponentSetId": "277:120",
+        "variantOverrides": null,
+        "componentPropertyOverrides": {},
+        "resolvedStyles": {
+          "fills": [],
+          "strokes": [],
+          "textColor": null
+        }
+      },
+      {
+        "id": "212:997",
+        "name": "lucide/hash",
+        "path": [
+          "state=pr-open",
+          "content",
+          "metadata",
+          "KAN-23",
+          "lucide/hash"
+        ],
+        "mainComponentSetId": "202:130",
+        "variantOverrides": null,
+        "componentPropertyOverrides": {},
+        "resolvedStyles": {
+          "fills": [],
+          "strokes": [],
+          "textColor": null
+        }
+      },
+      {
+        "id": "212:1001",
+        "name": "lucide/clock",
+        "path": [
+          "state=pr-open",
+          "content",
+          "metadata",
+          "21m 04s",
+          "lucide/clock"
+        ],
+        "mainComponentSetId": "202:132",
+        "variantOverrides": null,
+        "componentPropertyOverrides": {},
+        "resolvedStyles": {
+          "fills": [],
+          "strokes": [],
+          "textColor": null
+        }
+      },
+      {
+        "id": "212:1005",
+        "name": "lucide/currency",
+        "path": [
+          "state=pr-open",
+          "content",
+          "metadata",
+          "48.2k",
+          "lucide/currency"
+        ],
+        "mainComponentSetId": "202:134",
+        "variantOverrides": null,
+        "componentPropertyOverrides": {},
+        "resolvedStyles": {
+          "fills": [],
+          "strokes": [],
+          "textColor": null
+        }
+      },
+      {
+        "id": "278:1544",
+        "name": "Pill",
+        "path": [
+          "state=pr-open",
+          "action",
+          "Pill"
+        ],
+        "mainComponentSetId": "272:120",
+        "variantOverrides": "type=button-xs, color=running, intensity=mid",
+        "componentPropertyOverrides": {
+          "Icon": "lucide/git-pull-request",
+          "Has Icon": true,
+          "Label": "View PR",
+          "type": "button-xs",
+          "color": "running",
+          "intensity": "mid"
+        },
+        "resolvedStyles": {
+          "fills": [
+            {
+              "hex": "#1C2538",
+              "tokenAlias": "slate-1050",
+              "opacity": 1
+            }
+          ],
+          "strokes": [
+            {
+              "hex": "#64748B",
+              "tokenAlias": "slate/500",
+              "opacity": 1
+            }
+          ],
+          "textColor": {
+            "hex": "#94A3B8",
+            "tokenAlias": "state/running"
+          }
+        }
+      },
+      {
+        "id": "I278:1544;276:439",
+        "name": "lucide/git-pull-request",
+        "path": [
+          "state=pr-open",
+          "action",
+          "Pill",
+          "lucide/git-pull-request"
+        ],
+        "mainComponentSetId": "199:106",
+        "variantOverrides": null,
+        "componentPropertyOverrides": {},
+        "resolvedStyles": {
+          "fills": [],
+          "strokes": [],
+          "textColor": null
+        }
+      },
+      {
+        "id": "278:1549",
+        "name": "Pill",
+        "path": [
+          "state=pr-open",
+          "action",
+          "Pill"
+        ],
+        "mainComponentSetId": "272:120",
+        "variantOverrides": "type=button-xs, color=running, intensity=ghost",
+        "componentPropertyOverrides": {
+          "Has Icon": false,
+          "Icon": "lucide/git-pull-request",
+          "Label": "Finish",
+          "type": "button-xs",
+          "color": "running",
+          "intensity": "ghost"
+        },
+        "resolvedStyles": {
+          "fills": [],
+          "strokes": [],
+          "textColor": {
+            "hex": "#94A3B8",
+            "tokenAlias": "state/running"
+          }
+        }
+      },
+      {
+        "id": "I278:1549;276:433",
+        "name": "icon",
+        "path": [
+          "state=pr-open",
+          "action",
+          "Pill",
+          "icon"
+        ],
+        "mainComponentSetId": "199:106",
+        "variantOverrides": null,
+        "componentPropertyOverrides": {},
+        "resolvedStyles": {
+          "fills": [],
+          "strokes": [],
+          "textColor": null
+        }
+      },
+      {
+        "id": "281:188",
+        "name": "Pill",
+        "path": [
+          "state=error",
+          "state-slot",
+          "Pill"
+        ],
+        "mainComponentSetId": "272:120",
+        "variantOverrides": "type=pill, color=error, intensity=mid",
+        "componentPropertyOverrides": {
+          "Has Icon": true,
+          "Icon": "lucide/circle",
+          "Label": "Error",
+          "type": "pill",
+          "color": "error",
+          "intensity": "mid"
+        },
+        "resolvedStyles": {
+          "fills": [
+            {
+              "hex": "#262031",
+              "tokenAlias": "red-1050",
+              "opacity": 1
+            }
+          ],
+          "strokes": [
+            {
+              "hex": "#EF4444",
+              "tokenAlias": "red/500",
+              "opacity": 1
+            }
+          ],
+          "textColor": {
+            "hex": "#F87171",
+            "tokenAlias": "state/error"
+          }
+        }
+      },
+      {
+        "id": "I281:188;276:379",
+        "name": "icon",
+        "path": [
+          "state=error",
+          "state-slot",
+          "Pill",
+          "icon"
+        ],
+        "mainComponentSetId": "277:120",
+        "variantOverrides": null,
+        "componentPropertyOverrides": {},
+        "resolvedStyles": {
+          "fills": [],
+          "strokes": [],
+          "textColor": null
+        }
+      },
+      {
+        "id": "212:1018",
+        "name": "lucide/hash",
+        "path": [
+          "state=error",
+          "content",
+          "metadata",
+          "KAN-23",
+          "lucide/hash"
+        ],
+        "mainComponentSetId": "202:130",
+        "variantOverrides": null,
+        "componentPropertyOverrides": {},
+        "resolvedStyles": {
+          "fills": [],
+          "strokes": [],
+          "textColor": null
+        }
+      },
+      {
+        "id": "212:1022",
+        "name": "lucide/clock",
+        "path": [
+          "state=error",
+          "content",
+          "metadata",
+          "21m 04s",
+          "lucide/clock"
+        ],
+        "mainComponentSetId": "202:132",
+        "variantOverrides": null,
+        "componentPropertyOverrides": {},
+        "resolvedStyles": {
+          "fills": [],
+          "strokes": [],
+          "textColor": null
+        }
+      },
+      {
+        "id": "212:1026",
+        "name": "lucide/currency",
+        "path": [
+          "state=error",
+          "content",
+          "metadata",
+          "48.2k",
+          "lucide/currency"
+        ],
+        "mainComponentSetId": "202:134",
+        "variantOverrides": null,
+        "componentPropertyOverrides": {},
+        "resolvedStyles": {
+          "fills": [],
+          "strokes": [],
+          "textColor": null
+        }
+      },
+      {
+        "id": "278:1553",
+        "name": "Pill",
+        "path": [
+          "state=error",
+          "action",
+          "Pill"
+        ],
+        "mainComponentSetId": "272:120",
+        "variantOverrides": "type=button-xs, color=error, intensity=mid",
+        "componentPropertyOverrides": {
+          "Has Icon": false,
+          "Icon": "lucide/git-pull-request",
+          "Label": "Inspect",
+          "type": "button-xs",
+          "color": "error",
+          "intensity": "mid"
+        },
+        "resolvedStyles": {
+          "fills": [
+            {
+              "hex": "#262031",
+              "tokenAlias": "red-1050",
+              "opacity": 1
+            }
+          ],
+          "strokes": [
+            {
+              "hex": "#EF4444",
+              "tokenAlias": "red/500",
+              "opacity": 1
+            }
+          ],
+          "textColor": {
+            "hex": "#F87171",
+            "tokenAlias": "state/error"
+          }
+        }
+      },
+      {
+        "id": "I278:1553;276:475",
+        "name": "icon",
+        "path": [
+          "state=error",
+          "action",
+          "Pill",
+          "icon"
+        ],
+        "mainComponentSetId": "199:106",
+        "variantOverrides": null,
+        "componentPropertyOverrides": {},
+        "resolvedStyles": {
+          "fills": [],
+          "strokes": [],
+          "textColor": null
+        }
+      },
+      {
+        "id": "281:196",
+        "name": "Pill",
+        "path": [
+          "state=finished",
+          "state-slot",
+          "Pill"
+        ],
+        "mainComponentSetId": "272:120",
+        "variantOverrides": "type=pill, color=finished, intensity=mid",
+        "componentPropertyOverrides": {
+          "Icon": "lucide/circle",
+          "Has Icon": true,
+          "Label": "Finished",
+          "type": "pill",
+          "color": "finished",
+          "intensity": "mid"
+        },
+        "resolvedStyles": {
+          "fills": [
+            {
+              "hex": "#0F2733",
+              "tokenAlias": "emerald-1050",
+              "opacity": 1
+            }
+          ],
+          "strokes": [
+            {
+              "hex": "#059669",
+              "tokenAlias": "emerald/600",
+              "opacity": 1
+            }
+          ],
+          "textColor": {
+            "hex": "#10B981",
+            "tokenAlias": "state/finished"
+          }
+        }
+      },
+      {
+        "id": "I281:196;276:391",
+        "name": "icon",
+        "path": [
+          "state=finished",
+          "state-slot",
+          "Pill",
+          "icon"
+        ],
+        "mainComponentSetId": "277:120",
+        "variantOverrides": null,
+        "componentPropertyOverrides": {},
+        "resolvedStyles": {
+          "fills": [],
+          "strokes": [],
+          "textColor": null
+        }
+      },
+      {
+        "id": "212:1038",
+        "name": "lucide/hash",
+        "path": [
+          "state=finished",
+          "content",
+          "metadata",
+          "KAN-23",
+          "lucide/hash"
+        ],
+        "mainComponentSetId": "202:130",
+        "variantOverrides": null,
+        "componentPropertyOverrides": {},
+        "resolvedStyles": {
+          "fills": [],
+          "strokes": [],
+          "textColor": null
+        }
+      },
+      {
+        "id": "212:1042",
+        "name": "lucide/clock",
+        "path": [
+          "state=finished",
+          "content",
+          "metadata",
+          "21m 04s",
+          "lucide/clock"
+        ],
+        "mainComponentSetId": "202:132",
+        "variantOverrides": null,
+        "componentPropertyOverrides": {},
+        "resolvedStyles": {
+          "fills": [],
+          "strokes": [],
+          "textColor": null
+        }
+      },
+      {
+        "id": "212:1046",
+        "name": "lucide/currency",
+        "path": [
+          "state=finished",
+          "content",
+          "metadata",
+          "48.2k",
+          "lucide/currency"
+        ],
+        "mainComponentSetId": "202:134",
+        "variantOverrides": null,
+        "componentPropertyOverrides": {},
+        "resolvedStyles": {
+          "fills": [],
+          "strokes": [],
+          "textColor": null
+        }
+      }
+    ],
     "depthWarnings": []
   }
 }

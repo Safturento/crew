@@ -25695,7 +25695,7 @@
                                           "textAlignHorizontal": "LEFT",
                                           "textAlignVertical": "TOP",
                                           "letterSpacing": 0,
-                                          "lineHeightPx": 14.0625,
+                                          "lineHeightPx": 15.744000434875488,
                                           "lineHeightPercent": 100,
                                           "lineHeightUnit": "INTRINSIC_%"
                                         },
@@ -26553,7 +26553,7 @@
                                           "textAlignHorizontal": "LEFT",
                                           "textAlignVertical": "TOP",
                                           "letterSpacing": 0,
-                                          "lineHeightPx": 14.0625,
+                                          "lineHeightPx": 15.744000434875488,
                                           "lineHeightPercent": 100,
                                           "lineHeightUnit": "INTRINSIC_%"
                                         },
@@ -27411,7 +27411,7 @@
                                           "textAlignHorizontal": "LEFT",
                                           "textAlignVertical": "TOP",
                                           "letterSpacing": 0,
-                                          "lineHeightPx": 14.0625,
+                                          "lineHeightPx": 15.744000434875488,
                                           "lineHeightPercent": 100,
                                           "lineHeightUnit": "INTRINSIC_%"
                                         },
@@ -28269,7 +28269,7 @@
                                           "textAlignHorizontal": "LEFT",
                                           "textAlignVertical": "TOP",
                                           "letterSpacing": 0,
-                                          "lineHeightPx": 14.0625,
+                                          "lineHeightPx": 15.744000434875488,
                                           "lineHeightPercent": 100,
                                           "lineHeightUnit": "INTRINSIC_%"
                                         },
@@ -29127,7 +29127,7 @@
                                           "textAlignHorizontal": "LEFT",
                                           "textAlignVertical": "TOP",
                                           "letterSpacing": 0,
-                                          "lineHeightPx": 14.0625,
+                                          "lineHeightPx": 15.744000434875488,
                                           "lineHeightPercent": 100,
                                           "lineHeightUnit": "INTRINSIC_%"
                                         },
@@ -30639,7 +30639,7 @@
   },
   "enrichment": {
     "source": "plugin-api",
-    "capturedAt": "2026-05-18T14:28:34.474Z",
+    "capturedAt": "2026-05-18T15:53:13.480Z",
     "componentProperties": null,
     "mainComponent": null,
     "boundVariables": [

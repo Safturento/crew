@@ -4227,11 +4227,280 @@
   },
   "enrichment": {
     "source": "plugin-api",
-    "capturedAt": "2026-05-18T14:36:23.799Z",
+    "capturedAt": "2026-05-18T15:25:34.925Z",
     "componentProperties": null,
     "mainComponent": null,
     "boundVariables": [],
-    "componentInstances": [],
+    "componentInstances": [
+      {
+        "id": "243:106",
+        "name": "brandmark",
+        "path": [
+          "Active Tab=agents",
+          "left",
+          "logo",
+          "brandmark"
+        ],
+        "mainComponentSetId": "220:211",
+        "variantOverrides": null,
+        "componentPropertyOverrides": {},
+        "resolvedStyles": {
+          "fills": [
+            {
+              "hex": null,
+              "tokenAlias": null,
+              "opacity": 1
+            }
+          ],
+          "strokes": [],
+          "textColor": null
+        }
+      },
+      {
+        "id": "332:230",
+        "name": "count-pill",
+        "path": [
+          "Active Tab=agents",
+          "right",
+          "attention",
+          "count-pill"
+        ],
+        "mainComponentSetId": "272:120",
+        "variantOverrides": "type=pill, color=waiting, intensity=mid",
+        "componentPropertyOverrides": {
+          "Icon": "lucide/git-pull-request",
+          "Has Icon": false,
+          "Label": "3",
+          "type": "pill",
+          "color": "waiting",
+          "intensity": "mid"
+        },
+        "resolvedStyles": {
+          "fills": [
+            {
+              "hex": "#26282A",
+              "tokenAlias": "amber-1050",
+              "opacity": 1
+            }
+          ],
+          "strokes": [
+            {
+              "hex": "#F59E0B",
+              "tokenAlias": "amber/500",
+              "opacity": 1
+            }
+          ],
+          "textColor": {
+            "hex": "#FBBF24",
+            "tokenAlias": "state/waiting"
+          }
+        }
+      },
+      {
+        "id": "I332:230;276:355",
+        "name": "icon",
+        "path": [
+          "Active Tab=agents",
+          "right",
+          "attention",
+          "count-pill",
+          "icon"
+        ],
+        "mainComponentSetId": "199:106",
+        "variantOverrides": null,
+        "componentPropertyOverrides": {},
+        "resolvedStyles": {
+          "fills": [],
+          "strokes": [],
+          "textColor": null
+        }
+      },
+      {
+        "id": "278:1622",
+        "name": "Pill",
+        "path": [
+          "Active Tab=agents",
+          "right",
+          "Pill"
+        ],
+        "mainComponentSetId": "272:120",
+        "variantOverrides": "type=button-sm, color=idle, intensity=loud",
+        "componentPropertyOverrides": {
+          "Icon": "lucide/plus",
+          "Has Icon": true,
+          "Label": "New Run",
+          "type": "button-sm",
+          "color": "idle",
+          "intensity": "loud"
+        },
+        "resolvedStyles": {
+          "fills": [
+            {
+              "hex": "#64748B",
+              "tokenAlias": "state/idle",
+              "opacity": 1
+            }
+          ],
+          "strokes": [],
+          "textColor": {
+            "hex": "#020617",
+            "tokenAlias": "state/foreground"
+          }
+        }
+      },
+      {
+        "id": "I278:1622;276:514",
+        "name": "icon",
+        "path": [
+          "Active Tab=agents",
+          "right",
+          "Pill",
+          "icon"
+        ],
+        "mainComponentSetId": "243:102",
+        "variantOverrides": null,
+        "componentPropertyOverrides": {},
+        "resolvedStyles": {
+          "fills": [],
+          "strokes": [],
+          "textColor": null
+        }
+      },
+      {
+        "id": "245:114",
+        "name": "brandmark",
+        "path": [
+          "Active Tab=projects",
+          "left",
+          "logo",
+          "brandmark"
+        ],
+        "mainComponentSetId": "220:211",
+        "variantOverrides": null,
+        "componentPropertyOverrides": {},
+        "resolvedStyles": {
+          "fills": [
+            {
+              "hex": null,
+              "tokenAlias": null,
+              "opacity": 1
+            }
+          ],
+          "strokes": [],
+          "textColor": null
+        }
+      },
+      {
+        "id": "332:235",
+        "name": "count-pill",
+        "path": [
+          "Active Tab=projects",
+          "right",
+          "attention",
+          "count-pill"
+        ],
+        "mainComponentSetId": "272:120",
+        "variantOverrides": "type=pill, color=waiting, intensity=mid",
+        "componentPropertyOverrides": {
+          "Icon": "lucide/git-pull-request",
+          "Has Icon": false,
+          "Label": "3",
+          "type": "pill",
+          "color": "waiting",
+          "intensity": "mid"
+        },
+        "resolvedStyles": {
+          "fills": [
+            {
+              "hex": "#26282A",
+              "tokenAlias": "amber-1050",
+              "opacity": 1
+            }
+          ],
+          "strokes": [
+            {
+              "hex": "#F59E0B",
+              "tokenAlias": "amber/500",
+              "opacity": 1
+            }
+          ],
+          "textColor": {
+            "hex": "#FBBF24",
+            "tokenAlias": "state/waiting"
+          }
+        }
+      },
+      {
+        "id": "I332:235;276:355",
+        "name": "icon",
+        "path": [
+          "Active Tab=projects",
+          "right",
+          "attention",
+          "count-pill",
+          "icon"
+        ],
+        "mainComponentSetId": "199:106",
+        "variantOverrides": null,
+        "componentPropertyOverrides": {},
+        "resolvedStyles": {
+          "fills": [],
+          "strokes": [],
+          "textColor": null
+        }
+      },
+      {
+        "id": "278:1627",
+        "name": "Pill",
+        "path": [
+          "Active Tab=projects",
+          "right",
+          "Pill"
+        ],
+        "mainComponentSetId": "272:120",
+        "variantOverrides": "type=button-sm, color=idle, intensity=loud",
+        "componentPropertyOverrides": {
+          "Icon": "lucide/plus",
+          "Has Icon": true,
+          "Label": "New Run",
+          "type": "button-sm",
+          "color": "idle",
+          "intensity": "loud"
+        },
+        "resolvedStyles": {
+          "fills": [
+            {
+              "hex": "#64748B",
+              "tokenAlias": "state/idle",
+              "opacity": 1
+            }
+          ],
+          "strokes": [],
+          "textColor": {
+            "hex": "#020617",
+            "tokenAlias": "state/foreground"
+          }
+        }
+      },
+      {
+        "id": "I278:1627;276:514",
+        "name": "icon",
+        "path": [
+          "Active Tab=projects",
+          "right",
+          "Pill",
+          "icon"
+        ],
+        "mainComponentSetId": "243:102",
+        "variantOverrides": null,
+        "componentPropertyOverrides": {},
+        "resolvedStyles": {
+          "fills": [],
+          "strokes": [],
+          "textColor": null
+        }
+      }
+    ],
     "depthWarnings": []
   }
 }
