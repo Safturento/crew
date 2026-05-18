@@ -1,4 +1,5 @@
 {
+  "skillListingBudgetFraction": 0.02,
   "sandbox": {
     "enabled": true,
     "allowUnsandboxedCommands": false,
@@ -50,6 +51,15 @@
           {
             "type": "command",
             "command": "./packages/cli/scripts/hooks/doc-parity-gate.sh"
+          }
+        ]
+      },
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "./packages/cli/scripts/hooks/update-config-reminder.sh"
           }
         ]
       }
