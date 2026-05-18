@@ -275,3 +275,13 @@ If even one regression slips through after this spec ships, it surfaces either (
 
 B2 (chrome integration) extends the same anchor philosophy with rendered-screenshot capture: the screenshot becomes a third axis of comparison (against the composite's resolvedStyles, plus the composite's screenshot, plus the live browser render). This spec ships independently.
 ```
+
+## Validation run (post-implementation)
+
+Re-ran the `visual-fidelity-check` skill against PR #193's frozen diff (`docs/superpowers/skill-fixtures/visual-fidelity-check/crew-135/pr-193.patch` applied to `origin/main`) using the refreshed crew-135 fixture (CREW-152 Task 4.1) and the render-frame-anchored workflow. All three known regressions surfaced at HIGH severity, each attributed to the correct file and diffed against the correct render composite:
+
+- **New Run variant mismatch** — diff target `composites/245-133.json` (TopNav). Code `color="white" / size="xs"` vs render `color=idle / type=button-sm` (`variantOverrides: "type=button-sm, color=idle, intensity=loud"`). Two variant axes wrong; fix is `color="idle" size="sm"`.
+- **State-badge icons per state** — diff target `composites/212-910.json` (AgentRow). Render shows `Icon: "lucide/circle"` for every one of the 7 state variants; code's `StateIcon` helper emits `Loader2 / AlertCircle / GitPullRequest / AlertOctagon / Check` for 6 of 7 states (only `idle`'s `Circle` matches).
+- **Spurious `border` on `intensity="loud"`** — `lib/pill-variants.ts:57-58` (`case 'loud'`) emits `border ${t.solidBorder}`; every `intensity=loud` nested instance in the snapshot (New Run in `245-133.json`, Provide input in `212-910.json`) has `resolvedStyles.strokes: []`.
+
+No regression slipped through low/medium and none was attributed to the wrong file. One verification gap surfaced as a spec input: `TopNav.figma.tsx` and `AgentRow.figma.tsx` still `figma.connect(...)` to the archived `DsA7QuEa2WthDATkksd1Bq` DS file (skeleton nodes `21-2` / `21-9`), not the live render composites in `9FeJPriqdsdA4n9R5Xsrr8` (`245:133` / `212:910`). The composites were resolved by component name via `snapshot/index.json`; a strictly-mechanical Step 4.1 (`.figma.tsx` URL → `composites/<id>.json`) would have hit missing-data instead. Captured in `docs/followups.md` — the Code Connect pointers should be re-aimed at the live composites so Step 4 needs no name-fallback. Re-dispatching CREW-135 against this combined fixture + skill is the next live verification.
