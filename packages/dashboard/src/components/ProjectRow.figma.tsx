@@ -4,7 +4,7 @@ import { ProjectRow } from '@/components/ProjectRow';
 
 figma.connect(
   ProjectRow,
-  'https://www.figma.com/design/DsA7QuEa2WthDATkksd1Bq/Crew-Design-System?node-id=79-14',
+  'https://www.figma.com/design/9FeJPriqdsdA4n9R5Xsrr8/Crew?node-id=220-300',
   {
     example: () => (
       <ProjectRow

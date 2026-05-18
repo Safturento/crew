@@ -4,7 +4,7 @@ import { ProjectSection } from '@/components/ProjectSection';
 
 figma.connect(
   ProjectSection,
-  'https://www.figma.com/design/DsA7QuEa2WthDATkksd1Bq/Crew-Design-System?node-id=21-21',
+  'https://www.figma.com/design/9FeJPriqdsdA4n9R5Xsrr8/Crew?node-id=220-224',
   {
     example: () => (
       <ProjectSection

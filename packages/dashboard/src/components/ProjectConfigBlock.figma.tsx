@@ -12,7 +12,7 @@ const sampleConfig: ProjectConfig = {
 
 figma.connect(
   ProjectConfigBlock,
-  'https://www.figma.com/design/DsA7QuEa2WthDATkksd1Bq/Crew-Design-System?node-id=83-15',
+  'https://www.figma.com/design/9FeJPriqdsdA4n9R5Xsrr8/Crew?node-id=220-318',
   {
     example: () => <ProjectConfigBlock config={sampleConfig} />,
   },
