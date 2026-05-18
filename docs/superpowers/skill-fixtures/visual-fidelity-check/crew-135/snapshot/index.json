@@ -1,0 +1,254 @@
+{
+  "220:211": {
+    "name": "BrandMark",
+    "type": "COMPONENT",
+    "page": "Composites",
+    "screenshotPath": "composites/220-211.png",
+    "metadataPath": "composites/220-211.json"
+  },
+  "220:224": {
+    "name": "ProjectSection",
+    "type": "COMPONENT",
+    "page": "Composites",
+    "screenshotPath": "composites/220-224.png",
+    "metadataPath": "composites/220-224.json"
+  },
+  "220:227": {
+    "name": "AgentsList",
+    "type": "COMPONENT",
+    "page": "Composites",
+    "screenshotPath": "composites/220-227.png",
+    "metadataPath": "composites/220-227.json"
+  },
+  "220:246": {
+    "name": "AgentBody",
+    "type": "COMPONENT",
+    "page": "Composites",
+    "screenshotPath": "composites/220-246.png",
+    "metadataPath": "composites/220-246.json"
+  },
+  "220:257": {
+    "name": "StateHistoryBar",
+    "type": "COMPONENT",
+    "page": "Composites",
+    "screenshotPath": "composites/220-257.png",
+    "metadataPath": "composites/220-257.json"
+  },
+  "220:287": {
+    "name": "TokenTable",
+    "type": "COMPONENT",
+    "page": "Composites",
+    "screenshotPath": "composites/220-287.png",
+    "metadataPath": "composites/220-287.json"
+  },
+  "220:292": {
+    "name": "ViewportFrame",
+    "type": "COMPONENT",
+    "page": "Composites",
+    "screenshotPath": "composites/220-292.png",
+    "metadataPath": "composites/220-292.json"
+  },
+  "220:300": {
+    "name": "ProjectRow",
+    "type": "COMPONENT",
+    "page": "Composites",
+    "screenshotPath": "composites/220-300.png",
+    "metadataPath": "composites/220-300.json"
+  },
+  "220:315": {
+    "name": "ProjectHeader",
+    "type": "COMPONENT",
+    "page": "Composites",
+    "screenshotPath": "composites/220-315.png",
+    "metadataPath": "composites/220-315.json"
+  },
+  "220:318": {
+    "name": "ProjectConfigBlock",
+    "type": "COMPONENT",
+    "page": "Composites",
+    "screenshotPath": "composites/220-318.png",
+    "metadataPath": "composites/220-318.json"
+  },
+  "212:910": {
+    "name": "AgentRow",
+    "type": "COMPONENT_SET",
+    "page": "Composites",
+    "screenshotPath": "composites/212-910.png",
+    "metadataPath": "composites/212-910.json"
+  },
+  "245:133": {
+    "name": "TopNav",
+    "type": "COMPONENT_SET",
+    "page": "Composites",
+    "screenshotPath": "composites/245-133.png",
+    "metadataPath": "composites/245-133.json"
+  },
+  "272:120": {
+    "name": "Pill",
+    "type": "COMPONENT_SET",
+    "page": "Composites",
+    "screenshotPath": "composites/272-120.png",
+    "metadataPath": "composites/272-120.json"
+  },
+  "318:230": {
+    "name": "Input",
+    "type": "COMPONENT",
+    "page": "Composites",
+    "screenshotPath": "composites/318-230.png",
+    "metadataPath": "composites/318-230.json"
+  },
+  "335:242": {
+    "name": "Switch",
+    "type": "COMPONENT_SET",
+    "page": "Composites",
+    "screenshotPath": "composites/335-242.png",
+    "metadataPath": "composites/335-242.json"
+  },
+  "337:234": {
+    "name": "FormField",
+    "type": "COMPONENT",
+    "page": "Composites",
+    "screenshotPath": "composites/337-234.png",
+    "metadataPath": "composites/337-234.json"
+  },
+  "350:236": {
+    "name": "ModalSelectionRow",
+    "type": "COMPONENT",
+    "page": "Composites",
+    "screenshotPath": "composites/350-236.png",
+    "metadataPath": "composites/350-236.json"
+  },
+  "355:238": {
+    "name": "Modal",
+    "type": "COMPONENT",
+    "page": "Composites",
+    "screenshotPath": "composites/355-238.png",
+    "metadataPath": "composites/355-238.json"
+  },
+  "362:2209": {
+    "name": "RegisterModalContent",
+    "type": "COMPONENT",
+    "page": "Composites",
+    "screenshotPath": "composites/362-2209.png",
+    "metadataPath": "composites/362-2209.json"
+  },
+  "362:2210": {
+    "name": "EditModalContent",
+    "type": "COMPONENT",
+    "page": "Composites",
+    "screenshotPath": "composites/362-2210.png",
+    "metadataPath": "composites/362-2210.json"
+  },
+  "362:2211": {
+    "name": "NewRunStep1Content",
+    "type": "COMPONENT",
+    "page": "Composites",
+    "screenshotPath": "composites/362-2211.png",
+    "metadataPath": "composites/362-2211.json"
+  },
+  "362:2212": {
+    "name": "NewRunStep2Content",
+    "type": "COMPONENT",
+    "page": "Composites",
+    "screenshotPath": "composites/362-2212.png",
+    "metadataPath": "composites/362-2212.json"
+  },
+  "362:2213": {
+    "name": "NewRunStep3Content",
+    "type": "COMPONENT",
+    "page": "Composites",
+    "screenshotPath": "composites/362-2213.png",
+    "metadataPath": "composites/362-2213.json"
+  },
+  "373:413": {
+    "name": "AlertModal",
+    "type": "COMPONENT",
+    "page": "Composites",
+    "screenshotPath": "composites/373-413.png",
+    "metadataPath": "composites/373-413.json"
+  },
+  "378:462": {
+    "name": "Stepper",
+    "type": "COMPONENT_SET",
+    "page": "Composites",
+    "screenshotPath": "composites/378-462.png",
+    "metadataPath": "composites/378-462.json"
+  },
+  "1:2": {
+    "name": "Agents List (/)",
+    "type": "FRAME",
+    "page": "Dashboard Screens",
+    "screenshotPath": "screens/1-2.png",
+    "metadataPath": "screens/1-2.json"
+  },
+  "1:378": {
+    "name": "Agents List (/) - Agent Drawer Open",
+    "type": "FRAME",
+    "page": "Dashboard Screens",
+    "screenshotPath": "screens/1-378.png",
+    "metadataPath": "screens/1-378.json"
+  },
+  "1:1900": {
+    "name": "Agent Page (/agent/XXX-123/full)",
+    "type": "FRAME",
+    "page": "Dashboard Screens",
+    "screenshotPath": "screens/1-1900.png",
+    "metadataPath": "screens/1-1900.json"
+  },
+  "1:2334": {
+    "name": "Projects list (/projects)",
+    "type": "FRAME",
+    "page": "Dashboard Screens",
+    "screenshotPath": "screens/1-2334.png",
+    "metadataPath": "screens/1-2334.json"
+  },
+  "1:2443": {
+    "name": "Project Page (/projects/project-name)",
+    "type": "FRAME",
+    "page": "Dashboard Screens",
+    "screenshotPath": "screens/1-2443.png",
+    "metadataPath": "screens/1-2443.json"
+  },
+  "1:2649": {
+    "name": "Projects page (/projects) - Register modal",
+    "type": "FRAME",
+    "page": "Dashboard Screens",
+    "screenshotPath": "screens/1-2649.png",
+    "metadataPath": "screens/1-2649.json"
+  },
+  "1:2980": {
+    "name": "New Run modal - 1. Select Project",
+    "type": "FRAME",
+    "page": "Dashboard Screens",
+    "screenshotPath": "screens/1-2980.png",
+    "metadataPath": "screens/1-2980.json"
+  },
+  "1:3418": {
+    "name": "New Run modal - 2. Select Ticket",
+    "type": "FRAME",
+    "page": "Dashboard Screens",
+    "screenshotPath": "screens/1-3418.png",
+    "metadataPath": "screens/1-3418.json"
+  },
+  "9:2": {
+    "name": "New Run modal - 3. Confirm",
+    "type": "FRAME",
+    "page": "Dashboard Screens",
+    "screenshotPath": "screens/9-2.png",
+    "metadataPath": "screens/9-2.json"
+  },
+  "18:2": {
+    "name": "Project Page - Delete confirmation modal",
+    "type": "FRAME",
+    "page": "Dashboard Screens",
+    "screenshotPath": "screens/18-2.png",
+    "metadataPath": "screens/18-2.json"
+  },
+  "23:2": {
+    "name": "Project Page - Edit project modal",
+    "type": "FRAME",
+    "page": "Dashboard Screens",
+    "screenshotPath": "screens/23-2.png",
+    "metadataPath": "screens/23-2.json"
+  }
+}

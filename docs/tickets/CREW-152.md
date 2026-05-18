@@ -20,6 +20,7 @@ regressions at HIGH severity.
 ## Decisions
 
 - **Snapshot is a committed artifact** — CREW-173 made `.crew/figma-snapshot/` git-tracked. No `crew figma-snapshot` run; the worktree already has it. Copy (`cp`, not `mv`) into the fixture.
+- **Fixture includes `snapshot/index.json` + `meta.json`** — Task 4.1 copies `composites/` _and_ the snapshot-root `index.json` (node → `{name, paths}` map) and `meta.json`, so the fixture is self-contained. The render-frame Step 4 name-resolution path (caller → composite by component name) depends on `index.json`; a `composites/`-only copy would force resolution against the out-of-fixture `.crew/` artifact.
 - **Validation uses the frozen patch, not a live CREW-135 branch** — that branch was overwritten by a fresh re-dispatch; `pr-193.patch` is the frozen source of #193's regressions.
 
 ## Open questions
