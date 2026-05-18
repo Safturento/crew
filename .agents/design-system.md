@@ -1,7 +1,7 @@
 ---
 name: design-system
 description: Crew Figma DS + token bindings + StateBadge contract
-last_updated: 2026-05-14
+last_updated: 2026-05-17
 covers:
   - 'packages/dashboard/src/components/**'
   - '*.figma.tsx'
@@ -211,6 +211,10 @@ Dashboard ships **dark-only** as default (`<html class="dark">` is set at app bo
 
 ## Verification
 
-Visual-fidelity verification for UI work is governed by the user-level **`visual-fidelity-check`** skill. The skill triggers on changes under `packages/dashboard/src/components/` or new/modified `.figma.tsx` files when the project has a `[visual_fidelity]` block in its crew TOML.
+Visual-fidelity verification for UI work is governed by the user-level **`visual-fidelity-check`** skill. It triggers on changes under `packages/dashboard/src/components/` or new/modified `.figma.tsx` files when the project has a `[visual_fidelity]` block in its crew TOML, and compares rendered UI against the **committed Figma snapshot** at `.crew/figma-snapshot/` — a git-tracked artifact, not regenerated per dispatch.
 
-**Crew is not yet dogfooding `visual-fidelity-check`.** `~/.config/crew/projects/crew.toml` has no `[visual_fidelity]` block, so dispatched agents working on crew's own dashboard don't get the skill auto-injected and aren't gated by the `visual-fidelity-pr-gate` PreToolUse hook. Wire it up when the dashboard's Figma counterpart is sufficiently stable to be a useful ground truth (currently blocked on the Pill-consolidation rebuild — see `docs/followups.md`).
+### After a Crew DS design change — refresh the snapshot
+
+The committed snapshot goes stale the moment the Crew Figma design changes without it being regenerated. **After any change to the Crew Figma design system this session — a `use_figma` write, a `figma-generate-*` run, a component or token edit — run the `figma-snapshot-refresh` skill before that design feeds into code implementation.** It re-exports, re-enriches, and commits `.crew/figma-snapshot/`, keeping it in step with the Figma file `visual-fidelity-check` validates against.
+
+`figma-snapshot-refresh` is the producer gate (after design, before code); `visual-fidelity-check` is the consumer gate (after code). `crew figma-snapshot --check` reports on demand whether the committed snapshot has gone stale.
