@@ -70,7 +70,6 @@ describe('runFigmaSnapshot', () => {
             dashboard_url: 'http://localhost:3000',
             snapshot_path: '.crew/figma-snapshot',
             code_connect_glob: '**/*.figma.tsx',
-            skip_snapshot: false,
           },
         },
         log: (msg) => logs.push(msg),
@@ -106,7 +105,6 @@ describe('runFigmaSnapshot', () => {
             dashboard_url: 'http://x',
             snapshot_path: '.crew/figma-snapshot',
             code_connect_glob: '**/*.figma.tsx',
-            skip_snapshot: false,
           },
         },
         log: () => {},
@@ -121,25 +119,4 @@ describe('runFigmaSnapshot', () => {
     }
   });
 
-  it('returns ok=true as a no-op when skip_snapshot=true', async () => {
-    const result = await runFigmaSnapshot(
-      makeDeps({
-        config: {
-          ...baseConfig,
-          visual_fidelity: {
-            figma_file_key: 'X',
-            figma_pages: ['P1'],
-            component_dir: 'src',
-            dashboard_url: 'http://x',
-            snapshot_path: '.crew/figma-snapshot',
-            code_connect_glob: '**/*.figma.tsx',
-            skip_snapshot: true,
-          },
-        },
-      }),
-    );
-    expect(result.ok).toBe(true);
-    expect(result.nodesExported).toBe(0);
-    expect(result.reason).toMatch(/skip_snapshot/);
-  });
 });

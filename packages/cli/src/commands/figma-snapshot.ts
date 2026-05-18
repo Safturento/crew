@@ -32,10 +32,6 @@ export async function runFigmaSnapshot(deps: FigmaSnapshotDeps): Promise<FigmaSn
       reason: `no [visual_fidelity] block in project config '${deps.config.name}' — nothing to snapshot`,
     };
   }
-  if (vf.skip_snapshot) {
-    return { ok: true, reason: 'skip_snapshot=true; no-op', nodesExported: 0 };
-  }
-
   const outDir = join(deps.worktree, vf.snapshot_path);
 
   try {

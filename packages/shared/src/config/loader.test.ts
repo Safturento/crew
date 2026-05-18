@@ -450,11 +450,10 @@ dashboard_url = "http://localhost:3000"
       dashboard_url: 'http://localhost:3000',
       snapshot_path: '.crew/figma-snapshot',
       code_connect_glob: '**/*.figma.tsx',
-      skip_snapshot: false,
     });
   });
 
-  it('parses overridden snapshot_path, code_connect_glob, and skip_snapshot', () => {
+  it('parses overridden snapshot_path and code_connect_glob', () => {
     const raw = `${baseToml}
 [visual_fidelity]
 figma_file_key = "X"
@@ -463,12 +462,10 @@ component_dir = "src"
 dashboard_url = "http://x"
 snapshot_path = ".cache/snap"
 code_connect_glob = "**/*.connect.tsx"
-skip_snapshot = true
 `;
     const config = parseProjectConfig(raw);
     expect(config.visual_fidelity?.snapshot_path).toBe('.cache/snap');
     expect(config.visual_fidelity?.code_connect_glob).toBe('**/*.connect.tsx');
-    expect(config.visual_fidelity?.skip_snapshot).toBe(true);
   });
 
   it('rejects missing figma_file_key', () => {
