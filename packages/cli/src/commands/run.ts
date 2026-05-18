@@ -48,7 +48,6 @@ import {
   requireGhToken,
   requireWorktreeAvailable,
   runLogPathFor,
-  runPreDispatchFigmaSnapshot,
   runSkillInjection,
   runVerifyGate,
   streamTranscript,
@@ -361,16 +360,6 @@ export async function runRun(key: string, opts: RunOptions): Promise<never> {
     if (writeResult.existed) {
       console.warn(pc.yellow('  ! .mcp.json already existed in worktree — overwritten'));
     }
-  }
-
-  if (config.visual_fidelity) {
-    console.log(pc.dim('→ generating Figma snapshot for visual-fidelity verification…'));
-    await runPreDispatchFigmaSnapshot({
-      worktree,
-      config,
-      log: (msg) => console.log(pc.dim(`    ${msg}`)),
-      warn: (msg) => console.warn(pc.yellow(`  ! ${msg}`)),
-    });
   }
 
   console.log(pc.dim('→ injecting dispatcher-managed skills into the worktree…'));
