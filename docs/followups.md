@@ -536,6 +536,8 @@ The structural fix for the first two is the Plugin-API snapshot work captured in
 
 **Why noticed:** During the 2026-05-12 design session, after building the new composites. Files are intentionally not published per [[project_code_connect_skipped]] (Pro tier limitation), so they're inert docs — but they're docs that the future `design-with-figma` skill will read to translate Figma instances → React code. Stale URLs / removed component references mean wrong or missing translations.
 
+**Update 2026-05-18 (CREW-152 validation run):** the staleness now has a sharper, load-bearing impact. The render-frame-anchored `visual-fidelity-check` workflow Step 4.1 resolves a caller's render composite via its `.figma.tsx` `figma.connect(...)` URL. With `TopNav.figma.tsx` / `AgentRow.figma.tsx` still pointed at `DsA7QuEa2WthDATkksd1Bq` skeleton nodes `21-2` / `21-9`, a strictly-mechanical Step 4 resolves to `composites/21-2.json` (absent) and surfaces HIGH missing-data instead of the real encoding error. The CREW-152 validation run worked around it by resolving the composite by component name via the fixture's `snapshot/index.json` (`"TopNav"` → `245:133`). Re-aiming these pointers at the live composites (`9FeJPriqdsdA4n9R5Xsrr8` `245:133` / `212:910`) removes the need for the name-fallback. Naturally folds into this followup's "incremental" approach as CREW-135's components are touched.
+
 **Anchors:**
 
 - `packages/dashboard/src/components/` — 21 `.figma.tsx` files, all need URL + node ID updates

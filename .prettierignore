@@ -7,3 +7,11 @@ packages/cli/src/lib/prompts/templates/
 # component anatomy, source/ is reference-only JSX. Reformatting bloats diffs
 # and conflicts with future hand-off updates.
 docs/designs/
+
+# Skill-fixture snapshots are generated artifacts — verbatim copies of the
+# `crew figma-snapshot` output (see docs/superpowers/skill-fixtures/). They must
+# byte-match the generator so the visual-fidelity-check skill reads identical
+# data from the fixture and from `.crew/figma-snapshot/`. Prettier reformatting
+# the JSON would diverge the copy from its source. Hand-authored fixture files
+# (description.md, expected/, runs/) outside snapshot/ stay checked.
+docs/superpowers/skill-fixtures/**/snapshot/
