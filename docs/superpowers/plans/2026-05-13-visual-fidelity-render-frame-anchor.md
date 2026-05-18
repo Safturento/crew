@@ -15,9 +15,11 @@
 > **Phase 1 is obsolete** — CREW-169 already moved the skill to `<repo>/.claude/skills/`, and
 > the injection module Phase 1 planned to delete is load-bearing; CREW-149 was closed obsolete.
 > **Phase 3** now also carries the chrome live-DOM Step 5 rewrite (Tasks 3.4–3.5, absorbed from
-> CREW-146 PR B). **Phase 4** is re-scoped — Task 4.1 consumes the host-side pre-dispatch
-> snapshot and Task 4.2 applies the frozen patch `crew-135/pr-193.patch`, not a live
-> `CREW-135` branch. See `docs/superpowers/specs/2026-05-16-visual-fidelity-closeout-design.md`.
+> CREW-146 PR B). **Phase 4** — Task 4.1 copies the committed `.crew/figma-snapshot/` artifact
+> into the crew-135 fixture (post-CREW-173 it is git-tracked, not generated pre-dispatch);
+> Task 4.2 applies the frozen patch `crew-135/pr-193.patch`, not a live `CREW-135` branch.
+> See `docs/superpowers/specs/2026-05-16-visual-fidelity-closeout-design.md` and
+> `docs/superpowers/specs/2026-05-17-figma-snapshot-committed-artifact-design.md`.
 
 ---
 
@@ -1008,22 +1010,24 @@ Confirm CI passes.
 
 Refresh the crew DS fixture with the new enrichment data, then verify the skill catches PR #193's regressions.
 
-### Task 4.1: Refresh the crew DS fixture from the pre-dispatch snapshot
+### Task 4.1: Refresh the crew DS fixture from the committed snapshot
 
-> **RE-SCOPED 2026-05-16 (close-out).** Originally ran `crew figma-snapshot` directly. A
-> dispatched `crew run CREW-152` agent has no `FIGMA_API_TOKEN` and cannot. Instead it consumes
-> the snapshot `crew run` already generated **host-side, pre-dispatch**, into
-> `<worktree>/.crew/figma-snapshot/`. See `docs/superpowers/specs/2026-05-16-visual-fidelity-closeout-design.md`.
+> **RECONCILED 2026-05-18 (post-CREW-173).** CREW-173 made `.crew/figma-snapshot/` a
+> **committed, git-tracked artifact** — `crew run` no longer generates it pre-dispatch. A
+> `crew run CREW-152` worktree is a checkout of the repo, so the snapshot is already present,
+> current, and enriched. This task copies that committed snapshot into the crew-135 fixture; it
+> neither generates a snapshot nor needs `FIGMA_API_TOKEN`. See
+> `docs/superpowers/specs/2026-05-17-figma-snapshot-committed-artifact-design.md`.
 
 **Files:**
 - Replace: contents of `docs/superpowers/skill-fixtures/visual-fidelity-check/crew-135/snapshot/composites/`
 
-- [ ] **Step 1: Confirm the pre-dispatch snapshot landed**
+- [ ] **Step 1: Confirm the committed snapshot is present**
 
-`crew run` on a `[visual_fidelity]` project generates the Figma snapshot into the worktree before the agent starts. Confirm it:
+`.crew/figma-snapshot/` is committed to the repo (CREW-173), so the worktree already has it — there is no generation step.
 
 Run: `ls .crew/figma-snapshot/composites/`
-Expected: a list of `<id>.json` files. If the directory is missing or empty, the pre-dispatch snapshot failed (the dispatching host likely lacks `FIGMA_API_TOKEN`) — surface as a blocker. Do **not** run `crew figma-snapshot` yourself; the dispatched agent has no token.
+Expected: a list of `<id>.json` files. If the directory is missing or empty, surface as a blocker (it should never be, post-CREW-173). Do **not** run `crew figma-snapshot` yourself — it needs `FIGMA_API_TOKEN`, which a dispatched agent does not have; regenerating the snapshot is the interactive `figma-snapshot-refresh` skill's job, done before dispatch.
 
 - [ ] **Step 2: Confirm the snapshot covers the Composites page**
 
