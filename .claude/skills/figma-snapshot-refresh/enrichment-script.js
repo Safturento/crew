@@ -122,12 +122,15 @@ async function walkChildren(node, depth, path, instances, depthWarnings) {
   // Leaf node types (VECTOR, TEXT, RECTANGLE, ...) have no `children` property,
   // and the Plugin API throws on access — check existence with `in` first.
   if (!node || !('children' in node) || !Array.isArray(node.children)) return;
-  // A COMPONENT_SET is a variant matrix — a component *definition*, not a
-  // composition. Walking its variants emits one redundant entry per nested
-  // instance (the 320-variant Pill set alone produced ~78 KB of near-identical
-  // icon entries). Variant identity and per-variant paints already live in the
-  // REST `raw` field; real instance *usage* is captured on the screen nodes.
-  if (node.type === 'COMPONENT_SET') return;
+  // A COMPONENT_SET's children are its variants. A *huge* primitive matrix
+  // (the 320-variant Pill set) would emit ~78 KB of redundant near-identical
+  // nested-icon entries — skip those. But a *small* variant set (AgentRow with
+  // 7 state variants, TopNav, ...) is a composite whose variants are renders:
+  // visual-fidelity-check anchors on these as render composites and diffs
+  // callers against their nested instances, so they MUST be walked. Variant
+  // count is the discriminator — every composite-set is single/low-double
+  // digit; the Pill primitive set (320) is the lone outlier.
+  if (node.type === 'COMPONENT_SET' && node.children.length > 50) return;
   for (const child of node.children) {
     const childPath = path.concat([child.name || child.id]);
     if (child.type === 'INSTANCE') {
