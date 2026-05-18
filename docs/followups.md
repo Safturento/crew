@@ -7,6 +7,7 @@ Format: see the user-level `~/.claude/CLAUDE.md` "Followup detection" section.
 ## Contents
 
 - [Active](#active)
+  - [2026-05-18 — visual-fidelity-check: per-fixture snapshot copy vs committed artifact, plus Step 4 path-vocab drift](#2026-05-18--visual-fidelity-check-per-fixture-snapshot-copy-vs-committed-artifact-plus-step-4-path-vocab-drift)
   - [2026-05-17 — figma-snapshot `index.json` `screenshotPath` can point at a PNG that was never written](#2026-05-17--figma-snapshot-indexjson-screenshotpath-can-point-at-a-png-that-was-never-written)
   - [2026-05-16 — figma-snapshot `resolvedStylesFor` text-color heuristic picks the first TEXT descendant](#2026-05-16--figma-snapshot-resolvedstylesfor-text-color-heuristic-picks-the-first-text-descendant)
   - [2026-05-15 — `crew fix-pr` does not refresh `.mcp.json` — `[visual_fidelity]` chrome wiring goes stale on resume](#2026-05-15--crew-fix-pr-does-not-refresh-mcpjson--visual_fidelity-chrome-wiring-goes-stale-on-resume)
@@ -92,6 +93,23 @@ Format: see the user-level `~/.claude/CLAUDE.md` "Followup detection" section.
 - [Abandoned](#abandoned)
 
 ## Active
+
+### 2026-05-18 — visual-fidelity-check: per-fixture snapshot copy vs committed artifact, plus Step 4 path-vocab drift
+
+**What:** Two coupled gaps in the `visual-fidelity-check` skill-fixture model, surfaced while reconciling render-frame Phase 4 against CREW-173.
+
+1. The skill-fixture system (`docs/superpowers/skill-fixtures/visual-fidelity-check/<case>/`) gives each calibration case its own frozen `snapshot/composites/`. CREW-173 made `.crew/figma-snapshot/` a committed, git-tracked artifact — so a per-fixture snapshot copy now duplicates data git already versions (a calibration replay can pin the commit whose snapshot it wants). Decide: keep the per-fixture `snapshot/` copy, or have calibration runs read the committed `.crew/figma-snapshot/` directly and drop the copy.
+2. The merged skill content (`workflow.md` Step 4, `SKILL.md` "Before authoring specs" section) locates composites at `<fixture-root>/snapshot/composites/<safe-id>.json`. But Step 0 records `snapshotPath` (not `fixture-root`), and Steps 2/5 use `<snapshotPath>`. In a normal (non-calibration) gate run there is no fixture — composites live at `<snapshotPath>/composites/`. Step 4's path is therefore wrong for the common case; the two coincide only inside a calibration run.
+
+**Why noticed:** Reconciling render-frame Phase 4 / CREW-152 against CREW-173's committed-artifact model. Task 4.1 copies the snapshot into `crew-135/snapshot/composites/` — that copy step raised "is the per-fixture snapshot still needed?", and grepping the skill for the path then surfaced the `<fixture-root>` vs `<snapshotPath>` inconsistency.
+
+**Anchors:** `.claude/skills/visual-fidelity-check/workflow.md` (Step 0 config keys; Step 4 ~line 74); `.claude/skills/visual-fidelity-check/SKILL.md` ("Before authoring specs" section); `docs/superpowers/skill-fixtures/visual-fidelity-check/` (`_template/`, `crew-135/`); render-frame plan Task 4.1; CREW-173.
+
+**What's been considered:** The Phase 4 reconciliation deliberately kept the per-fixture snapshot copy — minimal change to make CREW-152 dispatchable, not a fixture-model redesign. The two gaps are coupled: if calibration runs read the committed `.crew/figma-snapshot/` directly, the skill collapses to one path vocabulary (`<snapshotPath>`), `<fixture-root>` disappears entirely, and Phase 4 Task 4.1's copy step also drops.
+
+**Shape of work:** One design pass on the fixture model, then a small interactive skill-content edit unifying `workflow.md` Step 4 + `SKILL.md` on `<snapshotPath>`. Not a `crew run` (edits `.claude/skills/`).
+
+**Open questions:** Does any calibration case need a snapshot *different* from crew's current committed one (a historical snapshot, or a non-crew project's)? If yes, the per-fixture copy stays justified; if every case just wants "crew's snapshot at commit X", git already provides that.
 
 ### 2026-05-17 — figma-snapshot `index.json` `screenshotPath` can point at a PNG that was never written
 
