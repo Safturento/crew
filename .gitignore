@@ -70,3 +70,6 @@ desktop.ini
 # crew commits its own skills under .claude/skills/ — keep that tracked.
 .claude/*
 !.claude/skills/
+# ...except `browsing`: injected per-dispatch from the superpowers-chrome
+# plugin cache by runSkillInjection, never committed (see .agents/dispatch.md).
+.claude/skills/browsing/
