@@ -29,6 +29,10 @@ design feeds into code. (`visual-fidelity-check` is the consumer gate, after cod
   enrichment (step 3) works only interactively, not in a headless dispatch.
 - `FIGMA_API_TOKEN` exported — the REST export and `--check` need it.
 - The `figma` plugin MCP available (`mcp__plugin_figma_figma__use_figma`).
+- The session sandbox must allow `api.figma.com` — `crew figma-snapshot` calls the
+  Figma REST API. crew's `.claude/settings.json` includes it; if `crew figma-snapshot`
+  fails with a network/proxy error, that domain is missing from the active sandbox
+  config (a settings change needs a session restart to take effect).
 
 ## Procedure
 
