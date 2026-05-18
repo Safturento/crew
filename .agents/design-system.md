@@ -1,6 +1,6 @@
 ---
 name: design-system
-description: Crew Figma DS + token bindings + StateBadge contract
+description: Crew Figma DS + token bindings + Pill primitive contract
 last_updated: 2026-05-18
 covers:
   - 'packages/dashboard/src/components/**'
@@ -117,7 +117,6 @@ Figma node IDs below are in the live consolidated file (`9FeJPriqdsdA4n9R5Xsrr8`
 | Composite            | Figma node       | Dashboard counterpart                                      |
 | -------------------- | ---------------- | ---------------------------------------------------------- |
 | `BrandMark`          | `220:211`        | `packages/dashboard/src/components/BrandMark.tsx`          |
-| `StateBadge` set     | `Pill` `272:120` | `packages/dashboard/src/components/StateBadge.tsx`         |
 | `TopNav`             | `245:133`        | `packages/dashboard/src/components/TopNav.tsx`             |
 | `AgentRow`           | `212:910`        | `packages/dashboard/src/components/AgentRow.tsx`           |
 | `ProjectSection`     | `220:224`        | `packages/dashboard/src/components/ProjectSection.tsx`     |
@@ -126,39 +125,37 @@ Figma node IDs below are in the live consolidated file (`9FeJPriqdsdA4n9R5Xsrr8`
 | `StateHistoryBar`    | `220:257`        | `packages/dashboard/src/components/StateHistoryBar.tsx`    |
 | `TokenTable`         | `220:287`        | `packages/dashboard/src/components/TokenTable.tsx`         |
 | `ViewportFrame`      | `220:292`        | `packages/dashboard/src/components/ViewportFrame.tsx`      |
-| `CountBadge`         | `Pill` `272:120` | `packages/dashboard/src/components/CountBadge.tsx`         |
 | `ProjectRow`         | `220:300`        | `packages/dashboard/src/components/ProjectRow.tsx`         |
 | `ProjectHeader`      | `220:315`        | `packages/dashboard/src/components/ProjectHeader.tsx`      |
 | `ProjectConfigBlock` | `220:318`        | `packages/dashboard/src/components/ProjectConfigBlock.tsx` |
 
-`StateBadge` / `CountBadge` have no standalone node in the consolidated file — both
-folded into the unified `Pill` set (`272:120`), so their `.figma.tsx` files still
-point at the archived DS file (see the blockquote below).
+`TopNav` and `AgentRow` resolve to component sets in the live file; the rest resolve to single components. `ErrorFallback` is the only un-built composite from the original Phase 4 inventory; it lands alongside the next fidelity ticket that surfaces a need.
 
-`StateBadge` and `CountBadge` publish as component sets (one variant per agent state); the `.figma.tsx` mappings bridge Figma's kebab `pr-open` to the dashboard's snake `pr_open` via `figma.enum`. The other twelve don't need that enum bridge (`TopNav` and `AgentRow` resolve to component sets in the live file, the rest to single components). `ErrorFallback` is the only un-built composite from the original Phase 4 inventory; it lands alongside the next fidelity ticket that surfaces a need.
-
-> **Figma-side Pill consolidation (2026-05-12) is only partially reflected in code.** The Figma DS merged `Button` / `StateBadge` / `CountBadge` / `TimelineTag` into a unified `Pill` component set (192 variants), and the Crew DS moved into the dashboard file. The dashboard code still ships separate components. CREW-175 re-aimed the twelve `.figma.tsx` files that have a name-matching node in the committed snapshot from the archived standalone DS file URL to the live consolidated file (`9FeJPriqdsdA4n9R5Xsrr8`); `StateBadge.figma.tsx` and `CountBadge.figma.tsx` still reference the archived URL because the consolidated snapshot has no `StateBadge`/`CountBadge` node to resolve against (both folded into `Pill`). See `docs/followups.md` for the remaining StateBadge/CountBadge mapping task and [`docs/rationale/design-system.md`](../docs/rationale/design-system.md#2026-05-12-figma-side-pill-consolidation) for the migration history.
+> **Figma-side Pill consolidation (2026-05-12) is now reconciled in code (CREW-135).** The Figma DS merged `Button` / `StateBadge` / `CountBadge` / `TimelineTag` into a unified `Pill` component set, and the Crew DS moved into the dashboard file. CREW-135 reconciled the dashboard code: an internal `PillBase` owns the shared anatomy, and `Button` / `Badge` / `Tag` (under `components/ui/`) wrap it. The standalone `StateBadge.tsx` and `CountBadge.tsx` composites are retired — every state pill and count pill is now a `Badge`. See [`docs/rationale/design-system.md`](../docs/rationale/design-system.md#2026-05-12-figma-side-pill-consolidation) for the migration history.
 
 ### `components/ui/` vs `components/<feature>/` split
 
-- `packages/dashboard/src/components/ui/` — **shadcn primitives only** (`button`, `badge`, `input`, `dialog`, `label`, `separator`, `form`). One file per primitive plus its `.figma.tsx` mapping. Don't put crew-specific composites here.
+- `packages/dashboard/src/components/ui/` — **shadcn primitives + DS primitives** (`button`, `badge`, `tag`, `input`, `dialog`, `label`, `separator`, `form`). One file per primitive plus its `.figma.tsx` mapping. `pill-base.tsx` is the one exception — an internal shared anatomy for `button` / `badge` / `tag`, never exported or imported outside those three; it has no `.figma.tsx`. Don't put crew-specific composites here.
 - `packages/dashboard/src/components/` (top level) — **Crew composites** that compose primitives + crew logic. `AgentRow`, `ProjectSection`, etc.
 
 This is the canonical shadcn convention; the `components.json` `aliases` block maps `ui → @/components/ui`.
 
-## StateBadge visual pattern
+## Pill visual pattern
 
-The canonical pill treatment. Figma `StateBadge` set has **21 variants** (7 states × 3 intensities); the dashboard's `StateBadge.tsx` mirrors the same axes via CVA.
+The canonical pill treatment. The Figma `Pill` component set (`272:120`) carries one anatomy across `type` (tag / pill / button-*), `color` (8), and `intensity` (4) axes. In code, the internal `PillBase` owns that anatomy; `Button` / `Badge` / `Tag` wrap it and supply their own static shape.
 
-| Intensity       | Bg fill              | Stroke               | Text                           | Dot         |
-| --------------- | -------------------- | -------------------- | ------------------------------ | ----------- |
-| `muted`         | transparent (0%)     | `state/X` at 40%     | `state/X` ✓                    | `state/X` ✓ |
-| `mid` (default) | `state/X` at **10%** | `state/X` at **30%** | `state/X` ✓                    | `state/X` ✓ |
-| `loud`          | `state/X` at 100%    | `state/X` at 100%    | `state/foreground` (slate/950) | `state/X` ✓ |
+| Intensity       | Bg fill            | Stroke                  | Text                          |
+| --------------- | ------------------ | ----------------------- | ----------------------------- |
+| `ghost`         | transparent        | none                    | `state/X`                     |
+| `muted`         | `state/X` dark bg  | none                    | `state/X`                     |
+| `mid` (default) | `state/X` dark bg  | `state/X` (1px)         | `state/X`                     |
+| `loud`          | `state/X` solid    | `state/X` (same as bg)  | `state/foreground` (slate/950) |
 
-**Code-Figma parity contract:** `STATE_CLASSES` in `packages/dashboard/src/data/state-meta.ts` defines `bg10` → `bg-state-X/10` (10% bg) and `border30` → `border-state-X/30` (30% border). When changing canonical opacities, update both the Figma variants AND `STATE_CLASSES` in code — same value in both places.
+**Code-Figma parity contract:** the surface classes come from `pillSurfaceClasses(color, intensity)` in `packages/dashboard/src/lib/pill-variants.ts`, which sources the per-state `text` / `bg` / `border` / `solidBg` / `solidBorder` Tailwind tokens from `STATE_CLASSES` in `packages/dashboard/src/data/state-meta.ts` (plus a `white` color for neutral CTAs). When changing canonical state colors, update both the Figma variants AND `STATE_CLASSES` — same value in both places.
 
-**Embedding rule:** when a composite needs a state pill, compose a real `StateBadge` instance — not a hand-built ellipse + text. Hand-built pills drift from canonical opacity tweaks and new state variants.
+**Icon slot:** the pill icon is a `ReactNode` `icon` prop (a leading slot mapped to Figma's `Icon` INSTANCE_SWAP), never a CSS-drawn dot. State badges pass `lucide/circle`; the badge's color, not its glyph, carries the state.
+
+**Embedding rule:** when a composite needs a state pill or count pill, compose a real `Badge` — not a hand-built ellipse + text. Hand-built pills drift from canonical color tweaks and new state variants.
 
 **Figma Plugin API gotcha:** `inst.fills = [...]` and `inst.strokes = [...]` on a fresh instance (created via `variant.createInstance()`) **do not inherit** the variant's opacity property — instances default to opacity 1.0 even when the variant has 0.10. Always force opacity explicitly after `createInstance()` / `swapComponent()`. `setBoundVariableForPaint` silently drops the input paint's opacity for the same reason. See `figma-design-system-propagation` skill Trap 1 for the workaround.
 
@@ -178,21 +175,22 @@ The decision is reversible — the file structure stays compatible with future p
 
 ### Existing Code Connect mappings
 
-These target Core's component nodes (file `UkPJj6vd7HMKcey7M0XF4N`), not Crew DS, because the screens file instances shadcn primitives directly from Core via the library link.
+`Button` / `Badge` / `Tag` map to the Crew consolidated file's unified `Pill` set (`272:120` in `9FeJPriqdsdA4n9R5Xsrr8`) — CREW-135. The remaining primitives still target Core's component nodes (file `UkPJj6vd7HMKcey7M0XF4N`), because the screens file instances those shadcn primitives directly from Core via the library link.
 
-| Code component       | Mapping file                                               | Figma component (Core)                  | Figma node id |
+| Code component       | Mapping file                                               | Figma component                         | Figma node id |
 | -------------------- | ---------------------------------------------------------- | --------------------------------------- | ------------- |
-| `Button`             | `packages/dashboard/src/components/ui/button.figma.tsx`    | `Buttons` set on Button page            | `73:3681`     |
-| `Badge`              | `packages/dashboard/src/components/ui/badge.figma.tsx`     | `Badge` set on Badge page               | `665:2024`    |
-| `Input`              | `packages/dashboard/src/components/ui/input.figma.tsx`     | `Default` set on Input page             | `520:3062`    |
-| `Dialog`             | `packages/dashboard/src/components/ui/dialog.figma.tsx`    | `Dialog` set on Dialog page             | `594:105`     |
-| `Label`              | `packages/dashboard/src/components/ui/label.figma.tsx`     | `Label` set on Label page               | `76:8617`     |
-| `Separator`          | `packages/dashboard/src/components/ui/separator.figma.tsx` | `Separator` component on Seperator page | `76:10202`    |
-| `FormItem` (form.\*) | `packages/dashboard/src/components/ui/form.figma.tsx`      | `Field` component on Field page         | `1188:5362`   |
+| `Button`             | `packages/dashboard/src/components/ui/button.figma.tsx`    | `Pill` set (Crew file)                  | `272:120`     |
+| `Badge`              | `packages/dashboard/src/components/ui/badge.figma.tsx`     | `Pill` set (Crew file)                  | `272:120`     |
+| `Tag`                | `packages/dashboard/src/components/ui/tag.figma.tsx`       | `Pill` set (Crew file)                  | `272:120`     |
+| `Input`              | `packages/dashboard/src/components/ui/input.figma.tsx`     | `Default` set on Input page (Core)      | `520:3062`    |
+| `Dialog`             | `packages/dashboard/src/components/ui/dialog.figma.tsx`    | `Dialog` set on Dialog page (Core)      | `594:105`     |
+| `Label`              | `packages/dashboard/src/components/ui/label.figma.tsx`     | `Label` set on Label page (Core)        | `76:8617`     |
+| `Separator`          | `packages/dashboard/src/components/ui/separator.figma.tsx` | `Separator` on Seperator page (Core)    | `76:10202`    |
+| `FormItem` (form.\*) | `packages/dashboard/src/components/ui/form.figma.tsx`      | `Field` component on Field page (Core)  | `1188:5362`   |
 
-### Button variant mapping caveat
+### Pill mapping — color × intensity × type
 
-The community kit conflates shadcn's `variant` and `size` axes into a single Figma `Type` enum (13 values: `primary`, `secondary`, `destructive`, `outline`, `hhost` (sic — upstream typo for `ghost`), `link`, `icon`, `with icon`, `loading`, `Size-small`, `Size-default`, `Size-large`, `Rounded`). The mapping reads `Type` twice — once into shadcn's `variant`, once into `size` — with every value covered in both, since unmapped Figma values silently render as `undefined`. The `hhost` typo is preserved so existing Figma instances don't break; we map it to shadcn `ghost` in code.
+`button.figma.tsx` / `badge.figma.tsx` / `tag.figma.tsx` map the `Pill` set's variant axes to the code contract: `color` (8 — Figma's kebab `pr-open` → code's snake `pr_open` via `figma.enum`), `intensity` (`ghost` / `muted` / `mid` / `loud`), and — for `Button` only — `type` → `size` (`button-xs|sm|default|lg` → `xs|sm|md|lg`). Each mapping also exposes the `Icon` INSTANCE_SWAP via `figma.instance('Icon')`. `Badge` and `Tag` pin `variant: { type: 'pill' }` / `{ type: 'tag' }` so the set resolves to the right anatomy. Code Connect is still not published (see above) — the `.figma.tsx` files stay as inert documentation.
 
 ### Skipped: text-content extraction
 
