@@ -1,9 +1,9 @@
 import { figma } from '@figma/code-connect';
 
-import { Badge } from '@/components/ui/badge';
+import { Tag } from '@/components/ui/tag';
 
-figma.connect(Badge, 'https://www.figma.com/design/9FeJPriqdsdA4n9R5Xsrr8/Crew?node-id=272-120', {
-  variant: { type: 'pill' },
+figma.connect(Tag, 'https://www.figma.com/design/9FeJPriqdsdA4n9R5Xsrr8/Crew?node-id=272-120', {
+  variant: { type: 'tag' },
   props: {
     label: figma.string('Label'),
     icon: figma.instance('Icon'),
@@ -25,8 +25,8 @@ figma.connect(Badge, 'https://www.figma.com/design/9FeJPriqdsdA4n9R5Xsrr8/Crew?n
     }),
   },
   example: ({ label, color, intensity, icon }) => (
-    <Badge color={color} intensity={intensity} icon={icon}>
+    <Tag color={color} intensity={intensity} icon={icon}>
       {label}
-    </Badge>
+    </Tag>
   ),
 });
