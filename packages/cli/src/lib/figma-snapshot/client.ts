@@ -89,6 +89,15 @@ export class FigmaRestClient {
   }
 
   /**
+   * Fetch only the file's version metadata via the `depth=1` endpoint —
+   * cheap (no full node tree, no image render). Used by `figma-snapshot --check`.
+   */
+  async getFileMeta(fileKey: string): Promise<{ version: string }> {
+    const res = await this.req<FigmaFileResponse>(`/files/${encodeURIComponent(fileKey)}?depth=1`);
+    return { version: res.version };
+  }
+
+  /**
    * Fetch render URLs for `nodeIds`. The ids are chunked into batches of
    * {@link IMAGE_BATCH_SIZE} and requested sequentially — a large id list
    * never produces a single oversized request. A batch that hits Figma's
