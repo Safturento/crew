@@ -18,6 +18,7 @@ export interface FigmaNode {
 
 export interface FigmaFileResponse {
   document: FigmaNode;
+  version: string;
   components?: Record<string, unknown>;
   componentSets?: Record<string, unknown>;
   styles?: Record<string, unknown>;
