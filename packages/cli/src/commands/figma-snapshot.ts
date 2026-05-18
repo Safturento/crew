@@ -5,17 +5,8 @@ import {
   FigmaRestClient,
   discoverProjectConfig,
   emitSnapshot,
-  enrichSnapshotWithPluginApi,
-  type EnrichSnapshotResult,
   type ProjectConfig,
 } from '../lib/index.js';
-
-export interface FigmaSnapshotEnrichArgs {
-  snapshotDir: string;
-  fileKey: string;
-  log: (msg: string) => void;
-  warn: (msg: string) => void;
-}
 
 export interface FigmaSnapshotDeps {
   worktree: string;
@@ -23,8 +14,6 @@ export interface FigmaSnapshotDeps {
   log: (msg: string) => void;
   clientFactory?: () => FigmaRestClient;
   fetchImage?: (url: string) => Promise<Buffer>;
-  /** Test seam — defaults to `enrichSnapshotWithPluginApi`. */
-  enrich?: (args: FigmaSnapshotEnrichArgs) => Promise<EnrichSnapshotResult>;
 }
 
 export interface FigmaSnapshotResult {
@@ -32,7 +21,6 @@ export interface FigmaSnapshotResult {
   reason?: string;
   nodesExported?: number;
   outDir?: string;
-  enrichment?: EnrichSnapshotResult;
 }
 
 export async function runFigmaSnapshot(deps: FigmaSnapshotDeps): Promise<FigmaSnapshotResult> {
@@ -61,15 +49,7 @@ export async function runFigmaSnapshot(deps: FigmaSnapshotDeps): Promise<FigmaSn
     });
     deps.log(`exported ${nodesExported} nodes`);
 
-    const enrichRunner = deps.enrich ?? enrichSnapshotWithPluginApi;
-    const enrichment = await enrichRunner({
-      snapshotDir: outDir,
-      fileKey: vf.figma_file_key,
-      log: deps.log,
-      warn: (msg) => deps.log(msg),
-    });
-
-    return { ok: true, nodesExported, outDir, enrichment };
+    return { ok: true, nodesExported, outDir };
   } catch (err) {
     return { ok: false, reason: (err as Error).message };
   }
