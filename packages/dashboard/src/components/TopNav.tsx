@@ -53,7 +53,7 @@ export function TopNav({ route, attentionCount, onClearAttention, onNewRun }: To
         <Button
           color="idle"
           intensity="loud"
-          size="xs"
+          size="sm"
           icon={<Plus aria-hidden />}
           onClick={onNewRun}
           className="font-semibold"

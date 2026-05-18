@@ -1,13 +1,5 @@
 import { useEffect, useState } from 'react';
-import {
-  AlertCircle,
-  AlertOctagon,
-  ArrowUpRight,
-  Check,
-  Circle,
-  GitPullRequest,
-  Loader2,
-} from 'lucide-react';
+import { ArrowUpRight, Circle, GitPullRequest } from 'lucide-react';
 
 import { formatDuration } from '../format/duration.js';
 import { formatTokens } from '../format/tokens.js';
@@ -79,7 +71,7 @@ function AgentHeader({ detail, mode }: { detail: AgentDetail; mode: AgentBodyMod
           aria-label={meta.label}
           color={detail.state}
           intensity="mid"
-          icon={<StateIcon state={detail.state} />}
+          icon={<StateIcon />}
         >
           {meta.label}
         </Badge>
@@ -124,23 +116,10 @@ function AgentHeader({ detail, mode }: { detail: AgentDetail; mode: AgentBodyMod
   );
 }
 
-function StateIcon({ state }: { state: AgentState }) {
-  switch (state) {
-    case 'running':
-    case 'initializing':
-      return <Loader2 className="animate-spin" aria-hidden />;
-    case 'waiting':
-      return <AlertCircle aria-hidden />;
-    case 'pr_open':
-      return <GitPullRequest aria-hidden />;
-    case 'error':
-      return <AlertOctagon aria-hidden />;
-    case 'finished':
-      return <Check aria-hidden />;
-    case 'idle':
-    default:
-      return <Circle aria-hidden />;
-  }
+// Every state-badge instance in the Figma Pill set uses `lucide/circle` as its
+// Icon INSTANCE_SWAP — the badge's color, not its glyph, carries the state.
+function StateIcon() {
+  return <Circle aria-hidden />;
 }
 
 function WorktreePathLink({ path }: { path: string }) {

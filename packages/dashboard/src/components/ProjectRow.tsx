@@ -23,7 +23,7 @@ export function ProjectRow({ project }: ProjectRowProps) {
       <span className="truncate font-mono text-xs text-muted-foreground">{project.branch}</span>
       <span className="truncate font-mono text-xs text-muted-foreground">{project.jiraKey}</span>
       {project.activeCount > 0 ? (
-        <Badge color="initializing" intensity="mid">
+        <Badge color="initializing" intensity="muted">
           {project.activeCount}
         </Badge>
       ) : (

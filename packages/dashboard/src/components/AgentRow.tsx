@@ -1,16 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { MouseEvent, ReactNode } from 'react';
 import { cva } from 'class-variance-authority';
-import {
-  AlertCircle,
-  AlertOctagon,
-  ArrowRight,
-  Check,
-  Circle,
-  GitPullRequest,
-  Loader2,
-  Play,
-} from 'lucide-react';
+import { Circle, GitPullRequest } from 'lucide-react';
 
 import type { Agent, AgentState } from '../data/types.js';
 import { STATE_CLASSES, STATE_META } from '../data/state-meta.js';
@@ -79,7 +70,7 @@ export function AgentRow({ agent, onSelect, onAction }: AgentRowProps) {
         aria-label={meta.label}
         color={agent.state}
         intensity="mid"
-        icon={<StateIcon state={agent.state} />}
+        icon={<StateIcon />}
       >
         {meta.label}
       </Badge>
@@ -96,23 +87,10 @@ export function AgentRow({ agent, onSelect, onAction }: AgentRowProps) {
   );
 }
 
-function StateIcon({ state }: { state: AgentState }) {
-  switch (state) {
-    case 'running':
-    case 'initializing':
-      return <Loader2 className="animate-spin" aria-hidden />;
-    case 'waiting':
-      return <AlertCircle aria-hidden />;
-    case 'pr_open':
-      return <GitPullRequest aria-hidden />;
-    case 'error':
-      return <AlertOctagon aria-hidden />;
-    case 'finished':
-      return <Check aria-hidden />;
-    case 'idle':
-    default:
-      return <Circle aria-hidden />;
-  }
+// Every state-badge instance in the Figma Pill set uses `lucide/circle` as its
+// Icon INSTANCE_SWAP — the badge's color, not its glyph, carries the state.
+function StateIcon() {
+  return <Circle aria-hidden />;
 }
 
 function QuickActions({
@@ -132,13 +110,7 @@ function QuickActions({
     case 'idle':
       return (
         <QaGroup>
-          <Button
-            color="running"
-            intensity="mid"
-            size="xs"
-            icon={<Play aria-hidden />}
-            onClick={fire('resume')}
-          >
+          <Button color="running" intensity="mid" size="xs" onClick={fire('resume')}>
             Resume
           </Button>
           <Button color="running" intensity="ghost" size="xs" onClick={fire('finish')}>
@@ -153,7 +125,6 @@ function QuickActions({
             color="waiting"
             intensity="loud"
             size="xs"
-            icon={<ArrowRight aria-hidden />}
             onClick={fire('provide-input')}
           >
             Provide input
@@ -182,13 +153,7 @@ function QuickActions({
     case 'error':
       return (
         <SingleAction>
-          <Button
-            color="error"
-            intensity="loud"
-            size="xs"
-            icon={<AlertCircle aria-hidden />}
-            onClick={fire('inspect')}
-          >
+          <Button color="error" intensity="mid" size="xs" onClick={fire('inspect')}>
             Inspect
           </Button>
         </SingleAction>

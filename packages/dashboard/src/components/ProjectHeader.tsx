@@ -20,7 +20,7 @@ export function ProjectHeader({ name, configPath }: ProjectHeaderProps) {
       </div>
       <div className="flex shrink-0 items-center gap-2">
         <Button
-          color="white"
+          color="running"
           intensity="mid"
           size="sm"
           onClick={() => {
@@ -31,7 +31,7 @@ export function ProjectHeader({ name, configPath }: ProjectHeaderProps) {
         </Button>
         <Button
           color="error"
-          intensity="loud"
+          intensity="mid"
           size="sm"
           onClick={() => {
             /* TODO (Epic 4): wire to Remove modal */

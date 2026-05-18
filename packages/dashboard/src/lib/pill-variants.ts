@@ -37,11 +37,13 @@ const PILL_TOKENS: Record<PillColor, PillTokens> = {
   ...STATE_PILL_TOKENS,
   white: {
     text: 'text-foreground',
-    textOnSolid: 'text-slate-950',
+    // Figma's `white/loud` pill resolves to zinc/50 bg + zinc/950 text — not
+    // pure white / slate-950. Other colors keep slate-950 text on their solids.
+    textOnSolid: 'text-zinc-950',
     bg: 'bg-white/5',
     border: 'border-white/10',
-    solidBg: 'bg-white',
-    solidBorder: 'border-white',
+    solidBg: 'bg-zinc-50',
+    solidBorder: 'border-zinc-50',
   },
 };
 
