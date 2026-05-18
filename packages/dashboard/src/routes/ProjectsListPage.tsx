@@ -14,14 +14,15 @@ export function ProjectsListPage({ projects }: ProjectsListPageProps) {
       <div className="mb-6 flex items-center justify-between gap-4">
         <h1 className="text-2xl font-semibold tracking-tight text-foreground">Projects</h1>
         <Button
-          variant="outline"
+          color="white"
+          intensity="mid"
           size="xs"
+          icon={<Plus aria-hidden />}
           onClick={() => {
             /* Register modal lands in Epic 4 (project ops) */
           }}
-          className="border-white/10 text-muted-foreground hover:bg-popover"
         >
-          <Plus aria-hidden /> Register project
+          Register project
         </Button>
       </div>
       <ProjectsTable projects={projects} />
