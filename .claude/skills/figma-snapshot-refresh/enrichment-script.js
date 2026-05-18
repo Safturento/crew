@@ -119,13 +119,21 @@ async function walkChildren(node, depth, path, instances, depthWarnings) {
     depthWarnings.push({ depthExceeded: true, depth: depth, atNodeId: node.id, atName: node.name });
     return;
   }
-  if (!node || !Array.isArray(node.children)) return;
+  // Leaf node types (VECTOR, TEXT, RECTANGLE, ...) have no `children` property,
+  // and the Plugin API throws on access — check existence with `in` first.
+  if (!node || !('children' in node) || !Array.isArray(node.children)) return;
+  // A COMPONENT_SET is a variant matrix — a component *definition*, not a
+  // composition. Walking its variants emits one redundant entry per nested
+  // instance (the 320-variant Pill set alone produced ~78 KB of near-identical
+  // icon entries). Variant identity and per-variant paints already live in the
+  // REST `raw` field; real instance *usage* is captured on the screen nodes.
+  if (node.type === 'COMPONENT_SET') return;
   for (const child of node.children) {
     const childPath = path.concat([child.name || child.id]);
     if (child.type === 'INSTANCE') {
       instances.push(await instanceEntry(child, childPath));
     }
-    if (Array.isArray(child.children) && child.children.length > 0) {
+    if ('children' in child && Array.isArray(child.children) && child.children.length > 0) {
       await walkChildren(child, depth + 1, childPath, instances, depthWarnings);
     }
   }

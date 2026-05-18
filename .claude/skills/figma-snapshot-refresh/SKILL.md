@@ -47,8 +47,17 @@ design feeds into code. (`visual-fidelity-check` is the consumer gate, after cod
   `.crew/figma-snapshot/index.json`). Invoke the `figma-use` skill (mandatory
   before any `use_figma` call), then call `mcp__plugin_figma_figma__use_figma`
   with the contents of `enrichment-script.js` (this skill's directory) —
-  substitute `<NODE_IDS_JSON>` with the JSON array of node IDs, and pass the
+  substitute `<NODE_IDS_JSON>` with a JSON array of node IDs, and pass the
   project's `figma_file_key`. The script returns `{ nodeId: enrichmentObject }`.
+
+  **Batch the calls.** The `use_figma` tool result is truncated at ~20 KB, and
+  a full crew snapshot enriches to well over that. Split the node IDs into
+  batches sized so each result stays under ~20 KB (≈5–8 nodes is typical) and
+  call `use_figma` once per batch — merging each batch (step 4) before fetching
+  the next, so only one batch sits in context at a time. To size batches
+  precisely, first run a sizing probe: the same script with the final line
+  changed to `out[id] = JSON.stringify(enrichment).length;` returns one byte
+  count per node in a single small response.
 
 - [ ] **4. Merge.** For each returned entry, add its enrichment object as a
   top-level `enrichment` field on that node's per-node JSON file (path is in
