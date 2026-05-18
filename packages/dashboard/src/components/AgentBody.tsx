@@ -1,11 +1,21 @@
 import { useEffect, useState } from 'react';
+import {
+  AlertCircle,
+  AlertOctagon,
+  ArrowUpRight,
+  Check,
+  Circle,
+  GitPullRequest,
+  Loader2,
+} from 'lucide-react';
 
 import { formatDuration } from '../format/duration.js';
 import { formatTokens } from '../format/tokens.js';
 import { useAgent } from '../data/queries.js';
 import type { AgentDetail, AgentState } from '../data/types.js';
+import { STATE_META } from '../data/state-meta.js';
 import { RunMetrics } from './RunMetrics.js';
-import { StateBadge } from './StateBadge.js';
+import { Badge } from './ui/badge.js';
 import { Timeline } from './Timeline/Timeline.js';
 import { Button } from './ui/button.js';
 
@@ -52,6 +62,7 @@ function AgentHeader({ detail, mode }: { detail: AgentDetail; mode: AgentBodyMod
   const startedAt = detail.runs[0]?.started_at;
   const live = ACTIVE_STATES.has(detail.state);
   const runtime = useLiveRuntime(startedAt, live);
+  const meta = STATE_META[detail.state];
 
   return (
     <div
@@ -63,7 +74,15 @@ function AgentHeader({ detail, mode }: { detail: AgentDetail; mode: AgentBodyMod
           {detail.project}
         </span>
         <span className="font-mono text-xs text-muted-foreground">{detail.ticket_key}</span>
-        <StateBadge state={detail.state} />
+        <Badge
+          role="status"
+          aria-label={meta.label}
+          color={detail.state}
+          intensity="mid"
+          icon={<StateIcon state={detail.state} />}
+        >
+          {meta.label}
+        </Badge>
         {runtime && (
           <span className="font-mono text-xs tabular-nums text-muted-foreground">{runtime}</span>
         )}
@@ -77,20 +96,51 @@ function AgentHeader({ detail, mode }: { detail: AgentDetail; mode: AgentBodyMod
       <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
         <WorktreePathLink path={detail.worktree_path} />
         {detail.pr_url && (
-          <Button variant="outline" size="xs" asChild>
+          <Button
+            color="running"
+            intensity="mid"
+            size="xs"
+            icon={<GitPullRequest aria-hidden />}
+            asChild
+          >
             <a href={detail.pr_url} target="_blank" rel="noreferrer">
-              View PR ↗
+              View PR
             </a>
           </Button>
         )}
         {mode === 'drawer' && (
-          <Button variant="outline" size="xs" asChild>
-            <a href={`#/agent/${encodeURIComponent(detail.key)}/full`}>↗ Open as page</a>
+          <Button
+            color="running"
+            intensity="mid"
+            size="xs"
+            icon={<ArrowUpRight aria-hidden />}
+            asChild
+          >
+            <a href={`#/agent/${encodeURIComponent(detail.key)}/full`}>Open as page</a>
           </Button>
         )}
       </div>
     </div>
   );
+}
+
+function StateIcon({ state }: { state: AgentState }) {
+  switch (state) {
+    case 'running':
+    case 'initializing':
+      return <Loader2 className="animate-spin" aria-hidden />;
+    case 'waiting':
+      return <AlertCircle aria-hidden />;
+    case 'pr_open':
+      return <GitPullRequest aria-hidden />;
+    case 'error':
+      return <AlertOctagon aria-hidden />;
+    case 'finished':
+      return <Check aria-hidden />;
+    case 'idle':
+    default:
+      return <Circle aria-hidden />;
+  }
 }
 
 function WorktreePathLink({ path }: { path: string }) {
@@ -107,11 +157,12 @@ function WorktreePathLink({ path }: { path: string }) {
     <span className="inline-flex items-center gap-1.5 rounded-md border border-white/10 px-2 py-1">
       <span className="font-mono text-xs text-muted-foreground">{path}</span>
       <Button
-        variant="ghost"
+        color="running"
+        intensity="ghost"
         size="xs"
         onClick={onCopy}
         aria-label="Copy worktree path"
-        className="h-auto px-1 py-0 text-xs uppercase tracking-wide text-muted-foreground hover:text-foreground hover:bg-transparent"
+        className="h-auto px-1 py-0 text-xs uppercase tracking-wide"
       >
         {copied ? 'Copied' : 'Copy'}
       </Button>
