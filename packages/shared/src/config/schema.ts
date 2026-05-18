@@ -28,7 +28,6 @@ const visualFidelitySchema = z.object({
   dashboard_url: z.string().min(1),
   snapshot_path: z.string().min(1).default('.crew/figma-snapshot'),
   code_connect_glob: z.string().min(1).default('**/*.figma.tsx'),
-  skip_snapshot: z.boolean().default(false),
 });
 
 const brunoSmokeSchema = z.object({

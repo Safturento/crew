@@ -56,6 +56,19 @@ export async function emitSnapshot(opts: EmitSnapshotOptions): Promise<EmitSnaps
 
   await mkdir(opts.outDir, { recursive: true });
 
+  // meta.json sidecar — carries the Figma file version that `crew
+  // figma-snapshot --check` compares against to detect a stale snapshot.
+  // A sidecar, not an index.json field, so index.json's node-id consumers
+  // (visual-fidelity-check iterates its keys) are untouched.
+  await writeFile(
+    join(opts.outDir, 'meta.json'),
+    `${JSON.stringify(
+      { figmaFileVersion: file.version, capturedAt: new Date().toISOString() },
+      null,
+      2,
+    )}\n`,
+  );
+
   const pages = (file.document.children ?? []).filter(
     (c) => c.type === 'CANVAS' && opts.pages.includes(c.name),
   );

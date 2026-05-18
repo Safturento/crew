@@ -18,6 +18,7 @@ export interface FigmaNode {
 
 export interface FigmaFileResponse {
   document: FigmaNode;
+  version: string;
   components?: Record<string, unknown>;
   componentSets?: Record<string, unknown>;
   styles?: Record<string, unknown>;
@@ -85,6 +86,15 @@ export class FigmaRestClient {
 
   async getFile(fileKey: string): Promise<FigmaFileResponse> {
     return this.req<FigmaFileResponse>(`/files/${encodeURIComponent(fileKey)}`);
+  }
+
+  /**
+   * Fetch only the file's version metadata via the `depth=1` endpoint —
+   * cheap (no full node tree, no image render). Used by `figma-snapshot --check`.
+   */
+  async getFileMeta(fileKey: string): Promise<{ version: string }> {
+    const res = await this.req<FigmaFileResponse>(`/files/${encodeURIComponent(fileKey)}?depth=1`);
+    return { version: res.version };
   }
 
   /**

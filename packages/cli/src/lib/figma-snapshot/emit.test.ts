@@ -6,6 +6,7 @@ import { emitSnapshot } from './emit.js';
 import type { FigmaFileResponse, FigmaImagesResponse } from './client.js';
 
 const fileResponse: FigmaFileResponse = {
+  version: 'v-fixture',
   document: {
     id: '0:0',
     name: 'Document',
@@ -138,6 +139,7 @@ describe('emitSnapshot', () => {
   it('sanitizes non-whitelisted page names into safe slugs (no path separators or traversal)', async () => {
     const client = {
       getFile: vi.fn().mockResolvedValue({
+        version: 'v-fixture',
         document: {
           id: '0:0',
           name: 'Document',
@@ -232,6 +234,7 @@ describe('emitSnapshot', () => {
   it('still writes metadata when a node has no image URL (null in images response)', async () => {
     const client = {
       getFile: vi.fn().mockResolvedValue({
+        version: 'v-fixture',
         document: {
           id: '0:0',
           name: 'Document',
@@ -262,5 +265,24 @@ describe('emitSnapshot', () => {
     expect(fetchImage).not.toHaveBeenCalled();
     expect(existsSync(join(outDir, 'composites/2-0.png'))).toBe(false);
     expect(existsSync(join(outDir, 'composites/2-0.json'))).toBe(true);
+  });
+
+  it('writes meta.json with the Figma file version', async () => {
+    const client = {
+      getFile: vi.fn().mockResolvedValue({ ...fileResponse, version: 'v-test-123' }),
+      getImages: vi.fn().mockResolvedValue(imagesResponse),
+    };
+
+    await emitSnapshot({
+      fileKey: 'FILEKEY',
+      pages: ['Composites'],
+      outDir,
+      client: client as never,
+      fetchImage: async () => Buffer.from('x'),
+    });
+
+    const meta = JSON.parse(readFileSync(join(outDir, 'meta.json'), 'utf8'));
+    expect(meta.figmaFileVersion).toBe('v-test-123');
+    expect(typeof meta.capturedAt).toBe('string');
   });
 });

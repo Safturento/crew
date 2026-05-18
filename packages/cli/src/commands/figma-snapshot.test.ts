@@ -70,13 +70,11 @@ describe('runFigmaSnapshot', () => {
             dashboard_url: 'http://localhost:3000',
             snapshot_path: '.crew/figma-snapshot',
             code_connect_glob: '**/*.figma.tsx',
-            skip_snapshot: false,
           },
         },
         log: (msg) => logs.push(msg),
         clientFactory: () => client as never,
         fetchImage: async () => Buffer.from('fake'),
-        enrich: async () => ({ kind: 'skipped', reason: 'test stub' }),
       });
 
       expect(result.ok).toBe(true);
@@ -107,7 +105,6 @@ describe('runFigmaSnapshot', () => {
             dashboard_url: 'http://x',
             snapshot_path: '.crew/figma-snapshot',
             code_connect_glob: '**/*.figma.tsx',
-            skip_snapshot: false,
           },
         },
         log: () => {},
@@ -122,116 +119,4 @@ describe('runFigmaSnapshot', () => {
     }
   });
 
-  it('calls the enrichment runner after emitSnapshot and surfaces the result', async () => {
-    const worktree = mkdtempSync(join(tmpdir(), 'crew-fig-snap-enr-'));
-    try {
-      const client = {
-        getFile: vi.fn().mockResolvedValue({
-          document: {
-            id: '0:0',
-            name: 'Document',
-            type: 'DOCUMENT',
-            children: [
-              {
-                id: '212:630',
-                name: 'Composites',
-                type: 'CANVAS',
-                children: [{ id: '272:120', name: 'Pill', type: 'COMPONENT_SET', children: [] }],
-              },
-            ],
-          },
-        }),
-        getImages: vi.fn().mockResolvedValue({ images: { '272:120': 'https://cdn/x.png' } }),
-      };
-      const enrich = vi.fn().mockResolvedValue({ kind: 'ok', enrichedNodeCount: 1, errors: [] });
-
-      const result = await runFigmaSnapshot({
-        worktree,
-        config: {
-          ...baseConfig,
-          visual_fidelity: {
-            figma_file_key: 'FILEKEY',
-            figma_pages: ['Composites'],
-            component_dir: 'src',
-            dashboard_url: 'http://localhost:3000',
-            snapshot_path: '.crew/figma-snapshot',
-            code_connect_glob: '**/*.figma.tsx',
-            skip_snapshot: false,
-          },
-        },
-        log: () => {},
-        clientFactory: () => client as never,
-        fetchImage: async () => Buffer.from('fake'),
-        enrich: enrich as never,
-      });
-
-      expect(enrich).toHaveBeenCalledTimes(1);
-      expect(enrich.mock.calls[0][0].fileKey).toBe('FILEKEY');
-      expect(enrich.mock.calls[0][0].snapshotDir).toBe(join(worktree, '.crew/figma-snapshot'));
-      expect(result.ok).toBe(true);
-      expect(result.enrichment).toEqual({ kind: 'ok', enrichedNodeCount: 1, errors: [] });
-    } finally {
-      rmSync(worktree, { recursive: true, force: true });
-    }
-  });
-
-  it('completes ok with REST-only snapshot when enrichment skips', async () => {
-    const worktree = mkdtempSync(join(tmpdir(), 'crew-fig-snap-enr-skip-'));
-    try {
-      const client = {
-        getFile: vi.fn().mockResolvedValue({
-          document: { id: '0:0', name: 'Doc', type: 'DOCUMENT', children: [] },
-        }),
-        getImages: vi.fn().mockResolvedValue({ images: {} }),
-      };
-      const enrich = vi.fn().mockResolvedValue({ kind: 'skipped', reason: 'claude not on PATH' });
-
-      const result = await runFigmaSnapshot({
-        worktree,
-        config: {
-          ...baseConfig,
-          visual_fidelity: {
-            figma_file_key: 'FILEKEY',
-            figma_pages: ['Composites'],
-            component_dir: 'src',
-            dashboard_url: 'http://localhost:3000',
-            snapshot_path: '.crew/figma-snapshot',
-            code_connect_glob: '**/*.figma.tsx',
-            skip_snapshot: false,
-          },
-        },
-        log: () => {},
-        clientFactory: () => client as never,
-        fetchImage: async () => Buffer.from('fake'),
-        enrich: enrich as never,
-      });
-
-      expect(result.ok).toBe(true);
-      expect(result.enrichment).toEqual({ kind: 'skipped', reason: 'claude not on PATH' });
-    } finally {
-      rmSync(worktree, { recursive: true, force: true });
-    }
-  });
-
-  it('returns ok=true as a no-op when skip_snapshot=true', async () => {
-    const result = await runFigmaSnapshot(
-      makeDeps({
-        config: {
-          ...baseConfig,
-          visual_fidelity: {
-            figma_file_key: 'X',
-            figma_pages: ['P1'],
-            component_dir: 'src',
-            dashboard_url: 'http://x',
-            snapshot_path: '.crew/figma-snapshot',
-            code_connect_glob: '**/*.figma.tsx',
-            skip_snapshot: true,
-          },
-        },
-      }),
-    );
-    expect(result.ok).toBe(true);
-    expect(result.nodesExported).toBe(0);
-    expect(result.reason).toMatch(/skip_snapshot/);
-  });
 });

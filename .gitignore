@@ -57,8 +57,14 @@ desktop.ini
 *.sqlite-journal
 *.sqlite-wal
 
-# Crew's own runtime data dir (config + state)
-.crew/
+# Crew's own runtime data dir (config + state).
+# Pattern is `.crew/*`, not `.crew/`, so git still descends into the dir —
+# a directory-level ignore cannot be undone by a negation below it.
+.crew/*
+
+# The figma-snapshot is a committed artifact — keep it tracked.
+!.crew/figma-snapshot/
+!.crew/figma-snapshot/**
 
 # Per-repo agent sandbox config + secrets (gh-token, etc.)
 # crew commits its own skills under .claude/skills/ — keep that tracked.
