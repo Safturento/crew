@@ -4,7 +4,7 @@ import { AgentRow } from '@/components/AgentRow';
 
 figma.connect(
   AgentRow,
-  'https://www.figma.com/design/DsA7QuEa2WthDATkksd1Bq/Crew-Design-System?node-id=21-9',
+  'https://www.figma.com/design/9FeJPriqdsdA4n9R5Xsrr8/Crew?node-id=212-910',
   {
     // AgentRow's runtime state (state, key, ticketTitle, runtime, tokens) is a data
     // contract rather than a variant axis — we don't map per-state visual variants

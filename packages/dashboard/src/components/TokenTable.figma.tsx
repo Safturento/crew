@@ -4,7 +4,7 @@ import { TokenTable } from '@/components/TokenTable';
 
 figma.connect(
   TokenTable,
-  'https://www.figma.com/design/DsA7QuEa2WthDATkksd1Bq/Crew-Design-System?node-id=26-4',
+  'https://www.figma.com/design/9FeJPriqdsdA4n9R5Xsrr8/Crew?node-id=220-287',
   {
     // The Figma component is a single-variant skeleton with a representative header
     // (Tool / Tokens / Share) and three sample rows. Sort state, empty state, and

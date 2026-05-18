@@ -7,6 +7,8 @@ Format: see the user-level `~/.claude/CLAUDE.md` "Followup detection" section.
 ## Contents
 
 - [Active](#active)
+  - [2026-05-18 — `.agents/design-system.md` frontmatter URLs stale after Crew DS consolidation](#2026-05-18--agentsdesign-systemmd-frontmatter-urls-stale-after-crew-ds-consolidation)
+  - [2026-05-18 — StateBadge / CountBadge `.figma.tsx` still point at the archived DS file (Pill consolidation has no name-match)](#2026-05-18--statebadge--countbadge-figmatsx-still-point-at-the-archived-ds-file-pill-consolidation-has-no-name-match)
   - [2026-05-18 — visual-fidelity-check: per-fixture snapshot copy vs committed artifact, plus Step 4 path-vocab drift](#2026-05-18--visual-fidelity-check-per-fixture-snapshot-copy-vs-committed-artifact-plus-step-4-path-vocab-drift)
   - [2026-05-17 — figma-snapshot `index.json` `screenshotPath` can point at a PNG that was never written](#2026-05-17--figma-snapshot-indexjson-screenshotpath-can-point-at-a-png-that-was-never-written)
   - [2026-05-16 — figma-snapshot `resolvedStylesFor` text-color heuristic picks the first TEXT descendant](#2026-05-16--figma-snapshot-resolvedstylesfor-text-color-heuristic-picks-the-first-text-descendant)
@@ -28,7 +30,6 @@ Format: see the user-level `~/.claude/CLAUDE.md` "Followup detection" section.
   - [2026-05-12 — Pill needs trailing-icon support (Filters chevron-down)](#2026-05-12--pill-needs-trailing-icon-support-filters-chevron-down)
   - [2026-05-12 — CodeChip composite for mono-font URL/path display (docker URL, worktree path)](#2026-05-12--codechip-composite-for-mono-font-urlpath-display-docker-url-worktree-path)
   - [2026-05-12 — Re-link 8 detached AgentRow tiles in modal-overlay screen backgrounds](#2026-05-12--re-link-8-detached-agentrow-tiles-in-modal-overlay-screen-backgrounds)
-  - [2026-05-12 — Update `.figma.tsx` Code Connect files after Crew DS consolidation](#2026-05-12--update-figmatsx-code-connect-files-after-crew-ds-consolidation)
   - [2026-05-12 — Explore intensity-axis for Button (parallels StateBadge muted/mid/loud)](#2026-05-12--explore-intensity-axis-for-button-parallels-statebadge-mutedmidloud)
   - [2026-05-11 — Crew DS components are partials of Dashboard Screens equivalents](#2026-05-11--crew-ds-components-are-partials-of-dashboard-screens-equivalents)
   - [2026-05-11 — Agent activity timeline + Bash event-tag components missing from Crew DS](#2026-05-11--agent-activity-timeline--bash-event-tag-components-missing-from-crew-ds)
@@ -78,6 +79,7 @@ Format: see the user-level `~/.claude/CLAUDE.md` "Followup detection" section.
   - [2026-04-27 — Dashboard mobile responsive layout polish](#2026-04-27--dashboard-mobile-responsive-layout-polish)
   - [2026-04-26 — Architecture doc open questions still unresolved](#2026-04-26--architecture-doc-open-questions-still-unresolved)
 - [Resolved](#resolved)
+  - [2026-05-12 — Update `.figma.tsx` Code Connect files after Crew DS consolidation](#2026-05-12--update-figmatsx-code-connect-files-after-crew-ds-consolidation)
   - [2026-05-12 — New Run modal list rows need a proper component (project / ticket rows lost metadata during bulk Button swap)](#2026-05-12--new-run-modal-list-rows-need-a-proper-component-project--ticket-rows-lost-metadata-during-bulk-button-swap)
   - [2026-05-10 — Build a `TimelineTag` component in Crew DS for tool-name pills](#2026-05-10--build-a-timelinetag-component-in-crew-ds-for-tool-name-pills-1)
   - [2026-05-12 — Migrate main agents list project headers to ProjectHeader composite](#2026-05-12--migrate-main-agents-list-project-headers-to-projectheader-composite)
@@ -93,6 +95,37 @@ Format: see the user-level `~/.claude/CLAUDE.md` "Followup detection" section.
 - [Abandoned](#abandoned)
 
 ## Active
+
+### 2026-05-18 — `.agents/design-system.md` frontmatter URLs stale after Crew DS consolidation
+
+**What:** `.agents/design-system.md`'s `project_library_url` frontmatter still points at the archived `DsA7QuEa2WthDATkksd1Bq` ("Crew-Design-System") file. After the 2026-05-12 consolidation the Crew DS lives as the `Composites` page inside `9FeJPriqdsdA4n9R5Xsrr8` — the same file as `screens_file_url` (which itself carries a stale `/Untitled` slug). The doc body still describes "three files (Core, Crew DS, Crew Dashboard Screens)" — really two now (Core + the consolidated Crew file). The `design-with-figma` skill reads this frontmatter for URLs.
+
+**Why noticed:** Flagged as explicitly out-of-scope in CREW-175 ("fold in if trivial, else leave as a separate followup"). Not folded in: it's not a pure URL swap — `project_library_url` collapsing into `screens_file_url`'s file changes the doc's "three files" mental model, so the prose needs a pass too.
+
+**Anchors:**
+
+- `.agents/design-system.md` lines 9–12 (frontmatter URLs) and line 22 ("three files" prose)
+- Live file: `9FeJPriqdsdA4n9R5Xsrr8` (slug `Crew`); DS on its `Composites` page, screens on `Dashboard Screens`
+
+**Shape of work:** Small doc-only edit — update `project_library_url`, fix the `/Untitled` slug on `screens_file_url`, and rework the "three files" sentence to "two files". Decide whether `project_library_url` and `screens_file_url` should remain two frontmatter keys pointing at the same file or collapse to one.
+
+### 2026-05-18 — StateBadge / CountBadge `.figma.tsx` still point at the archived DS file (Pill consolidation has no name-match)
+
+**Ticket:** [CREW-175](https://safturento.atlassian.net/browse/CREW-175) — *sourced from CREW-175, which left these two files deliberately untouched. Not yet ticketed for resolution.*
+
+**What:** `StateBadge.figma.tsx` and `CountBadge.figma.tsx` still `figma.connect(...)` to the archived `DsA7QuEa2WthDATkksd1Bq` file (nodes `20-23` / `77-28`). CREW-175 re-aimed the other 12 dashboard `.figma.tsx` files at the live `9FeJPriqdsdA4n9R5Xsrr8`, but skipped these two: both components were consolidated into the unified `Pill` set, so the committed `.crew/figma-snapshot/index.json` has no node named `StateBadge` or `CountBadge` to mechanically resolve against, and CREW-175's scope forbade guessing.
+
+**Why noticed:** Out-of-scope item from CREW-175 — see that PR's description. The ticket explicitly routed the no-snapshot-match cases to manual follow-up.
+
+**Anchors:**
+
+- `packages/dashboard/src/components/StateBadge.figma.tsx`, `packages/dashboard/src/components/CountBadge.figma.tsx`
+- `Pill` set is node `272:120` in `9FeJPriqdsdA4n9R5Xsrr8` (`.crew/figma-snapshot/index.json`)
+- [[project_crew_ds_pill_unified]] covers the Pill consolidation
+
+**Open questions:**
+
+- [ ] Map each React component to a variant-scoped `figma.connect(Pill, ..., { variant: { type: '...' } })` against the `Pill` set, or connect to the whole set with a prop map? The existing `state` enum prop-mapping in both files would need to be reconciled with `Pill`'s axes.
 
 ### 2026-05-18 — visual-fidelity-check: per-fixture snapshot copy vs committed artifact, plus Step 4 path-vocab drift
 
@@ -529,34 +562,6 @@ The structural fix for the first two is the Plugin-API snapshot work captured in
 **Shape of work:** Likely abandon — the modal-overlay screens may not need to exist as their own canvases at all if the design intent is just "Project page + Modal X overlaid". Worth a 5-min conversation before doing the conversion.
 
 **Open questions:** Do these modal-overlay screens have downstream consumers (designer specs, prototyping flows) that depend on them existing as standalone frames? If not, prefer deleting them over fixing the backgrounds.
-
-### 2026-05-12 — Update `.figma.tsx` Code Connect files after Crew DS consolidation
-
-**What:** All 21 `.figma.tsx` files under `packages/dashboard/src/components/` reference the **archived** standalone Crew DS file URL (`DsA7QuEa2WthDATkksd1Bq`) and node IDs that no longer exist after the 2026-05-12 consolidation. The Crew DS now lives inside the dashboard file at `9FeJPriqdsdA4n9R5Xsrr8`, and many components (Button, StateBadge, CountBadge, TimelineTag) were consolidated into `Pill`. Other new composites (`Modal`, `AlertModal`, `ModalSelectionRow`, `FormField`, `Input`, `Switch`, `Stepper`) have no `.figma.tsx` mappings yet.
-
-**Why noticed:** During the 2026-05-12 design session, after building the new composites. Files are intentionally not published per [[project_code_connect_skipped]] (Pro tier limitation), so they're inert docs — but they're docs that the future `design-with-figma` skill will read to translate Figma instances → React code. Stale URLs / removed component references mean wrong or missing translations.
-
-**Update 2026-05-18 (CREW-152 validation run):** the staleness now has a sharper, load-bearing impact. The render-frame-anchored `visual-fidelity-check` workflow Step 4.1 resolves a caller's render composite via its `.figma.tsx` `figma.connect(...)` URL. With `TopNav.figma.tsx` / `AgentRow.figma.tsx` still pointed at `DsA7QuEa2WthDATkksd1Bq` skeleton nodes `21-2` / `21-9`, a strictly-mechanical Step 4 resolves to `composites/21-2.json` (absent) and surfaces HIGH missing-data instead of the real encoding error. The CREW-152 validation run worked around it by resolving the composite by component name via the fixture's `snapshot/index.json` (`"TopNav"` → `245:133`). Re-aiming these pointers at the live composites (`9FeJPriqdsdA4n9R5Xsrr8` `245:133` / `212:910`) removes the need for the name-fallback. Naturally folds into this followup's "incremental" approach as CREW-135's components are touched.
-
-**Anchors:**
-
-- `packages/dashboard/src/components/` — 21 `.figma.tsx` files, all need URL + node ID updates
-- `packages/dashboard/src/components/ui/` — shadcn primitives subdirectory (button, dialog, badge, input, label, form, separator)
-- Crew DS now in file `9FeJPriqdsdA4n9R5Xsrr8` on Composites page; key nodes: Pill set, Modal, AlertModal, ModalSelectionRow, FormField, Input, Switch set, Stepper set
-- Mapping table: [[project_crew_ds_modal_composites]] and [[project_crew_ds_form_composites]] cover the new composites; [[project_crew_ds_pill_unified]] covers Pill → Button/Badge/StateBadge
-
-**What's been considered:**
-
-- **Bulk rewrite in one Epic** — most efficient if done as one focused pass. Walk each `.figma.tsx`, update URL to `figma.com/design/9FeJPriqdsdA4n9R5Xsrr8/Crew?node-id=X-Y`, update node IDs, update prop mappings (Pill's `type`/`color`/`intensity` → Button's `variant`/`size`). Add new files for Modal, AlertModal, FormField, Input (update existing), Switch, ModalSelectionRow, Stepper. Probably needs `<Switch>` and `<AlertDialog>` added to shadcn primitives first (we have base shadcn but not those two yet).
-- **Incremental — update as each component is touched.** Slower but less risky. Each PR that touches a component updates its `.figma.tsx`.
-- **Delete all and start fresh.** Justified since Pill consolidates many — but loses the existing prop-mapping work for components that DID survive (ProjectSection, AgentRow, etc.).
-
-**Shape of work:** One ticket / Epic. ~21 file updates + ~7 new files + adding `<Switch>`/`<AlertDialog>` shadcn primitives = ~half-day of focused work.
-
-**Open questions:**
-
-- [ ] Add Code Connect publish back into the plan if we upgrade to Figma Org tier later? Currently skipped.
-- [ ] For `Pill` → multiple React components (Button / Badge / StateBadge / custom Tag), use multiple `figma.connect()` calls scoped by variant (`{ variant: { type: 'button-sm' } }`)?
 
 ### 2026-05-12 — Explore intensity-axis for Button (parallels StateBadge muted/mid/loud)
 
@@ -1692,6 +1697,16 @@ The other two open questions (sandbox config drift, Phase 2 + Phase 3 separation
 ## Resolved
 
 (items move here when ticketed and shipped, or fixed inline — keep for historical context, prune when the file gets long)
+
+### 2026-05-12 — Update `.figma.tsx` Code Connect files after Crew DS consolidation
+
+**What:** All 21 `.figma.tsx` files under `packages/dashboard/src/components/` reference the **archived** standalone Crew DS file URL (`DsA7QuEa2WthDATkksd1Bq`) and node IDs that no longer exist after the 2026-05-12 consolidation. The Crew DS now lives inside the dashboard file at `9FeJPriqdsdA4n9R5Xsrr8`, and many components (Button, StateBadge, CountBadge, TimelineTag) were consolidated into `Pill`. Other new composites (`Modal`, `AlertModal`, `ModalSelectionRow`, `FormField`, `Input`, `Switch`, `Stepper`) have no `.figma.tsx` mappings yet.
+
+**Why noticed:** During the 2026-05-12 design session, after building the new composites. Files are intentionally not published per [[project_code_connect_skipped]] (Pro tier limitation), so they're inert docs — but they're docs that the future `design-with-figma` skill will read to translate Figma instances → React code. Stale URLs / removed component references mean wrong or missing translations.
+
+**Update 2026-05-18 (CREW-152 validation run):** the staleness now has a sharper, load-bearing impact. The render-frame-anchored `visual-fidelity-check` workflow Step 4.1 resolves a caller's render composite via its `.figma.tsx` `figma.connect(...)` URL. With `TopNav.figma.tsx` / `AgentRow.figma.tsx` still pointed at `DsA7QuEa2WthDATkksd1Bq` skeleton nodes `21-2` / `21-9`, a strictly-mechanical Step 4 resolves to `composites/21-2.json` (absent) and surfaces HIGH missing-data instead of the real encoding error. The CREW-152 validation run worked around it by resolving the composite by component name via the fixture's `snapshot/index.json` (`"TopNav"` → `245:133`). Re-aiming these pointers at the live composites (`9FeJPriqdsdA4n9R5Xsrr8` `245:133` / `212:910`) removes the need for the name-fallback.
+
+**Resolved 2026-05-18 (CREW-175):** Re-aimed all 12 `.figma.tsx` files whose `figma.connect(...)` URL had a matching node in the committed `.crew/figma-snapshot/index.json` from the archived `DsA7QuEa2WthDATkksd1Bq` to the live `9FeJPriqdsdA4n9R5Xsrr8` (`TopNav` → `245-133`, `AgentRow` → `212-910`, and the ten remaining composites). `StateBadge.figma.tsx` and `CountBadge.figma.tsx` were left on their archived URLs — both components were consolidated into the unified `Pill` set, so the committed snapshot has no node named `StateBadge`/`CountBadge` to mechanically resolve against; re-mapping them needs a design decision (multiple variant-scoped `figma.connect()` calls against `Pill` `272:120`) and is filed as the new followup below. The `ui/*.figma.tsx` shadcn primitives target the Core DS file, never the archived Crew DS, so they were untouched. The new-composite mappings (`Modal`, `AlertModal`, etc.) remain unbuilt — out of scope for CREW-175, which only re-aimed existing files.
 
 ### 2026-05-12 — New Run modal list rows need a proper component (project / ticket rows lost metadata during bulk Button swap)
 

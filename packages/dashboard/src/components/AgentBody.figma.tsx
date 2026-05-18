@@ -4,7 +4,7 @@ import { AgentBody } from '@/components/AgentBody';
 
 figma.connect(
   AgentBody,
-  'https://www.figma.com/design/DsA7QuEa2WthDATkksd1Bq/Crew-Design-System?node-id=24-2',
+  'https://www.figma.com/design/9FeJPriqdsdA4n9R5Xsrr8/Crew?node-id=220-246',
   {
     // AgentBody renders the agent drawer / full-page body. The Figma component is a
     // single-variant skeleton — `mode` is a runtime prop that swaps the "Open as page"

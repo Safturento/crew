@@ -1,7 +1,7 @@
 ---
 name: design-system
 description: Crew Figma DS + token bindings + StateBadge contract
-last_updated: 2026-05-17
+last_updated: 2026-05-18
 covers:
   - 'packages/dashboard/src/components/**'
   - '*.figma.tsx'
@@ -111,26 +111,33 @@ Forked from the Figma community file in `core_kit_origin`. We don't auto-track u
 
 Each has a `.tsx` implementation in `packages/dashboard/src/components/`, a matching `.figma.tsx` Code Connect mapping, and a Figma counterpart in the Crew DS file. Skeleton-fidelity bar — semantic-token bindings and slot structure are correct; pixel polish is opportunistic.
 
-| Composite            | Figma node | Dashboard counterpart                                      |
-| -------------------- | ---------- | ---------------------------------------------------------- |
-| `BrandMark`          | `19:3`     | `packages/dashboard/src/components/BrandMark.tsx`          |
-| `StateBadge` set     | `20:23`    | `packages/dashboard/src/components/StateBadge.tsx`         |
-| `TopNav`             | `21:2`     | `packages/dashboard/src/components/TopNav.tsx`             |
-| `AgentRow`           | `21:9`     | `packages/dashboard/src/components/AgentRow.tsx`           |
-| `ProjectSection`     | `21:21`    | `packages/dashboard/src/components/ProjectSection.tsx`     |
-| `AgentsList`         | `21:25`    | `packages/dashboard/src/components/AgentsList.tsx`         |
-| `AgentBody`          | `24:2`     | `packages/dashboard/src/components/AgentBody.tsx`          |
-| `StateHistoryBar`    | `25:4`     | `packages/dashboard/src/components/StateHistoryBar.tsx`    |
-| `TokenTable`         | `26:4`     | `packages/dashboard/src/components/TokenTable.tsx`         |
-| `ViewportFrame`      | `27:4`     | `packages/dashboard/src/components/ViewportFrame.tsx`      |
-| `CountBadge`         | `77:28`    | `packages/dashboard/src/components/CountBadge.tsx`         |
-| `ProjectRow`         | `79:14`    | `packages/dashboard/src/components/ProjectRow.tsx`         |
-| `ProjectHeader`      | `82:15`    | `packages/dashboard/src/components/ProjectHeader.tsx`      |
-| `ProjectConfigBlock` | `83:15`    | `packages/dashboard/src/components/ProjectConfigBlock.tsx` |
+Figma node IDs below are in the live consolidated file (`9FeJPriqdsdA4n9R5Xsrr8`,
+`Composites` page) — re-aimed from the archived standalone DS file by CREW-175.
 
-`StateBadge` and `CountBadge` publish as component sets (one variant per agent state); the `.figma.tsx` mappings bridge Figma's kebab `pr-open` to the dashboard's snake `pr_open` via `figma.enum`. The other twelve are single components. `ErrorFallback` is the only un-built composite from the original Phase 4 inventory; it lands alongside the next fidelity ticket that surfaces a need.
+| Composite            | Figma node       | Dashboard counterpart                                      |
+| -------------------- | ---------------- | ---------------------------------------------------------- |
+| `BrandMark`          | `220:211`        | `packages/dashboard/src/components/BrandMark.tsx`          |
+| `StateBadge` set     | `Pill` `272:120` | `packages/dashboard/src/components/StateBadge.tsx`         |
+| `TopNav`             | `245:133`        | `packages/dashboard/src/components/TopNav.tsx`             |
+| `AgentRow`           | `212:910`        | `packages/dashboard/src/components/AgentRow.tsx`           |
+| `ProjectSection`     | `220:224`        | `packages/dashboard/src/components/ProjectSection.tsx`     |
+| `AgentsList`         | `220:227`        | `packages/dashboard/src/components/AgentsList.tsx`         |
+| `AgentBody`          | `220:246`        | `packages/dashboard/src/components/AgentBody.tsx`          |
+| `StateHistoryBar`    | `220:257`        | `packages/dashboard/src/components/StateHistoryBar.tsx`    |
+| `TokenTable`         | `220:287`        | `packages/dashboard/src/components/TokenTable.tsx`         |
+| `ViewportFrame`      | `220:292`        | `packages/dashboard/src/components/ViewportFrame.tsx`      |
+| `CountBadge`         | `Pill` `272:120` | `packages/dashboard/src/components/CountBadge.tsx`         |
+| `ProjectRow`         | `220:300`        | `packages/dashboard/src/components/ProjectRow.tsx`         |
+| `ProjectHeader`      | `220:315`        | `packages/dashboard/src/components/ProjectHeader.tsx`      |
+| `ProjectConfigBlock` | `220:318`        | `packages/dashboard/src/components/ProjectConfigBlock.tsx` |
 
-> **Figma-side Pill consolidation (2026-05-12) is not reflected in code.** The Figma DS merged `Button` / `StateBadge` / `CountBadge` / `TimelineTag` into a unified `Pill` component set (192 variants), and the Crew DS moved into the dashboard file. The dashboard code still ships separate components and the `.figma.tsx` files still reference the archived standalone DS file URL + pre-consolidation node IDs. See `docs/followups.md` under "Stale `.figma.tsx` mappings" for the rebuild task and [`docs/rationale/design-system.md`](../docs/rationale/design-system.md#2026-05-12-figma-side-pill-consolidation) for the migration history.
+`StateBadge` / `CountBadge` have no standalone node in the consolidated file — both
+folded into the unified `Pill` set (`272:120`), so their `.figma.tsx` files still
+point at the archived DS file (see the blockquote below).
+
+`StateBadge` and `CountBadge` publish as component sets (one variant per agent state); the `.figma.tsx` mappings bridge Figma's kebab `pr-open` to the dashboard's snake `pr_open` via `figma.enum`. The other twelve don't need that enum bridge (`TopNav` and `AgentRow` resolve to component sets in the live file, the rest to single components). `ErrorFallback` is the only un-built composite from the original Phase 4 inventory; it lands alongside the next fidelity ticket that surfaces a need.
+
+> **Figma-side Pill consolidation (2026-05-12) is only partially reflected in code.** The Figma DS merged `Button` / `StateBadge` / `CountBadge` / `TimelineTag` into a unified `Pill` component set (192 variants), and the Crew DS moved into the dashboard file. The dashboard code still ships separate components. CREW-175 re-aimed the twelve `.figma.tsx` files that have a name-matching node in the committed snapshot from the archived standalone DS file URL to the live consolidated file (`9FeJPriqdsdA4n9R5Xsrr8`); `StateBadge.figma.tsx` and `CountBadge.figma.tsx` still reference the archived URL because the consolidated snapshot has no `StateBadge`/`CountBadge` node to resolve against (both folded into `Pill`). See `docs/followups.md` for the remaining StateBadge/CountBadge mapping task and [`docs/rationale/design-system.md`](../docs/rationale/design-system.md#2026-05-12-figma-side-pill-consolidation) for the migration history.
 
 ### `components/ui/` vs `components/<feature>/` split
 

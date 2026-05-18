@@ -4,7 +4,7 @@ import { StateHistoryBar } from '@/components/StateHistoryBar';
 
 figma.connect(
   StateHistoryBar,
-  'https://www.figma.com/design/DsA7QuEa2WthDATkksd1Bq/Crew-Design-System?node-id=25-4',
+  'https://www.figma.com/design/9FeJPriqdsdA4n9R5Xsrr8/Crew?node-id=220-257',
   {
     // The Figma component is a single skeleton showing a representative sequence of
     // state chips (state-token fills + mono labels with arrow separators). The
