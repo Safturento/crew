@@ -31,6 +31,8 @@ export function PillBase({
     className,
   );
 
+  // `asChild` takes precedence over `as`: when set, the element comes from the
+  // wrapped child and the `as` prop is ignored.
   if (asChild) {
     return (
       <Slot.Root

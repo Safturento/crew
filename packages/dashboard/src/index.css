@@ -42,7 +42,6 @@
   --radius-lg: 14px;
 
   --animate-att-pulse: att-pulse 1.8s ease-in-out infinite;
-  --animate-pulse-dot: pulse-dot 1.6s ease-in-out infinite;
 }
 
 :root {
@@ -103,16 +102,6 @@
   }
   50% {
     opacity: 0.4;
-  }
-}
-
-@keyframes pulse-dot {
-  0%,
-  100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.3;
   }
 }
 
