@@ -7,6 +7,7 @@ Format: see the user-level `~/.claude/CLAUDE.md` "Followup detection" section.
 ## Contents
 
 - [Active](#active)
+  - [2026-05-18 — Daemon has no reaper for orphaned runs stuck in `running`](#2026-05-18--daemon-has-no-reaper-for-orphaned-runs-stuck-in-running)
   - [2026-05-18 — `index.css` falls outside every `.agents/*.md` `covers` glob](#2026-05-18--indexcss-falls-outside-every-agentsmd-covers-glob)
   - [2026-05-18 — `.agents/design-system.md` frontmatter URLs stale after Crew DS consolidation](#2026-05-18--agentsdesign-systemmd-frontmatter-urls-stale-after-crew-ds-consolidation)
   - [2026-05-18 — visual-fidelity-check: per-fixture snapshot copy vs committed artifact, plus Step 4 path-vocab drift](#2026-05-18--visual-fidelity-check-per-fixture-snapshot-copy-vs-committed-artifact-plus-step-4-path-vocab-drift)
@@ -96,6 +97,18 @@ Format: see the user-level `~/.claude/CLAUDE.md` "Followup detection" section.
 - [Abandoned](#abandoned)
 
 ## Active
+
+### 2026-05-18 — Daemon has no reaper for orphaned runs stuck in `running`
+
+**What:** A crew run can finish its real-world work — PR opened and merged, Jira ticket Done — while the daemon's run record stays stuck in `running` indefinitely. The daemon marks a run complete only when the CLI delivers `POST /api/agents/runs/:id/complete` on Claude exit. If that call never lands (CLI crash, daemon down at exit, killed process), the run sits in `running` forever — `completed_at` null, metrics null, no PR URL — and the dashboard shows the agent as perpetually active. Nothing detects or reaps these.
+
+**Why noticed:** CREW-158's daemon run (run 23, started 2026-05-14) was found still `running` 4 days later, even though its work had shipped via merged PR #208 and the ticket is `Done`. We recovered it manually this session with `POST /api/agents/runs/23/complete` `exitCode 137` — which lands the agent in `error`, because the daemon derives `error` from any non-zero exit and only `exitCode 0` yields a clean completion. So orphaned runs are both invisible (no detection) and unrecoverable to a clean state (manual completion can only produce `error`).
+
+**Anchors:** `packages/daemon/src/routes/runs.ts` (register + `:runId/complete` endpoints); `packages/daemon/src/services/AgentsService.ts`, `IngestService.ts` (run state); `packages/cli/src/lib/preflight/run-resume-preflight.ts` (existing orphan-detection on the resume path); CREW-158 / daemon run 23 / PR #208.
+
+**What's been considered:** Two angles, possibly both — (1) **detection / reaping:** a daemon-side sweep that flags runs `running` past a threshold (e.g. no transcript activity for N hours) and either auto-completes them or surfaces them in the dashboard for manual recovery; (2) **durable exit signalling:** make the CLI's completion POST survive a crash (retry / on-disk intent), or a daemon-side fallback that notices the ingested transcript tail going idle. The CLI already has orphan-detection in `run-resume-preflight.ts` for the *resume* path — a daemon reaper would generalize that to runs nobody resumes.
+
+**Open questions:** What's the right "stuck" threshold? And the right terminal state for a reaped run — `error` (honest: it never completed cleanly) or a distinct `abandoned` / `stale` state so it's visually separable from runs that genuinely crashed? CREW-158 showed conflating the two is misleading: a reaped orphan and a real failure both read `error` today.
 
 ### 2026-05-18 — `index.css` falls outside every `.agents/*.md` `covers` glob
 
