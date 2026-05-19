@@ -7,6 +7,7 @@ Format: see the user-level `~/.claude/CLAUDE.md` "Followup detection" section.
 ## Contents
 
 - [Active](#active)
+  - [2026-05-19 — `crew figma-snapshot` has no per-node refresh — single-component edits require a full export](#2026-05-19--crew-figma-snapshot-has-no-per-node-refresh--single-component-edits-require-a-full-export)
   - [2026-05-18 — Daemon has no reaper for orphaned runs stuck in `running`](#2026-05-18--daemon-has-no-reaper-for-orphaned-runs-stuck-in-running)
   - [2026-05-18 — `index.css` falls outside every `.agents/*.md` `covers` glob](#2026-05-18--indexcss-falls-outside-every-agentsmd-covers-glob)
   - [2026-05-18 — `.agents/design-system.md` frontmatter URLs stale after Crew DS consolidation](#2026-05-18--agentsdesign-systemmd-frontmatter-urls-stale-after-crew-ds-consolidation)
@@ -97,6 +98,22 @@ Format: see the user-level `~/.claude/CLAUDE.md` "Followup detection" section.
 - [Abandoned](#abandoned)
 
 ## Active
+
+### 2026-05-19 — `crew figma-snapshot` has no per-node refresh — single-component edits require a full export
+
+**In-session blocker:** scoped for in-session brainstorm + implementation immediately after the AgentRow card-redesign spec lands. Hard prereq before the AgentRow `crew run` dispatches.
+
+**What:** `crew figma-snapshot` only supports `--check` (boolean staleness) and a full page-walk export. A one-component Figma edit — e.g. flipping the AgentRow's quick-action buttons from `xs` to `sm` — invalidates the committed snapshot in exactly one place but forces a full export + per-node enrichment-batch dance through `figma-use` to re-land it. Most refreshes in practice are single-node touch-ups; the full-document cost is disproportionate to the change.
+
+**Why noticed:** Mid-session, refreshing the committed snapshot after a small AgentRow Figma edit. Paused from AgentRow card-redesign brainstorming to handle the refresh and noticed the lack of selective export. Tooling cost compounds as the DS grows.
+
+**Anchors:** `packages/cli/src/commands/figma-snapshot.ts` (CLI flag handling — only `--check` today); `packages/cli/src/lib/figma-snapshot/emit.ts` (page-level walk in `emitSnapshot`); `.claude/skills/figma-snapshot-refresh/` (skill procedure that batches `use_figma` enrichment — also needs to flow through any narrower export).
+
+**What's been considered:** Two flag shapes. (a) `--node-id <id>[,<id>...]` — explicit per-node refresh; caller has to know what changed but it's mechanical. (b) `--changed-since` — compares the live Figma file's per-node `lastModified` against the committed `meta.json` and re-exports only nodes that moved; auto-detecting. Both touch the same code paths (filter the emit walk, scope the enrichment batch). The skill procedure either grows a new step ("step 0: ask `--changed-since`, fall back to full export when unsure") or stays the same and the caller passes the flag explicitly.
+
+**Shape of work:** Single ticket. CLI flag plumbing + emit-side node filter + skill-procedure update + at least one test fixture for the partial-refresh case. Probably half a day of focused work; resolves in the same session it's scoped.
+
+**Open questions:** Does the Figma REST API surface per-node `lastModified` reliably for every node type (including instances and nested components)? If not, `--changed-since` degrades into a manifest-diff approach where the caller hands the CLI a list and the CLI computes against the committed `index.json`. Worth verifying with one REST call before locking the design.
 
 ### 2026-05-18 — Daemon has no reaper for orphaned runs stuck in `running`
 
