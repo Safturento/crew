@@ -7,6 +7,7 @@ Format: see the user-level `~/.claude/CLAUDE.md` "Followup detection" section.
 ## Contents
 
 - [Active](#active)
+  - [2026-05-18 — `index.css` falls outside every `.agents/*.md` `covers` glob](#2026-05-18--indexcss-falls-outside-every-agentsmd-covers-glob)
   - [2026-05-18 — `.agents/design-system.md` frontmatter URLs stale after Crew DS consolidation](#2026-05-18--agentsdesign-systemmd-frontmatter-urls-stale-after-crew-ds-consolidation)
   - [2026-05-18 — visual-fidelity-check: per-fixture snapshot copy vs committed artifact, plus Step 4 path-vocab drift](#2026-05-18--visual-fidelity-check-per-fixture-snapshot-copy-vs-committed-artifact-plus-step-4-path-vocab-drift)
   - [2026-05-17 — figma-snapshot `index.json` `screenshotPath` can point at a PNG that was never written](#2026-05-17--figma-snapshot-indexjson-screenshotpath-can-point-at-a-png-that-was-never-written)
@@ -95,6 +96,20 @@ Format: see the user-level `~/.claude/CLAUDE.md` "Followup detection" section.
 - [Abandoned](#abandoned)
 
 ## Active
+
+### 2026-05-18 — `index.css` falls outside every `.agents/*.md` `covers` glob
+
+**What:** `packages/dashboard/src/index.css` holds the Tailwind v4 `@theme` token block, the `:root`/`.dark` semantic-color palette, custom dark-tinted color shades, radii, and the global base styles — core design-system infrastructure — yet no `.agents/<topic>.md` `covers` glob includes it. `design-system.md` covers only `packages/dashboard/src/components/**`; `architecture.md` covers `packages/*/src/**/*.ts` (not `.css`). So a change to the design system's actual token/base layer carries **zero** `agents-doc-parity-check` obligation.
+
+**Why noticed:** Surfaced running the doc-parity audit for PR #243, which dropped a `font-size: 14px` root override that was warping the entire Tailwind rem scale (every `h-*`/`p-*`/`gap-*`/`text-*` rendered at 0.875× nominal). The audit correctly reported "no `.agents/` doc covers `index.css`" — which is itself the gap: a change that materially shifts every component's rendered sizing app-wide had no doc-parity gate at all.
+
+**Anchors:** `.agents/design-system.md` `covers:` frontmatter (lines 5–8); `packages/dashboard/src/index.css`; PR #243 (merged); `agents-doc-parity-check` skill.
+
+**What's been considered:** Add `packages/dashboard/src/index.css` to `design-system.md`'s `covers` list — it's the natural owner: the doc's "Extending the palette" and "Fonts" sections already reference `index.css` by name and document the `@theme` block. One-line frontmatter addition, low risk.
+
+**Shape of work:** One-line `covers` addition to `.agents/design-system.md`. Optionally a wider sweep for other DS-relevant infra files that fall through the same crack (`main.tsx` sets `<html class="dark">` at boot; `vite.config.ts`) — but the `index.css` gap is the concrete known one; the broader sweep can be its own judgment call.
+
+**Open questions:** None blocking — fold into any future dashboard-touching PR.
 
 ### 2026-05-18 — `.agents/design-system.md` frontmatter URLs stale after Crew DS consolidation
 
