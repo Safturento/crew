@@ -8,7 +8,6 @@ Format: see the user-level `~/.claude/CLAUDE.md` "Followup detection" section.
 
 - [Active](#active)
   - [2026-05-18 — `.agents/design-system.md` frontmatter URLs stale after Crew DS consolidation](#2026-05-18--agentsdesign-systemmd-frontmatter-urls-stale-after-crew-ds-consolidation)
-  - [2026-05-18 — StateBadge / CountBadge `.figma.tsx` still point at the archived DS file (Pill consolidation has no name-match)](#2026-05-18--statebadge--countbadge-figmatsx-still-point-at-the-archived-ds-file-pill-consolidation-has-no-name-match)
   - [2026-05-18 — visual-fidelity-check: per-fixture snapshot copy vs committed artifact, plus Step 4 path-vocab drift](#2026-05-18--visual-fidelity-check-per-fixture-snapshot-copy-vs-committed-artifact-plus-step-4-path-vocab-drift)
   - [2026-05-17 — figma-snapshot `index.json` `screenshotPath` can point at a PNG that was never written](#2026-05-17--figma-snapshot-indexjson-screenshotpath-can-point-at-a-png-that-was-never-written)
   - [2026-05-16 — figma-snapshot `resolvedStylesFor` text-color heuristic picks the first TEXT descendant](#2026-05-16--figma-snapshot-resolvedstylesfor-text-color-heuristic-picks-the-first-text-descendant)
@@ -79,6 +78,7 @@ Format: see the user-level `~/.claude/CLAUDE.md` "Followup detection" section.
   - [2026-04-27 — Dashboard mobile responsive layout polish](#2026-04-27--dashboard-mobile-responsive-layout-polish)
   - [2026-04-26 — Architecture doc open questions still unresolved](#2026-04-26--architecture-doc-open-questions-still-unresolved)
 - [Resolved](#resolved)
+  - [2026-05-18 — StateBadge / CountBadge `.figma.tsx` still point at the archived DS file (Pill consolidation has no name-match)](#2026-05-18--statebadge--countbadge-figmatsx-still-point-at-the-archived-ds-file-pill-consolidation-has-no-name-match)
   - [2026-05-12 — Update `.figma.tsx` Code Connect files after Crew DS consolidation](#2026-05-12--update-figmatsx-code-connect-files-after-crew-ds-consolidation)
   - [2026-05-12 — New Run modal list rows need a proper component (project / ticket rows lost metadata during bulk Button swap)](#2026-05-12--new-run-modal-list-rows-need-a-proper-component-project--ticket-rows-lost-metadata-during-bulk-button-swap)
   - [2026-05-10 — Build a `TimelineTag` component in Crew DS for tool-name pills](#2026-05-10--build-a-timelinetag-component-in-crew-ds-for-tool-name-pills-1)
@@ -108,24 +108,6 @@ Format: see the user-level `~/.claude/CLAUDE.md` "Followup detection" section.
 - Live file: `9FeJPriqdsdA4n9R5Xsrr8` (slug `Crew`); DS on its `Composites` page, screens on `Dashboard Screens`
 
 **Shape of work:** Small doc-only edit — update `project_library_url`, fix the `/Untitled` slug on `screens_file_url`, and rework the "three files" sentence to "two files". Decide whether `project_library_url` and `screens_file_url` should remain two frontmatter keys pointing at the same file or collapse to one.
-
-### 2026-05-18 — StateBadge / CountBadge `.figma.tsx` still point at the archived DS file (Pill consolidation has no name-match)
-
-**Ticket:** [CREW-175](https://safturento.atlassian.net/browse/CREW-175) — *sourced from CREW-175, which left these two files deliberately untouched. Not yet ticketed for resolution.*
-
-**What:** `StateBadge.figma.tsx` and `CountBadge.figma.tsx` still `figma.connect(...)` to the archived `DsA7QuEa2WthDATkksd1Bq` file (nodes `20-23` / `77-28`). CREW-175 re-aimed the other 12 dashboard `.figma.tsx` files at the live `9FeJPriqdsdA4n9R5Xsrr8`, but skipped these two: both components were consolidated into the unified `Pill` set, so the committed `.crew/figma-snapshot/index.json` has no node named `StateBadge` or `CountBadge` to mechanically resolve against, and CREW-175's scope forbade guessing.
-
-**Why noticed:** Out-of-scope item from CREW-175 — see that PR's description. The ticket explicitly routed the no-snapshot-match cases to manual follow-up.
-
-**Anchors:**
-
-- `packages/dashboard/src/components/StateBadge.figma.tsx`, `packages/dashboard/src/components/CountBadge.figma.tsx`
-- `Pill` set is node `272:120` in `9FeJPriqdsdA4n9R5Xsrr8` (`.crew/figma-snapshot/index.json`)
-- [[project_crew_ds_pill_unified]] covers the Pill consolidation
-
-**Open questions:**
-
-- [ ] Map each React component to a variant-scoped `figma.connect(Pill, ..., { variant: { type: '...' } })` against the `Pill` set, or connect to the whole set with a prop map? The existing `state` enum prop-mapping in both files would need to be reconciled with `Pill`'s axes.
 
 ### 2026-05-18 — visual-fidelity-check: per-fixture snapshot copy vs committed artifact, plus Step 4 path-vocab drift
 
@@ -1697,6 +1679,20 @@ The other two open questions (sandbox config drift, Phase 2 + Phase 3 separation
 ## Resolved
 
 (items move here when ticketed and shipped, or fixed inline — keep for historical context, prune when the file gets long)
+
+### 2026-05-18 — StateBadge / CountBadge `.figma.tsx` still point at the archived DS file (Pill consolidation has no name-match)
+
+**What:** `StateBadge.figma.tsx` and `CountBadge.figma.tsx` still `figma.connect(...)` to the archived `DsA7QuEa2WthDATkksd1Bq` file (nodes `20-23` / `77-28`). CREW-175 re-aimed the other 12 dashboard `.figma.tsx` files at the live `9FeJPriqdsdA4n9R5Xsrr8`, but skipped these two: both components were consolidated into the unified `Pill` set, so the committed `.crew/figma-snapshot/index.json` has no node named `StateBadge` or `CountBadge` to mechanically resolve against, and CREW-175's scope forbade guessing.
+
+**Why noticed:** Out-of-scope item from CREW-175 — see that PR's description. The ticket explicitly routed the no-snapshot-match cases to manual follow-up.
+
+**Anchors:**
+
+- `packages/dashboard/src/components/StateBadge.figma.tsx`, `packages/dashboard/src/components/CountBadge.figma.tsx`
+- `Pill` set is node `272:120` in `9FeJPriqdsdA4n9R5Xsrr8` (`.crew/figma-snapshot/index.json`)
+- [[project_crew_ds_pill_unified]] covers the Pill consolidation
+
+**Resolved 2026-05-18 (CREW-135):** Made moot by retirement, not re-mapping. CREW-135 (T1 Pill primitives) deleted `StateBadge.tsx` / `CountBadge.tsx` and their `.figma.tsx` files — every state pill and count pill is now a `Badge` (`ui/badge.tsx`). `badge.figma.tsx` maps `Badge` to the `Pill` set `272:120` with `variant: { type: 'pill' }`, so the consolidated-file mapping the followup asked for now exists on `Badge` itself. No orphaned `.figma.tsx` files remain to re-aim.
 
 ### 2026-05-12 — Update `.figma.tsx` Code Connect files after Crew DS consolidation
 

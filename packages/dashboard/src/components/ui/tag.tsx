@@ -3,24 +3,17 @@ import * as React from 'react';
 import { PillBase } from './pill-base';
 import type { PillColor, PillIntensity } from '@/lib/pill-variants';
 
-const BADGE_SHAPE =
-  "h-5.5 gap-1.5 rounded-full px-1.5 py-1 font-mono text-xs leading-none [&_svg:not([class*='size-'])]:size-3";
+const TAG_SHAPE =
+  "h-[17px] gap-1 rounded-[4px] px-1.5 font-mono text-[11px] leading-none [&_svg:not([class*='size-'])]:size-2.5";
 
-type BadgeProps = Omit<React.HTMLAttributes<HTMLSpanElement>, 'color'> & {
+type TagProps = Omit<React.HTMLAttributes<HTMLSpanElement>, 'color'> & {
   color?: PillColor;
   intensity?: PillIntensity;
   icon?: React.ReactNode;
   asChild?: boolean;
 };
 
-function Badge({
-  color = 'running',
-  intensity = 'mid',
-  icon,
-  asChild = false,
-  children,
-  ...rest
-}: BadgeProps) {
+function Tag({ color = 'running', intensity = 'mid', icon, asChild = false, children, ...rest }: TagProps) {
   return (
     <PillBase
       {...rest}
@@ -29,11 +22,11 @@ function Badge({
       color={color}
       intensity={intensity}
       icon={icon}
-      shape={BADGE_SHAPE}
+      shape={TAG_SHAPE}
     >
       {children}
     </PillBase>
   );
 }
 
-export { Badge };
+export { Tag };

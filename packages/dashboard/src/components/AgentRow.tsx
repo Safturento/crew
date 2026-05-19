@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
 import type { MouseEvent, ReactNode } from 'react';
 import { cva } from 'class-variance-authority';
+import { Circle, GitPullRequest } from 'lucide-react';
 
 import type { Agent, AgentState } from '../data/types.js';
 import { STATE_CLASSES, STATE_META } from '../data/state-meta.js';
-import { StateBadge } from './StateBadge.js';
+import { Badge } from './ui/badge.js';
 import { Button } from './ui/button.js';
 import { formatDuration } from '../format/duration.js';
 import { formatTokens } from '../format/tokens.js';
@@ -20,7 +21,7 @@ interface AgentRowProps {
 const ACTIVE_STATES = new Set<AgentState>(['running', 'initializing']);
 
 const agentRow = cva(
-  'group relative grid cursor-pointer items-center gap-4 rounded border bg-card px-4 py-3 transition-colors hover:bg-popover grid-cols-[100px_90px_90px_70px_1fr_168px]',
+  'group relative grid cursor-pointer items-center h-16 gap-3 rounded border bg-card px-4 py-3 transition-colors hover:bg-popover grid-cols-[100px_90px_90px_70px_1fr_168px]',
   {
     variants: {
       state: {
@@ -64,7 +65,15 @@ export function AgentRow({ agent, onSelect, onAction }: AgentRowProps) {
           className={`absolute inset-y-1.5 left-0 w-1 rounded-full ${stateClasses.solidBg} animate-att-pulse`}
         />
       )}
-      <StateBadge state={agent.state} />
+      <Badge
+        role="status"
+        aria-label={meta.label}
+        color={agent.state}
+        intensity="mid"
+        icon={<StateIcon />}
+      >
+        {meta.label}
+      </Badge>
       <span className="font-mono text-xs text-muted-foreground">{agent.key}</span>
       <span className="text-right font-mono text-xs tabular-nums text-muted-foreground">
         {runtime}
@@ -76,6 +85,12 @@ export function AgentRow({ agent, onSelect, onAction }: AgentRowProps) {
       <QuickActions agent={agent} onAction={onAction} />
     </div>
   );
+}
+
+// Every state-badge instance in the Figma Pill set uses `lucide/circle` as its
+// Icon INSTANCE_SWAP — the badge's color, not its glyph, carries the state.
+function StateIcon() {
+  return <Circle className={'p-[2px]'} aria-hidden strokeWidth={6} absoluteStrokeWidth={true} />;
 }
 
 function QuickActions({
@@ -95,10 +110,10 @@ function QuickActions({
     case 'idle':
       return (
         <QaGroup>
-          <Button variant="outline" size="xs" onClick={fire('resume')}>
+          <Button color="running" intensity="mid" size="xs" onClick={fire('resume')}>
             Resume
           </Button>
-          <Button variant="ghost" size="xs" onClick={fire('finish')}>
+          <Button color="running" intensity="ghost" size="xs" onClick={fire('finish')}>
             Finish
           </Button>
         </QaGroup>
@@ -106,12 +121,7 @@ function QuickActions({
     case 'waiting':
       return (
         <SingleAction>
-          <Button
-            variant="default"
-            size="xs"
-            onClick={fire('provide-input')}
-            className="bg-amber-400 text-slate-950 hover:bg-amber-400/90"
-          >
+          <Button color="waiting" intensity="loud" size="xs" onClick={fire('provide-input')}>
             Provide input
           </Button>
         </SingleAction>
@@ -119,12 +129,18 @@ function QuickActions({
     case 'pr_open':
       return (
         <QaGroup>
-          <Button variant="outline" size="xs" asChild>
+          <Button
+            color="running"
+            intensity="mid"
+            size="xs"
+            icon={<GitPullRequest aria-hidden />}
+            asChild
+          >
             <a href={agent.prUrl ?? '#'} target="_blank" rel="noreferrer" onClick={stop}>
-              View PR ↗
+              View PR
             </a>
           </Button>
-          <Button variant="ghost" size="xs" onClick={fire('finish')}>
+          <Button color="running" intensity="ghost" size="xs" onClick={fire('finish')}>
             Finish
           </Button>
         </QaGroup>
@@ -132,12 +148,7 @@ function QuickActions({
     case 'error':
       return (
         <SingleAction>
-          <Button
-            variant="default"
-            size="xs"
-            onClick={fire('inspect')}
-            className="bg-red-400 text-slate-950 hover:bg-red-400/90"
-          >
+          <Button color="error" intensity="mid" size="xs" onClick={fire('inspect')}>
             Inspect
           </Button>
         </SingleAction>

@@ -1,5 +1,3 @@
-import { Plus } from 'lucide-react';
-
 import type { Project } from '../data/types.js';
 import { Button } from '../components/ui/button.js';
 import { ProjectsTable } from '../components/ProjectsTable.js';
@@ -14,14 +12,14 @@ export function ProjectsListPage({ projects }: ProjectsListPageProps) {
       <div className="mb-6 flex items-center justify-between gap-4">
         <h1 className="text-2xl font-semibold tracking-tight text-foreground">Projects</h1>
         <Button
-          variant="outline"
-          size="xs"
+          color="running"
+          intensity="mid"
+          size="sm"
           onClick={() => {
             /* Register modal lands in Epic 4 (project ops) */
           }}
-          className="border-white/10 text-muted-foreground hover:bg-popover"
         >
-          <Plus aria-hidden /> Register project
+          Register project
         </Button>
       </div>
       <ProjectsTable projects={projects} />

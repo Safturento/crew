@@ -1,7 +1,7 @@
 import { ChevronRight } from 'lucide-react';
 
 import type { Project } from '../data/types.js';
-import { CountBadge } from './CountBadge.js';
+import { Badge } from './ui/badge.js';
 
 interface ProjectRowProps {
   project: Project;
@@ -22,7 +22,13 @@ export function ProjectRow({ project }: ProjectRowProps) {
       <span className="truncate font-mono text-xs text-muted-foreground">{project.repoPath}</span>
       <span className="truncate font-mono text-xs text-muted-foreground">{project.branch}</span>
       <span className="truncate font-mono text-xs text-muted-foreground">{project.jiraKey}</span>
-      <CountBadge count={project.activeCount} />
+      {project.activeCount > 0 ? (
+        <Badge color="initializing" intensity="muted">
+          {project.activeCount}
+        </Badge>
+      ) : (
+        <span className="font-mono text-xs text-muted-foreground">0</span>
+      )}
       <ChevronRight className="h-4 w-4 text-muted-foreground" aria-hidden />
     </a>
   );

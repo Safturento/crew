@@ -58,15 +58,15 @@ export function ProjectSection({
           </span>
           {onOpenProject && (
             <Button
-              variant="ghost"
-              size="icon-xs"
+              color="running"
+              intensity="ghost"
+              size="xs"
+              icon={<ExternalLink aria-hidden />}
               aria-label="Open project page"
               title="Open project page"
               onClick={handleOpenProject}
               className="opacity-0 transition-opacity group-hover/header:opacity-100 focus-visible:opacity-100"
-            >
-              <ExternalLink aria-hidden />
-            </Button>
+            />
           )}
           <span className="text-xs text-muted-foreground">
             {active} active · {agents.length} total
