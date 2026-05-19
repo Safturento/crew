@@ -3,7 +3,7 @@ import { cva } from 'class-variance-authority';
 export type ColumnHeaderPlacement = 'per-section' | 'global' | 'floating' | 'tab';
 
 const headerRow = cva(
-  'grid items-center gap-4 grid-cols-[100px_90px_90px_70px_1fr_168px] font-mono text-xs font-semibold uppercase tracking-widest text-muted-foreground',
+  'grid items-center gap-3 grid-cols-[100px_90px_90px_70px_1fr_168px] font-mono text-xs font-semibold uppercase tracking-widest text-muted-foreground',
   {
     variants: {
       placement: {

@@ -21,7 +21,7 @@ interface AgentRowProps {
 const ACTIVE_STATES = new Set<AgentState>(['running', 'initializing']);
 
 const agentRow = cva(
-  'group relative grid cursor-pointer items-center gap-4 rounded border bg-card px-4 py-3 transition-colors hover:bg-popover grid-cols-[100px_90px_90px_70px_1fr_168px]',
+  'group relative grid cursor-pointer items-center h-16 gap-3 rounded border bg-card px-4 py-3 transition-colors hover:bg-popover grid-cols-[100px_90px_90px_70px_1fr_168px]',
   {
     variants: {
       state: {
@@ -90,7 +90,7 @@ export function AgentRow({ agent, onSelect, onAction }: AgentRowProps) {
 // Every state-badge instance in the Figma Pill set uses `lucide/circle` as its
 // Icon INSTANCE_SWAP — the badge's color, not its glyph, carries the state.
 function StateIcon() {
-  return <Circle aria-hidden />;
+  return <Circle className={'p-[2px]'} aria-hidden strokeWidth={6} absoluteStrokeWidth={true} />;
 }
 
 function QuickActions({
@@ -121,12 +121,7 @@ function QuickActions({
     case 'waiting':
       return (
         <SingleAction>
-          <Button
-            color="waiting"
-            intensity="loud"
-            size="xs"
-            onClick={fire('provide-input')}
-          >
+          <Button color="waiting" intensity="loud" size="xs" onClick={fire('provide-input')}>
             Provide input
           </Button>
         </SingleAction>

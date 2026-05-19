@@ -4,7 +4,7 @@ import { PillBase } from './pill-base';
 import type { PillColor, PillIntensity } from '@/lib/pill-variants';
 
 const BADGE_SHAPE =
-  "h-5 gap-1.5 rounded-full px-2 py-0.5 font-mono text-xs leading-none [&_svg:not([class*='size-'])]:size-3";
+  "h-5.5 gap-1.5 rounded-full px-1.5 py-1 font-mono text-xs leading-none [&_svg:not([class*='size-'])]:size-3";
 
 type BadgeProps = Omit<React.HTMLAttributes<HTMLSpanElement>, 'color'> & {
   color?: PillColor;
@@ -13,7 +13,14 @@ type BadgeProps = Omit<React.HTMLAttributes<HTMLSpanElement>, 'color'> & {
   asChild?: boolean;
 };
 
-function Badge({ color = 'running', intensity = 'mid', icon, asChild = false, children, ...rest }: BadgeProps) {
+function Badge({
+  color = 'running',
+  intensity = 'mid',
+  icon,
+  asChild = false,
+  children,
+  ...rest
+}: BadgeProps) {
   return (
     <PillBase
       {...rest}
