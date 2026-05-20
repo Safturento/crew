@@ -473,6 +473,8 @@ The structural fix for the first two is the Plugin-API snapshot work captured in
 - What does the skill actually need? Settle in Phase A.
 - Do we want a per-file size budget for `.crew/figma-snapshot/`? Currently unbounded.
 
+**2026-05-19 update:** No longer theoretical — `.crew/figma-snapshot/composites/212-910.json` (the AgentRow composite) is **632 KB**, which exceeds the `Read` tool's 256 KB hard limit. During the AgentRow card-redesign brainstorm we had to fall back to `grep` for icon-name lookups since the file couldn't be ingested whole. That's a real friction point: agents doing snapshot-driven design work can't open the source-of-truth JSON for any non-trivial component. Bumped from "future cost" to "current blocker for tool ergonomics." Scheduled to discuss after AgentRow planning + selective figma-snapshot export work close (the latter is the 2026-05-19 entry above; both are figma-snapshot scope and a single design pass can reconcile them).
+
 ### 2026-05-12 — Move figma-snapshot `PAGE_DIR_MAP` into project config
 
 **What:** `emit.ts` hardcodes `Composites → composites/` and `Dashboard Screens → screens/` in a module-level map. Any other page name falls through to a sanitized slug. This is crew-dashboard-specific knowledge living in a generic CLI helper — violates AGENTS.md's "Don't hardcode project-specific knowledge" rule (originally written for `Recipes-App`, same principle applies here).
