@@ -118,25 +118,30 @@ async function runPartial(
 
   // Page-mismatch gate: known IDs must be on the --page if --page is set.
   if (deps.page) {
-    const mismatched = known.filter((id) => index[id]!.page !== deps.page);
-    if (mismatched.length > 0) {
-      const example = mismatched[0]!;
-      return {
-        ok: false,
-        reason: `node ${example} is on page '${index[example]!.page}', not '${deps.page}'; partial refresh does not move nodes between pages`,
-      };
+    const targetPage = deps.page;
+    for (const id of known) {
+      const entry = index[id];
+      if (entry && entry.page !== targetPage) {
+        return {
+          ok: false,
+          reason: `node ${id} is on page '${entry.page}', not '${targetPage}'; partial refresh does not move nodes between pages`,
+        };
+      }
     }
   }
 
-  const targets = nodeIds.map((id) => {
+  const pageOverride = deps.page;
+  const targets: Array<{ nodeId: string; page: string; dir: string }> = [];
+  for (const id of nodeIds) {
     const existing = index[id];
     if (existing) {
       const dir = existing.metadataPath.split('/').slice(0, -1).join('/');
-      return { nodeId: id, page: existing.page, dir };
+      targets.push({ nodeId: id, page: existing.page, dir });
+    } else if (pageOverride) {
+      targets.push({ nodeId: id, page: pageOverride, dir: pageDirFor(pageOverride) });
     }
-    // Unknown — use --page (validated above to be non-empty).
-    return { nodeId: id, page: deps.page!, dir: pageDirFor(deps.page!) };
-  });
+    // Else: caught by the unknown-IDs gate above. Defensive — skip.
+  }
 
   try {
     const client = deps.clientFactory ? deps.clientFactory() : new FigmaRestClient();
