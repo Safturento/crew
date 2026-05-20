@@ -111,26 +111,52 @@ export async function emitSnapshot(opts: EmitSnapshotOptions): Promise<EmitSnaps
 
   await writeFile(join(opts.outDir, 'index.json'), `${JSON.stringify(index, null, 2)}\n`);
 
-  // Image pass — non-fatal. A render timeout or a failed download warns and
-  // skips the PNG; the snapshot still succeeds with complete metadata.
+  // Image pass — non-fatal. See runImagePass for the policy.
   if (targets.length > 0) {
-    try {
-      const ids = targets.map((t) => t.node.id);
-      const images = await opts.client.getImages(opts.fileKey, ids, opts.imageScale ?? 2);
-      for (const t of targets) {
-        const cdnUrl = images.images[t.node.id];
-        if (!cdnUrl) continue;
-        try {
-          const buf = await fetchImage(cdnUrl);
-          await writeFile(join(opts.outDir, t.dir, `${safeId(t.node.id)}.png`), buf);
-        } catch (err) {
-          console.warn(`figma-snapshot: image fetch failed for ${t.node.id}: ${String(err)}`);
-        }
-      }
-    } catch (err) {
-      console.warn(`figma-snapshot: image pass failed, snapshot has metadata only: ${String(err)}`);
-    }
+    await runImagePass({
+      fileKey: opts.fileKey,
+      outDir: opts.outDir,
+      client: opts.client,
+      fetchImage,
+      imageScale: opts.imageScale,
+      targets: targets.map((t) => ({ nodeId: t.node.id, dir: t.dir })),
+    });
   }
 
   return { nodesExported: targets.length };
+}
+
+interface RunImagePassOptions {
+  fileKey: string;
+  outDir: string;
+  client: FigmaRestClient;
+  fetchImage: (url: string) => Promise<Buffer>;
+  imageScale?: number;
+  targets: Array<{ nodeId: string; dir: string }>;
+}
+
+/**
+ * Render PNGs for the given targets. Non-fatal per node and per batch:
+ * a Figma render timeout, a CDN fetch failure, or even a wholesale `/images`
+ * error all warn and skip the affected PNG(s) rather than aborting. The
+ * metadata files are already on disk by the time this runs — image-pass
+ * failures only cost the screenshots.
+ */
+async function runImagePass(opts: RunImagePassOptions): Promise<void> {
+  try {
+    const ids = opts.targets.map((t) => t.nodeId);
+    const images = await opts.client.getImages(opts.fileKey, ids, opts.imageScale ?? 2);
+    for (const t of opts.targets) {
+      const cdnUrl = images.images[t.nodeId];
+      if (!cdnUrl) continue;
+      try {
+        const buf = await opts.fetchImage(cdnUrl);
+        await writeFile(join(opts.outDir, t.dir, `${safeId(t.nodeId)}.png`), buf);
+      } catch (err) {
+        console.warn(`figma-snapshot: image fetch failed for ${t.nodeId}: ${String(err)}`);
+      }
+    }
+  } catch (err) {
+    console.warn(`figma-snapshot: image pass failed, snapshot has metadata only: ${String(err)}`);
+  }
 }
