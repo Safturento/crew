@@ -58,22 +58,33 @@ describe('ProjectSection', () => {
     expect(screen.getByText(/No agents yet/)).toBeInTheDocument();
   });
 
-  it('renders a per-section column header row above the agents', () => {
+  it('renders the project header by default', () => {
     render(<ProjectSection project={project} agents={agents} onSelectAgent={() => {}} />);
-    expect(screen.getByRole('row', { name: /column headers/i })).toBeInTheDocument();
-    // Header labels in v2 column order
-    expect(screen.getByText(/^State$/i)).toBeInTheDocument();
-    expect(screen.getByText(/^ID$/i)).toBeInTheDocument();
-    expect(screen.getByText(/^Runtime$/i)).toBeInTheDocument();
-    expect(screen.getByText(/^Tokens$/i)).toBeInTheDocument();
-    expect(screen.getByText(/^Title$/i)).toBeInTheDocument();
+    expect(screen.getByText('kanban-api')).toBeInTheDocument();
+    expect(screen.getByText(/1 active · 2 total/)).toBeInTheDocument();
   });
 
-  it('does not render the column header row when collapsed', async () => {
-    const user = userEvent.setup();
-    render(<ProjectSection project={project} agents={agents} onSelectAgent={() => {}} />);
-    await user.click(screen.getByRole('button', { name: /toggle kanban-api/i }));
-    expect(screen.queryByRole('row', { name: /column headers/i })).not.toBeInTheDocument();
+  it('omits the project header when showHeader is false but still renders agents', () => {
+    render(
+      <ProjectSection
+        project={project}
+        agents={agents}
+        onSelectAgent={() => {}}
+        showHeader={false}
+      />,
+    );
+    expect(screen.queryByRole('button', { name: /toggle kanban-api/i })).not.toBeInTheDocument();
+    expect(screen.queryByText('~/code/kanban-api')).not.toBeInTheDocument();
+    expect(screen.getByText('KAN-1')).toBeInTheDocument();
+    expect(screen.getByText('KAN-2')).toBeInTheDocument();
+  });
+
+  it('omits the header and still renders the empty state when showHeader is false', () => {
+    render(
+      <ProjectSection project={project} agents={[]} onSelectAgent={() => {}} showHeader={false} />,
+    );
+    expect(screen.queryByRole('button', { name: /toggle kanban-api/i })).not.toBeInTheDocument();
+    expect(screen.getByText(/No agents yet/)).toBeInTheDocument();
   });
 
   it('renders an "Open project page" icon-button when onOpenProject is provided', () => {
