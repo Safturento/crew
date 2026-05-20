@@ -70,14 +70,14 @@ and background continue to come from the existing `cva` variants block driven by
 **Meta row.** Inline flex with three icon+value pairs separated by literal `·` characters and
 typed as `font-mono text-xs text-muted-foreground`:
 
-- ticket glyph (likely `<Hash />`) ` {agent.key}`
-- runtime glyph (likely `<Clock />`) ` {runtime}`
-- tokens glyph (likely one of `Diamond` / `Sparkle` / `Coins` — set-level instance per Figma) ` {formatTokens(agent.tokens)}`
+- `<Hash />` ` {agent.key}`
+- `<Clock />` ` {runtime}`
+- `<Currency />` ` {formatTokens(agent.tokens)}`
 
-Icons render at `h-3 w-3` `inline-block`. Final lucide names for all three glyphs get
-confirmed against `212-910.json`'s `componentInstances[].componentName` at implementation
-time — the snapshot is the binding spec for which DS-canonical lucide instance sits in each
-slot.
+Icons render at `h-3 w-3` `inline-block`. The three lucide instances above are taken from
+`.crew/figma-snapshot/composites/212-910.json` — grepping `lucide/` returns exactly
+`circle` (state pill), `hash`, `clock`, `currency`, `git-pull-request`. All five are present
+in the `lucide-react` export set; import as `Hash`, `Clock`, `Currency` from `lucide-react`.
 
 **Attention pulse.** Keep the existing `<span aria-hidden absolute inset-y-1.5 left-0 w-1 rounded-full ${stateClasses.solidBg} animate-att-pulse>`
 overlay for `meta.attention` states (waiting / pr_open / error). It renders on top of the new
