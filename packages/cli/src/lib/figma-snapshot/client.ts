@@ -29,6 +29,10 @@ export interface FigmaImagesResponse {
   err?: string;
 }
 
+export interface FigmaFileNodesResponse {
+  nodes: Record<string, { document: FigmaNode } | null>;
+}
+
 export interface FigmaRestClientOptions {
   token?: string;
   fetch?: FetchLike;
@@ -95,6 +99,18 @@ export class FigmaRestClient {
   async getFileMeta(fileKey: string): Promise<{ version: string }> {
     const res = await this.req<FigmaFileResponse>(`/files/${encodeURIComponent(fileKey)}?depth=1`);
     return { version: res.version };
+  }
+
+  /**
+   * Fetch specific nodes by id via `/files/{key}/nodes?ids=...`. Used by the
+   * selective-export path (`crew figma-snapshot --node-id ...`) to avoid the
+   * full document fetch. Figma returns `null` for ids it can't find — callers
+   * handle that case rather than throwing.
+   */
+  async getFileNodes(fileKey: string, nodeIds: string[]): Promise<FigmaFileNodesResponse> {
+    const ids = nodeIds.join(',');
+    const path = `/files/${encodeURIComponent(fileKey)}/nodes?ids=${encodeURIComponent(ids)}`;
+    return this.req<FigmaFileNodesResponse>(path);
   }
 
   /**

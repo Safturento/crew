@@ -169,4 +169,27 @@ describe('FigmaRestClient', () => {
     expect(meta.version).toBe('v-9');
     expect(calls[0]).toContain('/files/FILEKEY?depth=1');
   });
+
+  it('getFileNodes calls /files/{key}/nodes with comma-joined ids and returns the response', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        nodes: {
+          '212:910': {
+            document: { id: '212:910', name: 'AgentRow', type: 'COMPONENT_SET', children: [] },
+          },
+          '1:2': null,
+        },
+      }),
+    });
+    const client = new FigmaRestClient({ token: 't', fetch: fetchMock });
+    const res = await client.getFileNodes('FILEKEY', ['212:910', '1:2']);
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const url = fetchMock.mock.calls[0][0] as string;
+    expect(url).toMatch(/^https:\/\/api\.figma\.com\/v1\/files\/FILEKEY\/nodes\?/);
+    expect(url).toContain('ids=212%3A910%2C1%3A2');
+    expect(res.nodes['212:910']).not.toBeNull();
+    expect(res.nodes['1:2']).toBeNull();
+  });
 });

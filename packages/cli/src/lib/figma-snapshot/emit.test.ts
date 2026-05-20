@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { mkdtempSync, readFileSync, existsSync, rmSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, existsSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { emitSnapshot } from './emit.js';
+import { emitPartialSnapshot, emitSnapshot } from './emit.js';
 import type { FigmaFileResponse, FigmaImagesResponse } from './client.js';
 
 const fileResponse: FigmaFileResponse = {
@@ -284,5 +284,243 @@ describe('emitSnapshot', () => {
     const meta = JSON.parse(readFileSync(join(outDir, 'meta.json'), 'utf8'));
     expect(meta.figmaFileVersion).toBe('v-test-123');
     expect(typeof meta.capturedAt).toBe('string');
+  });
+});
+
+describe('emitPartialSnapshot', () => {
+  function seedSnapshot() {
+    const meta = { figmaFileVersion: 'v-baseline', capturedAt: '2026-05-15T00:00:00Z' };
+    const index = {
+      '272:120': {
+        name: 'Pill',
+        type: 'COMPONENT_SET',
+        page: 'Composites',
+        screenshotPath: 'composites/272-120.png',
+        metadataPath: 'composites/272-120.json',
+      },
+      '300:1': {
+        name: 'Detached frame',
+        type: 'FRAME',
+        page: 'Composites',
+        screenshotPath: 'composites/300-1.png',
+        metadataPath: 'composites/300-1.json',
+      },
+      '1:756': {
+        name: 'Agent drawer',
+        type: 'FRAME',
+        page: 'Dashboard Screens',
+        screenshotPath: 'screens/1-756.png',
+        metadataPath: 'screens/1-756.json',
+      },
+    };
+    writeFileSync(join(outDir, 'meta.json'), `${JSON.stringify(meta, null, 2)}\n`);
+    writeFileSync(join(outDir, 'index.json'), `${JSON.stringify(index, null, 2)}\n`);
+    mkdirSync(join(outDir, 'composites'), { recursive: true });
+    mkdirSync(join(outDir, 'screens'), { recursive: true });
+    for (const [id, e] of Object.entries(index)) {
+      writeFileSync(
+        join(outDir, e.metadataPath),
+        `${JSON.stringify(
+          {
+            id,
+            name: e.name,
+            type: e.type,
+            page: e.page,
+            raw: { id, name: e.name, type: e.type, children: [] },
+          },
+          null,
+          2,
+        )}\n`,
+      );
+    }
+    return { meta, index };
+  }
+
+  it('refreshes a single target: writes new per-node JSON, updates its index entry, leaves siblings and meta untouched', async () => {
+    const { meta: metaBefore } = seedSnapshot();
+    const client = {
+      getFile: vi.fn(),
+      getImages: vi.fn().mockResolvedValue({ images: { '272:120': 'https://cdn/new-pill.png' } }),
+      getFileNodes: vi.fn().mockResolvedValue({
+        nodes: {
+          '272:120': {
+            document: {
+              id: '272:120',
+              name: 'Pill (v2)',
+              type: 'COMPONENT_SET',
+              children: [{ id: 'x', name: 'variant', type: 'COMPONENT' }],
+            },
+          },
+        },
+      }),
+    };
+    const fetchImage = vi.fn().mockResolvedValue(Buffer.from('new-pill-bytes'));
+
+    const result = await emitPartialSnapshot({
+      fileKey: 'FILEKEY',
+      outDir,
+      client: client as never,
+      fetchImage,
+      targets: [{ nodeId: '272:120', page: 'Composites', dir: 'composites' }],
+    });
+
+    expect(result.nodesRefreshed).toBe(1);
+
+    const json = JSON.parse(readFileSync(join(outDir, 'composites/272-120.json'), 'utf8'));
+    expect(json.name).toBe('Pill (v2)');
+    expect(json.raw.children).toHaveLength(1);
+
+    const index = JSON.parse(readFileSync(join(outDir, 'index.json'), 'utf8'));
+    expect(index['272:120']).toMatchObject({ name: 'Pill (v2)', page: 'Composites' });
+
+    expect(index['300:1']).toMatchObject({ name: 'Detached frame' });
+    expect(index['1:756']).toMatchObject({ name: 'Agent drawer' });
+    const siblingJson = JSON.parse(readFileSync(join(outDir, 'composites/300-1.json'), 'utf8'));
+    expect(siblingJson.name).toBe('Detached frame');
+
+    const metaAfter = JSON.parse(readFileSync(join(outDir, 'meta.json'), 'utf8'));
+    expect(metaAfter).toEqual(metaBefore);
+
+    expect(readFileSync(join(outDir, 'composites/272-120.png')).toString()).toBe('new-pill-bytes');
+  });
+
+  it('refreshes multiple targets across different page dirs', async () => {
+    seedSnapshot();
+    const client = {
+      getFile: vi.fn(),
+      getImages: vi.fn().mockResolvedValue({
+        images: {
+          '272:120': 'https://cdn/pill.png',
+          '1:756': 'https://cdn/drawer.png',
+        },
+      }),
+      getFileNodes: vi.fn().mockResolvedValue({
+        nodes: {
+          '272:120': {
+            document: { id: '272:120', name: 'Pill (v2)', type: 'COMPONENT_SET', children: [] },
+          },
+          '1:756': {
+            document: { id: '1:756', name: 'Agent drawer (v2)', type: 'FRAME', children: [] },
+          },
+        },
+      }),
+    };
+
+    const result = await emitPartialSnapshot({
+      fileKey: 'FILEKEY',
+      outDir,
+      client: client as never,
+      fetchImage: async (url) => Buffer.from(url),
+      targets: [
+        { nodeId: '272:120', page: 'Composites', dir: 'composites' },
+        { nodeId: '1:756', page: 'Dashboard Screens', dir: 'screens' },
+      ],
+    });
+
+    expect(result.nodesRefreshed).toBe(2);
+    expect(existsSync(join(outDir, 'composites/272-120.json'))).toBe(true);
+    expect(existsSync(join(outDir, 'screens/1-756.json'))).toBe(true);
+
+    const index = JSON.parse(readFileSync(join(outDir, 'index.json'), 'utf8'));
+    expect(index['272:120'].name).toBe('Pill (v2)');
+    expect(index['1:756'].name).toBe('Agent drawer (v2)');
+  });
+
+  it('fails closed when Figma returns null for any requested ID — no disk writes, no index mutation', async () => {
+    seedSnapshot();
+    const indexBefore = readFileSync(join(outDir, 'index.json'), 'utf8');
+    const componentJsonBefore = readFileSync(
+      join(outDir, 'composites/272-120.json'),
+      'utf8',
+    );
+    const client = {
+      getFile: vi.fn(),
+      getImages: vi.fn(),
+      getFileNodes: vi.fn().mockResolvedValue({
+        nodes: {
+          '272:120': {
+            document: { id: '272:120', name: 'Pill (v2)', type: 'COMPONENT_SET', children: [] },
+          },
+          '999:9': null,
+        },
+      }),
+    };
+
+    await expect(
+      emitPartialSnapshot({
+        fileKey: 'FILEKEY',
+        outDir,
+        client: client as never,
+        fetchImage: async () => Buffer.from('x'),
+        targets: [
+          { nodeId: '272:120', page: 'Composites', dir: 'composites' },
+          { nodeId: '999:9', page: 'Composites', dir: 'composites' },
+        ],
+      }),
+    ).rejects.toThrow(/999:9/);
+
+    expect(readFileSync(join(outDir, 'index.json'), 'utf8')).toBe(indexBefore);
+    expect(readFileSync(join(outDir, 'composites/272-120.json'), 'utf8')).toBe(componentJsonBefore);
+
+    expect(client.getImages).not.toHaveBeenCalled();
+  });
+
+  it('image-pass failure is non-fatal — JSON and index already flushed, warning emitted', async () => {
+    seedSnapshot();
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const client = {
+      getFile: vi.fn(),
+      getImages: vi.fn().mockRejectedValue(new Error('Figma API 403 for /images')),
+      getFileNodes: vi.fn().mockResolvedValue({
+        nodes: {
+          '272:120': {
+            document: { id: '272:120', name: 'Pill (v2)', type: 'COMPONENT_SET', children: [] },
+          },
+        },
+      }),
+    };
+
+    const result = await emitPartialSnapshot({
+      fileKey: 'FILEKEY',
+      outDir,
+      client: client as never,
+      fetchImage: vi.fn(),
+      targets: [{ nodeId: '272:120', page: 'Composites', dir: 'composites' }],
+    });
+
+    expect(result.nodesRefreshed).toBe(1);
+    const json = JSON.parse(readFileSync(join(outDir, 'composites/272-120.json'), 'utf8'));
+    expect(json.name).toBe('Pill (v2)');
+    expect(warn).toHaveBeenCalled();
+    warn.mockRestore();
+  });
+
+  it('preserves sibling index entries byte-for-byte across a multi-target refresh', async () => {
+    seedSnapshot();
+    const indexBefore = JSON.parse(readFileSync(join(outDir, 'index.json'), 'utf8'));
+    const client = {
+      getFile: vi.fn(),
+      getImages: vi.fn().mockResolvedValue({ images: { '272:120': null } }),
+      getFileNodes: vi.fn().mockResolvedValue({
+        nodes: {
+          '272:120': {
+            document: { id: '272:120', name: 'Pill (v2)', type: 'COMPONENT_SET', children: [] },
+          },
+        },
+      }),
+    };
+
+    await emitPartialSnapshot({
+      fileKey: 'FILEKEY',
+      outDir,
+      client: client as never,
+      fetchImage: async () => Buffer.from('x'),
+      targets: [{ nodeId: '272:120', page: 'Composites', dir: 'composites' }],
+    });
+
+    const indexAfter = JSON.parse(readFileSync(join(outDir, 'index.json'), 'utf8'));
+    expect(indexAfter['272:120']).not.toEqual(indexBefore['272:120']);
+    expect(indexAfter['300:1']).toEqual(indexBefore['300:1']);
+    expect(indexAfter['1:756']).toEqual(indexBefore['1:756']);
   });
 });

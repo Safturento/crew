@@ -4064,6 +4064,22 @@
                 "type": "INSTANCE",
                 "scrollBehavior": "SCROLLS",
                 "boundVariables": {
+                  "paddingLeft": {
+                    "type": "VARIABLE_ALIAS",
+                    "id": "VariableID:fc419875de7f89830704de681d4c797b252fcf73/1088:535"
+                  },
+                  "paddingTop": {
+                    "type": "VARIABLE_ALIAS",
+                    "id": "VariableID:849cd9aae3b4f4cd79eb791715956035953ff1ea/1088:518"
+                  },
+                  "paddingRight": {
+                    "type": "VARIABLE_ALIAS",
+                    "id": "VariableID:fc419875de7f89830704de681d4c797b252fcf73/1088:535"
+                  },
+                  "paddingBottom": {
+                    "type": "VARIABLE_ALIAS",
+                    "id": "VariableID:849cd9aae3b4f4cd79eb791715956035953ff1ea/1088:518"
+                  },
                   "fills": [
                     {
                       "type": "VARIABLE_ALIAS",
@@ -5815,7 +5831,7 @@
                     }
                   ]
                 },
-                "componentId": "271:332",
+                "componentId": "271:396",
                 "componentProperties": {
                   "Icon#272:450": {
                     "type": "INSTANCE_SWAP",
@@ -5836,7 +5852,7 @@
                     "value": "Resume"
                   },
                   "type": {
-                    "value": "button-xs",
+                    "value": "button-sm",
                     "type": "VARIANT",
                     "boundVariables": {}
                   },
@@ -5862,7 +5878,7 @@
                 ],
                 "children": [
                   {
-                    "id": "I278:1529;276:439",
+                    "id": "I278:1529;276:535",
                     "name": "icon",
                     "visible": false,
                     "type": "INSTANCE",
@@ -5895,7 +5911,7 @@
                     "overrides": [],
                     "children": [
                       {
-                        "id": "I278:1529;276:439;128:1337",
+                        "id": "I278:1529;276:535;128:1337",
                         "name": "Vector",
                         "type": "VECTOR",
                         "scrollBehavior": "SCROLLS",
@@ -5939,10 +5955,10 @@
                         "strokeJoin": "ROUND",
                         "strokeCap": "ROUND",
                         "absoluteBoundingBox": {
-                          "x": 812.5,
-                          "y": 5036.5,
-                          "width": 9,
-                          "height": 9
+                          "x": 797,
+                          "y": 5041,
+                          "width": 12,
+                          "height": 12
                         },
                         "absoluteRenderBounds": null,
                         "constraints": {
@@ -5970,10 +5986,10 @@
                       "a": 0
                     },
                     "absoluteBoundingBox": {
-                      "x": 811,
-                      "y": 5035,
-                      "width": 12,
-                      "height": 12
+                      "x": 795,
+                      "y": 5039,
+                      "width": 16,
+                      "height": 16
                     },
                     "absoluteRenderBounds": null,
                     "constraints": {
@@ -5991,7 +6007,7 @@
                     }
                   },
                   {
-                    "id": "I278:1529;271:333",
+                    "id": "I278:1529;271:397",
                     "name": "label",
                     "type": "TEXT",
                     "scrollBehavior": "SCROLLS",
@@ -6029,16 +6045,16 @@
                     "strokeWeight": 1,
                     "strokeAlign": "OUTSIDE",
                     "absoluteBoundingBox": {
-                      "x": 819,
-                      "y": 5039,
-                      "width": 43,
-                      "height": 16
+                      "x": 795,
+                      "y": 5038,
+                      "width": 50,
+                      "height": 18
                     },
                     "absoluteRenderBounds": {
-                      "x": 819.9000244140625,
-                      "y": 5042.63623046875,
-                      "width": 40.77044677734375,
-                      "height": 8.4716796875
+                      "x": 796.0499877929688,
+                      "y": 5042.2421875,
+                      "width": 47.5655517578125,
+                      "height": 9.8837890625
                     },
                     "constraints": {
                       "vertical": "TOP",
@@ -6063,11 +6079,11 @@
                       "fontStyle": "Medium",
                       "fontWeight": 500,
                       "textAutoResize": "WIDTH_AND_HEIGHT",
-                      "fontSize": 12,
+                      "fontSize": 14,
                       "textAlignHorizontal": "LEFT",
                       "textAlignVertical": "TOP",
                       "letterSpacing": 0,
-                      "lineHeightPx": 15.63599967956543,
+                      "lineHeightPx": 18.242000579833984,
                       "lineHeightPercent": 100,
                       "lineHeightUnit": "INTRINSIC_%"
                     },
@@ -6148,23 +6164,23 @@
                 "layoutMode": "HORIZONTAL",
                 "counterAxisAlignItems": "CENTER",
                 "primaryAxisAlignItems": "CENTER",
-                "paddingLeft": 8,
-                "paddingRight": 8,
-                "paddingTop": 4,
-                "paddingBottom": 4,
-                "itemSpacing": 4,
+                "paddingLeft": 12,
+                "paddingRight": 12,
+                "paddingTop": 6,
+                "paddingBottom": 6,
+                "itemSpacing": 6,
                 "layoutWrap": "NO_WRAP",
                 "absoluteBoundingBox": {
-                  "x": 811,
-                  "y": 5035,
-                  "width": 59,
-                  "height": 24
+                  "x": 783,
+                  "y": 5032,
+                  "width": 74,
+                  "height": 30
                 },
                 "absoluteRenderBounds": {
-                  "x": 811,
-                  "y": 5035,
-                  "width": 59,
-                  "height": 24
+                  "x": 783,
+                  "y": 5032,
+                  "width": 74,
+                  "height": 30
                 },
                 "constraints": {
                   "vertical": "TOP",
@@ -6185,7 +6201,7 @@
                 "name": "Pill",
                 "type": "INSTANCE",
                 "scrollBehavior": "SCROLLS",
-                "componentId": "271:328",
+                "componentId": "271:392",
                 "componentProperties": {
                   "Has Icon#272:225": {
                     "type": "BOOLEAN",
@@ -6206,7 +6222,7 @@
                     "value": "Finish"
                   },
                   "type": {
-                    "value": "button-xs",
+                    "value": "button-sm",
                     "type": "VARIANT",
                     "boundVariables": {}
                   },
@@ -6232,7 +6248,7 @@
                 ],
                 "children": [
                   {
-                    "id": "I278:1534;276:433",
+                    "id": "I278:1534;276:529",
                     "name": "icon",
                     "visible": false,
                     "type": "INSTANCE",
@@ -6265,7 +6281,7 @@
                     "overrides": [],
                     "children": [
                       {
-                        "id": "I278:1534;276:433;128:1337",
+                        "id": "I278:1534;276:529;128:1337",
                         "name": "Vector",
                         "type": "VECTOR",
                         "scrollBehavior": "SCROLLS",
@@ -6309,10 +6325,10 @@
                         "strokeJoin": "ROUND",
                         "strokeCap": "ROUND",
                         "absoluteBoundingBox": {
-                          "x": 877.5,
-                          "y": 5036.5,
-                          "width": 9,
-                          "height": 9
+                          "x": 877,
+                          "y": 5041,
+                          "width": 12,
+                          "height": 12
                         },
                         "absoluteRenderBounds": null,
                         "constraints": {
@@ -6340,10 +6356,10 @@
                       "a": 0
                     },
                     "absoluteBoundingBox": {
-                      "x": 876,
-                      "y": 5035,
-                      "width": 12,
-                      "height": 12
+                      "x": 875,
+                      "y": 5039,
+                      "width": 16,
+                      "height": 16
                     },
                     "absoluteRenderBounds": null,
                     "constraints": {
@@ -6361,7 +6377,7 @@
                     }
                   },
                   {
-                    "id": "I278:1534;271:329",
+                    "id": "I278:1534;271:393",
                     "name": "label",
                     "type": "TEXT",
                     "scrollBehavior": "SCROLLS",
@@ -6399,16 +6415,16 @@
                     "strokeWeight": 1,
                     "strokeAlign": "OUTSIDE",
                     "absoluteBoundingBox": {
-                      "x": 884,
-                      "y": 5039,
-                      "width": 32,
-                      "height": 16
+                      "x": 875,
+                      "y": 5038,
+                      "width": 37,
+                      "height": 18
                     },
                     "absoluteRenderBounds": {
-                      "x": 884.9000244140625,
-                      "y": 5042.63623046875,
-                      "width": 29.60107421875,
-                      "height": 8.4716796875
+                      "x": 876.0499877929688,
+                      "y": 5042.2421875,
+                      "width": 34.53460693359375,
+                      "height": 9.8837890625
                     },
                     "constraints": {
                       "vertical": "TOP",
@@ -6433,11 +6449,11 @@
                       "fontStyle": "Medium",
                       "fontWeight": 500,
                       "textAutoResize": "WIDTH_AND_HEIGHT",
-                      "fontSize": 12,
+                      "fontSize": 14,
                       "textAlignHorizontal": "LEFT",
                       "textAlignVertical": "TOP",
                       "letterSpacing": 0,
-                      "lineHeightPx": 15.63599967956543,
+                      "lineHeightPx": 18.242000579833984,
                       "lineHeightPercent": 100,
                       "lineHeightUnit": "INTRINSIC_%"
                     },
@@ -6467,23 +6483,23 @@
                 "layoutMode": "HORIZONTAL",
                 "counterAxisAlignItems": "CENTER",
                 "primaryAxisAlignItems": "CENTER",
-                "paddingLeft": 8,
-                "paddingRight": 8,
-                "paddingTop": 4,
-                "paddingBottom": 4,
-                "itemSpacing": 4,
+                "paddingLeft": 12,
+                "paddingRight": 12,
+                "paddingTop": 6,
+                "paddingBottom": 6,
+                "itemSpacing": 6,
                 "layoutWrap": "NO_WRAP",
                 "absoluteBoundingBox": {
-                  "x": 876,
-                  "y": 5035,
-                  "width": 48,
-                  "height": 24
+                  "x": 863,
+                  "y": 5032,
+                  "width": 61,
+                  "height": 30
                 },
                 "absoluteRenderBounds": {
-                  "x": 876,
-                  "y": 5035,
-                  "width": 48,
-                  "height": 24
+                  "x": 863,
+                  "y": 5032,
+                  "width": 61,
+                  "height": 30
                 },
                 "constraints": {
                   "vertical": "TOP",
@@ -6521,15 +6537,15 @@
             "layoutWrap": "NO_WRAP",
             "absoluteBoundingBox": {
               "x": 756,
-              "y": 5035,
+              "y": 5032,
               "width": 168,
-              "height": 24
+              "height": 30
             },
             "absoluteRenderBounds": {
               "x": 756,
-              "y": 5035,
+              "y": 5032,
               "width": 168,
-              "height": 24
+              "height": 30
             },
             "constraints": {
               "vertical": "TOP",
@@ -8496,7 +8512,7 @@
                     }
                   ]
                 },
-                "componentId": "271:342",
+                "componentId": "271:406",
                 "componentProperties": {
                   "Has Icon#272:225": {
                     "type": "BOOLEAN",
@@ -8517,7 +8533,7 @@
                     "value": "Provide input"
                   },
                   "type": {
-                    "value": "button-xs",
+                    "value": "button-sm",
                     "type": "VARIANT",
                     "boundVariables": {}
                   },
@@ -8543,7 +8559,7 @@
                 ],
                 "children": [
                   {
-                    "id": "I278:1539;276:454",
+                    "id": "I278:1539;276:550",
                     "name": "icon",
                     "visible": false,
                     "type": "INSTANCE",
@@ -8576,7 +8592,7 @@
                     "overrides": [],
                     "children": [
                       {
-                        "id": "I278:1539;276:454;128:1337",
+                        "id": "I278:1539;276:550;128:1337",
                         "name": "Vector",
                         "type": "VECTOR",
                         "scrollBehavior": "SCROLLS",
@@ -8620,10 +8636,10 @@
                         "strokeJoin": "ROUND",
                         "strokeCap": "ROUND",
                         "absoluteBoundingBox": {
-                          "x": 837.5,
-                          "y": 5116.5,
-                          "width": 9,
-                          "height": 9
+                          "x": 831,
+                          "y": 5121,
+                          "width": 12,
+                          "height": 12
                         },
                         "absoluteRenderBounds": null,
                         "constraints": {
@@ -8651,10 +8667,10 @@
                       "a": 0
                     },
                     "absoluteBoundingBox": {
-                      "x": 836,
-                      "y": 5115,
-                      "width": 12,
-                      "height": 12
+                      "x": 829,
+                      "y": 5119,
+                      "width": 16,
+                      "height": 16
                     },
                     "absoluteRenderBounds": null,
                     "constraints": {
@@ -8672,7 +8688,7 @@
                     }
                   },
                   {
-                    "id": "I278:1539;271:343",
+                    "id": "I278:1539;271:407",
                     "name": "label",
                     "type": "TEXT",
                     "scrollBehavior": "SCROLLS",
@@ -8710,16 +8726,16 @@
                     "strokeWeight": 1,
                     "strokeAlign": "OUTSIDE",
                     "absoluteBoundingBox": {
-                      "x": 844,
-                      "y": 5119,
-                      "width": 72,
-                      "height": 16
+                      "x": 829,
+                      "y": 5118,
+                      "width": 83,
+                      "height": 18
                     },
                     "absoluteRenderBounds": {
-                      "x": 844.9000244140625,
-                      "y": 5122.63623046875,
-                      "width": 69.713134765625,
-                      "height": 10.81201171875
+                      "x": 830.0499877929688,
+                      "y": 5122.2421875,
+                      "width": 81.33203125,
+                      "height": 12.61376953125
                     },
                     "constraints": {
                       "vertical": "TOP",
@@ -8744,11 +8760,11 @@
                       "fontStyle": "Medium",
                       "fontWeight": 500,
                       "textAutoResize": "WIDTH_AND_HEIGHT",
-                      "fontSize": 12,
+                      "fontSize": 14,
                       "textAlignHorizontal": "LEFT",
                       "textAlignVertical": "TOP",
                       "letterSpacing": 0,
-                      "lineHeightPx": 15.63599967956543,
+                      "lineHeightPx": 18.242000579833984,
                       "lineHeightPercent": 100,
                       "lineHeightUnit": "INTRINSIC_%"
                     },
@@ -8812,23 +8828,23 @@
                 "layoutMode": "HORIZONTAL",
                 "counterAxisAlignItems": "CENTER",
                 "primaryAxisAlignItems": "CENTER",
-                "paddingLeft": 8,
-                "paddingRight": 8,
-                "paddingTop": 4,
-                "paddingBottom": 4,
-                "itemSpacing": 4,
+                "paddingLeft": 12,
+                "paddingRight": 12,
+                "paddingTop": 6,
+                "paddingBottom": 6,
+                "itemSpacing": 6,
                 "layoutWrap": "NO_WRAP",
                 "absoluteBoundingBox": {
-                  "x": 836,
-                  "y": 5115,
-                  "width": 88,
-                  "height": 24
+                  "x": 817,
+                  "y": 5112,
+                  "width": 107,
+                  "height": 30
                 },
                 "absoluteRenderBounds": {
-                  "x": 836,
-                  "y": 5115,
-                  "width": 88,
-                  "height": 24
+                  "x": 817,
+                  "y": 5112,
+                  "width": 107,
+                  "height": 30
                 },
                 "constraints": {
                   "vertical": "TOP",
@@ -8866,15 +8882,15 @@
             "layoutWrap": "NO_WRAP",
             "absoluteBoundingBox": {
               "x": 756,
-              "y": 5115,
+              "y": 5112,
               "width": 168,
-              "height": 24
+              "height": 30
             },
             "absoluteRenderBounds": {
               "x": 756,
-              "y": 5115,
+              "y": 5112,
               "width": 168,
-              "height": 24
+              "height": 30
             },
             "constraints": {
               "vertical": "TOP",
@@ -9080,6 +9096,12 @@
           "paddingBottom": {
             "type": "VARIABLE_ALIAS",
             "id": "VariableID:fcab863369e5bc38e065c708d4309745255c80c1/1088:655"
+          },
+          "size": {
+            "y": {
+              "type": "VARIABLE_ALIAS",
+              "id": "VariableID:2c43a4d7d34850eff9933eabd3fc3f79e81948af/1046:6144"
+            }
           },
           "rectangleCornerRadii": {
             "RECTANGLE_TOP_LEFT_CORNER_RADIUS": {
@@ -10876,7 +10898,7 @@
                     }
                   ]
                 },
-                "componentId": "271:332",
+                "componentId": "271:396",
                 "componentProperties": {
                   "Icon#272:450": {
                     "type": "INSTANCE_SWAP",
@@ -10897,7 +10919,7 @@
                     "value": "View PR"
                   },
                   "type": {
-                    "value": "button-xs",
+                    "value": "button-sm",
                     "type": "VARIANT",
                     "boundVariables": {}
                   },
@@ -10919,18 +10941,12 @@
                       "height",
                       "width"
                     ]
-                  },
-                  {
-                    "id": "I278:1544;276:439;128:1337",
-                    "overriddenFields": [
-                      "strokes"
-                    ]
                   }
                 ],
                 "children": [
                   {
-                    "id": "I278:1544;276:439",
-                    "name": "lucide/git-pull-request",
+                    "id": "I278:1544;276:535",
+                    "name": "icon",
                     "type": "INSTANCE",
                     "scrollBehavior": "SCROLLS",
                     "componentPropertyReferences": {
@@ -10958,17 +10974,10 @@
                       }
                     },
                     "componentId": "199:106",
-                    "overrides": [
-                      {
-                        "id": "I278:1544;276:439;128:1337",
-                        "overriddenFields": [
-                          "strokes"
-                        ]
-                      }
-                    ],
+                    "overrides": [],
                     "children": [
                       {
-                        "id": "I278:1544;276:439;128:1337",
+                        "id": "I278:1544;276:535;128:1337",
                         "name": "Vector",
                         "type": "VECTOR",
                         "scrollBehavior": "SCROLLS",
@@ -11012,16 +11021,16 @@
                         "strokeJoin": "ROUND",
                         "strokeCap": "ROUND",
                         "absoluteBoundingBox": {
-                          "x": 803.5,
-                          "y": 5202.5,
-                          "width": 9,
-                          "height": 9
+                          "x": 774,
+                          "y": 5201,
+                          "width": 12,
+                          "height": 12
                         },
                         "absoluteRenderBounds": {
-                          "x": 802.5,
-                          "y": 5201.5,
-                          "width": 11,
-                          "height": 11
+                          "x": 773,
+                          "y": 5200,
+                          "width": 14,
+                          "height": 14
                         },
                         "constraints": {
                           "vertical": "SCALE",
@@ -11048,16 +11057,16 @@
                       "a": 0
                     },
                     "absoluteBoundingBox": {
-                      "x": 802,
-                      "y": 5201,
-                      "width": 12,
-                      "height": 12
+                      "x": 772,
+                      "y": 5199,
+                      "width": 16,
+                      "height": 16
                     },
                     "absoluteRenderBounds": {
-                      "x": 802,
-                      "y": 5201,
-                      "width": 12,
-                      "height": 12
+                      "x": 772,
+                      "y": 5199,
+                      "width": 16,
+                      "height": 16
                     },
                     "constraints": {
                       "vertical": "TOP",
@@ -11074,7 +11083,7 @@
                     }
                   },
                   {
-                    "id": "I278:1544;271:333",
+                    "id": "I278:1544;271:397",
                     "name": "label",
                     "type": "TEXT",
                     "scrollBehavior": "SCROLLS",
@@ -11112,16 +11121,16 @@
                     "strokeWeight": 1,
                     "strokeAlign": "OUTSIDE",
                     "absoluteBoundingBox": {
-                      "x": 818,
-                      "y": 5199,
-                      "width": 44,
-                      "height": 16
+                      "x": 784,
+                      "y": 5196,
+                      "width": 51,
+                      "height": 18
                     },
                     "absoluteRenderBounds": {
-                      "x": 818.1680297851562,
-                      "y": 5202.63623046875,
-                      "width": 42.7445068359375,
-                      "height": 8.4716796875
+                      "x": 784.1959838867188,
+                      "y": 5200.2421875,
+                      "width": 49.86865234375,
+                      "height": 9.8837890625
                     },
                     "constraints": {
                       "vertical": "TOP",
@@ -11146,11 +11155,11 @@
                       "fontStyle": "Medium",
                       "fontWeight": 500,
                       "textAutoResize": "WIDTH_AND_HEIGHT",
-                      "fontSize": 12,
+                      "fontSize": 14,
                       "textAlignHorizontal": "LEFT",
                       "textAlignVertical": "TOP",
                       "letterSpacing": 0,
-                      "lineHeightPx": 15.63599967956543,
+                      "lineHeightPx": 18.242000579833984,
                       "lineHeightPercent": 100,
                       "lineHeightUnit": "INTRINSIC_%"
                     },
@@ -11231,23 +11240,23 @@
                 "layoutMode": "HORIZONTAL",
                 "counterAxisAlignItems": "CENTER",
                 "primaryAxisAlignItems": "CENTER",
-                "paddingLeft": 8,
-                "paddingRight": 8,
-                "paddingTop": 4,
-                "paddingBottom": 4,
-                "itemSpacing": 4,
+                "paddingLeft": 12,
+                "paddingRight": 12,
+                "paddingTop": 6,
+                "paddingBottom": 6,
+                "itemSpacing": 6,
                 "layoutWrap": "NO_WRAP",
                 "absoluteBoundingBox": {
-                  "x": 794,
-                  "y": 5195,
-                  "width": 76,
-                  "height": 24
+                  "x": 760,
+                  "y": 5192,
+                  "width": 97,
+                  "height": 30
                 },
                 "absoluteRenderBounds": {
-                  "x": 794,
-                  "y": 5195,
-                  "width": 76,
-                  "height": 24
+                  "x": 760,
+                  "y": 5192,
+                  "width": 97,
+                  "height": 30
                 },
                 "constraints": {
                   "vertical": "TOP",
@@ -11268,7 +11277,7 @@
                 "name": "Pill",
                 "type": "INSTANCE",
                 "scrollBehavior": "SCROLLS",
-                "componentId": "271:328",
+                "componentId": "271:392",
                 "componentProperties": {
                   "Has Icon#272:225": {
                     "type": "BOOLEAN",
@@ -11289,7 +11298,7 @@
                     "value": "Finish"
                   },
                   "type": {
-                    "value": "button-xs",
+                    "value": "button-sm",
                     "type": "VARIANT",
                     "boundVariables": {}
                   },
@@ -11315,7 +11324,7 @@
                 ],
                 "children": [
                   {
-                    "id": "I278:1549;276:433",
+                    "id": "I278:1549;276:529",
                     "name": "icon",
                     "visible": false,
                     "type": "INSTANCE",
@@ -11348,7 +11357,7 @@
                     "overrides": [],
                     "children": [
                       {
-                        "id": "I278:1549;276:433;128:1337",
+                        "id": "I278:1549;276:529;128:1337",
                         "name": "Vector",
                         "type": "VECTOR",
                         "scrollBehavior": "SCROLLS",
@@ -11392,10 +11401,10 @@
                         "strokeJoin": "ROUND",
                         "strokeCap": "ROUND",
                         "absoluteBoundingBox": {
-                          "x": 877.5,
-                          "y": 5196.5,
-                          "width": 9,
-                          "height": 9
+                          "x": 877,
+                          "y": 5201,
+                          "width": 12,
+                          "height": 12
                         },
                         "absoluteRenderBounds": null,
                         "constraints": {
@@ -11423,10 +11432,10 @@
                       "a": 0
                     },
                     "absoluteBoundingBox": {
-                      "x": 876,
-                      "y": 5195,
-                      "width": 12,
-                      "height": 12
+                      "x": 875,
+                      "y": 5199,
+                      "width": 16,
+                      "height": 16
                     },
                     "absoluteRenderBounds": null,
                     "constraints": {
@@ -11444,7 +11453,7 @@
                     }
                   },
                   {
-                    "id": "I278:1549;271:329",
+                    "id": "I278:1549;271:393",
                     "name": "label",
                     "type": "TEXT",
                     "scrollBehavior": "SCROLLS",
@@ -11482,16 +11491,16 @@
                     "strokeWeight": 1,
                     "strokeAlign": "OUTSIDE",
                     "absoluteBoundingBox": {
-                      "x": 884,
-                      "y": 5199,
-                      "width": 32,
-                      "height": 16
+                      "x": 875,
+                      "y": 5198,
+                      "width": 37,
+                      "height": 18
                     },
                     "absoluteRenderBounds": {
-                      "x": 884.9000244140625,
-                      "y": 5202.63623046875,
-                      "width": 29.60107421875,
-                      "height": 8.4716796875
+                      "x": 876.0499877929688,
+                      "y": 5202.2421875,
+                      "width": 34.53460693359375,
+                      "height": 9.8837890625
                     },
                     "constraints": {
                       "vertical": "TOP",
@@ -11516,11 +11525,11 @@
                       "fontStyle": "Medium",
                       "fontWeight": 500,
                       "textAutoResize": "WIDTH_AND_HEIGHT",
-                      "fontSize": 12,
+                      "fontSize": 14,
                       "textAlignHorizontal": "LEFT",
                       "textAlignVertical": "TOP",
                       "letterSpacing": 0,
-                      "lineHeightPx": 15.63599967956543,
+                      "lineHeightPx": 18.242000579833984,
                       "lineHeightPercent": 100,
                       "lineHeightUnit": "INTRINSIC_%"
                     },
@@ -11550,23 +11559,23 @@
                 "layoutMode": "HORIZONTAL",
                 "counterAxisAlignItems": "CENTER",
                 "primaryAxisAlignItems": "CENTER",
-                "paddingLeft": 8,
-                "paddingRight": 8,
-                "paddingTop": 4,
-                "paddingBottom": 4,
-                "itemSpacing": 4,
+                "paddingLeft": 12,
+                "paddingRight": 12,
+                "paddingTop": 6,
+                "paddingBottom": 6,
+                "itemSpacing": 6,
                 "layoutWrap": "NO_WRAP",
                 "absoluteBoundingBox": {
-                  "x": 876,
-                  "y": 5195,
-                  "width": 48,
-                  "height": 24
+                  "x": 863,
+                  "y": 5192,
+                  "width": 61,
+                  "height": 30
                 },
                 "absoluteRenderBounds": {
-                  "x": 876,
-                  "y": 5195,
-                  "width": 48,
-                  "height": 24
+                  "x": 863,
+                  "y": 5192,
+                  "width": 61,
+                  "height": 30
                 },
                 "constraints": {
                   "vertical": "TOP",
@@ -11604,15 +11613,15 @@
             "layoutWrap": "NO_WRAP",
             "absoluteBoundingBox": {
               "x": 756,
-              "y": 5195,
+              "y": 5192,
               "width": 168,
-              "height": 24
+              "height": 30
             },
             "absoluteRenderBounds": {
               "x": 756,
-              "y": 5195,
+              "y": 5192,
               "width": 168,
-              "height": 24
+              "height": 30
             },
             "constraints": {
               "vertical": "TOP",
@@ -13614,12 +13623,8 @@
                     }
                   ]
                 },
-                "componentId": "271:356",
+                "componentId": "271:420",
                 "componentProperties": {
-                  "Has Icon#272:225": {
-                    "type": "BOOLEAN",
-                    "value": false
-                  },
                   "Icon#272:450": {
                     "type": "INSTANCE_SWAP",
                     "value": "199:106",
@@ -13630,12 +13635,16 @@
                       }
                     ]
                   },
+                  "Has Icon#272:225": {
+                    "type": "BOOLEAN",
+                    "value": false
+                  },
                   "Label#272:0": {
                     "type": "TEXT",
                     "value": "Inspect"
                   },
                   "type": {
-                    "value": "button-xs",
+                    "value": "button-sm",
                     "type": "VARIANT",
                     "boundVariables": {}
                   },
@@ -13661,7 +13670,7 @@
                 ],
                 "children": [
                   {
-                    "id": "I278:1553;276:475",
+                    "id": "I278:1553;276:571",
                     "name": "icon",
                     "visible": false,
                     "type": "INSTANCE",
@@ -13694,7 +13703,7 @@
                     "overrides": [],
                     "children": [
                       {
-                        "id": "I278:1553;276:475;128:1337",
+                        "id": "I278:1553;276:571;128:1337",
                         "name": "Vector",
                         "type": "VECTOR",
                         "scrollBehavior": "SCROLLS",
@@ -13738,10 +13747,10 @@
                         "strokeJoin": "ROUND",
                         "strokeCap": "ROUND",
                         "absoluteBoundingBox": {
-                          "x": 869.5,
-                          "y": 5276.5,
-                          "width": 9,
-                          "height": 9
+                          "x": 868,
+                          "y": 5281,
+                          "width": 12,
+                          "height": 12
                         },
                         "absoluteRenderBounds": null,
                         "constraints": {
@@ -13769,10 +13778,10 @@
                       "a": 0
                     },
                     "absoluteBoundingBox": {
-                      "x": 868,
-                      "y": 5275,
-                      "width": 12,
-                      "height": 12
+                      "x": 866,
+                      "y": 5279,
+                      "width": 16,
+                      "height": 16
                     },
                     "absoluteRenderBounds": null,
                     "constraints": {
@@ -13790,7 +13799,7 @@
                     }
                   },
                   {
-                    "id": "I278:1553;271:357",
+                    "id": "I278:1553;271:421",
                     "name": "label",
                     "type": "TEXT",
                     "scrollBehavior": "SCROLLS",
@@ -13828,16 +13837,16 @@
                     "strokeWeight": 1,
                     "strokeAlign": "OUTSIDE",
                     "absoluteBoundingBox": {
-                      "x": 876,
-                      "y": 5279,
-                      "width": 40,
-                      "height": 16
+                      "x": 866,
+                      "y": 5278,
+                      "width": 46,
+                      "height": 18
                     },
                     "absoluteRenderBounds": {
-                      "x": 876.9000244140625,
-                      "y": 5282.63623046875,
-                      "width": 37.931884765625,
-                      "height": 10.81201171875
+                      "x": 867.0499877929688,
+                      "y": 5282.2421875,
+                      "width": 44.25390625,
+                      "height": 12.61376953125
                     },
                     "constraints": {
                       "vertical": "TOP",
@@ -13862,11 +13871,11 @@
                       "fontStyle": "Medium",
                       "fontWeight": 500,
                       "textAutoResize": "WIDTH_AND_HEIGHT",
-                      "fontSize": 12,
+                      "fontSize": 14,
                       "textAlignHorizontal": "LEFT",
                       "textAlignVertical": "TOP",
                       "letterSpacing": 0,
-                      "lineHeightPx": 15.63599967956543,
+                      "lineHeightPx": 18.242000579833984,
                       "lineHeightPercent": 100,
                       "lineHeightUnit": "INTRINSIC_%"
                     },
@@ -13947,23 +13956,23 @@
                 "layoutMode": "HORIZONTAL",
                 "counterAxisAlignItems": "CENTER",
                 "primaryAxisAlignItems": "CENTER",
-                "paddingLeft": 8,
-                "paddingRight": 8,
-                "paddingTop": 4,
-                "paddingBottom": 4,
-                "itemSpacing": 4,
+                "paddingLeft": 12,
+                "paddingRight": 12,
+                "paddingTop": 6,
+                "paddingBottom": 6,
+                "itemSpacing": 6,
                 "layoutWrap": "NO_WRAP",
                 "absoluteBoundingBox": {
-                  "x": 868,
-                  "y": 5275,
-                  "width": 56,
-                  "height": 24
+                  "x": 854,
+                  "y": 5272,
+                  "width": 70,
+                  "height": 30
                 },
                 "absoluteRenderBounds": {
-                  "x": 868,
-                  "y": 5275,
-                  "width": 56,
-                  "height": 24
+                  "x": 854,
+                  "y": 5272,
+                  "width": 70,
+                  "height": 30
                 },
                 "constraints": {
                   "vertical": "TOP",
@@ -14001,15 +14010,15 @@
             "layoutWrap": "NO_WRAP",
             "absoluteBoundingBox": {
               "x": 756,
-              "y": 5275,
+              "y": 5272,
               "width": 168,
-              "height": 24
+              "height": 30
             },
             "absoluteRenderBounds": {
               "x": 756,
-              "y": 5275,
+              "y": 5272,
               "width": 168,
-              "height": 24
+              "height": 30
             },
             "constraints": {
               "vertical": "TOP",
@@ -16216,7 +16225,7 @@
   },
   "enrichment": {
     "source": "plugin-api",
-    "capturedAt": "2026-05-18T15:23:55.052Z",
+    "capturedAt": "2026-05-20T13:57:38.437Z",
     "componentProperties": null,
     "mainComponent": null,
     "boundVariables": [],
@@ -16572,12 +16581,12 @@
           "Pill"
         ],
         "mainComponentSetId": "272:120",
-        "variantOverrides": "type=button-xs, color=running, intensity=mid",
+        "variantOverrides": "type=button-sm, color=running, intensity=mid",
         "componentPropertyOverrides": {
           "Icon": "lucide/git-pull-request",
           "Has Icon": false,
           "Label": "Resume",
-          "type": "button-xs",
+          "type": "button-sm",
           "color": "running",
           "intensity": "mid"
         },
@@ -16603,7 +16612,7 @@
         }
       },
       {
-        "id": "I278:1529;276:439",
+        "id": "I278:1529;276:535",
         "name": "icon",
         "path": [
           "state=idle",
@@ -16629,12 +16638,12 @@
           "Pill"
         ],
         "mainComponentSetId": "272:120",
-        "variantOverrides": "type=button-xs, color=running, intensity=ghost",
+        "variantOverrides": "type=button-sm, color=running, intensity=ghost",
         "componentPropertyOverrides": {
           "Has Icon": false,
           "Icon": "lucide/git-pull-request",
           "Label": "Finish",
-          "type": "button-xs",
+          "type": "button-sm",
           "color": "running",
           "intensity": "ghost"
         },
@@ -16648,7 +16657,7 @@
         }
       },
       {
-        "id": "I278:1534;276:433",
+        "id": "I278:1534;276:529",
         "name": "icon",
         "path": [
           "state=idle",
@@ -16788,12 +16797,12 @@
           "Pill"
         ],
         "mainComponentSetId": "272:120",
-        "variantOverrides": "type=button-xs, color=waiting, intensity=loud",
+        "variantOverrides": "type=button-sm, color=waiting, intensity=loud",
         "componentPropertyOverrides": {
           "Has Icon": false,
           "Icon": "lucide/git-pull-request",
           "Label": "Provide input",
-          "type": "button-xs",
+          "type": "button-sm",
           "color": "waiting",
           "intensity": "loud"
         },
@@ -16813,7 +16822,7 @@
         }
       },
       {
-        "id": "I278:1539;276:454",
+        "id": "I278:1539;276:550",
         "name": "icon",
         "path": [
           "state=waiting",
@@ -16953,12 +16962,12 @@
           "Pill"
         ],
         "mainComponentSetId": "272:120",
-        "variantOverrides": "type=button-xs, color=running, intensity=mid",
+        "variantOverrides": "type=button-sm, color=running, intensity=mid",
         "componentPropertyOverrides": {
           "Icon": "lucide/git-pull-request",
           "Has Icon": true,
           "Label": "View PR",
-          "type": "button-xs",
+          "type": "button-sm",
           "color": "running",
           "intensity": "mid"
         },
@@ -16984,13 +16993,13 @@
         }
       },
       {
-        "id": "I278:1544;276:439",
-        "name": "lucide/git-pull-request",
+        "id": "I278:1544;276:535",
+        "name": "icon",
         "path": [
           "state=pr-open",
           "action",
           "Pill",
-          "lucide/git-pull-request"
+          "icon"
         ],
         "mainComponentSetId": "199:106",
         "variantOverrides": null,
@@ -17010,12 +17019,12 @@
           "Pill"
         ],
         "mainComponentSetId": "272:120",
-        "variantOverrides": "type=button-xs, color=running, intensity=ghost",
+        "variantOverrides": "type=button-sm, color=running, intensity=ghost",
         "componentPropertyOverrides": {
           "Has Icon": false,
           "Icon": "lucide/git-pull-request",
           "Label": "Finish",
-          "type": "button-xs",
+          "type": "button-sm",
           "color": "running",
           "intensity": "ghost"
         },
@@ -17029,7 +17038,7 @@
         }
       },
       {
-        "id": "I278:1549;276:433",
+        "id": "I278:1549;276:529",
         "name": "icon",
         "path": [
           "state=pr-open",
@@ -17169,12 +17178,12 @@
           "Pill"
         ],
         "mainComponentSetId": "272:120",
-        "variantOverrides": "type=button-xs, color=error, intensity=mid",
+        "variantOverrides": "type=button-sm, color=error, intensity=mid",
         "componentPropertyOverrides": {
-          "Has Icon": false,
           "Icon": "lucide/git-pull-request",
+          "Has Icon": false,
           "Label": "Inspect",
-          "type": "button-xs",
+          "type": "button-sm",
           "color": "error",
           "intensity": "mid"
         },
@@ -17200,7 +17209,7 @@
         }
       },
       {
-        "id": "I278:1553;276:475",
+        "id": "I278:1553;276:571",
         "name": "icon",
         "path": [
           "state=error",
