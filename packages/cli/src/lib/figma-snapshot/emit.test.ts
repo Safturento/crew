@@ -116,6 +116,10 @@ describe('emitSnapshot', () => {
       page: 'Composites',
     });
     expect(componentJson.raw.id).toBe('272:120');
+    // raw is a top-level projection — children is dropped to keep the file
+    // under tool-read limits. Nested data lives in enrichment.componentInstances.
+    expect(componentJson.raw.children).toBeUndefined();
+    expect(componentJson.raw.type).toBe('COMPONENT_SET');
   });
 
   it('returns nodesExported=0 and skips network when no pages match', async () => {
@@ -368,7 +372,10 @@ describe('emitPartialSnapshot', () => {
 
     const json = JSON.parse(readFileSync(join(outDir, 'composites/272-120.json'), 'utf8'));
     expect(json.name).toBe('Pill (v2)');
-    expect(json.raw.children).toHaveLength(1);
+    // raw is a top-level projection — children dropped, top-level identity survives.
+    expect(json.raw.children).toBeUndefined();
+    expect(json.raw.id).toBe('272:120');
+    expect(json.raw.type).toBe('COMPONENT_SET');
 
     const index = JSON.parse(readFileSync(join(outDir, 'index.json'), 'utf8'));
     expect(index['272:120']).toMatchObject({ name: 'Pill (v2)', page: 'Composites' });
