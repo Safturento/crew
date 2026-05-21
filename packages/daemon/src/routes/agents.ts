@@ -73,6 +73,10 @@ const StateHistoryResponseSchema = z.object({
 
 const KeyParamsSchema = z.object({ key: z.string().min(1) });
 
+const UpdateTicketTitleBodySchema = z.object({
+  ticketTitle: z.string(),
+});
+
 export type Agent = z.infer<typeof AgentSchema>;
 export type AgentsResponse = z.infer<typeof AgentsResponseSchema>;
 export type AgentDetailResponse = z.infer<typeof AgentDetailSchema>;
@@ -138,6 +142,28 @@ export async function registerAgentsRoutes(app: DaemonApp): Promise<void> {
     async (req) => {
       const svc = req.diScope.resolve('agentsService');
       return svc.getStateHistory(req.params.key);
+    },
+  );
+
+  // Backfill mechanism for ticket_title on rows registered before the CLI
+  // started fetching Jira summaries on registerRun. Takes a string body
+  // (empty string clears via the same NULL-on-empty contract as the
+  // registerRun upsert). 404 when the key doesn't exist; 204 on success.
+  app.patch(
+    '/api/agents/:key',
+    {
+      schema: {
+        params: KeyParamsSchema,
+        body: UpdateTicketTitleBodySchema,
+      },
+    },
+    async (req, reply) => {
+      const svc = req.diScope.resolve('agentsService');
+      const updated = await svc.updateTicketTitle(req.params.key, req.body.ticketTitle);
+      if (!updated) {
+        throw new NotFoundError('agent_not_found', { resource: 'agent', id: req.params.key });
+      }
+      reply.code(204).send();
     },
   );
 

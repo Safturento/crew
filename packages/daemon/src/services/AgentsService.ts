@@ -307,6 +307,22 @@ export class AgentsService {
   }
 
   /**
+   * Update an agent's `ticket_title`. Backs the `PATCH /api/agents/:key`
+   * endpoint that `crew backfill-titles` uses to fill in titles missing on
+   * agents that were registered before the CLI started fetching Jira
+   * summaries. Returns `false` when no agent matches the key (caller maps
+   * to 404); never updates anything else on the row.
+   */
+  async updateTicketTitle(key: string, ticketTitle: string): Promise<boolean> {
+    const result = await this.db
+      .updateTable('agents')
+      .set({ ticket_title: ticketTitle === '' ? null : ticketTitle })
+      .where('key', '=', key)
+      .executeTakeFirst();
+    return Number(result.numUpdatedRows ?? 0) > 0;
+  }
+
+  /**
    * Ordered state-transition trail for an agent. Reads directly from the
    * `state_transitions` table populated by CREW-96's backfill (and, in
    * future, by IngestService writes). Returns an empty list for agents

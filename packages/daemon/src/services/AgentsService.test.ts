@@ -538,3 +538,52 @@ describe('AgentsService.getStateHistory', () => {
     }
   });
 });
+
+describe('AgentsService.updateTicketTitle', () => {
+  it('updates the ticket_title for an existing agent and returns true', async () => {
+    const db = await freshDb();
+    try {
+      await makeAgent(db, 'KAN-23', { ticketTitle: null });
+      const svc = new AgentsService({ db });
+      const updated = await svc.updateTicketTitle('KAN-23', 'Add board archival endpoint');
+      expect(updated).toBe(true);
+      const row = await db
+        .selectFrom('agents')
+        .select(['ticket_title'])
+        .where('key', '=', 'KAN-23')
+        .executeTakeFirst();
+      expect(row?.ticket_title).toBe('Add board archival endpoint');
+    } finally {
+      await db.destroy();
+    }
+  });
+
+  it('stores NULL when passed an empty string (matches registerRun upsert contract)', async () => {
+    const db = await freshDb();
+    try {
+      await makeAgent(db, 'KAN-23', { ticketTitle: 'existing' });
+      const svc = new AgentsService({ db });
+      const updated = await svc.updateTicketTitle('KAN-23', '');
+      expect(updated).toBe(true);
+      const row = await db
+        .selectFrom('agents')
+        .select(['ticket_title'])
+        .where('key', '=', 'KAN-23')
+        .executeTakeFirst();
+      expect(row?.ticket_title).toBeNull();
+    } finally {
+      await db.destroy();
+    }
+  });
+
+  it('returns false when no agent matches the key', async () => {
+    const db = await freshDb();
+    try {
+      const svc = new AgentsService({ db });
+      const updated = await svc.updateTicketTitle('KAN-999', 'anything');
+      expect(updated).toBe(false);
+    } finally {
+      await db.destroy();
+    }
+  });
+});

@@ -36,6 +36,16 @@ export interface CompleteRunInput {
   completedAt: string;
 }
 
+export interface AgentSummary {
+  key: string;
+  projectName: string;
+  ticketTitle: string;
+  state: 'initializing' | 'running' | 'pr_open' | 'error' | 'finished';
+  startedAt: string;
+  tokens: number;
+  prUrl?: string;
+}
+
 export type DaemonResult<T> = T | { ok: false; reason: string };
 
 export interface CrewDaemonClientOptions {
@@ -96,6 +106,41 @@ export class CrewDaemonClient {
       return { ok: true };
     } catch (err) {
       this.warn(`completeRun: ${(err as Error).message}`);
+      return { ok: false, reason: 'connect_error' };
+    }
+  }
+
+  async listAgents(): Promise<DaemonResult<{ agents: AgentSummary[] }>> {
+    try {
+      const res = await fetch(`${this.baseUrl}/api/agents`);
+      if (!res.ok) {
+        this.warn(`listAgents: HTTP ${res.status}`);
+        return { ok: false, reason: `http_${res.status}` };
+      }
+      const body = (await res.json()) as { agents: AgentSummary[] };
+      return { agents: body.agents };
+    } catch (err) {
+      this.warn(`listAgents: ${(err as Error).message}`);
+      return { ok: false, reason: 'connect_error' };
+    }
+  }
+
+  async updateTicketTitle(
+    key: string,
+    ticketTitle: string,
+  ): Promise<DaemonResult<{ ok: true }>> {
+    try {
+      const res = await fetch(`${this.baseUrl}/api/agents/${encodeURIComponent(key)}`, {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ ticketTitle }),
+      });
+      if (!res.ok) {
+        return { ok: false, reason: `http_${res.status}` };
+      }
+      return { ok: true };
+    } catch (err) {
+      this.warn(`updateTicketTitle: ${(err as Error).message}`);
       return { ok: false, reason: 'connect_error' };
     }
   }
