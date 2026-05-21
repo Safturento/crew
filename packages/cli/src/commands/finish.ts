@@ -8,6 +8,7 @@ import {
   type CrewDaemonClient,
   crewDaemonClientFromEnv,
   discoverProjectConfig,
+  fetchTicketSummary,
   JiraClient,
   type ProjectConfig,
 } from '../lib/index.js';
@@ -225,10 +226,21 @@ export async function runFinish(key: string, deps: FinishDeps): Promise<FinishRe
   // A downed daemon returns ok:false; runId stays null and we skip the
   // companion completeRun. CLI proceeds with local merge work either way.
   const startedAt = new Date().toISOString();
+  // Best-effort Jira title — preserves any existing daemon-side value via
+  // the registerRun COALESCE upsert when '' returns (missing creds, etc).
+  const ticketTitle = jiraSecrets
+    ? await fetchTicketSummary({
+        key,
+        jiraSite: config.jira.site,
+        email: jiraSecrets.email,
+        token: jiraSecrets.token,
+        warn,
+      })
+    : '';
   const registration = await daemonClient.registerRun({
     key,
     projectName: config.name,
-    ticketTitle: '',
+    ticketTitle,
     worktreePath,
     branch: key,
     sessionId: `finish-${key}-${randomUUID()}`,

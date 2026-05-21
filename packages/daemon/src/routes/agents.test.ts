@@ -406,3 +406,70 @@ describe('GET /api/agents/:key/timeline', () => {
     }
   });
 });
+
+describe('PATCH /api/agents/:key', () => {
+  it('updates ticket_title and returns 204 on success', async () => {
+    const { app, db } = await setupApp();
+    try {
+      await db
+        .insertInto('agents')
+        .values({
+          key: 'KAN-23',
+          project_name: 'demo',
+          ticket_title: null,
+          worktree_path: '/x',
+          branch: 'KAN-23',
+          pr_url: null,
+          created_at: '2026-04-29T12:00:00Z',
+        })
+        .execute();
+
+      const res = await app.inject({
+        method: 'PATCH',
+        url: '/api/agents/KAN-23',
+        payload: { ticketTitle: 'Add board archival endpoint' },
+      });
+      expect(res.statusCode).toBe(204);
+
+      const row = await db
+        .selectFrom('agents')
+        .select(['ticket_title'])
+        .where('key', '=', 'KAN-23')
+        .executeTakeFirst();
+      expect(row?.ticket_title).toBe('Add board archival endpoint');
+    } finally {
+      await app.close();
+      await db.destroy();
+    }
+  });
+
+  it('returns 404 when no agent matches the key', async () => {
+    const { app, db } = await setupApp();
+    try {
+      const res = await app.inject({
+        method: 'PATCH',
+        url: '/api/agents/NOPE-99',
+        payload: { ticketTitle: 'anything' },
+      });
+      expect(res.statusCode).toBe(404);
+    } finally {
+      await app.close();
+      await db.destroy();
+    }
+  });
+
+  it('rejects a body without ticketTitle with 400', async () => {
+    const { app, db } = await setupApp();
+    try {
+      const res = await app.inject({
+        method: 'PATCH',
+        url: '/api/agents/KAN-23',
+        payload: {},
+      });
+      expect(res.statusCode).toBe(400);
+    } finally {
+      await app.close();
+      await db.destroy();
+    }
+  });
+});

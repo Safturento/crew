@@ -1,0 +1,42 @@
+meta {
+  name: PATCH /api/agents/:key (ticket_title backfill)
+  type: http
+  seq: 9
+}
+
+patch {
+  url: {{baseUrl}}/api/agents/{{agentKey}}
+  body: json
+}
+
+headers {
+  content-type: application/json
+}
+
+body:json {
+  {
+    "ticketTitle": "Backfilled title via Bruno"
+  }
+}
+
+script:pre-request {
+  // Fallback for standalone runs. In the smoke chain, post-register-run.bru
+  // sets `agentKey` via `vars:post-response`; this only fires when the chain
+  // has not already populated it.
+  if (!bru.getVar("agentKey")) {
+    bru.setVar("agentKey", "BRUNO-1");
+  }
+}
+
+assert {
+  res.status: eq 204
+}
+
+docs {
+  Backfill endpoint used by `crew backfill-titles` to populate the
+  `agents.ticket_title` column for rows registered before the CLI
+  started fetching Jira summaries on registerRun. The body's
+  `ticketTitle` is stored as NULL when it is the empty string (mirrors
+  the registerRun upsert contract). 404 when no agent matches the
+  key; 400 when the body is malformed.
+}

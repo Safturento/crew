@@ -388,7 +388,14 @@ describe('runFinish happy path', () => {
   it('runs all cleanup steps and transitions Jira to Done', async () => {
     mockHappyPathExeca();
 
-    // Jira: getIssue returns "In Progress", getTransitions returns Done, transition succeeds
+    // Jira call sequence:
+    //   1. fetchTicketSummary getIssue (registerRun payload)
+    //   2. transitionJira getIssue (current status check)
+    //   3. transitionJira getTransitions
+    //   4. transitionJira POST /transitions
+    fetchMock.mockResolvedValueOnce(
+      ok({ key: 'KAN-23', fields: { summary: 'Add board archival endpoint' } }),
+    );
     fetchMock.mockResolvedValueOnce(
       ok({ key: 'KAN-23', fields: { status: { name: 'In Progress' } } }),
     );
@@ -436,9 +443,10 @@ describe('runFinish happy path', () => {
       ]),
     );
 
-    // Jira PUT was called
-    expect(fetchMock).toHaveBeenCalledTimes(3);
-    const transitionCall = fetchMock.mock.calls[2]!;
+    // Jira PUT was called (after the title-fetch getIssue + transition-check
+    // getIssue + getTransitions, the 4th call is the transition POST).
+    expect(fetchMock).toHaveBeenCalledTimes(4);
+    const transitionCall = fetchMock.mock.calls[3]!;
     expect(transitionCall[0]).toBe(
       'https://safturento.atlassian.net/rest/api/3/issue/KAN-23/transitions',
     );
@@ -515,6 +523,10 @@ describe('runFinish happy path', () => {
 
   it('skips Jira transition when issue is already Done', async () => {
     mockHappyPathExeca();
+    // 1. fetchTicketSummary getIssue, 2. transitionJira getIssue (Done).
+    fetchMock.mockResolvedValueOnce(
+      ok({ key: 'KAN-23', fields: { summary: 'Add board archival endpoint' } }),
+    );
     fetchMock.mockResolvedValueOnce(ok({ key: 'KAN-23', fields: { status: { name: 'Done' } } }));
     mockedUnlink.mockResolvedValue(undefined);
 
@@ -522,8 +534,8 @@ describe('runFinish happy path', () => {
     const result = await runFinish('KAN-23', deps);
 
     expect(result.ok).toBe(true);
-    // Only the getIssue call happened — no getTransitions, no transition POST
-    expect(fetchMock).toHaveBeenCalledTimes(1);
+    // title-fetch getIssue + transition-check getIssue → no getTransitions, no transition POST.
+    expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(deps.logs.some((l) => /already Done/i.test(l))).toBe(true);
   });
 });
@@ -531,6 +543,11 @@ describe('runFinish happy path', () => {
 describe('runFinish daemon round-trips', () => {
   it('registers a finish run with the daemon after gates pass, and completes ok', async () => {
     mockHappyPathExeca();
+    // 4-call Jira sequence: title-fetch getIssue, transition-check getIssue,
+    // getTransitions, transition POST.
+    fetchMock.mockResolvedValueOnce(
+      ok({ key: 'KAN-23', fields: { summary: 'Add board archival endpoint' } }),
+    );
     fetchMock.mockResolvedValueOnce(
       ok({ key: 'KAN-23', fields: { status: { name: 'In Progress' } } }),
     );
@@ -573,6 +590,10 @@ describe('runFinish daemon round-trips', () => {
 
   it('continues + exits 0 when registerRun reports daemon unreachable', async () => {
     mockHappyPathExeca();
+    // title-fetch getIssue + transition-check getIssue (already Done → no transition).
+    fetchMock.mockResolvedValueOnce(
+      ok({ key: 'KAN-23', fields: { summary: 'Add board archival endpoint' } }),
+    );
     fetchMock.mockResolvedValueOnce(ok({ key: 'KAN-23', fields: { status: { name: 'Done' } } }));
     mockedUnlink.mockResolvedValue(undefined);
 
