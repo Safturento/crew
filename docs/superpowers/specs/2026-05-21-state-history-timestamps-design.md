@@ -59,6 +59,7 @@ A single horizontal bar broken into colored segments. Segment width is proportio
 
 - **Pro:** never wraps; visual outliers (long stalls) jump out at a glance
 - **Con:** very short states get squeezed; labels truncate at narrow widths
+- **Min-segment-width:** sub-second states (e.g. instant `init`) must clamp to a minimum readable width (≈40–48px) so they don't collapse to a sliver. Remaining segments redistribute the leftover space proportionally.
 
 ### Direction C — Vertical timeline
 
