@@ -3,12 +3,12 @@ import type { MouseEvent, ReactNode } from 'react';
 import { cva } from 'class-variance-authority';
 import { Circle, Clock, Currency, GitPullRequest, Hash } from 'lucide-react';
 
-import type { Agent, AgentState } from '../data/types.js';
-import { STATE_CLASSES, STATE_META } from '../data/state-meta.js';
+import type { Agent, AgentState } from '@/data/types';
+import { STATE_CLASSES, STATE_META } from '@/data/state-meta';
 import { Badge } from './ui/badge.js';
 import { Button } from './ui/button.js';
-import { formatDuration } from '../format/duration.js';
-import { formatTokens } from '../format/tokens.js';
+import { formatDuration } from '@/format/duration';
+import { formatTokens } from '@/format/tokens';
 
 export type QuickActionKind = 'resume' | 'finish' | 'view-pr' | 'provide-input' | 'inspect';
 
@@ -65,16 +65,18 @@ export function AgentRow({ agent, onSelect, onAction }: AgentRowProps) {
           className={`absolute inset-y-1.5 left-0 w-1 rounded-full ${stateClasses.solidBg} animate-att-pulse`}
         />
       )}
-      <Badge
-        role="status"
-        aria-label={meta.label}
-        color={agent.state}
-        intensity="mid"
-        icon={<StateIcon />}
-        className="shrink-0"
-      >
-        {meta.label}
-      </Badge>
+      <div className={"w-24"}>
+        <Badge
+          role="status"
+          aria-label={meta.label}
+          color={agent.state}
+          intensity="mid"
+          icon={<StateIcon />}
+          className="shrink-0"
+        >
+          {meta.label}
+        </Badge>
+      </div>
       <div className="flex min-w-0 flex-1 flex-col gap-0.5">
         <span className="truncate text-sm text-foreground">{agent.ticketTitle}</span>
         <div className="flex items-center gap-1.5 font-mono text-xs text-muted-foreground">
@@ -109,7 +111,7 @@ function MetaSeparator() {
 // Every state-badge instance in the Figma Pill set uses `lucide/circle` as its
 // Icon INSTANCE_SWAP — the badge's color, not its glyph, carries the state.
 function StateIcon() {
-  return <Circle className="p-[2px]" aria-hidden strokeWidth={6} absoluteStrokeWidth />;
+  return <Circle className="p-0.5" aria-hidden strokeWidth={6} absoluteStrokeWidth />;
 }
 
 function QuickActions({
