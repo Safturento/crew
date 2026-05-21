@@ -25,7 +25,6 @@ Format: see the user-level `~/.claude/CLAUDE.md` "Followup detection" section.
   - [2026-05-13 — "Hide finished" toggle on Agents List has no Figma reference (scope drift either way — reconcile)](#2026-05-13--hide-finished-toggle-on-agents-list-has-no-figma-reference-scope-drift-either-way--reconcile)
   - [2026-05-13 — visual-fidelity-check calibration: pattern accuracy ≠ specific accuracy + planned screenshot-vs-Figma ultimate test](#2026-05-13--visual-fidelity-check-calibration-pattern-accuracy--specific-accuracy--planned-screenshot-vs-figma-ultimate-test)
   - [2026-05-13 — figma-snapshot omits instance `componentProperties` (REST API limitation) — needed for caller-check accuracy](#2026-05-13--figma-snapshot-omits-instance-componentproperties-rest-api-limitation--needed-for-caller-check-accuracy)
-  - [2026-05-12 — Cap or filter `raw` subtree size in figma-snapshot per-component JSON](#2026-05-12--cap-or-filter-raw-subtree-size-in-figma-snapshot-per-component-json)
   - [2026-05-12 — Move figma-snapshot `PAGE_DIR_MAP` into project config](#2026-05-12--move-figma-snapshot-page_dir_map-into-project-config)
   - [2026-05-12 — Rethink followup-tracking system (priority tier + Jira backlog sync)](#2026-05-12--rethink-followup-tracking-system-priority-tier--jira-backlog-sync)
   - [2026-05-12 — Pill needs trailing-icon support (Filters chevron-down)](#2026-05-12--pill-needs-trailing-icon-support-filters-chevron-down)
@@ -81,6 +80,7 @@ Format: see the user-level `~/.claude/CLAUDE.md` "Followup detection" section.
   - [2026-04-26 — Architecture doc open questions still unresolved](#2026-04-26--architecture-doc-open-questions-still-unresolved)
 - [Resolved](#resolved)
   - [2026-05-13 — Agent rows: code renders as table; Figma designs as cards (architectural layout drift, affects 3 screens)](#2026-05-13--agent-rows-code-renders-as-table-figma-designs-as-cards-architectural-layout-drift-affects-3-screens)
+  - [2026-05-12 — Cap or filter `raw` subtree size in figma-snapshot per-component JSON](#2026-05-12--cap-or-filter-raw-subtree-size-in-figma-snapshot-per-component-json)
   - [2026-05-18 — StateBadge / CountBadge `.figma.tsx` still point at the archived DS file (Pill consolidation has no name-match)](#2026-05-18--statebadge--countbadge-figmatsx-still-point-at-the-archived-ds-file-pill-consolidation-has-no-name-match)
   - [2026-05-12 — Update `.figma.tsx` Code Connect files after Crew DS consolidation](#2026-05-12--update-figmatsx-code-connect-files-after-crew-ds-consolidation)
   - [2026-05-12 — New Run modal list rows need a proper component (project / ticket rows lost metadata during bulk Button swap)](#2026-05-12--new-run-modal-list-rows-need-a-proper-component-project--ticket-rows-lost-metadata-during-bulk-button-swap)
@@ -433,29 +433,6 @@ The structural fix for the first two is the Plugin-API snapshot work captured in
 - Is the Plugin-API path reliable enough to make default, or should it remain opt-in? Reliability depends on Claude Code being available on the dispatching host.
 - Does the Figma Pro tier limit Plugin-API access in any way relevant to crew? (Pro supports plugins and the Plugin API in the editor, but programmatic-headless usage is via the `use_figma` MCP we already have.)
 - Could we cache Plugin-API enrichment data (file-version keyed) to avoid the Claude shell-out on every dispatch? Pairs with the "snapshot caching" long-tail followup in the spec.
-
-### 2026-05-12 — Cap or filter `raw` subtree size in figma-snapshot per-component JSON
-
-**What:** `emitSnapshot` writes `{ id, name, type, page, raw: t.node }` for every exported node — and `raw: t.node` is the entire Figma subtree, recursively. For a large component set like Pill (~192 variants) this could be megabytes per file. The agent's visual-fidelity-check skill probably only needs paint/text bindings + a shallow geometry summary; the deep subtree is dead weight.
-
-**Why noticed:** Self-review of CREW-139 flagged it as an Important issue. The plan literally specifies emitting `raw: t.node` and the consuming skill doesn't exist yet (Phase A), so the right shape isn't knowable today — but the cost is real once Pill-sized component sets land in `.crew/figma-snapshot/`.
-
-**Anchors:**
-
-- `packages/cli/src/lib/figma-snapshot/emit.ts` (the `raw` field)
-- `docs/superpowers/plans/2026-05-12-agent-visual-verification.md` (the "per-component JSON shape" example that hardcoded `raw`)
-- `docs/superpowers/specs/2026-05-12-agent-visual-verification-design.md` (the original spec)
-- Epic: [CREW-138](https://safturento.atlassian.net/browse/CREW-138) — gating Epic for visual-fidelity work
-- PR for the snapshot generator: CREW-139
-
-**Shape of work:** Small refactor in `emit.ts` once Phase A reveals what the skill actually consumes. Either depth-cap the `raw` tree, project a flat resolvedStyles + geometry summary, or move the heavy data behind an opt-in flag. Likely folds into the Plugin-API snapshot migration if that lands first (the Plugin API gives variable bindings, which makes most of `raw` redundant anyway).
-
-**Open questions:**
-
-- What does the skill actually need? Settle in Phase A.
-- Do we want a per-file size budget for `.crew/figma-snapshot/`? Currently unbounded.
-
-**2026-05-19 update:** No longer theoretical — `.crew/figma-snapshot/composites/212-910.json` (the AgentRow composite) is **632 KB**, which exceeds the `Read` tool's 256 KB hard limit. During the AgentRow card-redesign brainstorm we had to fall back to `grep` for icon-name lookups since the file couldn't be ingested whole. That's a real friction point: agents doing snapshot-driven design work can't open the source-of-truth JSON for any non-trivial component. Bumped from "future cost" to "current blocker for tool ergonomics." Scheduled to discuss after AgentRow planning + selective figma-snapshot export work close (the latter is the 2026-05-19 entry above; both are figma-snapshot scope and a single design pass can reconcile them).
 
 ### 2026-05-12 — Move figma-snapshot `PAGE_DIR_MAP` into project config
 
@@ -1691,6 +1668,16 @@ The other two open questions (sandbox config drift, Phase 2 + Phase 3 separation
 ## Resolved
 
 (items move here when ticketed and shipped, or fixed inline — keep for historical context, prune when the file gets long)
+
+### 2026-05-12 — Cap or filter `raw` subtree size in figma-snapshot per-component JSON
+
+**What:** `emitSnapshot` writes `{ id, name, type, page, raw: t.node }` for every exported node — and `raw: t.node` is the entire Figma subtree, recursively. For a large component set like Pill (~192 variants) this could be megabytes per file. The agent's visual-fidelity-check skill probably only needs paint/text bindings + a shallow geometry summary; the deep subtree is dead weight.
+
+**Why noticed:** Self-review of CREW-139 flagged it as an Important issue. The plan literally specifies emitting `raw: t.node` and the consuming skill doesn't exist yet (Phase A), so the right shape isn't knowable today — but the cost is real once Pill-sized component sets land in `.crew/figma-snapshot/`.
+
+**2026-05-19 update:** No longer theoretical — `.crew/figma-snapshot/composites/212-910.json` (the AgentRow composite) is **632 KB**, which exceeds the `Read` tool's 256 KB hard limit. During the AgentRow card-redesign brainstorm we had to fall back to `grep` for icon-name lookups since the file couldn't be ingested whole.
+
+**Resolved 2026-05-21:** Shipped top-level-only projection in `emit.ts` — `raw` field now spreads the Figma node with `children: undefined`, which `JSON.stringify` omits cleanly. The `visual-fidelity-check` skill's fallback contract is preserved verbatim (every field it consults survives the projection). Total snapshot size dropped from **20.6 MB to 322 KB** (98.4% reduction); AgentRow composite dropped from 632 KB to 28 KB and now fits under the Read tool's 256 KB limit. Skill prose in `.claude/skills/visual-fidelity-check/{SKILL,workflow}.md` clarified to match. Spec: `docs/superpowers/specs/2026-05-21-figma-snapshot-slim-raw-design.md`; plan: `docs/superpowers/plans/2026-05-21-figma-snapshot-slim-raw.md`.
 
 ### 2026-05-13 — Agent rows: code renders as table; Figma designs as cards (architectural layout drift, affects 3 screens)
 

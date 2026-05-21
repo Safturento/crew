@@ -95,7 +95,17 @@ export async function emitSnapshot(opts: EmitSnapshotOptions): Promise<EmitSnaps
     await writeFile(
       join(opts.outDir, jsonPath),
       `${JSON.stringify(
-        { id: t.node.id, name: t.node.name, type: t.node.type, page: t.page, raw: t.node },
+        {
+          id: t.node.id,
+          name: t.node.name,
+          type: t.node.type,
+          page: t.page,
+          // Slim `raw` to top-level properties only — `children` is dropped to
+          // keep the file under tool-read limits. Nested instance data lives
+          // in `enrichment.componentInstances`. JSON.stringify omits the
+          // undefined key cleanly.
+          raw: { ...t.node, children: undefined },
+        },
         null,
         2,
       )}\n`,
@@ -182,7 +192,13 @@ export async function emitPartialSnapshot(
     pendingWrites.push({
       absPath: join(opts.outDir, jsonPath),
       contents: `${JSON.stringify(
-        { id: node.id, name: node.name, type: node.type, page: t.page, raw: node },
+        {
+          id: node.id,
+          name: node.name,
+          type: node.type,
+          page: t.page,
+          raw: { ...node, children: undefined },
+        },
         null,
         2,
       )}\n`,
