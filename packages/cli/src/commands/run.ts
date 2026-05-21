@@ -14,7 +14,11 @@ import { Command } from 'commander';
 import { execa } from 'execa';
 import pc from 'picocolors';
 import type { ProjectConfig } from 'crew-shared';
-import { claudeProjectDirFor, discoverProjectConfig } from '../lib/index.js';
+import {
+  claudeProjectDirFor,
+  discoverProjectConfig,
+  fetchTicketSummaryFromEnv,
+} from '../lib/index.js';
 import {
   dockerDaemonReachable,
   writeDockerEnv,
@@ -493,10 +497,19 @@ export async function runRun(key: string, opts: RunOptions): Promise<never> {
   const sessionId = basename(transcriptPath, '.jsonl');
   const daemonClient = crewDaemonClientFromEnv(process.env);
   const startedAt = new Date().toISOString();
+  // Best-effort Jira title for the dashboard's agent rows. Returns '' on any
+  // failure (missing creds, network, malformed payload); the daemon upserts
+  // with COALESCE so an empty value preserves any title already on the row.
+  const ticketTitle = await fetchTicketSummaryFromEnv(
+    key,
+    config.jira.site,
+    process.env,
+    (msg) => console.log(pc.yellow('!'), msg),
+  );
   const registration = await daemonClient.registerRun({
     key,
     projectName: config.name,
-    ticketTitle: '',
+    ticketTitle,
     worktreePath: worktree,
     branch: key,
     sessionId,

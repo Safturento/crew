@@ -5,6 +5,7 @@ import {
   assemblePrFeedback,
   buildFixPrPrompt,
   discoverProjectConfig,
+  fetchTicketSummaryFromEnv,
   findLatestSession,
   getHeadSha,
   getPrForBranch,
@@ -242,10 +243,17 @@ async function runFixPr(key: string, flags: FixPrFlags): Promise<void> {
   const daemonClient = crewDaemonClientFromEnv(process.env);
   let runId: number | null = null;
   if (projectConfig) {
+    // Best-effort Jira title — registerRun COALESCEs '' against the existing
+    // value so missing creds / network errors never clobber a known title.
+    const ticketTitle = await fetchTicketSummaryFromEnv(
+      key,
+      projectConfig.jira.site,
+      process.env,
+    );
     const registration = await daemonClient.registerRun({
       key,
       projectName: projectConfig.name,
-      ticketTitle: '',
+      ticketTitle,
       worktreePath: worktree,
       branch: key,
       sessionId: session.sessionId,
