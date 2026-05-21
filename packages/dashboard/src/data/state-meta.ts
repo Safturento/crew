@@ -11,7 +11,7 @@ export const STATE_META: Record<AgentState, StateMetaEntry> = {
   error: { label: 'Error', attention: true, sortRank: 1 },
   pr_open: { label: 'PR open', attention: true, sortRank: 2 },
   running: { label: 'Running', attention: false, sortRank: 3 },
-  initializing: { label: 'Initializing', attention: false, sortRank: 4 },
+  initializing: { label: 'Starting', attention: false, sortRank: 4 },
   idle: { label: 'Idle', attention: false, sortRank: 5 },
   finished: { label: 'Finished', attention: false, sortRank: 6 },
 };

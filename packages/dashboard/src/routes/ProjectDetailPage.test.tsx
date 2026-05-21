@@ -51,4 +51,27 @@ describe('ProjectDetailPage', () => {
 
     await waitFor(() => expect(screen.getByText(/Project not found/i)).toBeInTheDocument());
   });
+
+  it('renders the active/total count next to the AGENTS heading', async () => {
+    vi.spyOn(defaultClient, 'getProject').mockResolvedValue(FIXTURE_PROJECT_DETAILS['kanban-api']!);
+    vi.spyOn(defaultClient, 'listAgents').mockResolvedValue(FIXTURE_AGENTS);
+
+    renderWithQuery(<ProjectDetailPage slug="kanban-api" />);
+
+    await screen.findByRole('heading', { name: 'kanban-api' });
+    const countText = await screen.findByText(/\d+ active · \d+ total/);
+    expect(countText).toBeInTheDocument();
+  });
+
+  it('hides the inner ProjectSection header (no per-section toggle on the project page)', async () => {
+    vi.spyOn(defaultClient, 'getProject').mockResolvedValue(FIXTURE_PROJECT_DETAILS['kanban-api']!);
+    vi.spyOn(defaultClient, 'listAgents').mockResolvedValue(FIXTURE_AGENTS);
+
+    renderWithQuery(<ProjectDetailPage slug="kanban-api" />);
+
+    await screen.findByRole('heading', { name: 'kanban-api' });
+    expect(
+      screen.queryByRole('button', { name: /toggle kanban-api/i }),
+    ).not.toBeInTheDocument();
+  });
 });

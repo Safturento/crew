@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -23,26 +23,34 @@ describe('AgentRow', () => {
     expect(screen.getByText('48.2k')).toBeInTheDocument();
   });
 
-  it('renders cells in v2 column order: state, key, runtime, tokens, title, action', () => {
-    render(<AgentRow agent={baseAgent} onSelect={() => {}} />);
-    const row = screen.getByRole('button', { name: /KAN-31/ });
-    const visibleChildren = Array.from(row.children).filter(
-      (c) => c.getAttribute('aria-hidden') !== 'true',
-    );
-    const cellTexts = visibleChildren.map((c) => c.textContent ?? '');
-    // state pill, key, runtime, tokens, title, action
-    const keyIdx = cellTexts.findIndex((t) => t.includes('KAN-31'));
-    const runtimeIdx = cellTexts.findIndex((t) => /^33m/.test(t));
-    const tokensIdx = cellTexts.findIndex((t) => /48\.2k/.test(t));
-    const titleIdx = cellTexts.findIndex((t) => t.includes('Add board archival endpoint'));
-    expect(keyIdx).toBeLessThan(runtimeIdx);
-    expect(runtimeIdx).toBeLessThan(tokensIdx);
-    expect(tokensIdx).toBeLessThan(titleIdx);
-  });
-
   it('renders the state badge', () => {
     render(<AgentRow agent={baseAgent} onSelect={() => {}} />);
     expect(screen.getByRole('status')).toHaveAccessibleName('Waiting');
+  });
+
+  it('renders meta-row icons (Hash, Clock, Currency) alongside the key, runtime, and tokens', () => {
+    render(<AgentRow agent={baseAgent} onSelect={() => {}} />);
+    const row = screen.getByRole('button', { name: /KAN-31/ });
+    const svgs = row.querySelectorAll('svg');
+    // 1 (state pill Circle) + 3 (meta-row Hash/Clock/Currency) = 4 minimum
+    expect(svgs.length).toBeGreaterThanOrEqual(4);
+  });
+
+  it('truncates the ticket title and keeps the meta row visible alongside it', () => {
+    const longTitle = 'A'.repeat(200);
+    render(<AgentRow agent={{ ...baseAgent, ticketTitle: longTitle }} onSelect={() => {}} />);
+    const title = screen.getByText(longTitle);
+    expect(title.className).toContain('truncate');
+    expect(screen.getByText('KAN-31')).toBeInTheDocument();
+    expect(screen.getByText('48.2k')).toBeInTheDocument();
+  });
+
+  it('renders quick-action buttons at sm size (not xs)', () => {
+    render(<AgentRow agent={{ ...baseAgent, state: 'idle' }} onSelect={() => {}} />);
+    const resume = screen.getByRole('button', { name: 'Resume' });
+    // Button primitive maps xs→h-6 and sm→h-8 (see ui/button.tsx).
+    expect(resume.className).not.toMatch(/\bh-6\b/);
+    expect(resume.className).toMatch(/\bh-8\b/);
   });
 
   it('renders a "Provide input" quick action for waiting state', () => {
@@ -176,12 +184,5 @@ describe('AgentRow', () => {
     const finish = screen.getByRole('button', { name: 'Finish' });
     await user.click(finish);
     expect(onSelect).not.toHaveBeenCalled();
-  });
-
-  it('row uses the v2 6-track grid template (state · key · runtime · tokens · title · action)', () => {
-    render(<AgentRow agent={baseAgent} onSelect={() => {}} />);
-    const row = screen.getByRole('button', { name: /KAN-31/ });
-    expect(row.className).toContain('grid-cols-[100px_90px_90px_70px_1fr_168px]');
-    expect(within(row).getByRole('status')).toBeInTheDocument();
   });
 });

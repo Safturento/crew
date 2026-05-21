@@ -5,7 +5,6 @@ import { ChevronDown, ExternalLink, Folder } from 'lucide-react';
 import type { Agent, Project } from '@/data/types';
 import { AgentRow, type QuickActionKind } from './AgentRow.js';
 import { Button } from './ui/button.js';
-import { ColumnHeaderRow } from './ColumnHeaderRow.js';
 
 interface ProjectSectionProps {
   project: Project;
@@ -13,6 +12,7 @@ interface ProjectSectionProps {
   onSelectAgent: (key: string) => void;
   onAgentAction?: (kind: QuickActionKind, agent: Agent) => void;
   onOpenProject?: (name: string) => void;
+  showHeader?: boolean;
 }
 
 export function ProjectSection({
@@ -21,6 +21,7 @@ export function ProjectSection({
   onSelectAgent,
   onAgentAction,
   onOpenProject,
+  showHeader = true,
 }: ProjectSectionProps) {
   const [collapsed, setCollapsed] = useState(false);
   const active = agents.filter((a) => a.state !== 'finished').length;
@@ -29,6 +30,25 @@ export function ProjectSection({
     e.stopPropagation();
     onOpenProject?.(project.name);
   };
+
+  const body = (
+    <div className="flex flex-col gap-2 pt-1">
+      {agents.length === 0 ? (
+        <div className="rounded border border-dashed border-white/10 px-4 py-6 text-center text-sm text-muted-foreground">
+          No agents yet — start one with{' '}
+          <span className="font-mono text-muted-foreground">+ New Run</span>
+        </div>
+      ) : (
+        agents.map((a) => (
+          <AgentRow key={a.key} agent={a} onSelect={onSelectAgent} onAction={onAgentAction} />
+        ))
+      )}
+    </div>
+  );
+
+  if (!showHeader) {
+    return <section className="flex flex-col">{body}</section>;
+  }
 
   return (
     <section className="flex flex-col">
@@ -74,21 +94,7 @@ export function ProjectSection({
         </span>
         <span className="font-mono text-xs text-muted-foreground">{project.repoPath}</span>
       </div>
-      {!collapsed && (
-        <div className="flex flex-col gap-1.5 pt-1">
-          <ColumnHeaderRow placement="per-section" />
-          {agents.length === 0 ? (
-            <div className="rounded border border-dashed border-white/10 px-4 py-6 text-center text-sm text-muted-foreground">
-              No agents yet — start one with{' '}
-              <span className="font-mono text-muted-foreground">+ New Run</span>
-            </div>
-          ) : (
-            agents.map((a) => (
-              <AgentRow key={a.key} agent={a} onSelect={onSelectAgent} onAction={onAgentAction} />
-            ))
-          )}
-        </div>
-      )}
+      {!collapsed && body}
     </section>
   );
 }

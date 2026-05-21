@@ -1,14 +1,14 @@
 import { useEffect, useState } from 'react';
 import type { MouseEvent, ReactNode } from 'react';
 import { cva } from 'class-variance-authority';
-import { Circle, GitPullRequest } from 'lucide-react';
+import { Circle, Clock, Currency, GitPullRequest, Hash } from 'lucide-react';
 
-import type { Agent, AgentState } from '../data/types.js';
-import { STATE_CLASSES, STATE_META } from '../data/state-meta.js';
+import type { Agent, AgentState } from '@/data/types';
+import { STATE_CLASSES, STATE_META } from '@/data/state-meta';
 import { Badge } from './ui/badge.js';
 import { Button } from './ui/button.js';
-import { formatDuration } from '../format/duration.js';
-import { formatTokens } from '../format/tokens.js';
+import { formatDuration } from '@/format/duration';
+import { formatTokens } from '@/format/tokens';
 
 export type QuickActionKind = 'resume' | 'finish' | 'view-pr' | 'provide-input' | 'inspect';
 
@@ -21,7 +21,7 @@ interface AgentRowProps {
 const ACTIVE_STATES = new Set<AgentState>(['running', 'initializing']);
 
 const agentRow = cva(
-  'group relative grid cursor-pointer items-center h-16 gap-3 rounded border bg-card px-4 py-3 transition-colors hover:bg-popover grid-cols-[100px_90px_90px_70px_1fr_168px]',
+  'group relative flex cursor-pointer items-center h-16 gap-3 rounded border bg-card px-4 py-3 transition-colors hover:bg-popover',
   {
     variants: {
       state: {
@@ -65,32 +65,53 @@ export function AgentRow({ agent, onSelect, onAction }: AgentRowProps) {
           className={`absolute inset-y-1.5 left-0 w-1 rounded-full ${stateClasses.solidBg} animate-att-pulse`}
         />
       )}
-      <Badge
-        role="status"
-        aria-label={meta.label}
-        color={agent.state}
-        intensity="mid"
-        icon={<StateIcon />}
-      >
-        {meta.label}
-      </Badge>
-      <span className="font-mono text-xs text-muted-foreground">{agent.key}</span>
-      <span className="text-right font-mono text-xs tabular-nums text-muted-foreground">
-        {runtime}
-      </span>
-      <span className="text-right font-mono text-xs tabular-nums text-muted-foreground">
-        {formatTokens(agent.tokens)}
-      </span>
-      <span className="truncate text-sm text-foreground">{agent.ticketTitle}</span>
+      <div className={"w-24"}>
+        <Badge
+          role="status"
+          aria-label={meta.label}
+          color={agent.state}
+          intensity="mid"
+          icon={<StateIcon />}
+          className="shrink-0"
+        >
+          {meta.label}
+        </Badge>
+      </div>
+      <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+        <span className="truncate text-sm text-foreground">{agent.ticketTitle}</span>
+        <div className="flex items-center gap-1.5 font-mono text-xs text-muted-foreground">
+          <MetaItem icon={<Hash className="h-3 w-3" aria-hidden />} value={agent.key} />
+          <MetaSeparator />
+          <MetaItem icon={<Clock className="h-3 w-3" aria-hidden />} value={runtime} />
+          <MetaSeparator />
+          <MetaItem
+            icon={<Currency className="h-3 w-3" aria-hidden />}
+            value={formatTokens(agent.tokens)}
+          />
+        </div>
+      </div>
       <QuickActions agent={agent} onAction={onAction} />
     </div>
   );
 }
 
+function MetaItem({ icon, value }: { icon: ReactNode; value: string }) {
+  return (
+    <span className="inline-flex items-center gap-1 tabular-nums">
+      {icon}
+      <span>{value}</span>
+    </span>
+  );
+}
+
+function MetaSeparator() {
+  return <span aria-hidden>·</span>;
+}
+
 // Every state-badge instance in the Figma Pill set uses `lucide/circle` as its
 // Icon INSTANCE_SWAP — the badge's color, not its glyph, carries the state.
 function StateIcon() {
-  return <Circle className={'p-[2px]'} aria-hidden strokeWidth={6} absoluteStrokeWidth={true} />;
+  return <Circle className="p-0.5" aria-hidden strokeWidth={6} absoluteStrokeWidth />;
 }
 
 function QuickActions({
@@ -110,10 +131,10 @@ function QuickActions({
     case 'idle':
       return (
         <QaGroup>
-          <Button color="running" intensity="mid" size="xs" onClick={fire('resume')}>
+          <Button color="running" intensity="mid" size="sm" onClick={fire('resume')}>
             Resume
           </Button>
-          <Button color="running" intensity="ghost" size="xs" onClick={fire('finish')}>
+          <Button color="running" intensity="ghost" size="sm" onClick={fire('finish')}>
             Finish
           </Button>
         </QaGroup>
@@ -121,7 +142,7 @@ function QuickActions({
     case 'waiting':
       return (
         <SingleAction>
-          <Button color="waiting" intensity="loud" size="xs" onClick={fire('provide-input')}>
+          <Button color="waiting" intensity="loud" size="sm" onClick={fire('provide-input')}>
             Provide input
           </Button>
         </SingleAction>
@@ -132,7 +153,7 @@ function QuickActions({
           <Button
             color="running"
             intensity="mid"
-            size="xs"
+            size="sm"
             icon={<GitPullRequest aria-hidden />}
             asChild
           >
@@ -140,7 +161,7 @@ function QuickActions({
               View PR
             </a>
           </Button>
-          <Button color="running" intensity="ghost" size="xs" onClick={fire('finish')}>
+          <Button color="running" intensity="ghost" size="sm" onClick={fire('finish')}>
             Finish
           </Button>
         </QaGroup>
@@ -148,7 +169,7 @@ function QuickActions({
     case 'error':
       return (
         <SingleAction>
-          <Button color="error" intensity="mid" size="xs" onClick={fire('inspect')}>
+          <Button color="error" intensity="mid" size="sm" onClick={fire('inspect')}>
             Inspect
           </Button>
         </SingleAction>
@@ -162,7 +183,7 @@ function QaGroup({ children }: { children: ReactNode }) {
   return (
     <div
       data-qa-group="true"
-      className="flex items-center justify-end gap-1.5"
+      className="flex shrink-0 items-center justify-end gap-1.5"
       onClick={(e) => e.stopPropagation()}
     >
       {children}
@@ -171,7 +192,7 @@ function QaGroup({ children }: { children: ReactNode }) {
 }
 
 function SingleAction({ children }: { children: ReactNode }) {
-  return <div className="flex items-center justify-end">{children}</div>;
+  return <div className="flex shrink-0 items-center justify-end">{children}</div>;
 }
 
 function useLiveRuntime(startedAt: string, live: boolean): string {

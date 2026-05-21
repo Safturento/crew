@@ -18,7 +18,6 @@ Format: see the user-level `~/.claude/CLAUDE.md` "Followup detection" section.
   - [2026-05-15 — `.agents/` topic-doc system vs native `.claude/rules/` and agents.md alignment](#2026-05-15--agents-topic-doc-system-vs-native-clauderules-and-agentsmd-alignment)
   - [2026-05-15 — `parity_violations` metric is recorded end-to-end but never computed (always null)](#2026-05-15--parity_violations-metric-is-recorded-end-to-end-but-never-computed-always-null)
   - [2026-05-14 — Per-turn metric series so cache size can be graphed over a run](#2026-05-14--per-turn-metric-series-so-cache-size-can-be-graphed-over-a-run)
-  - [2026-05-13 — Agent rows: code renders as table; Figma designs as cards (architectural layout drift, affects 3 screens)](#2026-05-13--agent-rows-code-renders-as-table-figma-designs-as-cards-architectural-layout-drift-affects-3-screens)
   - [2026-05-13 — Agent drawer Close button uses Unicode "X" glyph instead of `lucide/x` SVG](#2026-05-13--agent-drawer-close-button-uses-unicode-x-glyph-instead-of-lucidex-svg)
   - [2026-05-13 — Agent drawer / agent page search input missing leading magnifying-glass icon](#2026-05-13--agent-drawer--agent-page-search-input-missing-leading-magnifying-glass-icon)
   - [2026-05-13 — TopNav BrandMark renders a different glyph than the Figma "crew" mark](#2026-05-13--topnav-brandmark-renders-a-different-glyph-than-the-figma-crew-mark)
@@ -81,6 +80,7 @@ Format: see the user-level `~/.claude/CLAUDE.md` "Followup detection" section.
   - [2026-04-27 — Dashboard mobile responsive layout polish](#2026-04-27--dashboard-mobile-responsive-layout-polish)
   - [2026-04-26 — Architecture doc open questions still unresolved](#2026-04-26--architecture-doc-open-questions-still-unresolved)
 - [Resolved](#resolved)
+  - [2026-05-13 — Agent rows: code renders as table; Figma designs as cards (architectural layout drift, affects 3 screens)](#2026-05-13--agent-rows-code-renders-as-table-figma-designs-as-cards-architectural-layout-drift-affects-3-screens)
   - [2026-05-18 — StateBadge / CountBadge `.figma.tsx` still point at the archived DS file (Pill consolidation has no name-match)](#2026-05-18--statebadge--countbadge-figmatsx-still-point-at-the-archived-ds-file-pill-consolidation-has-no-name-match)
   - [2026-05-12 — Update `.figma.tsx` Code Connect files after Crew DS consolidation](#2026-05-12--update-figmatsx-code-connect-files-after-crew-ds-consolidation)
   - [2026-05-12 — New Run modal list rows need a proper component (project / ticket rows lost metadata during bulk Button swap)](#2026-05-12--new-run-modal-list-rows-need-a-proper-component-project--ticket-rows-lost-metadata-during-bulk-button-swap)
@@ -264,41 +264,6 @@ Format: see the user-level `~/.claude/CLAUDE.md` "Followup detection" section.
 
 - Sample rate: every turn, or every N tokens? Every turn is fine to start — a 100-turn run is 100 rows; cheap.
 - Retention: keep forever, or expire alongside transcripts? Probably tied to transcript lifetime since that's the source of truth.
-
-### 2026-05-13 — Agent rows: code renders as table; Figma designs as cards (architectural layout drift, affects 3 screens)
-
-**What:** The agent rows on Agents List (`packages/dashboard/src/routes/AgentsListPage.tsx` + `components/AgentRow.tsx`), Agent full page (`AgentFullPage.tsx` agents sub-section), and Project detail (`ProjectDetailPage.tsx` agents sub-section) currently render as a **columnar table** (`STATE | ID | RUNTIME | TOKENS | TITLE | actions`). The Figma reference on every one of those screens uses a **card layout**: full-width row with a left-edge state-colored stroke, state pill top-left, title as the primary content, meta (`# KAN-31 · ⌚ 33m 04s · ✦ 38.1k`) inline below the title, action buttons right-aligned within the card. The table-vs-card mismatch is the single largest visual difference between code and Figma — bigger than any individual component-level bug.
-
-**Why noticed:** 2026-05-13 ultimate-test visual-comparison session. The visual-fidelity-check skill's structural+caller checks across three calibration runs (run-01 / run-02 / run-03) never flagged this because they operate per-component, not per-layout. The diff only surfaces when comparing rendered-page screenshots to Figma frame screenshots side-by-side.
-
-**Anchors:**
-
-- `packages/dashboard/src/routes/AgentsListPage.tsx` — table renderer
-- `packages/dashboard/src/components/AgentRow.tsx` — row composite (currently styled for table cells, would need substantial rewrite for card shape)
-- `packages/dashboard/src/routes/AgentFullPage.tsx` — uses AgentsListPage's table rendering for the "agents" tab
-- `packages/dashboard/src/routes/ProjectDetailPage.tsx` — uses the same row pattern under the project's TOML block
-- Figma references: `1:2` (Agents List), `1:1900` (Agent full page), `1:2443` (Project detail) — all three Figma frames render cards
-- Code Connect: `AgentRow.figma.tsx` — currently maps the table-row component to whatever Figma node was on the legacy DS file; needs updating to point at the card-shape Figma component if/when it exists in `9FeJPriqdsdA4n9R5Xsrr8`
-- Spec doc covering originally-shipped agents-list slice: `docs/superpowers/specs/2026-05-05-slice-1c-agent-drawer-and-push-updates-design.md` — predates the Figma card refresh
-
-**What's been considered:**
-
-- **Out-of-scope deferral:** the row layout shipped during the original agents-list slice (CREW-102 / CREW-103). The current Figma design represents a later DS iteration. The drift accumulated as Figma evolved and code didn't follow. This is a design-system catch-up effort, not a CREW-135 regression.
-- **Effort scope:** AgentRow.tsx is a substantial composite — would need rewriting to switch from table-cell layout to card-layout, including how the meta fields render (icons inline vs columnar), how quick-actions position within the card, how the left-edge state stroke gets applied (probably via a `border-l-4` color matching state). The supporting parent table (header row, column-width logic) goes away entirely.
-- **Verify the Figma is canonical:** before committing to the rewrite, confirm with the design owner that the card layout is actually the intended end-state (not an in-progress concept that got merged to main Figma by accident). Once confirmed, plan as its own ticket.
-
-**Shape of work:**
-
-- ~1-day brainstorm + spec covering the layout migration + reconciling the meta-row icon set (clock for runtime, diamond for tokens, etc. — Figma uses lucide icons there; code currently uses plain text columns).
-- ~2-3 days implementation: rewrite AgentRow.tsx as a card, drop the table header row, migrate three pages (Agents List, Agent full page, Project detail) to use the card-shape consumer.
-- Tests: existing `AgentRow.test.tsx` is column-oriented; needs rewrite to match card affordances.
-- Visual smoke + Plugin-API-snapshot-driven `visual-fidelity-check` to verify the result matches Figma. (Ironically, this would be a great fixture for the future "ultimate test" capability — known-bad input + known-good Figma reference + measurable progress.)
-
-**Open questions:**
-
-- Is the card layout actually the design intent, or did Figma drift? Confirm before scoping.
-- Does the table-row layout have any current usability advantage worth keeping? (e.g., sortable columns — Figma's card layout doesn't expose this affordance.)
-- What's the right ordering vs other DS catch-up work? This is likely the biggest single visual-fidelity win, but also the biggest implementation cost.
 
 ### 2026-05-13 — Agent drawer Close button uses Unicode "X" glyph instead of `lucide/x` SVG
 
@@ -1726,6 +1691,43 @@ The other two open questions (sandbox config drift, Phase 2 + Phase 3 separation
 ## Resolved
 
 (items move here when ticketed and shipped, or fixed inline — keep for historical context, prune when the file gets long)
+
+### 2026-05-13 — Agent rows: code renders as table; Figma designs as cards (architectural layout drift, affects 3 screens)
+
+**What:** The agent rows on Agents List (`packages/dashboard/src/routes/AgentsListPage.tsx` + `components/AgentRow.tsx`), Agent full page (`AgentFullPage.tsx` agents sub-section), and Project detail (`ProjectDetailPage.tsx` agents sub-section) currently render as a **columnar table** (`STATE | ID | RUNTIME | TOKENS | TITLE | actions`). The Figma reference on every one of those screens uses a **card layout**: full-width row with a left-edge state-colored stroke, state pill top-left, title as the primary content, meta (`# KAN-31 · ⌚ 33m 04s · ✦ 38.1k`) inline below the title, action buttons right-aligned within the card. The table-vs-card mismatch is the single largest visual difference between code and Figma — bigger than any individual component-level bug.
+
+**Why noticed:** 2026-05-13 ultimate-test visual-comparison session. The visual-fidelity-check skill's structural+caller checks across three calibration runs (run-01 / run-02 / run-03) never flagged this because they operate per-component, not per-layout. The diff only surfaces when comparing rendered-page screenshots to Figma frame screenshots side-by-side.
+
+**Anchors:**
+
+- `packages/dashboard/src/routes/AgentsListPage.tsx` — table renderer
+- `packages/dashboard/src/components/AgentRow.tsx` — row composite (currently styled for table cells, would need substantial rewrite for card shape)
+- `packages/dashboard/src/routes/AgentFullPage.tsx` — uses AgentsListPage's table rendering for the "agents" tab
+- `packages/dashboard/src/routes/ProjectDetailPage.tsx` — uses the same row pattern under the project's TOML block
+- Figma references: `1:2` (Agents List), `1:1900` (Agent full page), `1:2443` (Project detail) — all three Figma frames render cards
+- Code Connect: `AgentRow.figma.tsx` — currently maps the table-row component to whatever Figma node was on the legacy DS file; needs updating to point at the card-shape Figma component if/when it exists in `9FeJPriqdsdA4n9R5Xsrr8`
+- Spec doc covering originally-shipped agents-list slice: `docs/superpowers/specs/2026-05-05-slice-1c-agent-drawer-and-push-updates-design.md` — predates the Figma card refresh
+
+**What's been considered:**
+
+- **Out-of-scope deferral:** the row layout shipped during the original agents-list slice (CREW-102 / CREW-103). The current Figma design represents a later DS iteration. The drift accumulated as Figma evolved and code didn't follow. This is a design-system catch-up effort, not a CREW-135 regression.
+- **Effort scope:** AgentRow.tsx is a substantial composite — would need rewriting to switch from table-cell layout to card-layout, including how the meta fields render (icons inline vs columnar), how quick-actions position within the card, how the left-edge state stroke gets applied (probably via a `border-l-4` color matching state). The supporting parent table (header row, column-width logic) goes away entirely.
+- **Verify the Figma is canonical:** before committing to the rewrite, confirm with the design owner that the card layout is actually the intended end-state (not an in-progress concept that got merged to main Figma by accident). Once confirmed, plan as its own ticket.
+
+**Shape of work:**
+
+- ~1-day brainstorm + spec covering the layout migration + reconciling the meta-row icon set (clock for runtime, diamond for tokens, etc. — Figma uses lucide icons there; code currently uses plain text columns).
+- ~2-3 days implementation: rewrite AgentRow.tsx as a card, drop the table header row, migrate three pages (Agents List, Agent full page, Project detail) to use the card-shape consumer.
+- Tests: existing `AgentRow.test.tsx` is column-oriented; needs rewrite to match card affordances.
+- Visual smoke + Plugin-API-snapshot-driven `visual-fidelity-check` to verify the result matches Figma. (Ironically, this would be a great fixture for the future "ultimate test" capability — known-bad input + known-good Figma reference + measurable progress.)
+
+**Open questions:**
+
+- Is the card layout actually the design intent, or did Figma drift? Confirm before scoping.
+- Does the table-row layout have any current usability advantage worth keeping? (e.g., sortable columns — Figma's card layout doesn't expose this affordance.)
+- What's the right ordering vs other DS catch-up work? This is likely the biggest single visual-fidelity win, but also the biggest implementation cost.
+
+**Resolved 2026-05-20 (CREW-176):** AgentRow rewritten from 6-column table grid to flex card matching Figma `212-910`; ProjectSection grew a `showHeader` prop so ProjectDetailPage can hide the inner section header and surface the active/total count next to its AGENTS heading; ColumnHeaderRow deleted. Scope correction: only two consuming screens (AgentsListPage + ProjectDetailPage), not three — `AgentFullPage` does not list other agents. Spec: `docs/superpowers/specs/2026-05-19-agentrow-card-redesign-design.md`; plan: `docs/superpowers/plans/2026-05-19-agentrow-card-redesign.md`.
 
 ### 2026-05-18 — StateBadge / CountBadge `.figma.tsx` still point at the archived DS file (Pill consolidation has no name-match)
 

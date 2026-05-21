@@ -1,5 +1,5 @@
-@import 'tailwindcss';
 @import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@300..700&display=swap');
+@import 'tailwindcss';
 
 @custom-variant dark (&:is(.dark *));
 
@@ -117,14 +117,14 @@ body {
   height: 100%;
   background: var(--color-background);
   color: var(--color-foreground);
-  font-family: var(--font-sans);
+  font-family: var(--font-sans), sans-serif;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
 .mono {
-  font-family: var(--font-mono);
+  font-family: var(--font-mono), monospace;
   font-feature-settings:
     'calt' on,
     'liga' on;
