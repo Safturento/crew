@@ -65,7 +65,7 @@ Every finding must cite **file:line + actual code snippet + Figma reference (nod
 
 ### Read the `enrichment` field first
 
-Each per-node JSON in `<snapshotPath>` has two data tiers: `raw` (REST API, always present) and `enrichment` (Plugin-API, present when snapshot was enriched successfully). **Always prefer `enrichment`** when available:
+Each per-node JSON in `<snapshotPath>` has two data tiers: `raw` (REST API top-level node properties — no `children`; always present) and `enrichment` (Plugin-API, present when snapshot was enriched successfully). **Always prefer `enrichment`** when available:
 
 - `enrichment.componentProperties` — exact variant config + resolved `Icon` INSTANCE_SWAP names (e.g. `Icon: { name: "lucide/circle" }`)
 - `enrichment.mainComponent.name` — resolved master variant key (e.g. `"type=pill, color=waiting, intensity=mid"`)

@@ -35,7 +35,7 @@ For each touched component:
    - The `restrictToVariants` config if present (tells you which Figma variants this code component maps to)
 3. Look up the node ID in `<snapshotPath>/index.json` → get the path to the metadata JSON + screenshot.
 4. Read the metadata JSON. Two data tiers may be present:
-   - **`raw`** (always present) — full REST API node tree. Use for canonical structure, names, geometry, basic fills/strokes hex values.
+   - **`raw`** (always present) — top-level REST API properties only (fills, strokes, absoluteBoundingBox, layoutMode, paddings, cornerRadius, effects, etc.). The recursive `children` subtree is deliberately omitted — nested instance data lives in `enrichment.componentInstances`. Use `raw` for top-level paint hex values, geometry, and layout when `enrichment` is missing.
    - **`enrichment`** (present when `crew figma-snapshot` completed its Plugin-API pass; absent on REST-only fallback runs) — adds:
      - `componentProperties` — for INSTANCE nodes, the _specific_ variant config (e.g. `{ type: "pill", color: "waiting", intensity: "mid", Icon: { id: "lucide/circle", name: "lucide/circle" } }`). INSTANCE_SWAP icon properties resolve to `{ id, name }` so you can read the specific lucide glyph directly.
      - `mainComponent` — `{ id, name, parentSetName }` for INSTANCE nodes, naming the resolved master variant (e.g. `name: "type=pill, color=waiting, intensity=mid"`).
