@@ -4,11 +4,12 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vite
 import type { UseQueryResult } from '@tanstack/react-query';
 
 import { Timeline } from './Timeline.js';
-import { useTimeline } from '../../data/queries.js';
-import type { TranscriptEvent } from '../../data/types.js';
+import { useStateHistory, useTimeline } from '../../data/queries.js';
+import type { StateTransition, TranscriptEvent } from '../../data/types.js';
 
 vi.mock('../../data/queries.js', () => ({
   useTimeline: vi.fn(),
+  useStateHistory: vi.fn(),
 }));
 
 // jsdom returns 0 for layout dimensions, which makes useVirtualizer
@@ -49,6 +50,7 @@ beforeAll(() => {
 });
 
 const mockUseTimeline = vi.mocked(useTimeline);
+const mockUseStateHistory = vi.mocked(useStateHistory);
 
 type TimelineQueryResult = UseQueryResult<{ events: TranscriptEvent[]; warnings?: string[] }>;
 
@@ -71,6 +73,28 @@ function timelineResult(partial: Partial<TimelineQueryResult>): TimelineQueryRes
     fetchStatus: 'idle',
     ...partial,
   } as unknown as TimelineQueryResult;
+}
+
+type StateHistoryQueryResult = UseQueryResult<{ transitions: StateTransition[] }>;
+
+function stateHistoryResult(transitions: StateTransition[]): StateHistoryQueryResult {
+  return {
+    data: { transitions },
+    error: null,
+    isLoading: false,
+    isError: false,
+    isSuccess: true,
+    isPending: false,
+    isFetching: false,
+    isFetched: true,
+    isFetchedAfterMount: true,
+    isStale: false,
+    isPlaceholderData: false,
+    isRefetching: false,
+    refetch: vi.fn(),
+    status: 'success',
+    fetchStatus: 'idle',
+  } as unknown as StateHistoryQueryResult;
 }
 
 const evt = (i: number): TranscriptEvent =>
@@ -112,6 +136,9 @@ const assistantThinking = (i: number, text: string): TranscriptEvent =>
 describe('Timeline', () => {
   beforeEach(() => {
     mockUseTimeline.mockReset();
+    mockUseStateHistory.mockReset();
+    // Default: no transitions — Timeline falls back to a single section.
+    mockUseStateHistory.mockReturnValue(stateHistoryResult([]));
   });
 
   afterEach(() => {
@@ -336,5 +363,89 @@ describe('Timeline', () => {
     // Toggle assistant prose OFF — only tool-call + thinking remain.
     await userEvent.click(screen.getByRole('button', { name: 'Assistant prose' }));
     expect(screen.getAllByTestId('event-card')).toHaveLength(2);
+  });
+
+  it('falls back to a single section tagged with agentState when transitions is empty', () => {
+    mockUseTimeline.mockReturnValue(
+      timelineResult({
+        data: { events: [evt(1), evt(2)] },
+        isSuccess: true,
+        status: 'success',
+      }),
+    );
+    mockUseStateHistory.mockReturnValue(stateHistoryResult([]));
+    render(<Timeline agentKey="KAN-1" agentState="running" />);
+    const sections = screen.getAllByTestId('timeline-section');
+    expect(sections).toHaveLength(1);
+    expect(sections[0]).toHaveAttribute('data-state', 'running');
+  });
+
+  it('groups events into per-state sections when transitions are available', () => {
+    const transitions: StateTransition[] = [
+      { from: null, to: 'init', ts: Date.parse('2026-04-29T11:59:50Z') },
+      { from: 'init', to: 'running', ts: Date.parse('2026-04-29T12:00:01.5Z') },
+      { from: 'running', to: 'waiting', ts: Date.parse('2026-04-29T12:00:03Z') },
+    ];
+    mockUseTimeline.mockReturnValue(
+      timelineResult({
+        data: { events: [evt(1), evt(2), evt(3)] },
+        isSuccess: true,
+        status: 'success',
+      }),
+    );
+    mockUseStateHistory.mockReturnValue(stateHistoryResult(transitions));
+    render(<Timeline agentKey="KAN-1" agentState="waiting" />);
+    const sections = screen.getAllByTestId('timeline-section');
+    expect(sections.map((s) => s.getAttribute('data-state'))).toEqual([
+      'initializing',
+      'running',
+      'waiting',
+    ]);
+  });
+
+  it('Collapse-all collapses every section in one click', async () => {
+    const transitions: StateTransition[] = [
+      { from: null, to: 'init', ts: Date.parse('2026-04-29T11:59:50Z') },
+      { from: 'init', to: 'running', ts: Date.parse('2026-04-29T12:00:01.5Z') },
+    ];
+    mockUseTimeline.mockReturnValue(
+      timelineResult({
+        data: { events: [evt(1), evt(2)] },
+        isSuccess: true,
+        status: 'success',
+      }),
+    );
+    mockUseStateHistory.mockReturnValue(stateHistoryResult(transitions));
+    render(<Timeline agentKey="KAN-1" agentState="running" />);
+    // Sections start open → at least one event-card visible.
+    expect(screen.getAllByTestId('event-card').length).toBeGreaterThan(0);
+    await userEvent.click(screen.getByRole('button', { name: /collapse all/i }));
+    expect(screen.queryAllByTestId('event-card')).toHaveLength(0);
+    // Every section's toggle button should be aria-expanded=false.
+    const toggles = screen.getAllByRole('button', { name: /toggle/i });
+    for (const t of toggles) {
+      expect(t).toHaveAttribute('aria-expanded', 'false');
+    }
+  });
+
+  it('toggling a single section is independent of the others', async () => {
+    const transitions: StateTransition[] = [
+      { from: null, to: 'init', ts: Date.parse('2026-04-29T11:59:50Z') },
+      { from: 'init', to: 'running', ts: Date.parse('2026-04-29T12:00:01.5Z') },
+    ];
+    mockUseTimeline.mockReturnValue(
+      timelineResult({
+        data: { events: [evt(1), evt(2)] },
+        isSuccess: true,
+        status: 'success',
+      }),
+    );
+    mockUseStateHistory.mockReturnValue(stateHistoryResult(transitions));
+    render(<Timeline agentKey="KAN-1" agentState="running" />);
+    const toggles = screen.getAllByRole('button', { name: /toggle/i });
+    expect(toggles).toHaveLength(2);
+    await userEvent.click(toggles[0]);
+    expect(toggles[0]).toHaveAttribute('aria-expanded', 'false');
+    expect(toggles[1]).toHaveAttribute('aria-expanded', 'true');
   });
 });
