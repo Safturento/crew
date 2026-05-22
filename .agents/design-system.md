@@ -1,7 +1,7 @@
 ---
 name: design-system
 description: Crew Figma DS + token bindings + Pill primitive contract
-last_updated: 2026-05-18
+last_updated: 2026-05-22
 covers:
   - 'packages/dashboard/src/components/**'
   - '*.figma.tsx'
@@ -124,6 +124,8 @@ Figma node IDs below are in the live consolidated file (`9FeJPriqdsdA4n9R5Xsrr8`
 | `AgentBody`          | `220:246`        | `packages/dashboard/src/components/AgentBody.tsx`          |
 | `StateHistoryBar`    | `220:257`        | `packages/dashboard/src/components/StateHistoryBar.tsx`    |
 | `TokenTable`         | `220:287`        | `packages/dashboard/src/components/TokenTable.tsx`         |
+| `TokenBarRow`        | `555:449`        | `packages/dashboard/src/components/TokenBarRow.tsx`        |
+| `TokensByTool`       | `577:643`        | `packages/dashboard/src/components/TokensByTool.tsx`       |
 | `ViewportFrame`      | `220:292`        | `packages/dashboard/src/components/ViewportFrame.tsx`      |
 | `ProjectRow`         | `220:300`        | `packages/dashboard/src/components/ProjectRow.tsx`         |
 | `ProjectHeader`      | `220:315`        | `packages/dashboard/src/components/ProjectHeader.tsx`      |
