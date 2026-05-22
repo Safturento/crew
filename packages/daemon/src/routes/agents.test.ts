@@ -24,7 +24,7 @@ async function setupApp() {
   const db = createDb(config.dbFile);
   await runMigrations(db, MIGRATIONS_DIR);
   const app = await buildApp({ config, logger: silentLogger, db });
-  return { app, db };
+  return { app, db, configDir: dir };
 }
 
 describe('GET /api/agents', () => {
@@ -162,6 +162,134 @@ describe('GET /api/agents/:key', () => {
         completed_at: '2026-04-29T13:00:00Z',
       });
       expect(typeof body.runs[0].id).toBe('string');
+    } finally {
+      await app.close();
+      await db.destroy();
+    }
+  });
+});
+
+describe('GET /api/agents/:key — drawer redesign fields (CREW-178)', () => {
+  it('surfaces app_url, jira_url, and tokens_by_tool on the AgentDetail response', async () => {
+    const { app, db, configDir } = await setupApp();
+    try {
+      // Materialise the project TOML at configDir, which AgentsService now
+      // reads as <configDir>/<projectName>.toml.
+      writeFileSync(
+        join(configDir, 'demo.toml'),
+        `
+name = "demo"
+repo_path = "~/code/demo"
+[jira]
+project_key = "DEMO"
+site = "https://safturento.atlassian.net"
+[github]
+repo = "safturento/demo"
+[playwright]
+app_url = "http://localhost:7421"
+start_command = "npm run dev"
+[playwright.smoke]
+enabled = true
+`,
+      );
+      await db
+        .insertInto('agents')
+        .values({
+          key: 'KAN-DR-1',
+          project_name: 'demo',
+          ticket_title: 'Drawer demo',
+          worktree_path: '/work/KAN-DR-1',
+          branch: 'KAN-DR-1',
+          pr_url: null,
+          created_at: '2026-05-22T12:00:00Z',
+        })
+        .execute();
+      const r1 = await db
+        .insertInto('runs')
+        .values({
+          agent_key: 'KAN-DR-1',
+          command: 'run',
+          session_id: 'sdr1',
+          started_at: '2026-05-22T12:00:00Z',
+          completed_at: null,
+          exit_code: null,
+        })
+        .returning('id')
+        .executeTakeFirstOrThrow();
+      await db
+        .insertInto('tool_calls')
+        .values([
+          {
+            run_id: r1.id,
+            tool_name: 'Bash',
+            input_summary: 'ls',
+            output_tokens: 800,
+            input_tokens: 0,
+            cache_read_tokens: 0,
+            cache_creation_tokens: 0,
+            occurred_at: '2026-05-22T12:00:01Z',
+          },
+          {
+            run_id: r1.id,
+            tool_name: 'Read',
+            input_summary: '/x',
+            output_tokens: 200,
+            input_tokens: 0,
+            cache_read_tokens: 0,
+            cache_creation_tokens: 0,
+            occurred_at: '2026-05-22T12:00:02Z',
+          },
+        ])
+        .execute();
+
+      const res = await app.inject({ method: 'GET', url: '/api/agents/KAN-DR-1' });
+      expect(res.statusCode).toBe(200);
+      const body = res.json();
+      expect(body.app_url).toBe('http://localhost:7421');
+      expect(body.jira_url).toBe('https://safturento.atlassian.net/browse/KAN-DR-1');
+      expect(body.tokens_by_tool).toEqual([
+        { tool: 'Bash', tokens: 800, percent: 80 },
+        { tool: 'Read', tokens: 200, percent: 20 },
+      ]);
+    } finally {
+      await app.close();
+      await db.destroy();
+    }
+  });
+
+  it('returns null URLs and an empty tokens_by_tool when no project TOML is present', async () => {
+    const { app, db } = await setupApp();
+    try {
+      await db
+        .insertInto('agents')
+        .values({
+          key: 'KAN-DR-2',
+          project_name: 'unmapped-project',
+          ticket_title: 'no toml',
+          worktree_path: '/x',
+          branch: 'KAN-DR-2',
+          pr_url: null,
+          created_at: '2026-05-22T12:00:00Z',
+        })
+        .execute();
+      await db
+        .insertInto('runs')
+        .values({
+          agent_key: 'KAN-DR-2',
+          command: 'run',
+          session_id: 'sdr2',
+          started_at: '2026-05-22T12:00:00Z',
+          completed_at: null,
+          exit_code: null,
+        })
+        .execute();
+
+      const res = await app.inject({ method: 'GET', url: '/api/agents/KAN-DR-2' });
+      expect(res.statusCode).toBe(200);
+      const body = res.json();
+      expect(body.app_url).toBeNull();
+      expect(body.jira_url).toBeNull();
+      expect(body.tokens_by_tool).toEqual([]);
     } finally {
       await app.close();
       await db.destroy();
