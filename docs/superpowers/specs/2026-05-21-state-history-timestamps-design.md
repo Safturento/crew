@@ -109,13 +109,12 @@ The drawer design (`1:378` → `Container 1:814`) confirms it: the timeline (`Se
 
 ### Section-header layout — sub-decision to mock
 
-Three header layouts to compare, each shown inline at drawer width:
+Two header layouts to compare, each shown inline at drawer width. The tooltip approach from the original spec is **dropped** — section headers have enough horizontal space to carry timestamp + elapsed + count inline, and tooltips add a hidden-info tax the existing chip-form needed but the header doesn't.
 
 - **L1 — All-inline, append elapsed:** `[▾] [Running pill] started 14:30:24 · 4m 22s · 8 events`. Smallest delta from today.
 - **L2 — Right-aligned timestamp:** `[▾] [Running pill] 4m 22s · 8 events                14:30:24`. Separates "what + how long" (left) from "when" (right edge).
-- **L3 — Timestamp on tooltip only:** `[▾] [Running pill] 4m 22s · 8 events`. Hover/tap the row reveals `Entered 14:30:24`. Consistent with the original spec decision and reduces noise.
 
-Each layout is mocked in both **expanded** (one row of events under the header) and **collapsed** (header only, stacked vertically with the connector line implied between headers) states. The collapsed-all stack is the "new state history" view.
+Each layout is mocked only in its **collapsed** state (the chevron rotates between expanded/collapsed; the header content is identical). The collapsed-all stack is the "new state history" view.
 
 Live state visual treatment carries over from the original exploration: hollow/loud dot on the active state's pill, live elapsed counter ticking in real time.
 
