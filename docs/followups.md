@@ -15,6 +15,7 @@ Organization: Active is grouped by topic (not chronology) since the dominant acc
   - [Daemon, CLI & Dispatch](#daemon-cli--dispatch)
   - [Architecture & Config](#architecture--config)
   - [Process & Conventions](#process--conventions)
+- [Resolved](#resolved)
 - [Abandoned](#abandoned)
 
 ## Active
@@ -303,22 +304,6 @@ The first two examples resolve once the structural fix lands. The third is a ski
 - Are `RunMetrics` (cohort) and `MetricsTrendWidget` two surfaces of the same idea or distinct? They share a backend (`/api/metrics`) but render differently.
 - Does anyone actively look at these metrics today, or was the widget aspirational? If aspirational, deprecation is a third option.
 
-#### 2026-05-13 — Agent drawer Close button uses Unicode "✕" glyph instead of `lucide/x` SVG
-
-**What:** The Close button at the top-right of the Agent Drawer declares `Icon=lucide/x` in its componentProperties — the polish-pass session on 2026-05-12 migrated the Figma side to use the proper SVG. The dashboard's drawer code (`routes/AgentDrawer.tsx:42`) still renders `Close ✕` (Unicode glyph) inline, not the lucide SVG. Same class of bug as the View PR / Open as page Unicode-arrow issue caught in CREW-135 F5, but on a different button.
-
-**Why noticed:** 2026-05-13 ultimate-test visual comparison (screen 2 — agent drawer header). Verified 2026-05-21: `routes/AgentDrawer.tsx:42` still has `Close ✕`. Skill's calibration runs never surfaced this because the drawer Close button isn't in CREW-135's diff.
-
-**Anchors:**
-
-- `packages/dashboard/src/routes/AgentDrawer.tsx:42` — `Close ✕`
-- Figma instance: `387:2566` on the agent-drawer screen — `componentProperties: { type: "button-icon-sm", color: "running", intensity: "ghost", Icon: { name: "lucide/x" } }`
-- Polish-pass conversion: 2026-05-12 Figma DS polish session
-
-**Shape of work:** Small — one or two file edits. Replace the inline `Close ✕` with `<X aria-hidden />` from `lucide-react`. The Button base class already sizes child SVGs to `size-4` for normal buttons / `size-3` for xs sizes.
-
-**Open questions:** None. Drop-in fix.
-
 #### 2026-05-13 — Agent drawer / agent page search input missing leading magnifying-glass icon
 
 **What:** The search input above the event timeline on Agent Drawer (`1:756`) + Agent full page (`1:1900`) Figma frames has a `Has Icon=true, Icon=lucide/search` leading-icon configuration. The dashboard code (`components/Timeline/SearchBar.tsx`) renders the same input as a bare `<input type="search">` with placeholder text only — no leading icon SVG. Once CREW-136 (T2 Form composites) lands the `leadingIcon` prop on `Input`, the caller needs to be updated to pass `leadingIcon={<Search />}`.
@@ -478,34 +463,6 @@ The SSE shape feels right — matches slice 1c's "live updates" feel.
 - Drawer layout: inline (between StateHistoryBar and Timeline) vs dedicated panel?
 - Pre-existing finish runs in the DB will have no step data. Drawer should render nothing rather than an empty state.
 - Distinguish skip vs error in the schema (CLI uses `warn()` for both). Schema should have three states (success/skip/error).
-
-#### 2026-05-08 — Wire `StateHistoryBar`, `TokenTable`, and Token-usage section into `AgentBody`
-
-**What:** CREW-109 wired `<Timeline>` into `packages/dashboard/src/components/AgentBody.tsx` (replacing the `agent-body-placeholder` div) so the e2e timeline scenarios could pass. The original placeholder copy promised "Timeline, state history, and token table" — the latter two (`<StateHistoryBar>`, `<TokenTable>`) ship in CREW-104 but are still unmounted. The drawer is functional; the spec §5a/§5b composition isn't complete.
-
-**2026-05-13 visual evidence (folded in from duplicate followup):** The Figma `1:1900` Agent full page reference shows a `Token usage` section between the page header and the event timeline — a table listing per-tool token consumption (Read 22.4k, Bash 5.1k, etc.). The rendered agent page does not display this section at all. Two possibilities: (a) hidden when empty but not reappearing when data is present — bug; (b) planned-but-not-yet-built. `TokenTable.tsx` exists (CREW-104), so the question is whether it's wired into AgentFullPage.tsx + AgentDrawer.tsx and what governs its visibility.
-
-> **Update 2026-05-10:** CREW-117's ticket scope was expanded to a vertical-slice bundle (Crew DS composites + dashboard refactor + Figma frame migration + visual fidelity sweep). The Definition of Done no longer covers this composition — CREW-117 lands 4 Crew DS composites and the dashboard refactor, but does NOT mount StateHistoryBar/TokenTable in AgentBody (open questions still unresolved, and TokenTable's per-tool token data isn't exposed by the daemon today). Re-target this followup to a fresh ticket once open questions are settled.
-
-**Why noticed:** While reading the slice 1c plan, noticed no plan task actually composes Tasks 20 (TokenTable) and 21 (StateHistoryBar) into AgentBody. The 2026-05-13 ultimate-test visual comparison surfaced the same gap from the user-facing side: Token usage section visibly missing.
-
-**Anchors:**
-
-- `packages/dashboard/src/components/AgentBody.tsx` — currently renders only `<Timeline>` under the header
-- `packages/dashboard/src/components/StateHistoryBar.tsx`, `packages/dashboard/src/components/TokenTable.tsx` — built but unmounted
-- `packages/dashboard/src/routes/AgentFullPage.tsx`, `routes/AgentDrawer.tsx` — host pages
-- `docs/superpowers/specs/2026-05-05-slice-1c-agent-drawer-and-push-updates-design.md` §5a/§5b — composition contract
-- Slice 1c Epic: [CREW-94](https://safturento.atlassian.net/browse/CREW-94)
-- Figma reference: `1:1900` — Token usage section between header + event stream
-
-**Shape of work:** One ticket under CREW-94. Expect two-pane layout (token-table sidebar + main timeline) plus a state-history strip above the timeline, with `StateHistoryBar.onScrollTo` wired into Timeline's virtualizer.
-
-**Open questions:**
-
-- Where does TokenTable sit on narrow drawer widths? (collapsible side panel vs always-stacked.)
-- Does `onScrollTo(ts)` need new public Timeline API, or piggyback on an existing imperative handle?
-- TokenTable's `rows: { tool, tokens }[]` data isn't exposed by the daemon — add a daemon endpoint or compute client-side from transcript events.
-- Is the empty-state-hides-section behavior intentional UX, or accidental?
 
 #### 2026-05-05 — Dashboard silently drops agents whose project isn't in `/api/projects`
 
@@ -1252,6 +1209,56 @@ The other two open questions (sandbox config drift, Phase 2 + Phase 3 separation
 - When a Jira ticket is created, does the markdown entry stay in `## Active` (with `**Ticket:**` line) or move to a new `## In Jira` section?
 - What about followups in repos without a Jira project (e.g., user-level `~/.claude/` work)? Sync skips them.
 - Should priority on the markdown side map directly to Jira priority, or stay a separate signal?
+
+## Resolved
+
+### 2026-05-13 — Agent drawer Close button uses Unicode "✕" glyph instead of `lucide/x` SVG
+
+**What:** The Close button at the top-right of the Agent Drawer declares `Icon=lucide/x` in its componentProperties — the polish-pass session on 2026-05-12 migrated the Figma side to use the proper SVG. The dashboard's drawer code (`routes/AgentDrawer.tsx:42`) still renders `Close ✕` (Unicode glyph) inline, not the lucide SVG. Same class of bug as the View PR / Open as page Unicode-arrow issue caught in CREW-135 F5, but on a different button.
+
+**Why noticed:** 2026-05-13 ultimate-test visual comparison (screen 2 — agent drawer header). Verified 2026-05-21: `routes/AgentDrawer.tsx:42` still has `Close ✕`. Skill's calibration runs never surfaced this because the drawer Close button isn't in CREW-135's diff.
+
+**Anchors:**
+
+- `packages/dashboard/src/routes/AgentDrawer.tsx:42` — `Close ✕`
+- Figma instance: `387:2566` on the agent-drawer screen — `componentProperties: { type: "button-icon-sm", color: "running", intensity: "ghost", Icon: { name: "lucide/x" } }`
+- Polish-pass conversion: 2026-05-12 Figma DS polish session
+
+**Shape of work:** Small — one or two file edits. Replace the inline `Close ✕` with `<X aria-hidden />` from `lucide-react`. The Button base class already sizes child SVGs to `size-4` for normal buttons / `size-3` for xs sizes.
+
+**Open questions:** None. Drop-in fix.
+
+**Resolved 2026-05-22:** Close moved into `DrawerHeader`'s `lucide/x` pill in CREW-179; the standalone `Close ✕` Unicode button on `AgentDrawer.tsx` was deleted as part of the drawer code migration Epic (CREW-177). E2e coverage on the new X pill ships in CREW-182's `agent-drawer-redesign.spec.ts`.
+
+### 2026-05-08 — Wire `StateHistoryBar`, `TokenTable`, and Token-usage section into `AgentBody`
+
+**What:** CREW-109 wired `<Timeline>` into `packages/dashboard/src/components/AgentBody.tsx` (replacing the `agent-body-placeholder` div) so the e2e timeline scenarios could pass. The original placeholder copy promised "Timeline, state history, and token table" — the latter two (`<StateHistoryBar>`, `<TokenTable>`) ship in CREW-104 but are still unmounted. The drawer is functional; the spec §5a/§5b composition isn't complete.
+
+**2026-05-13 visual evidence (folded in from duplicate followup):** The Figma `1:1900` Agent full page reference shows a `Token usage` section between the page header and the event timeline — a table listing per-tool token consumption (Read 22.4k, Bash 5.1k, etc.). The rendered agent page does not display this section at all. Two possibilities: (a) hidden when empty but not reappearing when data is present — bug; (b) planned-but-not-yet-built. `TokenTable.tsx` exists (CREW-104), so the question is whether it's wired into AgentFullPage.tsx + AgentDrawer.tsx and what governs its visibility.
+
+> **Update 2026-05-10:** CREW-117's ticket scope was expanded to a vertical-slice bundle (Crew DS composites + dashboard refactor + Figma frame migration + visual fidelity sweep). The Definition of Done no longer covers this composition — CREW-117 lands 4 Crew DS composites and the dashboard refactor, but does NOT mount StateHistoryBar/TokenTable in AgentBody (open questions still unresolved, and TokenTable's per-tool token data isn't exposed by the daemon today). Re-target this followup to a fresh ticket once open questions are settled.
+
+**Why noticed:** While reading the slice 1c plan, noticed no plan task actually composes Tasks 20 (TokenTable) and 21 (StateHistoryBar) into AgentBody. The 2026-05-13 ultimate-test visual comparison surfaced the same gap from the user-facing side: Token usage section visibly missing.
+
+**Anchors:**
+
+- `packages/dashboard/src/components/AgentBody.tsx` — currently renders only `<Timeline>` under the header
+- `packages/dashboard/src/components/StateHistoryBar.tsx`, `packages/dashboard/src/components/TokenTable.tsx` — built but unmounted
+- `packages/dashboard/src/routes/AgentFullPage.tsx`, `routes/AgentDrawer.tsx` — host pages
+- `docs/superpowers/specs/2026-05-05-slice-1c-agent-drawer-and-push-updates-design.md` §5a/§5b — composition contract
+- Slice 1c Epic: [CREW-94](https://safturento.atlassian.net/browse/CREW-94)
+- Figma reference: `1:1900` — Token usage section between header + event stream
+
+**Shape of work:** One ticket under CREW-94. Expect two-pane layout (token-table sidebar + main timeline) plus a state-history strip above the timeline, with `StateHistoryBar.onScrollTo` wired into Timeline's virtualizer.
+
+**Open questions:**
+
+- Where does TokenTable sit on narrow drawer widths? (collapsible side panel vs always-stacked.)
+- Does `onScrollTo(ts)` need new public Timeline API, or piggyback on an existing imperative handle?
+- TokenTable's `rows: { tool, tokens }[]` data isn't exposed by the daemon — add a daemon endpoint or compute client-side from transcript events.
+- Is the empty-state-hides-section behavior intentional UX, or accidental?
+
+**Resolved 2026-05-22:** Resolved via the drawer code migration Epic (CREW-177). `StateHistoryBar` and `TokenTable` were both deleted in CREW-182. The Token-usage section now ships as the `TokensByTool` composite (CREW-180), wired into `AgentBody` between the header and Timeline (CREW-178 backend + CREW-180 frontend). State history is surfaced as state-grouped Timeline sections (CREW-181) instead of the standalone bar.
 
 ## Abandoned
 

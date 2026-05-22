@@ -66,4 +66,13 @@ describe('AgentFullPage', () => {
     expect(await screen.findByTestId('agent-body')).toBeInTheDocument();
     expect(await screen.findByTestId('timeline-empty')).toBeInTheDocument();
   });
+
+  it('wraps the body in a 1056px-wide centered container with paddingTop 32 (Figma 1:1900)', async () => {
+    renderWithProviders(<AgentFullPage agentKey="KAN-1" />);
+    const container = await screen.findByTestId('agent-page-container');
+    expect(container.className).toMatch(/justify-center/);
+    expect(container.className).toMatch(/pt-8/);
+    const inner = container.firstElementChild as HTMLElement;
+    expect(inner.className).toMatch(/w-\[1056px\]/);
+  });
 });
