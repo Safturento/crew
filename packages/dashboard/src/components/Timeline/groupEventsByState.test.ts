@@ -42,9 +42,9 @@ describe('groupEventsByState', () => {
     const events: TranscriptEvent[] = [evt(500), evt(1500), evt(2500), evt(6000)];
     const sections = groupEventsByState(events, transitions, 'waiting');
     expect(sections.map((s) => s.state)).toEqual(['initializing', 'running', 'waiting']);
-    expect(sections[0].events.map((e) => Date.parse(e.timestamp))).toEqual([500]);
-    expect(sections[1].events.map((e) => Date.parse(e.timestamp))).toEqual([1500, 2500]);
-    expect(sections[2].events.map((e) => Date.parse(e.timestamp))).toEqual([6000]);
+    expect(sections[0]!.events.map((e) => Date.parse(e.timestamp ?? ''))).toEqual([500]);
+    expect(sections[1]!.events.map((e) => Date.parse(e.timestamp ?? ''))).toEqual([1500, 2500]);
+    expect(sections[2]!.events.map((e) => Date.parse(e.timestamp ?? ''))).toEqual([6000]);
   });
 
   it('marks the trailing (active) section endedAt=null', () => {
@@ -70,8 +70,8 @@ describe('groupEventsByState', () => {
     ];
     const events: TranscriptEvent[] = [evt(500), evt(1500)];
     const sections = groupEventsByState(events, transitions, 'running');
-    expect(sections[0].events.map((e) => Date.parse(e.timestamp))).toEqual([500, 1500]);
-    expect(sections[1].events).toEqual([]);
+    expect(sections[0]!.events.map((e) => Date.parse(e.timestamp ?? ''))).toEqual([500, 1500]);
+    expect(sections[1]!.events).toEqual([]);
   });
 
   it('handles out-of-order transitions by sorting on ts', () => {

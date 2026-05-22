@@ -1,8 +1,15 @@
-import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
-import { useVirtualizer } from '@tanstack/react-virtual';
+import { ListCollapse } from 'lucide-react';
+import {
+  useDeferredValue,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 
-import { useTimeline } from '../../data/queries.js';
+import { useStateHistory, useTimeline } from '../../data/queries.js';
 import type { AgentState, TranscriptEvent } from '../../data/types.js';
+import { Button } from '../ui/button.js';
 import { EventCard } from './EventCard.js';
 import { FilterChips } from './FilterChips.js';
 import { LiveModeToggle, NewEventsPill } from './LiveModeToggle.js';
@@ -13,23 +20,39 @@ import {
   eventOneLiner,
   type ChipGroup,
 } from './eventClassification.js';
+import { groupEventsByState, type TimelineSectionData } from './groupEventsByState.js';
+import { TimelineSection } from './TimelineSection.js';
 
 interface TimelineProps {
   agentKey: string;
   /**
-   * Used to derive the live-mode default. ON for active agents,
-   * OFF for `finished` / `error`. Optional so the component can be
-   * rendered standalone (e.g. in tests).
+   * Used to derive the live-mode default (ON for active agents, OFF for
+   * `finished` / `error`) and as the fallback state for `groupEventsByState`
+   * when the daemon hasn't reported any transitions yet. Optional so the
+   * component can be rendered standalone in tests.
    */
   agentState?: AgentState;
 }
 
-const ESTIMATED_ROW_HEIGHT = 88;
-
 const isLiveByDefault = (state?: AgentState): boolean => state !== 'finished' && state !== 'error';
 
+const sectionKey = (s: TimelineSectionData): string => `${s.state}:${s.startedAt}`;
+
+function eventTokens(e: TranscriptEvent): number {
+  if (e.type !== 'assistant') return 0;
+  const u = e.message.usage;
+  if (!u) return 0;
+  return (
+    (u.input_tokens ?? 0) +
+    (u.output_tokens ?? 0) +
+    (u.cache_read_input_tokens ?? 0) +
+    (u.cache_creation_input_tokens ?? 0)
+  );
+}
+
 export function Timeline({ agentKey, agentState }: TimelineProps) {
-  const { data, isLoading } = useTimeline(agentKey);
+  const { data: timelineData, isLoading } = useTimeline(agentKey);
+  const { data: historyData } = useStateHistory(agentKey);
   const [visibleGroups, setVisibleGroups] = useState<ReadonlySet<ChipGroup>>(
     () => new Set(defaultVisibleSet),
   );
@@ -37,7 +60,10 @@ export function Timeline({ agentKey, agentState }: TimelineProps) {
   const deferredSearch = useDeferredValue(searchInput);
   const [liveMode, setLiveMode] = useState<boolean>(() => isLiveByDefault(agentState));
 
-  const events = data?.events ?? [];
+  const events = timelineData?.events ?? [];
+  const transitions = historyData?.transitions ?? [];
+  const fallbackState: AgentState = agentState ?? 'running';
+
   const filteredEvents = useMemo(() => {
     const needle = deferredSearch.trim().toLowerCase();
     return events.filter((evt) => {
@@ -47,8 +73,33 @@ export function Timeline({ agentKey, agentState }: TimelineProps) {
     });
   }, [events, visibleGroups, deferredSearch]);
 
-  // New-events pill is driven by the *unfiltered* length so toggling a
-  // chip never registers as "new events arrived from the server."
+  const sections = useMemo(
+    () => groupEventsByState(filteredEvents, transitions, fallbackState),
+    [filteredEvents, transitions, fallbackState],
+  );
+
+  // Per-section collapsed map keyed by `${state}:${startedAt}` so the
+  // section-state survives re-renders that re-compute the sections array
+  // identity but not its content.
+  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
+  const collapseAll = () => {
+    setCollapsed(Object.fromEntries(sections.map((s) => [sectionKey(s), true])));
+  };
+  const toggleSection = (key: string) => {
+    setCollapsed((c) => ({ ...c, [key]: !c[key] }));
+  };
+
+  // Tick `now` every second so the active section's elapsedMs counts up live.
+  const hasActiveSection = sections.some((s) => s.endedAt === null);
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (!hasActiveSection) return;
+    const id = window.setInterval(() => setNow(Date.now()), 1_000);
+    return () => window.clearInterval(id);
+  }, [hasActiveSection]);
+
+  // New-events pill is driven by the *unfiltered* server-side length so
+  // toggling a chip never registers as "new events arrived."
   const lastSeenServerLengthRef = useRef<number>(events.length);
   const [pendingNewCount, setPendingNewCount] = useState(0);
   useEffect(() => {
@@ -62,6 +113,18 @@ export function Timeline({ agentKey, agentState }: TimelineProps) {
   useEffect(() => {
     if (liveMode) setPendingNewCount(0);
   }, [liveMode]);
+
+  // Auto-scroll to the bottom on new events when live mode is ON.
+  const scrollRef = useRef<HTMLDivElement | null>(null);
+  const lastSeenVisibleLengthRef = useRef<number>(filteredEvents.length);
+  useEffect(() => {
+    const prev = lastSeenVisibleLengthRef.current;
+    const next = filteredEvents.length;
+    if (liveMode && next > prev && scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+    lastSeenVisibleLengthRef.current = next;
+  }, [filteredEvents.length, liveMode]);
 
   if (isLoading) {
     return (
@@ -88,6 +151,8 @@ export function Timeline({ agentKey, agentState }: TimelineProps) {
         onSearchChange={setSearchInput}
         liveMode={liveMode}
         onLiveModeChange={setLiveMode}
+        onCollapseAll={collapseAll}
+        canCollapseAll={sections.length > 0}
       />
       {events.length === 0 ? (
         <div
@@ -99,12 +164,45 @@ export function Timeline({ agentKey, agentState }: TimelineProps) {
       ) : filteredEvents.length === 0 ? (
         <FilterEmptyState onShowAll={resetFilters} />
       ) : (
-        <VirtualEventList
-          events={filteredEvents}
-          liveMode={liveMode}
-          pendingNewCount={pendingNewCount}
-          onClearPendingNew={() => setPendingNewCount(0)}
-        />
+        <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto">
+          {sections.map((s) => {
+            const key = sectionKey(s);
+            const isOpen = !collapsed[key];
+            const elapsedMs = (s.endedAt ?? now) - s.startedAt;
+            const tokenSum = s.events.reduce((sum, e) => sum + eventTokens(e), 0);
+            return (
+              <TimelineSection
+                key={key}
+                state={s.state}
+                startedAt={s.startedAt}
+                elapsedMs={elapsedMs}
+                eventCount={s.events.length}
+                tokenSum={tokenSum}
+                isOpen={isOpen}
+                onToggle={() => toggleSection(key)}
+              >
+                {s.events.map((event) => (
+                  <EventCard key={eventKey(event)} event={event} />
+                ))}
+              </TimelineSection>
+            );
+          })}
+        </div>
+      )}
+      {!liveMode && pendingNewCount > 0 && (
+        <div className="pointer-events-none absolute right-3 bottom-3">
+          <span className="pointer-events-auto">
+            <NewEventsPill
+              count={pendingNewCount}
+              onClick={() => {
+                if (scrollRef.current) {
+                  scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+                }
+                setPendingNewCount(0);
+              }}
+            />
+          </span>
+        </div>
       )}
     </div>
   );
@@ -139,6 +237,8 @@ interface TimelineToolbarProps {
   onSearchChange: (next: string) => void;
   liveMode: boolean;
   onLiveModeChange: (next: boolean) => void;
+  onCollapseAll: () => void;
+  canCollapseAll: boolean;
 }
 
 function TimelineToolbar({
@@ -148,95 +248,31 @@ function TimelineToolbar({
   onSearchChange,
   liveMode,
   onLiveModeChange,
+  onCollapseAll,
+  canCollapseAll,
 }: TimelineToolbarProps) {
   return (
     <div className="flex items-center gap-2 border-b border-white/10 px-3 py-2 text-xs text-muted-foreground">
       <FilterChips visible={visibleGroups} onChange={onVisibleGroupsChange} />
       <SearchBar value={searchValue} onChange={onSearchChange} />
+      <Button
+        color="idle"
+        intensity="mid"
+        size="sm"
+        icon={<ListCollapse aria-hidden />}
+        onClick={onCollapseAll}
+        disabled={!canCollapseAll}
+      >
+        Collapse all
+      </Button>
       <LiveModeToggle active={liveMode} onChange={onLiveModeChange} />
     </div>
   );
 }
 
-interface VirtualEventListProps {
-  events: TranscriptEvent[];
-  liveMode: boolean;
-  pendingNewCount: number;
-  onClearPendingNew: () => void;
-}
-
-function VirtualEventList({
-  events,
-  liveMode,
-  pendingNewCount,
-  onClearPendingNew,
-}: VirtualEventListProps) {
-  const parentRef = useRef<HTMLDivElement | null>(null);
-  const lastSeenVisibleLengthRef = useRef<number>(events.length);
-
-  const virtualizer = useVirtualizer({
-    count: events.length,
-    getScrollElement: () => parentRef.current,
-    estimateSize: () => ESTIMATED_ROW_HEIGHT,
-    overscan: 6,
-  });
-
-  // Auto-scroll to the latest visible row when live mode is ON and
-  // the visible count grew. Tracks the visible length (not server
-  // length) so the scroll target is always a real row.
-  useEffect(() => {
-    const prev = lastSeenVisibleLengthRef.current;
-    const next = events.length;
-    if (liveMode && next > prev && next > 0) {
-      virtualizer.scrollToIndex(next - 1, { align: 'end' });
-    }
-    lastSeenVisibleLengthRef.current = next;
-  }, [events.length, liveMode, virtualizer]);
-
-  const items = virtualizer.getVirtualItems();
-
-  return (
-    <div className="relative min-h-0 flex-1">
-      <div ref={parentRef} className="h-full overflow-y-auto">
-        <div style={{ height: `${virtualizer.getTotalSize()}px` }} className="relative w-full">
-          {items.map((vi) => {
-            const event = events[vi.index];
-            return (
-              <div
-                key={vi.key}
-                data-index={vi.index}
-                ref={virtualizer.measureElement}
-                style={{
-                  position: 'absolute',
-                  top: 0,
-                  left: 0,
-                  width: '100%',
-                  transform: `translateY(${vi.start}px)`,
-                }}
-              >
-                <EventCard event={event} />
-              </div>
-            );
-          })}
-        </div>
-      </div>
-      {!liveMode && pendingNewCount > 0 && (
-        <div className="pointer-events-none absolute right-3 bottom-3">
-          <span className="pointer-events-auto">
-            <NewEventsPill
-              count={pendingNewCount}
-              onClick={() => {
-                if (events.length > 0) {
-                  virtualizer.scrollToIndex(events.length - 1, { align: 'end' });
-                }
-                onClearPendingNew();
-              }}
-            />
-          </span>
-        </div>
-      )}
-    </div>
-  );
+function eventKey(event: TranscriptEvent): string {
+  const r = event as unknown as { uuid?: string; timestamp?: string };
+  return r.uuid ?? r.timestamp ?? Math.random().toString(36).slice(2);
 }
 
 function intersects<T>(a: ReadonlySet<T>, b: ReadonlySet<T>): boolean {

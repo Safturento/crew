@@ -21,7 +21,8 @@ export function groupEventsByState(
   fallbackState: AgentState,
 ): TimelineSectionData[] {
   if (transitions.length === 0) {
-    const startedAt = events.length > 0 ? Date.parse(events[0].timestamp) : Date.now();
+    const firstTs = events.length > 0 ? eventTs(events[0]) : NaN;
+    const startedAt = Number.isFinite(firstTs) ? firstTs : Date.now();
     return [{ state: fallbackState, startedAt, endedAt: null, events: [...events] }];
   }
 
@@ -34,13 +35,22 @@ export function groupEventsByState(
   }));
 
   for (const event of events) {
-    const ts = Date.parse(event.timestamp);
-    let idx = sections.findIndex(
-      (s) => ts >= s.startedAt && (s.endedAt === null || ts < s.endedAt),
-    );
+    const ts = eventTs(event);
+    let idx = -1;
+    if (Number.isFinite(ts)) {
+      idx = sections.findIndex(
+        (s) => ts >= s.startedAt && (s.endedAt === null || ts < s.endedAt),
+      );
+    }
     if (idx === -1) idx = 0;
-    sections[idx].events.push(event);
+    const section = sections[idx];
+    if (section) section.events.push(event);
   }
 
   return sections;
+}
+
+function eventTs(event: TranscriptEvent | undefined): number {
+  if (!event?.timestamp) return NaN;
+  return Date.parse(event.timestamp);
 }
