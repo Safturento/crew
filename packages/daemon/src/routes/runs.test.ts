@@ -290,7 +290,7 @@ describe('POST /api/agents/runs/:runId/complete', () => {
   });
 
   // CREW-116: finish completion must record a `to_state='finished'` row and
-  // publish `agent.state_changed` so StateHistoryBar / SSE consumers see it.
+  // publish `agent.state_changed` so Timeline / SSE consumers see it.
   it('writes a state_transitions row to finished when a finish run completes ok', async () => {
     const { app, db, eventBus } = await setupApp();
     try {
