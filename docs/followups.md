@@ -82,7 +82,7 @@ Organization: Active is grouped by topic (not chronology) since the dominant acc
 
 **Re-audited 2026-05-13 (CREW-147):** Confirmed via figma metadata + search_design_system against `9FeJPriqdsdA4n9R5Xsrr8` that the Composites page (the only page in the file today) still has no `Timeline`, `EventCard`, `FilterChips`, `LiveModeToggle`, or `SearchBar` component. The CREW-147 spec's `.figma.tsx` gap-fills on these five cannot be authored against a non-existent counterpart.
 
-**2026-05-16 (visual-fidelity close-out):** CREW-147 closed; its Timeline `.figma.tsx` criterion was retired as a false premise. When this followup's design work builds the Timeline composites, it must also author the `.figma.tsx` Code Connect files for each — that authoring is part of *this* followup's scope, not a separate ticket. Until then, `visual-fidelity-check` correctly degrades to "no Code Connect mapping" for Timeline components, which does not block the visual-fidelity workstream.
+**2026-05-16 (visual-fidelity close-out):** CREW-147 closed; its Timeline `.figma.tsx` criterion was retired as a false premise. When this followup's design work builds the Timeline composites, it must also author the `.figma.tsx` Code Connect files for each — that authoring is part of _this_ followup's scope, not a separate ticket. Until then, `visual-fidelity-check` correctly degrades to "no Code Connect mapping" for Timeline components, which does not block the visual-fidelity workstream.
 
 **Partially resolved 2026-05-12:** The **leaf event-tag pills** are now real components — the `TimelineTag` COMPONENT_SET (7 tool variants) was built in the Composites page of the consolidated Crew file and all 22 detached timeline pills swapped to instances. The **timeline container itself** (collapsible state-header + list-of-events composition) remains a freehand structure on Dashboard Screens with no Crew DS counterpart.
 
@@ -166,7 +166,7 @@ For Timeline specifically: leaf tag is already real (`263:134`). Container compo
 
 **Shape of work:** One design pass on the fixture model, then a small interactive skill-content edit unifying `workflow.md` Step 4 + `SKILL.md` on `<snapshotPath>`. Not a `crew run` (edits `.claude/skills/`).
 
-**Open questions:** Does any calibration case need a snapshot *different* from crew's current committed one? If yes, the per-fixture copy stays justified; if every case just wants "crew's snapshot at commit X", git already provides that.
+**Open questions:** Does any calibration case need a snapshot _different_ from crew's current committed one? If yes, the per-fixture copy stays justified; if every case just wants "crew's snapshot at commit X", git already provides that.
 
 #### 2026-05-18 — `.agents/design-system.md` frontmatter URLs stale after Crew DS consolidation
 
@@ -194,13 +194,13 @@ For Timeline specifically: leaf tag is already real (`263:134`). Container compo
 
 #### 2026-05-17 — figma-snapshot `index.json` `screenshotPath` can point at PNG that was never written
 
-**What:** `emitSnapshot` writes an `index.json` entry with a `screenshotPath` for every exported node, but the PNG at that path may not exist — when the node's image URL is `null`, when the image download fails, or (after CREW-171) when the whole image pass fails non-fatally. `screenshotPath` is a *claimed* path, not a guarantee.
+**What:** `emitSnapshot` writes an `index.json` entry with a `screenshotPath` for every exported node, but the PNG at that path may not exist — when the node's image URL is `null`, when the image download fails, or (after CREW-171) when the whole image pass fails non-fatally. `screenshotPath` is a _claimed_ path, not a guarantee.
 
 **Why noticed:** Raised in CREW-171 code review. CREW-171 made the image pass non-fatal (metadata written before images, image failures warn and skip the PNG), which widens how often a `screenshotPath` entry can lack its file. Sole consumer is the `visual-fidelity-check` skill — agent-followed Markdown, not brittle code — a missing screenshot becomes an observed gap the agent flags. So no crash today, and unconditional `screenshotPath` predates CREW-171.
 
 **Anchors:** `packages/cli/src/lib/figma-snapshot/emit.ts` (`IndexEntry`, the metadata-write loop ~line 78); `.claude/skills/visual-fidelity-check/workflow.md` Step 2; CREW-171.
 
-**What's been considered:** Two options. (a) Make `screenshotPath` honest — write `index.json` *after* the image pass with the field omitted/null for nodes whose PNG didn't land. Downside: reintroduces "index lost when images fail" problem CREW-171 fixed unless the index is written twice. (b) Leave `index.json` as-is, add explicit per-entry `hasScreenshot: boolean` (or `screenshotPath: string | null`) populated after the image pass. Leaning (b).
+**What's been considered:** Two options. (a) Make `screenshotPath` honest — write `index.json` _after_ the image pass with the field omitted/null for nodes whose PNG didn't land. Downside: reintroduces "index lost when images fail" problem CREW-171 fixed unless the index is written twice. (b) Leave `index.json` as-is, add explicit per-entry `hasScreenshot: boolean` (or `screenshotPath: string | null`) populated after the image pass. Leaning (b).
 
 **Shape of work:** Small change in `emit.ts` — restructure so the image pass back-fills a screenshot-present flag into the already-written index, then rewrites `index.json` once at the end. Touches the `IndexEntry` shape, so the `visual-fidelity-check` skill doc + any snapshot-schema notes need a matching update. One ticket.
 
@@ -293,9 +293,9 @@ The first two examples resolve once the structural fix lands. The third is a ski
 
 - **Dedicated `/metrics` route.** RunMetrics + MetricsTrendWidget on their own screen. Clean separation between "what's happening with this run" (drawer) and "how are runs doing across cohorts" (metrics page). Largest scope.
 - **Sidebar/footer on AgentPage.** Less disruptive but reintroduces the same "doesn't belong here" problem the drawer redesign solved.
-- **Per-run drawer footer.** Show the *single run's* metrics at the bottom of the drawer (small row of 4 values), distinct from the cohort aggregate. Requires deciding whether to keep `RunMetrics` (cohort-aware) or build a per-run variant.
+- **Per-run drawer footer.** Show the _single run's_ metrics at the bottom of the drawer (small row of 4 values), distinct from the cohort aggregate. Requires deciding whether to keep `RunMetrics` (cohort-aware) or build a per-run variant.
 
-**Shape of work:** Decision-first. Once placement is decided, implementation is small — re-render `RunMetrics` in a different location, or build a thin per-run variant if going that route. The blocker is product/design clarity on what the metrics are *for* in this UI.
+**Shape of work:** Decision-first. Once placement is decided, implementation is small — re-render `RunMetrics` in a different location, or build a thin per-run variant if going that route. The blocker is product/design clarity on what the metrics are _for_ in this UI.
 
 **Open questions:**
 
@@ -628,6 +628,29 @@ The "synthetic Unregistered section" feels right — single render path, no extr
 
 ### Daemon, CLI & Dispatch
 
+#### 2026-05-22 — CREW-183's `installNodeModules` fix doesn't extend to `crew fix-pr`
+
+**What:** CREW-183 (PR #256) added an `installNodeModules` step before `installPlaywrightBrowsers` inside `prepareAgentEnvironment` so bare worktrees no longer no-op the chromium install. The fix covers `crew run` and `crew resume`, but **not `crew fix-pr`** — that command uses `runResumePreflight` instead of `prepareAgentEnvironment`, and `runResumePreflight` never installs node_modules. Result: a `crew fix-pr` dispatch on a freshly bare worktree still trips the silent `npx playwright install` no-op (warning only, rc=0), the worktree-pinned chromium revision never lands on disk, and `npm run test:e2e` from the fix-pr agent fails with `Executable doesn't exist at .../chromium_headless_shell-<rev>/...`.
+
+**Why noticed:** Re-running the e2e suite during the CREW-181 fix-pr cycle (PR #259) — the user explicitly asked "the 183 fix should be in place now, can you try to re-run the e2e setup and tests?" The cycle had been dispatched via `crew fix-pr CREW-181` after #256 merged, but the e2e suite still failed with the same shape of error CREW-183 was meant to fix. `/tmp/crew-playwright-CREW-181.log` shows the playwright "ran without first installing your project's dependencies" warning; no `/tmp/crew-npm-install-CREW-181.log` exists — confirming `installNodeModules` never ran for this dispatch path.
+
+**Anchors:** `packages/cli/src/commands/fix-pr.ts` (calls `runResumePreflight`, never `prepareAgentEnvironment`); `packages/cli/src/lib/preflight/run-resume-preflight.ts` (no install step); `packages/cli/src/lib/run/agent-environment.ts:83-99` (the CREW-183 fix that fix-pr bypasses); CREW-183 ticket / PR #256; CREW-181 PR #259 verification re-run.
+
+**What's been considered:** Three placements:
+
+1. Add `installNodeModules` (+ `installPlaywrightBrowsers`) to `runResumePreflight`, gated on the same `playwrightEnabled(config)` check — mirrors the existing `prepareAgentEnvironment` shape.
+2. Lift the install steps into a shared helper both `prepareAgentEnvironment` and `runResumePreflight` call — avoids drift between the two entrypoints if a third install step is ever added.
+3. Make fix-pr go through `prepareAgentEnvironment` directly — likely a larger refactor since fix-pr deliberately uses a slimmer preflight (the worktree already exists, the stack is already up for an in-flight PR, etc.).
+
+(2) is the most defensible: the duplication-risk surface is the same shape as the bug, so a shared helper closes the class of problem rather than patching one branch.
+
+**Shape of work:** Roughly mirrors PR #256 — one new helper file (or extract from `agent-environment.ts`), two callsites, gated on `playwrightEnabled`. Add a test that exercises `runResumePreflight` and asserts both install steps run in order. ~50-line patch + tests.
+
+**Open questions:**
+
+- Should the helper also handle the docker-stack readiness check, or stay scoped to install? `prepareAgentEnvironment` does both; `runResumePreflight` does docker too but separately. Probably keep them separate — the docker bringup is the load-bearing reason fix-pr has its own preflight.
+- Does the fix-pr dispatch need to surface the install log paths back to the agent's prompt template the way `prepareAgentEnvironment` does? Look at how `runResumePreflight`'s result is currently threaded.
+
 #### 2026-05-18 — Daemon has no reaper for orphaned runs stuck in `running`
 
 **What:** A crew run can finish its real-world work — PR opened and merged, Jira ticket Done — while the daemon's run record stays stuck in `running` indefinitely. The daemon marks a run complete only when the CLI delivers `POST /api/agents/runs/:id/complete` on Claude exit. If that call never lands (CLI crash, daemon down at exit, killed process), the run sits in `running` forever — `completed_at` null, metrics null, no PR URL — and the dashboard shows the agent as perpetually active. Nothing detects or reaps these.
@@ -636,7 +659,7 @@ The "synthetic Unregistered section" feels right — single render path, no extr
 
 **Anchors:** `packages/daemon/src/routes/runs.ts` (register + `:runId/complete` endpoints); `packages/daemon/src/services/AgentsService.ts`, `IngestService.ts` (run state); `packages/cli/src/lib/preflight/run-resume-preflight.ts` (existing orphan-detection on the resume path); CREW-158 / daemon run 23 / PR #208.
 
-**What's been considered:** Two angles, possibly both — (1) **detection / reaping:** daemon-side sweep that flags runs `running` past a threshold (e.g. no transcript activity for N hours) and either auto-completes them or surfaces them in the dashboard for manual recovery; (2) **durable exit signalling:** make the CLI's completion POST survive a crash (retry / on-disk intent), or a daemon-side fallback that notices the ingested transcript tail going idle. The CLI already has orphan-detection in `run-resume-preflight.ts` for the *resume* path — a daemon reaper would generalize that to runs nobody resumes.
+**What's been considered:** Two angles, possibly both — (1) **detection / reaping:** daemon-side sweep that flags runs `running` past a threshold (e.g. no transcript activity for N hours) and either auto-completes them or surfaces them in the dashboard for manual recovery; (2) **durable exit signalling:** make the CLI's completion POST survive a crash (retry / on-disk intent), or a daemon-side fallback that notices the ingested transcript tail going idle. The CLI already has orphan-detection in `run-resume-preflight.ts` for the _resume_ path — a daemon reaper would generalize that to runs nobody resumes.
 
 **Open questions:** What's the right "stuck" threshold? And the right terminal state for a reaped run — `error` (honest: it never completed cleanly) or a distinct `abandoned` / `stale` state so it's visually separable from runs that genuinely crashed? CREW-158 showed conflating the two is misleading.
 
@@ -1190,7 +1213,7 @@ The other two open questions (sandbox config drift, Phase 2 + Phase 3 separation
 
 **Anchors:** `.agents/` (9 topic docs + `README.md`); `packages/cli/scripts/hooks/doc-parity-gate.sh` (CREW-163, keyed on `covers:`); `scripts/validate-agents-frontmatter.ts`; `~/.claude/skills/agents-doc-parity-check` (the `covers:`-overlap audit skill); CREW-153 spec/plan at `docs/superpowers/{specs,plans}/2026-05-13-agent-progressive-disclosure-system.md`; Claude Code `.claude/rules/` reference: https://code.claude.com/docs/en/memory.
 
-**What's been considered:** The decision hinges on **cross-agent portability** — the user wants this agent-context setup to work with agents *beyond* Claude Code, which is the original reason `AGENTS.md` (a cross-tool convention) was chosen over `CLAUDE.md`. A straight migration to `.claude/rules/` is Claude-only and would sacrifice that. So the real question: once the auto-load fix lands, does `.agents/` genuinely serve the cross-agent goal — and does crew's implementation match how the `AGENTS.md` ecosystem actually intends the system to work?
+**What's been considered:** The decision hinges on **cross-agent portability** — the user wants this agent-context setup to work with agents _beyond_ Claude Code, which is the original reason `AGENTS.md` (a cross-tool convention) was chosen over `CLAUDE.md`. A straight migration to `.claude/rules/` is Claude-only and would sacrifice that. So the real question: once the auto-load fix lands, does `.agents/` genuinely serve the cross-agent goal — and does crew's implementation match how the `AGENTS.md` ecosystem actually intends the system to work?
 
 **Shape of work:** Its own brainstorm → spec. **Must** begin with a thorough read of the full https://agents.md/ spec (not just the homepage) to understand the intended cross-agent `AGENTS.md` model, then reconcile crew's `.agents/` + `covers:` implementation against it. Then decide: keep `.agents/`, migrate to `.claude/rules/`, or run both. Whatever survives, the doc-parity hook (CREW-163), the frontmatter validator, and `agents-doc-parity-check` are downstream and may need rework.
 
