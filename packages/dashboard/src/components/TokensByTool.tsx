@@ -8,8 +8,6 @@ interface TokensByToolProps {
   total: number;
 }
 
-const HEADER_FOOTER_TEXT = 'text-xs uppercase tracking-wide';
-
 export function TokensByTool({ tokensByTool, total }: TokensByToolProps) {
   return (
     <section
@@ -17,11 +15,13 @@ export function TokensByTool({ tokensByTool, total }: TokensByToolProps) {
       aria-label="Tokens by tool"
       className="overflow-hidden rounded-[10px] border border-border bg-card"
     >
-      <div className={`${TOKEN_BAR_ROW_GRID_CLASSES} ${HEADER_FOOTER_TEXT} text-muted-foreground`}>
-        <span className="font-mono">Tool</span>
-        <span className="text-right font-mono">Tokens</span>
+      <div
+        className={`${TOKEN_BAR_ROW_GRID_CLASSES} font-mono text-xs uppercase tracking-wide text-muted-foreground`}
+      >
+        <span>Tool</span>
+        <span className="text-right">Tokens</span>
         <span aria-hidden />
-        <span className="text-right font-mono">Share</span>
+        <span className="text-right">Share</span>
       </div>
       <div data-testid="tokens-by-tool-body">
         {tokensByTool.length === 0 ? (
@@ -36,12 +36,10 @@ export function TokensByTool({ tokensByTool, total }: TokensByToolProps) {
       </div>
       <div
         data-testid="tokens-by-tool-footer"
-        className={`${TOKEN_BAR_ROW_GRID_CLASSES} border-t border-border ${HEADER_FOOTER_TEXT}`}
+        className={`${TOKEN_BAR_ROW_GRID_CLASSES} border-t border-border font-mono text-sm text-foreground`}
       >
-        <span className="font-mono text-foreground">Total</span>
-        <span className="text-right font-mono tabular-nums text-foreground">
-          {formatTokens(total)}
-        </span>
+        <span>Total</span>
+        <span className="text-right tabular-nums">{formatTokens(total)}</span>
         <span aria-hidden />
         <span aria-hidden />
       </div>
