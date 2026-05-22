@@ -1,5 +1,6 @@
 import type { Kysely } from 'kysely';
 import { sql } from 'kysely';
+import { deriveAppUrl, deriveJiraUrl, loadProjectConfigByName } from 'crew-shared';
 import type { DaemonDatabase } from '../db.js';
 
 export type AgentState = 'initializing' | 'running' | 'pr_open' | 'error' | 'finished';
@@ -34,6 +35,13 @@ export interface AgentDetailTokens {
   cache_creation: number;
 }
 
+export interface AgentDetailTokensByTool {
+  tool: string;
+  tokens: number;
+  /** Share of the agent's total tool-call tokens, 0–100, rounded to 0.01. */
+  percent: number;
+}
+
 export interface AgentDetail {
   key: string;
   project: string;
@@ -42,6 +50,12 @@ export interface AgentDetail {
   state: AgentState;
   worktree_path: string;
   pr_url: string | null;
+  /** Browsable app URL (playwright.app_url, falling back to bruno_smoke.base_url). Null when neither is configured. */
+  app_url: string | null;
+  /** `<jira.site>/browse/<ticket_key>`. Null when ticket key is empty. */
+  jira_url: string | null;
+  /** Per-tool token aggregate across all of the agent's runs, ordered by tokens desc. */
+  tokens_by_tool: AgentDetailTokensByTool[];
   runs: AgentDetailRun[];
   tokens: AgentDetailTokens;
   tool_call_count: number;
@@ -68,13 +82,23 @@ export interface StateHistoryResponse {
 
 export interface AgentsServiceDeps {
   db: Kysely<DaemonDatabase>;
+  /**
+   * Absolute path to per-project TOML configs. `getByKey` reads
+   * `<projectsDir>/<projectName>.toml` to resolve `app_url` + `jira_url`
+   * for `AgentDetail`. Optional so unit tests that only exercise `list`
+   * or `countByProject` don't need to materialise a directory.
+   * `loadProjectConfigByName`'s loader-default kicks in when omitted.
+   */
+  projectsDir?: string;
 }
 
 export class AgentsService {
   private readonly db: Kysely<DaemonDatabase>;
+  private readonly projectsDir: string | undefined;
 
   constructor(deps: AgentsServiceDeps) {
     this.db = deps.db;
+    this.projectsDir = deps.projectsDir;
   }
 
   async list(): Promise<AgentSummary[]> {
@@ -262,6 +286,49 @@ export class AgentsService {
       finishCompletedOk,
     });
 
+    // Project config is optional plumbing for the drawer's app + Jira pills.
+    // Missing or invalid config leaves the pills hidden rather than failing
+    // the request — the agent row alone is more useful than a 500.
+    let appUrl: string | null = null;
+    let jiraUrl: string | null = null;
+    if (project) {
+      try {
+        const cfg = loadProjectConfigByName(project, this.projectsDir);
+        appUrl = deriveAppUrl(cfg);
+        jiraUrl = deriveJiraUrl(cfg, key);
+      } catch {
+        // swallow — pills hide when URLs are null
+      }
+    }
+
+    // Per-tool token aggregate. Sums every token column so a tool's row
+    // reflects its full footprint (input + output + both cache buckets),
+    // matching the agent-wide `tokens.total`. Percent is computed server-
+    // side from the row total so the dashboard never has to re-derive it.
+    const tokensByToolRows = await this.db
+      .selectFrom('tool_calls as tc')
+      .innerJoin('runs as r', 'r.id', 'tc.run_id')
+      .select([
+        'tc.tool_name as tool',
+        sql<number>`COALESCE(SUM(tc.input_tokens + tc.output_tokens + tc.cache_read_tokens + tc.cache_creation_tokens), 0)`.as(
+          'tokens',
+        ),
+      ])
+      .where('r.agent_key', '=', key)
+      .groupBy('tc.tool_name')
+      .orderBy('tokens', 'desc')
+      .execute();
+
+    const tokensByToolTotal = tokensByToolRows.reduce((s, r) => s + Number(r.tokens), 0);
+    const tokensByTool: AgentDetailTokensByTool[] = tokensByToolRows.map((r) => {
+      const t = Number(r.tokens);
+      return {
+        tool: r.tool,
+        tokens: t,
+        percent: tokensByToolTotal === 0 ? 0 : Math.round((t / tokensByToolTotal) * 10000) / 100,
+      };
+    });
+
     return {
       key,
       project,
@@ -270,6 +337,9 @@ export class AgentsService {
       state,
       worktree_path: worktreePath,
       pr_url: prUrl,
+      app_url: appUrl,
+      jira_url: jiraUrl,
+      tokens_by_tool: tokensByTool,
       runs: runRows.map((r) => ({
         id: String(r.id),
         command: r.command,
