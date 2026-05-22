@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach } from 'vitest';
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -100,6 +100,40 @@ async function makeToolCall(
     })
     .execute();
 }
+
+function makeProjectsDir(toml: Record<string, string> = {}): string {
+  const dir = mkdtempSync(join(tmpdir(), 'crew-projects-'));
+  tmpdirs.push(dir);
+  for (const [name, body] of Object.entries(toml)) {
+    writeFileSync(join(dir, `${name}.toml`), body);
+  }
+  return dir;
+}
+
+const KANBAN_TOML = `
+name = "kanban-api"
+repo_path = "~/code/kanban-api"
+[jira]
+project_key = "KAN"
+site = "https://safturento.atlassian.net"
+[github]
+repo = "safturento/kanban-api"
+[playwright]
+app_url = "http://localhost:7421"
+start_command = "npm run dev"
+[playwright.smoke]
+enabled = true
+`;
+
+const KANBAN_NO_PW_TOML = `
+name = "kanban-api"
+repo_path = "~/code/kanban-api"
+[jira]
+project_key = "KAN"
+site = "https://safturento.atlassian.net"
+[github]
+repo = "safturento/kanban-api"
+`;
 
 async function makeStateTransition(
   db: Kysely<DaemonDatabase>,
@@ -448,6 +482,137 @@ describe('AgentsService.getByKey', () => {
         cache_read: 0,
         cache_creation: 0,
       });
+    } finally {
+      await db.destroy();
+    }
+  });
+
+  // CREW-178: drawer redesign needs app_url + jira_url + tokens_by_tool on the detail.
+  it('composes app_url from playwright.app_url and jira_url from jira.site', async () => {
+    const db = await freshDb();
+    try {
+      await makeAgent(db, 'KAN-23', { projectName: 'kanban-api' });
+      await makeRun(db, 'KAN-23', 's1');
+      const projectsDir = makeProjectsDir({ 'kanban-api': KANBAN_TOML });
+      const detail = await new AgentsService({ db, projectsDir }).getByKey('KAN-23');
+      expect(detail?.app_url).toBe('http://localhost:7421');
+      expect(detail?.jira_url).toBe('https://safturento.atlassian.net/browse/KAN-23');
+    } finally {
+      await db.destroy();
+    }
+  });
+
+  it('returns null app_url when project config has no playwright or bruno_smoke', async () => {
+    const db = await freshDb();
+    try {
+      await makeAgent(db, 'KAN-23', { projectName: 'kanban-api' });
+      await makeRun(db, 'KAN-23', 's1');
+      const projectsDir = makeProjectsDir({ 'kanban-api': KANBAN_NO_PW_TOML });
+      const detail = await new AgentsService({ db, projectsDir }).getByKey('KAN-23');
+      expect(detail?.app_url).toBeNull();
+      // jira_url still composes — it only depends on the site, which is always present.
+      expect(detail?.jira_url).toBe('https://safturento.atlassian.net/browse/KAN-23');
+    } finally {
+      await db.destroy();
+    }
+  });
+
+  it('returns null app_url + jira_url when the project config is missing', async () => {
+    const db = await freshDb();
+    try {
+      await makeAgent(db, 'KAN-23', { projectName: 'kanban-api' });
+      await makeRun(db, 'KAN-23', 's1');
+      // Empty projects dir — loader will throw and getByKey should swallow it.
+      const projectsDir = makeProjectsDir();
+      const detail = await new AgentsService({ db, projectsDir }).getByKey('KAN-23');
+      expect(detail?.app_url).toBeNull();
+      expect(detail?.jira_url).toBeNull();
+    } finally {
+      await db.destroy();
+    }
+  });
+
+  it('aggregates tokens_by_tool across all of the agent\'s runs, ordered by tokens desc', async () => {
+    const db = await freshDb();
+    try {
+      await makeAgent(db, 'KAN-23', { projectName: 'kanban-api' });
+      const r1 = await makeRun(db, 'KAN-23', 's1', {
+        completedAt: '2026-04-29T13:00:00Z',
+        exitCode: 0,
+      });
+      const r2 = await makeRun(db, 'KAN-23', 's2', { command: 'fix-pr' });
+      // run 1: Bash×2 (1000 + 500 output), Read×1 (200 output)
+      await makeToolCall(db, r1, {
+        tool: 'Bash',
+        tokens: 1000,
+        occurredAt: '2026-04-29T12:00:01Z',
+      });
+      await makeToolCall(db, r1, {
+        tool: 'Bash',
+        tokens: 500,
+        occurredAt: '2026-04-29T12:00:02Z',
+      });
+      await makeToolCall(db, r1, {
+        tool: 'Read',
+        tokens: 200,
+        occurredAt: '2026-04-29T12:00:03Z',
+      });
+      // run 2: Bash×1 (300 output), Edit×1 (700 output)
+      await makeToolCall(db, r2, {
+        tool: 'Bash',
+        tokens: 300,
+        occurredAt: '2026-04-29T12:00:04Z',
+      });
+      await makeToolCall(db, r2, {
+        tool: 'Edit',
+        tokens: 700,
+        occurredAt: '2026-04-29T12:00:05Z',
+      });
+      const projectsDir = makeProjectsDir({ 'kanban-api': KANBAN_TOML });
+      const detail = await new AgentsService({ db, projectsDir }).getByKey('KAN-23');
+      // Total = 2700. Order by tokens desc: Bash 1800, Edit 700, Read 200.
+      expect(detail?.tokens_by_tool).toHaveLength(3);
+      expect(detail?.tokens_by_tool[0]).toMatchObject({ tool: 'Bash', tokens: 1800 });
+      expect(detail?.tokens_by_tool[0].percent).toBeCloseTo(66.67, 1);
+      expect(detail?.tokens_by_tool[1]).toMatchObject({ tool: 'Edit', tokens: 700 });
+      expect(detail?.tokens_by_tool[1].percent).toBeCloseTo(25.93, 1);
+      expect(detail?.tokens_by_tool[2]).toMatchObject({ tool: 'Read', tokens: 200 });
+      expect(detail?.tokens_by_tool[2].percent).toBeCloseTo(7.41, 1);
+    } finally {
+      await db.destroy();
+    }
+  });
+
+  it('returns an empty tokens_by_tool array when the agent has no tool calls', async () => {
+    const db = await freshDb();
+    try {
+      await makeAgent(db, 'KAN-23', { projectName: 'kanban-api' });
+      await makeRun(db, 'KAN-23', 's1');
+      const projectsDir = makeProjectsDir({ 'kanban-api': KANBAN_TOML });
+      const detail = await new AgentsService({ db, projectsDir }).getByKey('KAN-23');
+      expect(detail?.tokens_by_tool).toEqual([]);
+    } finally {
+      await db.destroy();
+    }
+  });
+
+  it('aggregates tokens_by_tool across all token columns (input + output + cache_read + cache_creation)', async () => {
+    const db = await freshDb();
+    try {
+      await makeAgent(db, 'KAN-23', { projectName: 'kanban-api' });
+      const r1 = await makeRun(db, 'KAN-23', 's1');
+      await makeToolCall(db, r1, {
+        tool: 'Bash',
+        tokens: 100,
+        inputTokens: 50,
+        cacheReadTokens: 25,
+        cacheCreationTokens: 25,
+      });
+      const projectsDir = makeProjectsDir({ 'kanban-api': KANBAN_TOML });
+      const detail = await new AgentsService({ db, projectsDir }).getByKey('KAN-23');
+      expect(detail?.tokens_by_tool).toEqual([
+        { tool: 'Bash', tokens: 200, percent: 100 },
+      ]);
     } finally {
       await db.destroy();
     }

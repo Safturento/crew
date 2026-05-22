@@ -48,6 +48,12 @@ const AgentDetailTokensSchema = z.object({
   cache_creation: z.number(),
 });
 
+const AgentDetailTokensByToolSchema = z.object({
+  tool: z.string(),
+  tokens: z.number().int().nonnegative(),
+  percent: z.number().min(0).max(100),
+});
+
 const AgentDetailSchema = z.object({
   key: z.string(),
   project: z.string(),
@@ -56,6 +62,9 @@ const AgentDetailSchema = z.object({
   state: AgentStateEnum,
   worktree_path: z.string(),
   pr_url: z.string().nullable(),
+  app_url: z.string().nullable(),
+  jira_url: z.string().nullable(),
+  tokens_by_tool: z.array(AgentDetailTokensByToolSchema),
   runs: z.array(AgentDetailRunSchema),
   tokens: AgentDetailTokensSchema,
   tool_call_count: z.number(),

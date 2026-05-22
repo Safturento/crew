@@ -159,6 +159,9 @@ const SAMPLE_AGENT_DETAIL = {
   state: 'running',
   worktree_path: '/repos/kanban-api-KAN-1',
   pr_url: null,
+  app_url: null,
+  jira_url: null,
+  tokens_by_tool: [],
   runs: [
     {
       id: '1',

@@ -70,6 +70,9 @@ describe('App', () => {
       state: 'waiting',
       worktree_path: '/repos/kanban-api-KAN-31',
       pr_url: null,
+      app_url: null,
+      jira_url: null,
+      tokens_by_tool: [],
       runs: [
         {
           id: '1',
@@ -104,6 +107,9 @@ describe('App', () => {
       state: 'running',
       worktree_path: '/repos/kanban-api-KAN-31',
       pr_url: null,
+      app_url: null,
+      jira_url: null,
+      tokens_by_tool: [],
       runs: [
         {
           id: '1',

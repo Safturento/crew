@@ -63,6 +63,15 @@ const AgentDetailSchema = z.object({
   state: z.enum(['initializing', 'running', 'idle', 'waiting', 'pr_open', 'error', 'finished']),
   worktree_path: z.string(),
   pr_url: z.string().nullable(),
+  app_url: z.string().nullable(),
+  jira_url: z.string().nullable(),
+  tokens_by_tool: z.array(
+    z.object({
+      tool: z.string(),
+      tokens: z.number(),
+      percent: z.number(),
+    }),
+  ),
   runs: z.array(
     z.object({
       id: z.string(),

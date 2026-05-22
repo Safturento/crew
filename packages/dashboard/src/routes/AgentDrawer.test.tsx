@@ -15,6 +15,9 @@ const SAMPLE_DETAIL: AgentDetail = {
   state: 'pr_open',
   worktree_path: '/repos/kanban-api-KAN-1',
   pr_url: 'https://github.com/example/repo/pull/12',
+  app_url: null,
+  jira_url: null,
+  tokens_by_tool: [],
   runs: [
     {
       id: '1',

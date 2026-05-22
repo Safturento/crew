@@ -49,9 +49,19 @@ export function useAgent(key: string): UseQueryResult<AgentDetail> {
       void qc.invalidateQueries({ queryKey: ['agents'] });
     });
 
+    // CREW-178: each new tool_call shifts the tokens_by_tool aggregate. The
+    // server emits tool_calls.changed on every batch so the drawer's
+    // TokensByTool composite refreshes within ~100ms of new activity.
+    const offToolCalls = eventStream.on('tool_calls.changed', (raw) => {
+      const d = raw as KeyedPayload;
+      if (d.key !== key) return;
+      void qc.invalidateQueries({ queryKey: ['agent', key] });
+    });
+
     return () => {
       offState();
       offRunCompleted();
+      offToolCalls();
     };
   }, [key, qc]);
 

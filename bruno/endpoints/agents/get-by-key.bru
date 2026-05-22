@@ -25,6 +25,7 @@ assert {
   res.body.worktree_path: isString
   res.body.runs: isArray
   res.body.tool_call_count: isNumber
+  res.body.tokens_by_tool: isArray
 }
 
 tests {
@@ -66,6 +67,21 @@ tests {
       for (const k of metricKeys) {
         expect(r[k] === null || typeof r[k] === "number").to.equal(true);
       }
+    }
+  });
+
+  test("app_url + jira_url are string or null (drawer redesign, CREW-178)", () => {
+    expect(res.body.app_url === null || typeof res.body.app_url === "string").to.equal(true);
+    expect(res.body.jira_url === null || typeof res.body.jira_url === "string").to.equal(true);
+  });
+
+  test("tokens_by_tool rows shape: { tool: string, tokens: number, percent: number }", () => {
+    for (const row of res.body.tokens_by_tool) {
+      expect(row.tool).to.be.a("string");
+      expect(row.tokens).to.be.a("number");
+      expect(row.tokens).to.be.at.least(0);
+      expect(row.percent).to.be.a("number");
+      expect(row.percent).to.be.within(0, 100);
     }
   });
 }

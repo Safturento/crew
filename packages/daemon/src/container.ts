@@ -62,7 +62,10 @@ export function buildContainer(deps: BuildContainerDeps): AwilixContainer<Daemon
     // env schema). The service param is named `projectsDir` to describe
     // what it actually scans; if `DaemonConfig` later splits the two,
     // change this argument, not the service's parameter name.
-    agentsService: asFunction(({ db }: DaemonCradle) => new AgentsService({ db })).scoped(),
+    agentsService: asFunction(
+      ({ db, config }: DaemonCradle) =>
+        new AgentsService({ db, projectsDir: config.configDir }),
+    ).scoped(),
     metricsService: asFunction(
       ({ db, logger }: DaemonCradle) => new MetricsService({ db, logger }),
     ).scoped(),
