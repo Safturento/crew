@@ -17,9 +17,7 @@ export function TokensByTool({ tokensByTool, total }: TokensByToolProps) {
       aria-label="Tokens by tool"
       className="overflow-hidden rounded-[10px] border border-border bg-card"
     >
-      <div
-        className={`${TOKEN_BAR_ROW_GRID_CLASSES} ${HEADER_FOOTER_TEXT} text-muted-foreground`}
-      >
+      <div className={`${TOKEN_BAR_ROW_GRID_CLASSES} ${HEADER_FOOTER_TEXT} text-muted-foreground`}>
         <span className="font-mono">Tool</span>
         <span className="text-right font-mono">Tokens</span>
         <span aria-hidden />
@@ -32,12 +30,7 @@ export function TokensByTool({ tokensByTool, total }: TokensByToolProps) {
           </div>
         ) : (
           tokensByTool.map((row) => (
-            <TokenBarRow
-              key={row.tool}
-              tool={row.tool}
-              tokens={row.tokens}
-              percent={row.percent}
-            />
+            <TokenBarRow key={row.tool} tool={row.tool} tokens={row.tokens} percent={row.percent} />
           ))
         )}
       </div>
