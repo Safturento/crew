@@ -153,6 +153,34 @@ describe('useAgent', () => {
     expect(invalidate).toHaveBeenCalledWith({ queryKey: ['agent', 'KAN-1'] });
     expect(invalidate).toHaveBeenCalledWith({ queryKey: ['agents'] });
   });
+
+  it('invalidates [agent, key] when tool_calls.changed fires for the same key (CREW-178)', async () => {
+    vi.spyOn(defaultClient, 'getAgent').mockResolvedValue(SAMPLE_DETAIL);
+
+    const invalidate = vi.spyOn(qc, 'invalidateQueries');
+
+    const { result } = renderHook(() => useAgent('KAN-1'), { wrapper: makeWrapper(qc) });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    invalidate.mockClear();
+    fire('tool_calls.changed', { key: 'KAN-1' });
+
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: ['agent', 'KAN-1'] });
+  });
+
+  it('ignores tool_calls.changed for other keys', async () => {
+    vi.spyOn(defaultClient, 'getAgent').mockResolvedValue(SAMPLE_DETAIL);
+
+    const invalidate = vi.spyOn(qc, 'invalidateQueries');
+
+    const { result } = renderHook(() => useAgent('KAN-1'), { wrapper: makeWrapper(qc) });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    invalidate.mockClear();
+    fire('tool_calls.changed', { key: 'OTHER-1' });
+
+    expect(invalidate).not.toHaveBeenCalled();
+  });
 });
 
 describe('useStateHistory', () => {
