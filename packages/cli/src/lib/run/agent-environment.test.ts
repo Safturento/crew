@@ -10,10 +10,14 @@ vi.mock('../docker/start-bringup.js', () => ({
 vi.mock('../mcp-config/install-browsers.js', () => ({
   installPlaywrightBrowsers: vi.fn(),
 }));
+vi.mock('./install-node-modules.js', () => ({
+  installNodeModules: vi.fn(),
+}));
 
 import { ensureStackRunning } from '../docker/ensure-stack-running.js';
 import { startDockerBringup } from '../docker/start-bringup.js';
 import { installPlaywrightBrowsers } from '../mcp-config/install-browsers.js';
+import { installNodeModules } from './install-node-modules.js';
 import * as buildChecksModule from '../preflight/build-checks.js';
 import { PreflightError } from '../preflight/index.js';
 import { prepareAgentEnvironment } from './agent-environment.js';
@@ -21,6 +25,7 @@ import { prepareAgentEnvironment } from './agent-environment.js';
 const ensureMock = vi.mocked(ensureStackRunning);
 const startBringupMock = vi.mocked(startDockerBringup);
 const installMock = vi.mocked(installPlaywrightBrowsers);
+const npmInstallMock = vi.mocked(installNodeModules);
 
 function baseConfig(): ProjectConfig {
   return {
@@ -59,6 +64,8 @@ describe('prepareAgentEnvironment — fresh mode', () => {
     ensureMock.mockReset();
     startBringupMock.mockReset();
     installMock.mockReset();
+    npmInstallMock.mockReset();
+    npmInstallMock.mockResolvedValue({ rc: 0, logPath: '/tmp/crew-npm-install-KAN-1.log' });
     vi.spyOn(console, 'log').mockImplementation(() => {});
     vi.spyOn(buildChecksModule, 'buildPreflightChecks').mockReturnValue([]);
   });
@@ -154,6 +161,8 @@ describe('prepareAgentEnvironment — resume mode docker step', () => {
     ensureMock.mockReset();
     startBringupMock.mockReset();
     installMock.mockReset();
+    npmInstallMock.mockReset();
+    npmInstallMock.mockResolvedValue({ rc: 0, logPath: '/tmp/crew-npm-install-KAN-1.log' });
     vi.spyOn(console, 'log').mockImplementation(() => {});
     vi.spyOn(buildChecksModule, 'buildPreflightChecks').mockReturnValue([]);
   });
@@ -262,6 +271,8 @@ describe('prepareAgentEnvironment — playwright steps', () => {
     ensureMock.mockReset();
     startBringupMock.mockReset();
     installMock.mockReset();
+    npmInstallMock.mockReset();
+    npmInstallMock.mockResolvedValue({ rc: 0, logPath: '/tmp/crew-npm-install-KAN-1.log' });
     vi.spyOn(console, 'log').mockImplementation(() => {});
     vi.spyOn(buildChecksModule, 'buildPreflightChecks').mockReturnValue([]);
   });
@@ -338,6 +349,68 @@ describe('prepareAgentEnvironment — playwright steps', () => {
       }),
     ).rejects.toThrow(/playwright.*KAN-1\.log/);
   });
+
+  it('runs npm install before chromium install when playwright is enabled', async () => {
+    const cfg = baseConfig();
+    cfg.playwright = { app_url: 'http://localhost:3000', smoke: { enabled: true } };
+    const events: string[] = [];
+    npmInstallMock.mockImplementation(async () => {
+      events.push('npm-install');
+      return { rc: 0, logPath: '/tmp/crew-npm-install-KAN-1.log' };
+    });
+    installMock.mockImplementation(async () => {
+      events.push('chromium-install');
+      return { rc: 0, logPath: '/tmp/crew-playwright-KAN-1.log' };
+    });
+
+    await prepareAgentEnvironment({
+      config: cfg,
+      worktree: '/wt',
+      key: 'KAN-1',
+      env: { PATH: '/usr/bin' },
+      mode: 'fresh',
+    });
+
+    expect(npmInstallMock).toHaveBeenCalledWith({
+      worktree: '/wt',
+      key: 'KAN-1',
+      env: { PATH: '/usr/bin' },
+    });
+    expect(events).toEqual(['npm-install', 'chromium-install']);
+  });
+
+  it('skips npm install when playwright is disabled', async () => {
+    const cfg = baseConfig();
+    cfg.bruno_smoke = { enabled: true, base_url: 'http://x', collection_dir: 'b' };
+
+    await prepareAgentEnvironment({
+      config: cfg,
+      worktree: '/wt',
+      key: 'KAN-1',
+      env: process.env,
+      mode: 'fresh',
+    });
+
+    expect(npmInstallMock).not.toHaveBeenCalled();
+  });
+
+  it('throws when npm install fails, embedding log path and skipping chromium install', async () => {
+    const cfg = baseConfig();
+    cfg.playwright = { app_url: 'http://localhost:3000', smoke: { enabled: true } };
+    npmInstallMock.mockResolvedValue({ rc: 1, logPath: '/tmp/crew-npm-install-KAN-1.log' });
+
+    await expect(
+      prepareAgentEnvironment({
+        config: cfg,
+        worktree: '/wt',
+        key: 'KAN-1',
+        env: process.env,
+        mode: 'fresh',
+      }),
+    ).rejects.toThrow(/npm install.*KAN-1\.log/);
+
+    expect(installMock).not.toHaveBeenCalled();
+  });
 });
 
 describe('prepareAgentEnvironment — preflight integration', () => {
@@ -345,6 +418,8 @@ describe('prepareAgentEnvironment — preflight integration', () => {
     ensureMock.mockReset();
     startBringupMock.mockReset();
     installMock.mockReset();
+    npmInstallMock.mockReset();
+    npmInstallMock.mockResolvedValue({ rc: 0, logPath: '/tmp/crew-npm-install-KAN-1.log' });
     vi.spyOn(console, 'log').mockImplementation(() => {});
     vi.spyOn(buildChecksModule, 'buildPreflightChecks').mockReturnValue([]);
   });

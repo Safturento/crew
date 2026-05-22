@@ -12,6 +12,7 @@ import {
 import { runPreflight } from '../preflight/index.js';
 import { buildPreflightChecks } from '../preflight/build-checks.js';
 import { agentNeedsAppRunning } from './app-lifecycle.js';
+import { installNodeModules } from './install-node-modules.js';
 
 export interface AgentEnvironmentOptions {
   config: ProjectConfig;
@@ -31,6 +32,8 @@ export interface AgentEnvironmentResult {
   resolvedAppUrl?: string;
   /** Path to the chromium-install log. Only set when playwright is enabled. */
   playwrightLogPath?: string;
+  /** Path to the npm-install log. Only set when playwright is enabled. */
+  npmInstallLogPath?: string;
 }
 
 /**
@@ -78,6 +81,14 @@ export async function prepareAgentEnvironment(
   }
 
   if (playwrightEnabled(config)) {
+    console.log(pc.dim('→ installing worktree node_modules…'));
+    const npmInstall = await installNodeModules({ worktree, key, env });
+    result.npmInstallLogPath = npmInstall.logPath;
+    if (npmInstall.rc !== 0) {
+      throw new Error(`npm install failed (rc=${npmInstall.rc}). Log: ${npmInstall.logPath}`);
+    }
+    console.log(pc.dim(`    log: ${npmInstall.logPath}`));
+
     console.log(pc.dim('→ ensuring Chromium is installed for Playwright…'));
     const install = await installPlaywrightBrowsers({ worktree, key, env });
     result.playwrightLogPath = install.logPath;

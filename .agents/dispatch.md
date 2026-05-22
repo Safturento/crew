@@ -1,7 +1,7 @@
 ---
 name: dispatch
 description: crew run prompt-build, skills injection, verification gates
-last_updated: 2026-05-17
+last_updated: 2026-05-22
 covers:
   - 'packages/cli/src/lib/run/**'
   - 'packages/cli/src/lib/prompts/**'
@@ -27,7 +27,7 @@ The companion commands `crew fix-pr` (resume from PR feedback) and the gate-driv
 4. **GH token copy.** Read-only source at `<repo>/.claude/secrets/gh-token` → `<worktree>/.claude/secrets/gh-token` (chmod 0600). Passed as `GH_TOKEN` env to the agent's claude process — never written into the prompt.
 5. **Env materialization.** `bringUpWorktreeEnv()` in `commands/run.ts`. Prefers `env.toml` via `env-spec/` (`loadEnvSpec` → `materialize` → `emit`); falls back to legacy `writeDockerEnv` when no `env.toml` exists. Output is `<worktree>/.env` consumed by docker-compose; the resolved `base` map is also returned for downstream URL resolution.
 6. **Bruno env write.** When `[bruno_smoke].enabled`, `writeBrunoEnvFile()` writes `bruno/environments/crew-<key-lower>.bru` with `baseUrl` (resolved from `APP_URL` / docker ports) and (if configured) a `smokeUser` block. `CREW_BRUNO_ENV` is passed to the agent's env.
-7. **`prepareAgentEnvironment` (fresh mode).** In `lib/run/agent-environment.ts`. Resolves the playwright app URL, starts docker bringup blocking-await in fresh mode (`startDockerBringup` → `await proc`), installs Chromium via `installPlaywrightBrowsers`, then runs `runPreflight(buildPreflightChecks(config))` — see Preflight below.
+7. **`prepareAgentEnvironment` (fresh mode).** In `lib/run/agent-environment.ts`. Resolves the playwright app URL, starts docker bringup blocking-await in fresh mode (`startDockerBringup` → `await proc`), runs `npm install` in the worktree via `installNodeModules` (worktrees are bare — see step 8), installs Chromium via `installPlaywrightBrowsers`, then runs `runPreflight(buildPreflightChecks(config))` — see Preflight below. The `npm install` and Chromium install steps both gate on `playwrightEnabled(config)`; the npm step runs first because `npx playwright install chromium` silently no-ops in a bare worktree without `node_modules` to resolve the project-pinned Playwright version (CREW-183).
 8. **MCP file write.** `writeMcpFile(worktree, { playwright?, chrome?, warn })` writes `<worktree>/.mcp.json` when `[playwright]` is enabled and smoke is on, **or** when `[visual_fidelity]` is configured (chrome-only is a valid configuration). The file carries a `playwright` server entry (when playwright wiring is on), a `chrome` server entry (when `[visual_fidelity]` is set — resolved from the `superpowers-chrome` plugin cache via `resolveSuperpowersChrome`, code under `lib/mcp-config/`), or both. A missing `superpowers-chrome` plugin emits exactly one yellow warning and omits the `chrome` entry; the dispatch continues. Order matters: write happens **after** `prepareAgentEnvironment` so the Chromium binary is on disk before `--executable-path` is resolved (CREW-70 regression bug — earlier writes captured a non-existent path and MCP silently fell back to system Chrome).
 9. **Skill injection.** `runSkillInjection(...)` copies dispatcher-managed skills (`<repo>/.claude/skills/<name>/`) into `<worktree>/.claude/skills/<name>/`. See Skills below.
 10. **Build prompt.** `buildTicketPrompt({ key, githubRepo, jiraSite, playwright, brunoSmoke, visualFidelity, userMessage, dockerUnavailable })`. See Prompts below.
@@ -131,6 +131,7 @@ Skip rules (in `computeGateSkip`): `verify_after_run=false`, `--skip-docker`, do
 | --------------------------------- | ----------------------------- | ------------------------------------------------------- |
 | `/tmp/crew-run-<KEY>.log`         | `claudeProcess` stdout+stderr | Full claude session output (also printed at end of run) |
 | `/tmp/crew-docker-<KEY>.log`      | `startDockerBringup`          | Background docker-compose output                        |
+| `/tmp/crew-npm-install-<KEY>.log` | `installNodeModules`          | Worktree `npm install` output (gated on playwright)     |
 | `/tmp/crew-playwright-<KEY>.log`  | `installPlaywrightBrowsers`   | Chromium install output                                 |
 | `/tmp/crew-verify-gate-<KEY>.log` | `runVerifyGate` resume        | Output of each gate-driven agent resume                 |
 
