@@ -45,7 +45,10 @@ describe('DrawerHeader', () => {
     render(<DrawerHeader detail={makeDetail()} showCloseButton showOpenAsPage />);
     expect(screen.getByText('kanban-api')).toBeInTheDocument();
     expect(screen.getAllByText(/KAN-23/).length).toBeGreaterThan(0);
-    expect(screen.getByRole('status')).toHaveAttribute('aria-label', expect.stringMatching(/running/i));
+    expect(screen.getByRole('status')).toHaveAttribute(
+      'aria-label',
+      expect.stringMatching(/running/i),
+    );
   });
 
   it('renders the ticket title as the heading', () => {
