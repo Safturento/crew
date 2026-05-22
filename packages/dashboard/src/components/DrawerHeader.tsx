@@ -36,32 +36,19 @@ export function DrawerHeader({
   const runtime = useLiveRuntime(startedAt, live);
   const meta = STATE_META[detail.state];
   const isWaiting = detail.state === 'waiting';
+  const startedClock = formatStartedClock(startedAt);
 
   return (
     <header
       data-testid="drawer-header"
-      className="flex flex-col gap-2.5 border-b border-slate-800 bg-card px-6 pb-4 pt-[18px]"
+      className="flex flex-col gap-[9px] border-b border-slate-800 bg-card px-6 pb-4 pt-[18px]"
     >
-      <div className="flex flex-wrap items-center gap-3">
-        <span className="font-mono text-xs uppercase tracking-wide text-muted-foreground">
-          {detail.project}
+      <div className="flex flex-wrap items-center gap-2 font-mono text-xs text-muted-foreground">
+        <span>{detail.project}</span>
+        <span aria-hidden className="text-muted-foreground/40">
+          /
         </span>
-        <span className="font-mono text-xs text-muted-foreground">{detail.ticket_key}</span>
-        <Badge
-          role="status"
-          aria-label={meta.label}
-          color={detail.state}
-          intensity="mid"
-          icon={<Circle aria-hidden />}
-        >
-          {meta.label}
-        </Badge>
-        {runtime && (
-          <span className="font-mono text-xs tabular-nums text-muted-foreground">{runtime}</span>
-        )}
-        <span className="font-mono text-xs tabular-nums text-muted-foreground">
-          {formatTokens(detail.tokens.total)}
-        </span>
+        <span>{detail.ticket_key}</span>
 
         <div className="ml-auto flex items-center gap-2">
           {showOpenAsPage && (
@@ -93,7 +80,6 @@ export function DrawerHeader({
               icon={<X aria-hidden />}
               aria-label="Close drawer"
               onClick={onClose}
-              disabled={!onClose}
             />
           )}
         </div>
@@ -103,12 +89,34 @@ export function DrawerHeader({
         {detail.ticket_title ?? detail.ticket_key}
       </h1>
 
+      <div className="flex flex-wrap items-center gap-3 font-mono text-xs text-muted-foreground">
+        <Badge
+          role="status"
+          aria-label={meta.label}
+          color={detail.state}
+          intensity="mid"
+          icon={<Circle aria-hidden />}
+        >
+          {meta.label}
+        </Badge>
+        <PipeSep />
+        <StatusItem label="runtime" value={runtime ?? '—'} />
+        <PipeSep />
+        <StatusItem label="tokens" value={formatTokens(detail.tokens.total)} />
+        {startedClock && (
+          <>
+            <PipeSep />
+            <StatusItem label="started" value={startedClock} />
+          </>
+        )}
+      </div>
+
       <div className="flex flex-wrap items-center gap-2">
         {detail.app_url && (
           <Button
             color="idle"
             intensity="mid"
-            size="sm"
+            size="md"
             icon={<Container aria-hidden />}
             asChild
             className="font-mono"
@@ -122,7 +130,7 @@ export function DrawerHeader({
           <Button
             color="idle"
             intensity="mid"
-            size="sm"
+            size="md"
             icon={<SquareArrowOutUpRight aria-hidden />}
             asChild
           >
@@ -134,7 +142,7 @@ export function DrawerHeader({
         <Button
           color="idle"
           intensity="mid"
-          size="sm"
+          size="md"
           icon={<FolderGit aria-hidden />}
           className="font-mono"
         >
@@ -143,6 +151,30 @@ export function DrawerHeader({
       </div>
     </header>
   );
+}
+
+function StatusItem({ label, value }: { label: string; value: string }) {
+  return (
+    <span className="inline-flex items-center gap-1.5">
+      <span>{label}</span>
+      <span className="tabular-nums text-foreground/80">{value}</span>
+    </span>
+  );
+}
+
+function PipeSep() {
+  return (
+    <span aria-hidden className="text-muted-foreground/40">
+      |
+    </span>
+  );
+}
+
+function formatStartedClock(startedAt: string | undefined): string | null {
+  if (!startedAt) return null;
+  const d = new Date(startedAt);
+  if (Number.isNaN(d.getTime())) return null;
+  return d.toLocaleTimeString('en-GB', { hour12: false });
 }
 
 function useLiveRuntime(startedAt: string | undefined, live: boolean): string | null {
