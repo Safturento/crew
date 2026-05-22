@@ -1,5 +1,7 @@
 8. **Visual fidelity gate** (this project's UI work). Invoke the `visual-fidelity-check` skill. The skill compares your rendered work against the Figma snapshot at **`{{snapshotPath}}`** (an `index.json` plus per-component PNG + JSON) and reports structural / caller / visual mismatches across **`{{componentDir}}`** (including any new or modified `.figma.tsx` files). Fix any high-severity findings before proceeding; surface medium/low findings in the PR description. The skill reads the snapshot from disk — no Figma network access is required from inside the sandbox.
 
-   **Fail-closed:** if the snapshot is missing, or the comparison can't run, stop and surface the blocker. Do not treat "couldn't run" as "passed."
+   **Use `mcp__chrome__use_browser` for the skill's Step 5 (live DOM check).** Visual fidelity needs computed styles and rendered SVG inspection — that's chrome MCP, not Playwright MCP. (Playwright MCP stays the right tool for behavior smoke in step 7's flow; do not confuse the two.) The host has already wired the chrome MCP server into this worktree's `.mcp.json`. If `mcp__chrome__use_browser` is not in your tool inventory when you reach Step 5, STOP and surface as a blocker — check `/tmp/crew-mcp-{{key}}.log` for the resolved chrome MCP path and any plugin-resolution warnings before re-running.
+
+   **Fail-closed:** if the snapshot is missing, the chrome MCP is unreachable, the dashboard is unreachable, or the comparison can't otherwise run, stop and surface the blocker. Do not treat "couldn't run" as "passed."
 
    This step is required IN ADDITION TO step 9 (Verify) — that step covers tests, lint, and build correctness; this one covers visual fidelity. They are not interchangeable. Running one does not replace the other.

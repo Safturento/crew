@@ -51,7 +51,7 @@ export function buildTicketPrompt(opts: BuildTicketPromptOptions): string {
     jiraSite: opts.jiraSite,
     playwrightBlock: buildPlaywrightBlock(opts.playwright),
     brunoSmokeBlock: buildBrunoSmokeBlock(opts.brunoSmoke),
-    visualFidelityBlock: buildVisualFidelityBlock(opts.visualFidelity),
+    visualFidelityBlock: buildVisualFidelityBlock(opts.key, opts.visualFidelity),
     sandboxNetworkBlock: buildSandboxNetworkBlock({
       key: opts.key,
       appUrl: opts.playwright?.appUrl ?? opts.brunoSmoke?.baseUrl,
@@ -65,9 +65,13 @@ export function buildTicketPrompt(opts: BuildTicketPromptOptions): string {
   });
 }
 
-function buildVisualFidelityBlock(vf: VisualFidelityPromptOptions | undefined): string {
+function buildVisualFidelityBlock(
+  key: string,
+  vf: VisualFidelityPromptOptions | undefined,
+): string {
   if (!vf) return '';
   return render('ticket-visual-fidelity', {
+    key,
     snapshotPath: vf.snapshotPath,
     componentDir: vf.componentDir,
   });

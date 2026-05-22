@@ -471,6 +471,38 @@ describe('buildTicketPrompt — visual-fidelity gate', () => {
     // step 9 still exists at its renumbered position
     expect(out).toMatch(/^9\. \*\*Verify\.\*\*/m);
   });
+
+  // CREW-184: the dispatch prompt must tell the agent which MCP to reach for
+  // when running Step 5 of visual-fidelity-check. The playwright block already
+  // points at `mcp__playwright__*` for behavior smoke — but agents were
+  // skipping Step 5 because the prompt never named `mcp__chrome__use_browser`
+  // as the visual-fidelity tool. Encode it in the gate block.
+  it('directs the agent to mcp__chrome__use_browser for the visual-fidelity gate', () => {
+    const prompt = buildTicketPrompt({
+      key: 'CREW-184',
+      githubRepo: 'Safturento/crew',
+      jiraSite: 'https://safturento.atlassian.net',
+      visualFidelity: {
+        snapshotPath: '.crew/figma-snapshot',
+        componentDir: 'packages/dashboard/src/components',
+      },
+    });
+    expect(prompt).toContain('mcp__chrome__use_browser');
+    // Skill name still present; the chrome guidance reinforces, doesn't replace.
+    expect(prompt).toContain('visual-fidelity-check');
+  });
+
+  it('keeps mcp__chrome__use_browser out of non-visual-fidelity prompts', () => {
+    const prompt = buildTicketPrompt({
+      key: 'KAN-23',
+      githubRepo: 'Safturento/Recipes',
+      jiraSite: 'https://safturento.atlassian.net',
+      playwright: { appUrl: 'https://localhost:18443', smoke: true },
+    });
+    expect(prompt).not.toContain('mcp__chrome__use_browser');
+    // The playwright block still points at the playwright MCP for behavior smoke.
+    expect(prompt).toContain('mcp__playwright__');
+  });
 });
 
 describe('buildTicketPrompt — sandbox-network-note', () => {
