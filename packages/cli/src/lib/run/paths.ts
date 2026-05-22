@@ -22,6 +22,10 @@ export function playwrightLogPathFor(key: string): string {
   return `/tmp/crew-playwright-${key}.log`;
 }
 
+export function npmInstallLogPathFor(key: string): string {
+  return `/tmp/crew-npm-install-${key}.log`;
+}
+
 export function verifyGateLogPathFor(key: string): string {
   return `/tmp/crew-verify-gate-${key}.log`;
 }
