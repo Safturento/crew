@@ -135,7 +135,7 @@
   },
   "enrichment": {
     "source": "plugin-api",
-    "capturedAt": "2026-05-18T14:33:26.927Z",
+    "capturedAt": "2026-05-22T15:32:32.788Z",
     "componentProperties": null,
     "mainComponent": null,
     "boundVariables": [
@@ -201,129 +201,6 @@
         }
       },
       {
-        "id": "I244:911;243:106",
-        "name": "brandmark",
-        "path": [
-          "Background+Border+Shadow",
-          "Container",
-          "TopNav",
-          "left",
-          "logo",
-          "brandmark"
-        ],
-        "mainComponentSetId": "220:211",
-        "variantOverrides": null,
-        "componentPropertyOverrides": {},
-        "resolvedStyles": {
-          "fills": [
-            {
-              "hex": null,
-              "tokenAlias": null,
-              "opacity": 1
-            }
-          ],
-          "strokes": [],
-          "textColor": null
-        }
-      },
-      {
-        "id": "I244:911;332:230",
-        "name": "count-pill",
-        "path": [
-          "Background+Border+Shadow",
-          "Container",
-          "TopNav",
-          "right",
-          "attention",
-          "count-pill"
-        ],
-        "mainComponentSetId": "272:120",
-        "variantOverrides": "type=pill, color=waiting, intensity=mid",
-        "componentPropertyOverrides": {
-          "Icon": "lucide/git-pull-request",
-          "Has Icon": false,
-          "Label": "3",
-          "type": "pill",
-          "color": "waiting",
-          "intensity": "mid"
-        },
-        "resolvedStyles": {
-          "fills": [
-            {
-              "hex": "#26282A",
-              "tokenAlias": "amber-1050",
-              "opacity": 1
-            }
-          ],
-          "strokes": [
-            {
-              "hex": "#F59E0B",
-              "tokenAlias": "amber/500",
-              "opacity": 1
-            }
-          ],
-          "textColor": {
-            "hex": "#FBBF24",
-            "tokenAlias": "state/waiting"
-          }
-        }
-      },
-      {
-        "id": "I244:911;278:1622",
-        "name": "Pill",
-        "path": [
-          "Background+Border+Shadow",
-          "Container",
-          "TopNav",
-          "right",
-          "Pill"
-        ],
-        "mainComponentSetId": "272:120",
-        "variantOverrides": "type=button-sm, color=idle, intensity=loud",
-        "componentPropertyOverrides": {
-          "Icon": "lucide/plus",
-          "Has Icon": true,
-          "Label": "New Run",
-          "type": "button-sm",
-          "color": "idle",
-          "intensity": "loud"
-        },
-        "resolvedStyles": {
-          "fills": [
-            {
-              "hex": "#64748B",
-              "tokenAlias": "state/idle",
-              "opacity": 1
-            }
-          ],
-          "strokes": [],
-          "textColor": {
-            "hex": "#020617",
-            "tokenAlias": "state/foreground"
-          }
-        }
-      },
-      {
-        "id": "I244:911;278:1622;276:514",
-        "name": "icon",
-        "path": [
-          "Background+Border+Shadow",
-          "Container",
-          "TopNav",
-          "right",
-          "Pill",
-          "icon"
-        ],
-        "mainComponentSetId": "243:102",
-        "variantOverrides": null,
-        "componentPropertyOverrides": {},
-        "resolvedStyles": {
-          "fills": [],
-          "strokes": [],
-          "textColor": null
-        }
-      },
-      {
         "id": "233:713",
         "name": "ProjectSection",
         "path": [
@@ -339,7 +216,7 @@
         "componentPropertyOverrides": {
           "Show Open Button": true,
           "Repo Path": "~/code/kanban-api",
-          "Count Summary": "3 active · 4 total",
+          "Count Summary": "3 active \u00b7 4 total",
           "Project Name": "kanban-api"
         },
         "resolvedStyles": {
@@ -367,7 +244,7 @@
         "componentPropertyOverrides": {
           "Show Open Button": true,
           "Repo Path": "~/code/crew",
-          "Count Summary": "1 active · 2 total",
+          "Count Summary": "1 active \u00b7 2 total",
           "Project Name": "crew"
         },
         "resolvedStyles": {
@@ -395,7 +272,7 @@
         "componentPropertyOverrides": {
           "Show Open Button": true,
           "Repo Path": "~/code/lighthouse",
-          "Count Summary": "1 active · 1 total",
+          "Count Summary": "1 active \u00b7 1 total",
           "Project Name": "lighthouse"
         },
         "resolvedStyles": {
@@ -460,7 +337,7 @@
         "componentPropertyOverrides": {
           "Show Open Button": true,
           "Repo Path": "~/code/mailer-svc",
-          "Count Summary": "1 active · 1 total",
+          "Count Summary": "1 active \u00b7 1 total",
           "Project Name": "mailer-svc"
         },
         "resolvedStyles": {
@@ -512,82 +389,9 @@
     ],
     "depthWarnings": [
       {
-        "depthExceeded": true,
-        "depth": 7,
-        "atNodeId": "I244:911;243:106",
-        "atName": "brandmark"
-      },
-      {
-        "depthExceeded": true,
-        "depth": 7,
-        "atNodeId": "I244:911;243:115",
-        "atName": "tab-agents"
-      },
-      {
-        "depthExceeded": true,
-        "depth": 7,
-        "atNodeId": "I244:911;243:117",
-        "atName": "tab-projects"
-      },
-      {
-        "depthExceeded": true,
-        "depth": 7,
-        "atNodeId": "I244:911;332:230",
-        "atName": "count-pill"
-      },
-      {
-        "depthExceeded": true,
-        "depth": 7,
-        "atNodeId": "I244:911;278:1622;276:514",
-        "atName": "icon"
-      },
-      {
-        "depthExceeded": true,
-        "depth": 7,
-        "atNodeId": "233:713",
-        "atName": "ProjectSection"
-      },
-      {
-        "depthExceeded": true,
-        "depth": 7,
-        "atNodeId": "1:46",
-        "atName": "Container"
-      },
-      {
-        "depthExceeded": true,
-        "depth": 7,
-        "atNodeId": "233:723",
-        "atName": "ProjectSection"
-      },
-      {
-        "depthExceeded": true,
-        "depth": 7,
-        "atNodeId": "1:205",
-        "atName": "Container"
-      },
-      {
-        "depthExceeded": true,
-        "depth": 7,
-        "atNodeId": "233:733",
-        "atName": "ProjectSection"
-      },
-      {
-        "depthExceeded": true,
-        "depth": 7,
-        "atNodeId": "206:410",
-        "atName": "AgentRow: LH-08"
-      },
-      {
-        "depthExceeded": true,
-        "depth": 7,
-        "atNodeId": "233:743",
-        "atName": "ProjectSection"
-      },
-      {
-        "depthExceeded": true,
-        "depth": 7,
-        "atNodeId": "206:450",
-        "atName": "AgentRow: MAIL-14"
+        "underInstance": "root",
+        "count": 2,
+        "sampleName": "Container"
       }
     ]
   }

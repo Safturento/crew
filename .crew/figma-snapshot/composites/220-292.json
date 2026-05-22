@@ -74,14 +74,14 @@
     "paddingBottom": 24,
     "layoutWrap": "NO_WRAP",
     "absoluteBoundingBox": {
-      "x": 1214,
-      "y": 5479,
+      "x": 1331,
+      "y": 4235,
       "width": 900,
       "height": 540
     },
     "absoluteRenderBounds": {
-      "x": 1178,
-      "y": 5473,
+      "x": 1295,
+      "y": 4229,
       "width": 972,
       "height": 612
     },
@@ -99,7 +99,7 @@
   },
   "enrichment": {
     "source": "plugin-api",
-    "capturedAt": "2026-05-18T14:24:12.406Z",
+    "capturedAt": "2026-05-22T15:38:53.831Z",
     "componentProperties": null,
     "mainComponent": null,
     "boundVariables": [

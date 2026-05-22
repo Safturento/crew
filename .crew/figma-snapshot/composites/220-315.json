@@ -100,7 +100,7 @@
   },
   "enrichment": {
     "source": "plugin-api",
-    "capturedAt": "2026-05-18T14:36:23.597Z",
+    "capturedAt": "2026-05-22T15:32:33.110Z",
     "componentProperties": null,
     "mainComponent": null,
     "boundVariables": [
@@ -128,14 +128,15 @@
           "Pill"
         ],
         "mainComponentSetId": "272:120",
-        "variantOverrides": "type=button-sm, color=running, intensity=mid",
+        "variantOverrides": "type=button-sm, color=running, intensity=mid, font=sans",
         "componentPropertyOverrides": {
           "Icon": "lucide/git-pull-request",
           "Has Icon": false,
           "Label": "Edit",
           "type": "button-sm",
           "color": "running",
-          "intensity": "mid"
+          "intensity": "mid",
+          "font": "sans"
         },
         "resolvedStyles": {
           "fills": [
@@ -159,23 +160,6 @@
         }
       },
       {
-        "id": "I278:1520;276:535",
-        "name": "icon",
-        "path": [
-          "actions-block",
-          "Pill",
-          "icon"
-        ],
-        "mainComponentSetId": "199:106",
-        "variantOverrides": null,
-        "componentPropertyOverrides": {},
-        "resolvedStyles": {
-          "fills": [],
-          "strokes": [],
-          "textColor": null
-        }
-      },
-      {
         "id": "278:1524",
         "name": "Pill",
         "path": [
@@ -183,14 +167,15 @@
           "Pill"
         ],
         "mainComponentSetId": "272:120",
-        "variantOverrides": "type=button-sm, color=error, intensity=mid",
+        "variantOverrides": "type=button-sm, color=error, intensity=mid, font=sans",
         "componentPropertyOverrides": {
           "Icon": "lucide/git-pull-request",
           "Has Icon": false,
           "Label": "Remove",
           "type": "button-sm",
           "color": "error",
-          "intensity": "mid"
+          "intensity": "mid",
+          "font": "sans"
         },
         "resolvedStyles": {
           "fills": [
@@ -211,23 +196,6 @@
             "hex": "#F87171",
             "tokenAlias": "state/error"
           }
-        }
-      },
-      {
-        "id": "I278:1524;276:571",
-        "name": "icon",
-        "path": [
-          "actions-block",
-          "Pill",
-          "icon"
-        ],
-        "mainComponentSetId": "199:106",
-        "variantOverrides": null,
-        "componentPropertyOverrides": {},
-        "resolvedStyles": {
-          "fills": [],
-          "strokes": [],
-          "textColor": null
         }
       }
     ],

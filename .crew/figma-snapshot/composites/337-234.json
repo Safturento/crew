@@ -35,13 +35,13 @@
       "x": 656,
       "y": 551,
       "width": 514,
-      "height": 51
+      "height": 49
     },
     "absoluteRenderBounds": {
       "x": 656,
       "y": 551,
       "width": 514,
-      "height": 51
+      "height": 49
     },
     "constraints": {
       "vertical": "TOP",
@@ -57,7 +57,7 @@
   },
   "enrichment": {
     "source": "plugin-api",
-    "capturedAt": "2026-05-18T14:36:23.765Z",
+    "capturedAt": "2026-05-22T15:38:53.818Z",
     "componentProperties": null,
     "mainComponent": null,
     "boundVariables": [],
@@ -78,15 +78,15 @@
         "resolvedStyles": {
           "fills": [
             {
-              "hex": "#0F172A",
-              "tokenAlias": "card",
+              "hex": "#172134",
+              "tokenAlias": "slate-1100",
               "opacity": 1
             }
           ],
           "strokes": [
             {
-              "hex": "#1E293B",
-              "tokenAlias": "border",
+              "hex": "#475569",
+              "tokenAlias": "slate/600",
               "opacity": 1
             }
           ],
@@ -94,22 +94,6 @@
             "hex": "#94A3B8",
             "tokenAlias": "muted-foreground"
           }
-        }
-      },
-      {
-        "id": "I337:236;318:231",
-        "name": "icon",
-        "path": [
-          "input",
-          "icon"
-        ],
-        "mainComponentSetId": "277:120",
-        "variantOverrides": null,
-        "componentPropertyOverrides": {},
-        "resolvedStyles": {
-          "fills": [],
-          "strokes": [],
-          "textColor": null
         }
       }
     ],

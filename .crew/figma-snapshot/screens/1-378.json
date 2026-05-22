@@ -135,7 +135,7 @@
   },
   "enrichment": {
     "source": "plugin-api",
-    "capturedAt": "2026-05-18T14:27:01.505Z",
+    "capturedAt": "2026-05-22T15:32:32.397Z",
     "componentProperties": null,
     "mainComponent": null,
     "boundVariables": [
@@ -201,129 +201,6 @@
         }
       },
       {
-        "id": "I244:936;243:106",
-        "name": "brandmark",
-        "path": [
-          "Background+Border+Shadow",
-          "Container",
-          "TopNav",
-          "left",
-          "logo",
-          "brandmark"
-        ],
-        "mainComponentSetId": "220:211",
-        "variantOverrides": null,
-        "componentPropertyOverrides": {},
-        "resolvedStyles": {
-          "fills": [
-            {
-              "hex": null,
-              "tokenAlias": null,
-              "opacity": 1
-            }
-          ],
-          "strokes": [],
-          "textColor": null
-        }
-      },
-      {
-        "id": "I244:936;332:230",
-        "name": "count-pill",
-        "path": [
-          "Background+Border+Shadow",
-          "Container",
-          "TopNav",
-          "right",
-          "attention",
-          "count-pill"
-        ],
-        "mainComponentSetId": "272:120",
-        "variantOverrides": "type=pill, color=waiting, intensity=mid",
-        "componentPropertyOverrides": {
-          "Icon": "lucide/git-pull-request",
-          "Has Icon": false,
-          "Label": "3",
-          "type": "pill",
-          "color": "waiting",
-          "intensity": "mid"
-        },
-        "resolvedStyles": {
-          "fills": [
-            {
-              "hex": "#26282A",
-              "tokenAlias": "amber-1050",
-              "opacity": 1
-            }
-          ],
-          "strokes": [
-            {
-              "hex": "#F59E0B",
-              "tokenAlias": "amber/500",
-              "opacity": 1
-            }
-          ],
-          "textColor": {
-            "hex": "#FBBF24",
-            "tokenAlias": "state/waiting"
-          }
-        }
-      },
-      {
-        "id": "I244:936;278:1622",
-        "name": "Pill",
-        "path": [
-          "Background+Border+Shadow",
-          "Container",
-          "TopNav",
-          "right",
-          "Pill"
-        ],
-        "mainComponentSetId": "272:120",
-        "variantOverrides": "type=button-sm, color=idle, intensity=loud",
-        "componentPropertyOverrides": {
-          "Icon": "lucide/plus",
-          "Has Icon": true,
-          "Label": "New Run",
-          "type": "button-sm",
-          "color": "idle",
-          "intensity": "loud"
-        },
-        "resolvedStyles": {
-          "fills": [
-            {
-              "hex": "#64748B",
-              "tokenAlias": "state/idle",
-              "opacity": 1
-            }
-          ],
-          "strokes": [],
-          "textColor": {
-            "hex": "#020617",
-            "tokenAlias": "state/foreground"
-          }
-        }
-      },
-      {
-        "id": "I244:936;278:1622;276:514",
-        "name": "icon",
-        "path": [
-          "Background+Border+Shadow",
-          "Container",
-          "TopNav",
-          "right",
-          "Pill",
-          "icon"
-        ],
-        "mainComponentSetId": "243:102",
-        "variantOverrides": null,
-        "componentPropertyOverrides": {},
-        "resolvedStyles": {
-          "fills": [],
-          "strokes": [],
-          "textColor": null
-        }
-      },
-      {
         "id": "233:753",
         "name": "ProjectSection",
         "path": [
@@ -339,7 +216,7 @@
         "componentPropertyOverrides": {
           "Show Open Button": true,
           "Repo Path": "~/code/kanban-api",
-          "Count Summary": "3 active · 4 total",
+          "Count Summary": "3 active \u00b7 4 total",
           "Project Name": "kanban-api"
         },
         "resolvedStyles": {
@@ -367,7 +244,7 @@
         "componentPropertyOverrides": {
           "Show Open Button": true,
           "Repo Path": "~/code/crew",
-          "Count Summary": "1 active · 2 total",
+          "Count Summary": "1 active \u00b7 2 total",
           "Project Name": "crew"
         },
         "resolvedStyles": {
@@ -395,7 +272,7 @@
         "componentPropertyOverrides": {
           "Show Open Button": true,
           "Repo Path": "~/code/lighthouse",
-          "Count Summary": "1 active · 1 total",
+          "Count Summary": "1 active \u00b7 1 total",
           "Project Name": "lighthouse"
         },
         "resolvedStyles": {
@@ -460,7 +337,7 @@
         "componentPropertyOverrides": {
           "Show Open Button": true,
           "Repo Path": "~/code/mailer-svc",
-          "Count Summary": "1 active · 1 total",
+          "Count Summary": "1 active \u00b7 1 total",
           "Project Name": "mailer-svc"
         },
         "resolvedStyles": {
@@ -510,246 +387,44 @@
         }
       },
       {
-        "id": "275:1355",
-        "name": "Pill",
+        "id": "587:2906",
+        "name": "AgentBody (drawer)",
         "path": [
           "Background+Border+Shadow",
           "Container",
           "Background+VerticalBorder",
-          "Header",
-          "Container",
-          "Pill"
+          "AgentBody (drawer)"
         ],
-        "mainComponentSetId": "272:120",
-        "variantOverrides": "type=pill, color=waiting, intensity=mid",
-        "componentPropertyOverrides": {
-          "Icon": "lucide/circle",
-          "Has Icon": true,
-          "Label": "Waiting",
-          "type": "pill",
-          "color": "waiting",
-          "intensity": "mid"
-        },
+        "mainComponentSetId": "220:246",
+        "variantOverrides": null,
+        "componentPropertyOverrides": {},
         "resolvedStyles": {
           "fills": [
             {
-              "hex": "#26282A",
-              "tokenAlias": "amber-1050",
+              "hex": "#020617",
+              "tokenAlias": "background",
               "opacity": 1
             }
           ],
           "strokes": [
             {
-              "hex": "#F59E0B",
-              "tokenAlias": "amber/500",
+              "hex": "#1E293B",
+              "tokenAlias": "border",
               "opacity": 1
             }
           ],
           "textColor": {
-            "hex": "#FBBF24",
-            "tokenAlias": "state/waiting"
+            "hex": "#94A3B8",
+            "tokenAlias": "muted-foreground"
           }
         }
       }
     ],
     "depthWarnings": [
       {
-        "depthExceeded": true,
-        "depth": 7,
-        "atNodeId": "I244:936;243:106",
-        "atName": "brandmark"
-      },
-      {
-        "depthExceeded": true,
-        "depth": 7,
-        "atNodeId": "I244:936;243:115",
-        "atName": "tab-agents"
-      },
-      {
-        "depthExceeded": true,
-        "depth": 7,
-        "atNodeId": "I244:936;243:117",
-        "atName": "tab-projects"
-      },
-      {
-        "depthExceeded": true,
-        "depth": 7,
-        "atNodeId": "I244:936;332:230",
-        "atName": "count-pill"
-      },
-      {
-        "depthExceeded": true,
-        "depth": 7,
-        "atNodeId": "I244:936;278:1622;276:514",
-        "atName": "icon"
-      },
-      {
-        "depthExceeded": true,
-        "depth": 7,
-        "atNodeId": "233:753",
-        "atName": "ProjectSection"
-      },
-      {
-        "depthExceeded": true,
-        "depth": 7,
-        "atNodeId": "1:422",
-        "atName": "Container"
-      },
-      {
-        "depthExceeded": true,
-        "depth": 7,
-        "atNodeId": "233:763",
-        "atName": "ProjectSection"
-      },
-      {
-        "depthExceeded": true,
-        "depth": 7,
-        "atNodeId": "1:581",
-        "atName": "Container"
-      },
-      {
-        "depthExceeded": true,
-        "depth": 7,
-        "atNodeId": "233:773",
-        "atName": "ProjectSection"
-      },
-      {
-        "depthExceeded": true,
-        "depth": 7,
-        "atNodeId": "206:695",
-        "atName": "AgentRow: LH-08"
-      },
-      {
-        "depthExceeded": true,
-        "depth": 7,
-        "atNodeId": "233:783",
-        "atName": "ProjectSection"
-      },
-      {
-        "depthExceeded": true,
-        "depth": 7,
-        "atNodeId": "206:731",
-        "atName": "AgentRow: MAIL-14"
-      },
-      {
-        "depthExceeded": true,
-        "depth": 7,
-        "atNodeId": "1:758",
-        "atName": "Paragraph"
-      },
-      {
-        "depthExceeded": true,
-        "depth": 7,
-        "atNodeId": "1:762",
-        "atName": "Container"
-      },
-      {
-        "depthExceeded": true,
-        "depth": 7,
-        "atNodeId": "275:1355",
-        "atName": "Pill"
-      },
-      {
-        "depthExceeded": true,
-        "depth": 7,
-        "atNodeId": "1:779",
-        "atName": "Margin"
-      },
-      {
-        "depthExceeded": true,
-        "depth": 7,
-        "atNodeId": "1:781",
-        "atName": "Container"
-      },
-      {
-        "depthExceeded": true,
-        "depth": 7,
-        "atNodeId": "1:783",
-        "atName": "Container"
-      },
-      {
-        "depthExceeded": true,
-        "depth": 7,
-        "atNodeId": "1:785",
-        "atName": "Margin"
-      },
-      {
-        "depthExceeded": true,
-        "depth": 7,
-        "atNodeId": "1:787",
-        "atName": "Container"
-      },
-      {
-        "depthExceeded": true,
-        "depth": 7,
-        "atNodeId": "1:789",
-        "atName": "Container"
-      },
-      {
-        "depthExceeded": true,
-        "depth": 7,
-        "atNodeId": "1:791",
-        "atName": "Margin"
-      },
-      {
-        "depthExceeded": true,
-        "depth": 7,
-        "atNodeId": "1:793",
-        "atName": "Container"
-      },
-      {
-        "depthExceeded": true,
-        "depth": 7,
-        "atNodeId": "1:795",
-        "atName": "Container"
-      },
-      {
-        "depthExceeded": true,
-        "depth": 7,
-        "atNodeId": "1:798",
-        "atName": "Background+Border"
-      },
-      {
-        "depthExceeded": true,
-        "depth": 7,
-        "atNodeId": "1:807",
-        "atName": "CodeChip (raw — pending mono-font Pill support)"
-      },
-      {
-        "depthExceeded": true,
-        "depth": 7,
-        "atNodeId": "1:816",
-        "atName": "Heading 2"
-      },
-      {
-        "depthExceeded": true,
-        "depth": 7,
-        "atNodeId": "1:818",
-        "atName": "Background+Border"
-      },
-      {
-        "depthExceeded": true,
-        "depth": 7,
-        "atNodeId": "1:902",
-        "atName": "Heading 2"
-      },
-      {
-        "depthExceeded": true,
-        "depth": 7,
-        "atNodeId": "1:904",
-        "atName": "Background+Border"
-      },
-      {
-        "depthExceeded": true,
-        "depth": 7,
-        "atNodeId": "1:939",
-        "atName": "Heading 2"
-      },
-      {
-        "depthExceeded": true,
-        "depth": 7,
-        "atNodeId": "1:941",
-        "atName": "Container"
+        "underInstance": "root",
+        "count": 2,
+        "sampleName": "Container"
       }
     ]
   }

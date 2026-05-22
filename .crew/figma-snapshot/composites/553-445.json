@@ -1,0 +1,131 @@
+{
+  "id": "553:445",
+  "name": "TranscriptRow",
+  "type": "COMPONENT",
+  "page": "Composites",
+  "raw": {
+    "id": "553:445",
+    "name": "TranscriptRow",
+    "type": "COMPONENT",
+    "scrollBehavior": "SCROLLS",
+    "componentPropertyDefinitions": {
+      "Pill#553:0": {
+        "type": "INSTANCE_SWAP",
+        "defaultValue": "271:212",
+        "preferredValues": [
+          {
+            "type": "COMPONENT_SET",
+            "key": "166d1f051baba62da93e417952289f35d3c07685"
+          }
+        ]
+      },
+      "text#553:1": {
+        "type": "TEXT",
+        "defaultValue": "docker compose -f docker-compose.dev.yml up -d"
+      },
+      "timestamp#553:2": {
+        "type": "TEXT",
+        "defaultValue": "14:30:04"
+      },
+      "tokens#553:3": {
+        "type": "TEXT",
+        "defaultValue": "180 tok"
+      }
+    },
+    "blendMode": "PASS_THROUGH",
+    "clipsContent": false,
+    "background": [],
+    "fills": [],
+    "strokes": [],
+    "strokeWeight": 1,
+    "strokeAlign": "INSIDE",
+    "backgroundColor": {
+      "r": 0,
+      "g": 0,
+      "b": 0,
+      "a": 0
+    },
+    "layoutMode": "HORIZONTAL",
+    "counterAxisSizingMode": "FIXED",
+    "primaryAxisSizingMode": "FIXED",
+    "counterAxisAlignItems": "CENTER",
+    "paddingLeft": 10,
+    "paddingRight": 10,
+    "paddingTop": 6,
+    "paddingBottom": 6,
+    "itemSpacing": 8,
+    "layoutWrap": "NO_WRAP",
+    "absoluteBoundingBox": {
+      "x": 0,
+      "y": 5555,
+      "width": 612,
+      "height": 32
+    },
+    "absoluteRenderBounds": {
+      "x": 0,
+      "y": 5555,
+      "width": 612,
+      "height": 32
+    },
+    "constraints": {
+      "vertical": "TOP",
+      "horizontal": "LEFT"
+    },
+    "layoutSizingHorizontal": "FIXED",
+    "layoutSizingVertical": "FIXED",
+    "effects": [],
+    "interactions": [],
+    "complexStrokeProperties": {
+      "strokeType": "BASIC"
+    }
+  },
+  "enrichment": {
+    "source": "plugin-api",
+    "capturedAt": "2026-05-22T15:38:53.791Z",
+    "componentProperties": null,
+    "mainComponent": null,
+    "boundVariables": [],
+    "componentInstances": [
+      {
+        "id": "553:447",
+        "name": "Pill",
+        "path": [
+          "left",
+          "Pill"
+        ],
+        "mainComponentSetId": "272:120",
+        "variantOverrides": "type=tag, color=waiting, intensity=mid, font=mono",
+        "componentPropertyOverrides": {
+          "Icon": "lucide/git-pull-request",
+          "Has Icon": false,
+          "Label": "Bash",
+          "type": "tag",
+          "color": "waiting",
+          "intensity": "mid",
+          "font": "mono"
+        },
+        "resolvedStyles": {
+          "fills": [
+            {
+              "hex": "#26282A",
+              "tokenAlias": "amber-1050",
+              "opacity": 1
+            }
+          ],
+          "strokes": [
+            {
+              "hex": "#F59E0B",
+              "tokenAlias": "amber/500",
+              "opacity": 1
+            }
+          ],
+          "textColor": {
+            "hex": "#FBBF24",
+            "tokenAlias": "state/waiting"
+          }
+        }
+      }
+    ],
+    "depthWarnings": []
+  }
+}

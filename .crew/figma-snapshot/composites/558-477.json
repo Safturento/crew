@@ -1,0 +1,196 @@
+{
+  "id": "558:477",
+  "name": "TimelineToolbar",
+  "type": "COMPONENT",
+  "page": "Composites",
+  "raw": {
+    "id": "558:477",
+    "name": "TimelineToolbar",
+    "type": "COMPONENT",
+    "scrollBehavior": "SCROLLS",
+    "blendMode": "PASS_THROUGH",
+    "clipsContent": false,
+    "background": [],
+    "fills": [],
+    "strokes": [],
+    "strokeWeight": 1,
+    "strokeAlign": "INSIDE",
+    "backgroundColor": {
+      "r": 0,
+      "g": 0,
+      "b": 0,
+      "a": 0
+    },
+    "layoutMode": "HORIZONTAL",
+    "counterAxisSizingMode": "FIXED",
+    "primaryAxisSizingMode": "FIXED",
+    "counterAxisAlignItems": "CENTER",
+    "primaryAxisAlignItems": "CENTER",
+    "itemSpacing": 10,
+    "layoutWrap": "NO_WRAP",
+    "absoluteBoundingBox": {
+      "x": 0,
+      "y": 5920,
+      "width": 628,
+      "height": 32
+    },
+    "absoluteRenderBounds": {
+      "x": 0,
+      "y": 5920,
+      "width": 628,
+      "height": 32
+    },
+    "constraints": {
+      "vertical": "TOP",
+      "horizontal": "LEFT"
+    },
+    "layoutSizingHorizontal": "FIXED",
+    "layoutSizingVertical": "FIXED",
+    "effects": [],
+    "interactions": [],
+    "complexStrokeProperties": {
+      "strokeType": "BASIC"
+    }
+  },
+  "enrichment": {
+    "source": "plugin-api",
+    "capturedAt": "2026-05-22T15:38:53.385Z",
+    "componentProperties": null,
+    "mainComponent": null,
+    "boundVariables": [],
+    "componentInstances": [
+      {
+        "id": "558:478",
+        "name": "Filters",
+        "path": [
+          "Filters"
+        ],
+        "mainComponentSetId": "272:120",
+        "variantOverrides": "type=button-sm, color=idle, intensity=mid, font=sans",
+        "componentPropertyOverrides": {
+          "Icon": "lucide/filter",
+          "Has Icon": true,
+          "Label": "Filters",
+          "type": "button-sm",
+          "color": "idle",
+          "intensity": "mid",
+          "font": "sans"
+        },
+        "resolvedStyles": {
+          "fills": [
+            {
+              "hex": "#172134",
+              "tokenAlias": "slate-1100",
+              "opacity": 1
+            }
+          ],
+          "strokes": [
+            {
+              "hex": "#475569",
+              "tokenAlias": "slate/600",
+              "opacity": 1
+            }
+          ],
+          "textColor": {
+            "hex": "#64748B",
+            "tokenAlias": "state/idle"
+          }
+        }
+      },
+      {
+        "id": "558:483",
+        "name": "Search",
+        "path": [
+          "Search"
+        ],
+        "mainComponentSetId": "318:230",
+        "variantOverrides": null,
+        "componentPropertyOverrides": {
+          "Icon": "lucide/search",
+          "Has Icon": true,
+          "Placeholder": "Placeholder"
+        },
+        "resolvedStyles": {
+          "fills": [
+            {
+              "hex": "#172134",
+              "tokenAlias": "slate-1100",
+              "opacity": 1
+            }
+          ],
+          "strokes": [
+            {
+              "hex": "#475569",
+              "tokenAlias": "slate/600",
+              "opacity": 1
+            }
+          ],
+          "textColor": {
+            "hex": "#64748B",
+            "tokenAlias": "state/idle"
+          }
+        }
+      },
+      {
+        "id": "558:488",
+        "name": "CollapseAll",
+        "path": [
+          "CollapseAll"
+        ],
+        "mainComponentSetId": "272:120",
+        "variantOverrides": "type=button-sm, color=idle, intensity=mid, font=sans",
+        "componentPropertyOverrides": {
+          "Icon": "lucide/list-collapse",
+          "Has Icon": true,
+          "Label": "Collapse all",
+          "type": "button-sm",
+          "color": "idle",
+          "intensity": "mid",
+          "font": "sans"
+        },
+        "resolvedStyles": {
+          "fills": [
+            {
+              "hex": "#172134",
+              "tokenAlias": "slate-1100",
+              "opacity": 1
+            }
+          ],
+          "strokes": [
+            {
+              "hex": "#475569",
+              "tokenAlias": "slate/600",
+              "opacity": 1
+            }
+          ],
+          "textColor": {
+            "hex": "#64748B",
+            "tokenAlias": "state/idle"
+          }
+        }
+      },
+      {
+        "id": "558:492",
+        "name": "Live",
+        "path": [
+          "Live"
+        ],
+        "mainComponentSetId": "335:242",
+        "variantOverrides": "state=on",
+        "componentPropertyOverrides": {
+          "Label": "Live",
+          "state": "on"
+        },
+        "resolvedStyles": {
+          "fills": [],
+          "strokes": [],
+          "textColor": {
+            "hex": "#94A3B8",
+            "tokenAlias": "muted-foreground"
+          }
+        }
+      }
+    ],
+    "depthWarnings": []
+  }
+}

@@ -122,7 +122,7 @@
   },
   "enrichment": {
     "source": "plugin-api",
-    "capturedAt": "2026-05-18T14:34:54.764Z",
+    "capturedAt": "2026-05-22T15:34:37.220Z",
     "componentProperties": null,
     "mainComponent": null,
     "boundVariables": [
@@ -150,35 +150,114 @@
     ],
     "componentInstances": [
       {
-        "id": "281:111",
-        "name": "Pill",
+        "id": "594:1196",
+        "name": "AgentHeader",
         "path": [
-          "AgentHeader",
-          "Metadata",
-          "Pill"
+          "AgentHeader"
         ],
-        "mainComponentSetId": "272:120",
-        "variantOverrides": "type=pill, color=initializing, intensity=mid",
+        "mainComponentSetId": "594:803",
+        "variantOverrides": null,
         "componentPropertyOverrides": {
-          "Icon": "lucide/circle",
-          "Has Icon": true,
-          "Label": "Initializing",
-          "type": "pill",
-          "color": "initializing",
-          "intensity": "mid"
+          "Show close button": true,
+          "Show Open as page": true
         },
         "resolvedStyles": {
           "fills": [
             {
-              "hex": "#17253F",
-              "tokenAlias": "blue-1050",
+              "hex": null,
+              "tokenAlias": null,
               "opacity": 1
             }
           ],
           "strokes": [
             {
-              "hex": "#3B82F6",
-              "tokenAlias": "blue/500",
+              "hex": "#1E293B",
+              "tokenAlias": "border",
+              "opacity": 1
+            }
+          ],
+          "textColor": {
+            "hex": "#94A3B8",
+            "tokenAlias": "muted-foreground"
+          }
+        }
+      },
+      {
+        "id": "579:655",
+        "name": "TokensByTool",
+        "path": [
+          "BodyContainer",
+          "Section: TOKENS BY TOOL",
+          "TokensByTool"
+        ],
+        "mainComponentSetId": "577:643",
+        "variantOverrides": null,
+        "componentPropertyOverrides": {
+          "total": "48k"
+        },
+        "resolvedStyles": {
+          "fills": [
+            {
+              "hex": "#0F172A",
+              "tokenAlias": "card",
+              "opacity": 1
+            }
+          ],
+          "strokes": [
+            {
+              "hex": "#1E293B",
+              "tokenAlias": "border",
+              "opacity": 1
+            }
+          ],
+          "textColor": {
+            "hex": "#94A3B8",
+            "tokenAlias": "muted-foreground"
+          }
+        }
+      },
+      {
+        "id": "573:543",
+        "name": "TimelineToolbar",
+        "path": [
+          "BodyContainer",
+          "Section: TIMELINE",
+          "TimelineToolbar"
+        ],
+        "mainComponentSetId": "558:477",
+        "variantOverrides": null,
+        "componentPropertyOverrides": {},
+        "resolvedStyles": {
+          "fills": [],
+          "strokes": [],
+          "textColor": {
+            "hex": "#64748B",
+            "tokenAlias": "state/idle"
+          }
+        }
+      },
+      {
+        "id": "573:561",
+        "name": "Section: initializing",
+        "path": [
+          "BodyContainer",
+          "Section: TIMELINE",
+          "sections",
+          "Section: initializing"
+        ],
+        "mainComponentSetId": "559:650",
+        "variantOverrides": "state=initializing",
+        "componentPropertyOverrides": {
+          "timestamp": "14:30:02",
+          "meta": "22s \u00b7 2 events \u00b7 150 tokens",
+          "state": "initializing"
+        },
+        "resolvedStyles": {
+          "fills": [],
+          "strokes": [
+            {
+              "hex": "#60A5FA",
+              "tokenAlias": "state/initializing",
               "opacity": 1
             }
           ],
@@ -189,21 +268,96 @@
         }
       },
       {
-        "id": "I281:111;276:331",
-        "name": "icon",
+        "id": "573:587",
+        "name": "Section: running",
         "path": [
-          "AgentHeader",
-          "Metadata",
-          "Pill",
-          "icon"
+          "BodyContainer",
+          "Section: TIMELINE",
+          "sections",
+          "Section: running"
         ],
-        "mainComponentSetId": "277:120",
-        "variantOverrides": null,
-        "componentPropertyOverrides": {},
+        "mainComponentSetId": "559:650",
+        "variantOverrides": "state=running",
+        "componentPropertyOverrides": {
+          "timestamp": "14:30:24",
+          "meta": "8m 12s \u00b7 14 events \u00b7 24k tokens",
+          "state": "running"
+        },
         "resolvedStyles": {
           "fills": [],
-          "strokes": [],
-          "textColor": null
+          "strokes": [
+            {
+              "hex": "#94A3B8",
+              "tokenAlias": "state/running",
+              "opacity": 1
+            }
+          ],
+          "textColor": {
+            "hex": "#94A3B8",
+            "tokenAlias": "state/running"
+          }
+        }
+      },
+      {
+        "id": "573:611",
+        "name": "Section: waiting",
+        "path": [
+          "BodyContainer",
+          "Section: TIMELINE",
+          "sections",
+          "Section: waiting"
+        ],
+        "mainComponentSetId": "559:650",
+        "variantOverrides": "state=waiting",
+        "componentPropertyOverrides": {
+          "timestamp": "14:38:36",
+          "meta": "1m 4s \u00b7 1 event \u00b7 800 tokens",
+          "state": "waiting"
+        },
+        "resolvedStyles": {
+          "fills": [],
+          "strokes": [
+            {
+              "hex": "#FBBF24",
+              "tokenAlias": "state/waiting",
+              "opacity": 1
+            }
+          ],
+          "textColor": {
+            "hex": "#FBBF24",
+            "tokenAlias": "state/waiting"
+          }
+        }
+      },
+      {
+        "id": "573:635",
+        "name": "Section: pr-open",
+        "path": [
+          "BodyContainer",
+          "Section: TIMELINE",
+          "sections",
+          "Section: pr-open"
+        ],
+        "mainComponentSetId": "559:650",
+        "variantOverrides": "state=pr-open",
+        "componentPropertyOverrides": {
+          "timestamp": "14:47:19",
+          "meta": "live \u00b7 18s \u00b7 0 events \u00b7 0 tokens",
+          "state": "pr-open"
+        },
+        "resolvedStyles": {
+          "fills": [],
+          "strokes": [
+            {
+              "hex": "#A78BFA",
+              "tokenAlias": "state/pr-open",
+              "opacity": 1
+            }
+          ],
+          "textColor": {
+            "hex": "#A78BFA",
+            "tokenAlias": "state/pr-open"
+          }
         }
       }
     ],

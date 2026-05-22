@@ -1,0 +1,540 @@
+{
+  "id": "559:650",
+  "name": "TimelineSection",
+  "type": "COMPONENT_SET",
+  "page": "Composites",
+  "raw": {
+    "id": "559:650",
+    "name": "TimelineSection",
+    "type": "COMPONENT_SET",
+    "scrollBehavior": "SCROLLS",
+    "componentPropertyDefinitions": {
+      "meta#559:0": {
+        "type": "TEXT",
+        "defaultValue": "8m 12s \u00b7 14 events \u00b7 24k tokens"
+      },
+      "timestamp#559:8": {
+        "type": "TEXT",
+        "defaultValue": "14:30:24"
+      },
+      "state": {
+        "type": "VARIANT",
+        "defaultValue": "initializing",
+        "variantOptions": [
+          "initializing",
+          "running",
+          "waiting",
+          "pr-open",
+          "error",
+          "finished",
+          "idle"
+        ]
+      }
+    },
+    "blendMode": "PASS_THROUGH",
+    "clipsContent": true,
+    "background": [],
+    "fills": [],
+    "strokes": [],
+    "cornerRadius": 5,
+    "cornerSmoothing": 0,
+    "strokeWeight": 1,
+    "strokeAlign": "INSIDE",
+    "backgroundColor": {
+      "r": 0,
+      "g": 0,
+      "b": 0,
+      "a": 0
+    },
+    "strokeDashes": [
+      10,
+      5
+    ],
+    "absoluteBoundingBox": {
+      "x": 0,
+      "y": 6052,
+      "width": 628,
+      "height": 680
+    },
+    "absoluteRenderBounds": {
+      "x": 0,
+      "y": 6052,
+      "width": 628,
+      "height": 680
+    },
+    "constraints": {
+      "vertical": "TOP",
+      "horizontal": "LEFT"
+    },
+    "effects": [],
+    "interactions": [],
+    "complexStrokeProperties": {
+      "strokeType": "BASIC"
+    }
+  },
+  "enrichment": {
+    "source": "plugin-api",
+    "capturedAt": "2026-05-22T15:32:32.101Z",
+    "componentProperties": null,
+    "mainComponent": null,
+    "boundVariables": [],
+    "componentInstances": [
+      {
+        "id": "559:493",
+        "name": "Pill",
+        "path": [
+          "state=initializing",
+          "Header",
+          "Pill"
+        ],
+        "mainComponentSetId": "272:120",
+        "variantOverrides": "type=pill, color=initializing, intensity=mid, font=mono",
+        "componentPropertyOverrides": {
+          "Icon": "lucide/circle",
+          "Has Icon": true,
+          "Label": "Initializing",
+          "type": "pill",
+          "color": "initializing",
+          "intensity": "mid",
+          "font": "mono"
+        },
+        "resolvedStyles": {
+          "fills": [
+            {
+              "hex": "#17253F",
+              "tokenAlias": "blue-1050",
+              "opacity": 1
+            }
+          ],
+          "strokes": [
+            {
+              "hex": "#3B82F6",
+              "tokenAlias": "blue/500",
+              "opacity": 1
+            }
+          ],
+          "textColor": {
+            "hex": "#60A5FA",
+            "tokenAlias": "state/initializing"
+          }
+        }
+      },
+      {
+        "id": "559:501",
+        "name": "TranscriptRow",
+        "path": [
+          "state=initializing",
+          "Body",
+          "TranscriptRow"
+        ],
+        "mainComponentSetId": "553:445",
+        "variantOverrides": null,
+        "componentPropertyOverrides": {
+          "Pill": "type=tag, color=waiting, intensity=mid, font=mono",
+          "tokens": "180 tok",
+          "timestamp": "14:30:04",
+          "text": "docker compose -f docker-compose.dev.yml up -d"
+        },
+        "resolvedStyles": {
+          "fills": [],
+          "strokes": [],
+          "textColor": {
+            "hex": "#FBBF24",
+            "tokenAlias": "state/waiting"
+          }
+        }
+      },
+      {
+        "id": "559:516",
+        "name": "Pill",
+        "path": [
+          "state=running",
+          "Header",
+          "Pill"
+        ],
+        "mainComponentSetId": "272:120",
+        "variantOverrides": "type=pill, color=running, intensity=mid, font=mono",
+        "componentPropertyOverrides": {
+          "Icon": "lucide/circle",
+          "Has Icon": true,
+          "Label": "Running",
+          "type": "pill",
+          "color": "running",
+          "intensity": "mid",
+          "font": "mono"
+        },
+        "resolvedStyles": {
+          "fills": [
+            {
+              "hex": "#1C2538",
+              "tokenAlias": "slate-1050",
+              "opacity": 1
+            }
+          ],
+          "strokes": [
+            {
+              "hex": "#64748B",
+              "tokenAlias": "slate/500",
+              "opacity": 1
+            }
+          ],
+          "textColor": {
+            "hex": "#94A3B8",
+            "tokenAlias": "state/running"
+          }
+        }
+      },
+      {
+        "id": "559:524",
+        "name": "TranscriptRow",
+        "path": [
+          "state=running",
+          "Body",
+          "TranscriptRow"
+        ],
+        "mainComponentSetId": "553:445",
+        "variantOverrides": null,
+        "componentPropertyOverrides": {
+          "Pill": "type=tag, color=waiting, intensity=mid, font=mono",
+          "tokens": "180 tok",
+          "timestamp": "14:30:04",
+          "text": "docker compose -f docker-compose.dev.yml up -d"
+        },
+        "resolvedStyles": {
+          "fills": [],
+          "strokes": [],
+          "textColor": {
+            "hex": "#FBBF24",
+            "tokenAlias": "state/waiting"
+          }
+        }
+      },
+      {
+        "id": "559:539",
+        "name": "Pill",
+        "path": [
+          "state=waiting",
+          "Header",
+          "Pill"
+        ],
+        "mainComponentSetId": "272:120",
+        "variantOverrides": "type=pill, color=waiting, intensity=mid, font=mono",
+        "componentPropertyOverrides": {
+          "Icon": "lucide/circle",
+          "Has Icon": true,
+          "Label": "Waiting",
+          "type": "pill",
+          "color": "waiting",
+          "intensity": "mid",
+          "font": "mono"
+        },
+        "resolvedStyles": {
+          "fills": [
+            {
+              "hex": "#26282A",
+              "tokenAlias": "amber-1050",
+              "opacity": 1
+            }
+          ],
+          "strokes": [
+            {
+              "hex": "#F59E0B",
+              "tokenAlias": "amber/500",
+              "opacity": 1
+            }
+          ],
+          "textColor": {
+            "hex": "#FBBF24",
+            "tokenAlias": "state/waiting"
+          }
+        }
+      },
+      {
+        "id": "559:547",
+        "name": "TranscriptRow",
+        "path": [
+          "state=waiting",
+          "Body",
+          "TranscriptRow"
+        ],
+        "mainComponentSetId": "553:445",
+        "variantOverrides": null,
+        "componentPropertyOverrides": {
+          "Pill": "type=tag, color=waiting, intensity=mid, font=mono",
+          "tokens": "180 tok",
+          "timestamp": "14:30:04",
+          "text": "docker compose -f docker-compose.dev.yml up -d"
+        },
+        "resolvedStyles": {
+          "fills": [],
+          "strokes": [],
+          "textColor": {
+            "hex": "#FBBF24",
+            "tokenAlias": "state/waiting"
+          }
+        }
+      },
+      {
+        "id": "559:562",
+        "name": "Pill",
+        "path": [
+          "state=pr-open",
+          "Header",
+          "Pill"
+        ],
+        "mainComponentSetId": "272:120",
+        "variantOverrides": "type=pill, color=pr-open, intensity=mid, font=mono",
+        "componentPropertyOverrides": {
+          "Has Icon": true,
+          "Icon": "lucide/circle",
+          "Label": "PR open",
+          "type": "pill",
+          "color": "pr-open",
+          "intensity": "mid",
+          "font": "mono"
+        },
+        "resolvedStyles": {
+          "fills": [
+            {
+              "hex": "#1E233F",
+              "tokenAlias": "violet-1050",
+              "opacity": 1
+            }
+          ],
+          "strokes": [
+            {
+              "hex": "#8B5CF6",
+              "tokenAlias": "violet/500",
+              "opacity": 1
+            }
+          ],
+          "textColor": {
+            "hex": "#A78BFA",
+            "tokenAlias": "state/pr-open"
+          }
+        }
+      },
+      {
+        "id": "559:570",
+        "name": "TranscriptRow",
+        "path": [
+          "state=pr-open",
+          "Body",
+          "TranscriptRow"
+        ],
+        "mainComponentSetId": "553:445",
+        "variantOverrides": null,
+        "componentPropertyOverrides": {
+          "Pill": "type=tag, color=waiting, intensity=mid, font=mono",
+          "tokens": "180 tok",
+          "timestamp": "14:30:04",
+          "text": "docker compose -f docker-compose.dev.yml up -d"
+        },
+        "resolvedStyles": {
+          "fills": [],
+          "strokes": [],
+          "textColor": {
+            "hex": "#FBBF24",
+            "tokenAlias": "state/waiting"
+          }
+        }
+      },
+      {
+        "id": "559:585",
+        "name": "Pill",
+        "path": [
+          "state=error",
+          "Header",
+          "Pill"
+        ],
+        "mainComponentSetId": "272:120",
+        "variantOverrides": "type=pill, color=error, intensity=mid, font=mono",
+        "componentPropertyOverrides": {
+          "Has Icon": true,
+          "Icon": "lucide/circle",
+          "Label": "Error",
+          "type": "pill",
+          "color": "error",
+          "intensity": "mid",
+          "font": "mono"
+        },
+        "resolvedStyles": {
+          "fills": [
+            {
+              "hex": "#262031",
+              "tokenAlias": "red-1050",
+              "opacity": 1
+            }
+          ],
+          "strokes": [
+            {
+              "hex": "#EF4444",
+              "tokenAlias": "red/500",
+              "opacity": 1
+            }
+          ],
+          "textColor": {
+            "hex": "#F87171",
+            "tokenAlias": "state/error"
+          }
+        }
+      },
+      {
+        "id": "559:593",
+        "name": "TranscriptRow",
+        "path": [
+          "state=error",
+          "Body",
+          "TranscriptRow"
+        ],
+        "mainComponentSetId": "553:445",
+        "variantOverrides": null,
+        "componentPropertyOverrides": {
+          "Pill": "type=tag, color=waiting, intensity=mid, font=mono",
+          "tokens": "180 tok",
+          "timestamp": "14:30:04",
+          "text": "docker compose -f docker-compose.dev.yml up -d"
+        },
+        "resolvedStyles": {
+          "fills": [],
+          "strokes": [],
+          "textColor": {
+            "hex": "#FBBF24",
+            "tokenAlias": "state/waiting"
+          }
+        }
+      },
+      {
+        "id": "559:608",
+        "name": "Pill",
+        "path": [
+          "state=finished",
+          "Header",
+          "Pill"
+        ],
+        "mainComponentSetId": "272:120",
+        "variantOverrides": "type=pill, color=finished, intensity=mid, font=mono",
+        "componentPropertyOverrides": {
+          "Icon": "lucide/circle",
+          "Has Icon": true,
+          "Label": "Finished",
+          "type": "pill",
+          "color": "finished",
+          "intensity": "mid",
+          "font": "mono"
+        },
+        "resolvedStyles": {
+          "fills": [
+            {
+              "hex": "#0F2733",
+              "tokenAlias": "emerald-1050",
+              "opacity": 1
+            }
+          ],
+          "strokes": [
+            {
+              "hex": "#059669",
+              "tokenAlias": "emerald/600",
+              "opacity": 1
+            }
+          ],
+          "textColor": {
+            "hex": "#10B981",
+            "tokenAlias": "state/finished"
+          }
+        }
+      },
+      {
+        "id": "559:616",
+        "name": "TranscriptRow",
+        "path": [
+          "state=finished",
+          "Body",
+          "TranscriptRow"
+        ],
+        "mainComponentSetId": "553:445",
+        "variantOverrides": null,
+        "componentPropertyOverrides": {
+          "Pill": "type=tag, color=waiting, intensity=mid, font=mono",
+          "tokens": "180 tok",
+          "timestamp": "14:30:04",
+          "text": "docker compose -f docker-compose.dev.yml up -d"
+        },
+        "resolvedStyles": {
+          "fills": [],
+          "strokes": [],
+          "textColor": {
+            "hex": "#FBBF24",
+            "tokenAlias": "state/waiting"
+          }
+        }
+      },
+      {
+        "id": "559:631",
+        "name": "Pill",
+        "path": [
+          "state=idle",
+          "Header",
+          "Pill"
+        ],
+        "mainComponentSetId": "272:120",
+        "variantOverrides": "type=pill, color=idle, intensity=mid, font=mono",
+        "componentPropertyOverrides": {
+          "Icon": "lucide/circle",
+          "Has Icon": true,
+          "Label": "Idle",
+          "type": "pill",
+          "color": "idle",
+          "intensity": "mid",
+          "font": "mono"
+        },
+        "resolvedStyles": {
+          "fills": [
+            {
+              "hex": "#172134",
+              "tokenAlias": "slate-1100",
+              "opacity": 1
+            }
+          ],
+          "strokes": [
+            {
+              "hex": "#475569",
+              "tokenAlias": "slate/600",
+              "opacity": 1
+            }
+          ],
+          "textColor": {
+            "hex": "#64748B",
+            "tokenAlias": "state/idle"
+          }
+        }
+      },
+      {
+        "id": "559:639",
+        "name": "TranscriptRow",
+        "path": [
+          "state=idle",
+          "Body",
+          "TranscriptRow"
+        ],
+        "mainComponentSetId": "553:445",
+        "variantOverrides": null,
+        "componentPropertyOverrides": {
+          "Pill": "type=tag, color=waiting, intensity=mid, font=mono",
+          "tokens": "180 tok",
+          "timestamp": "14:30:04",
+          "text": "docker compose -f docker-compose.dev.yml up -d"
+        },
+        "resolvedStyles": {
+          "fills": [],
+          "strokes": [],
+          "textColor": {
+            "hex": "#FBBF24",
+            "tokenAlias": "state/waiting"
+          }
+        }
+      }
+    ],
+    "depthWarnings": []
+  }
+}

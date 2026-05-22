@@ -34,13 +34,13 @@
       "x": 618,
       "y": 2074,
       "width": 558,
-      "height": 454
+      "height": 442
     },
     "absoluteRenderBounds": {
       "x": 618,
       "y": 2074,
       "width": 558,
-      "height": 454
+      "height": 442
     },
     "constraints": {
       "vertical": "TOP",
@@ -56,7 +56,7 @@
   },
   "enrichment": {
     "source": "plugin-api",
-    "capturedAt": "2026-05-18T14:31:57.207Z",
+    "capturedAt": "2026-05-22T15:36:47.013Z",
     "componentProperties": null,
     "mainComponent": null,
     "boundVariables": [],
@@ -83,60 +83,6 @@
         }
       },
       {
-        "id": "I338:1709;337:236",
-        "name": "input",
-        "path": [
-          "Container",
-          "FormField",
-          "input"
-        ],
-        "mainComponentSetId": "318:230",
-        "variantOverrides": null,
-        "componentPropertyOverrides": {
-          "Icon": "lucide/circle",
-          "Has Icon": false,
-          "Placeholder": "kanban-api"
-        },
-        "resolvedStyles": {
-          "fills": [
-            {
-              "hex": "#0F172A",
-              "tokenAlias": "card",
-              "opacity": 1
-            }
-          ],
-          "strokes": [
-            {
-              "hex": "#1E293B",
-              "tokenAlias": "border",
-              "opacity": 1
-            }
-          ],
-          "textColor": {
-            "hex": "#94A3B8",
-            "tokenAlias": "muted-foreground"
-          }
-        }
-      },
-      {
-        "id": "I338:1709;337:236;318:231",
-        "name": "icon",
-        "path": [
-          "Container",
-          "FormField",
-          "input",
-          "icon"
-        ],
-        "mainComponentSetId": "277:120",
-        "variantOverrides": null,
-        "componentPropertyOverrides": {},
-        "resolvedStyles": {
-          "fills": [],
-          "strokes": [],
-          "textColor": null
-        }
-      },
-      {
         "id": "338:1716",
         "name": "FormField",
         "path": [
@@ -155,60 +101,6 @@
             "hex": "#94A3B8",
             "tokenAlias": "muted-foreground"
           }
-        }
-      },
-      {
-        "id": "I338:1716;337:236",
-        "name": "input",
-        "path": [
-          "Container",
-          "FormField",
-          "input"
-        ],
-        "mainComponentSetId": "318:230",
-        "variantOverrides": null,
-        "componentPropertyOverrides": {
-          "Icon": "lucide/circle",
-          "Has Icon": false,
-          "Placeholder": "~/code/kanban-api"
-        },
-        "resolvedStyles": {
-          "fills": [
-            {
-              "hex": "#0F172A",
-              "tokenAlias": "card",
-              "opacity": 1
-            }
-          ],
-          "strokes": [
-            {
-              "hex": "#1E293B",
-              "tokenAlias": "border",
-              "opacity": 1
-            }
-          ],
-          "textColor": {
-            "hex": "#94A3B8",
-            "tokenAlias": "muted-foreground"
-          }
-        }
-      },
-      {
-        "id": "I338:1716;337:236;318:231",
-        "name": "icon",
-        "path": [
-          "Container",
-          "FormField",
-          "input",
-          "icon"
-        ],
-        "mainComponentSetId": "277:120",
-        "variantOverrides": null,
-        "componentPropertyOverrides": {},
-        "resolvedStyles": {
-          "fills": [],
-          "strokes": [],
-          "textColor": null
         }
       },
       {
@@ -233,60 +125,6 @@
         }
       },
       {
-        "id": "I338:1723;337:236",
-        "name": "input",
-        "path": [
-          "Container",
-          "FormField",
-          "input"
-        ],
-        "mainComponentSetId": "318:230",
-        "variantOverrides": null,
-        "componentPropertyOverrides": {
-          "Icon": "lucide/circle",
-          "Has Icon": false,
-          "Placeholder": "main"
-        },
-        "resolvedStyles": {
-          "fills": [
-            {
-              "hex": "#0F172A",
-              "tokenAlias": "card",
-              "opacity": 1
-            }
-          ],
-          "strokes": [
-            {
-              "hex": "#1E293B",
-              "tokenAlias": "border",
-              "opacity": 1
-            }
-          ],
-          "textColor": {
-            "hex": "#94A3B8",
-            "tokenAlias": "muted-foreground"
-          }
-        }
-      },
-      {
-        "id": "I338:1723;337:236;318:231",
-        "name": "icon",
-        "path": [
-          "Container",
-          "FormField",
-          "input",
-          "icon"
-        ],
-        "mainComponentSetId": "277:120",
-        "variantOverrides": null,
-        "componentPropertyOverrides": {},
-        "resolvedStyles": {
-          "fills": [],
-          "strokes": [],
-          "textColor": null
-        }
-      },
-      {
         "id": "338:1730",
         "name": "FormField",
         "path": [
@@ -305,60 +143,6 @@
             "hex": "#94A3B8",
             "tokenAlias": "muted-foreground"
           }
-        }
-      },
-      {
-        "id": "I338:1730;337:236",
-        "name": "input",
-        "path": [
-          "Container",
-          "FormField",
-          "input"
-        ],
-        "mainComponentSetId": "318:230",
-        "variantOverrides": null,
-        "componentPropertyOverrides": {
-          "Icon": "lucide/circle",
-          "Has Icon": false,
-          "Placeholder": "KAN"
-        },
-        "resolvedStyles": {
-          "fills": [
-            {
-              "hex": "#0F172A",
-              "tokenAlias": "card",
-              "opacity": 1
-            }
-          ],
-          "strokes": [
-            {
-              "hex": "#1E293B",
-              "tokenAlias": "border",
-              "opacity": 1
-            }
-          ],
-          "textColor": {
-            "hex": "#94A3B8",
-            "tokenAlias": "muted-foreground"
-          }
-        }
-      },
-      {
-        "id": "I338:1730;337:236;318:231",
-        "name": "icon",
-        "path": [
-          "Container",
-          "FormField",
-          "input",
-          "icon"
-        ],
-        "mainComponentSetId": "277:120",
-        "variantOverrides": null,
-        "componentPropertyOverrides": {},
-        "resolvedStyles": {
-          "fills": [],
-          "strokes": [],
-          "textColor": null
         }
       },
       {
@@ -383,60 +167,6 @@
         }
       },
       {
-        "id": "I338:1737;337:236",
-        "name": "input",
-        "path": [
-          "Container",
-          "FormField",
-          "input"
-        ],
-        "mainComponentSetId": "318:230",
-        "variantOverrides": null,
-        "componentPropertyOverrides": {
-          "Icon": "lucide/circle",
-          "Has Icon": false,
-          "Placeholder": "docker-compose.yml"
-        },
-        "resolvedStyles": {
-          "fills": [
-            {
-              "hex": "#0F172A",
-              "tokenAlias": "card",
-              "opacity": 1
-            }
-          ],
-          "strokes": [
-            {
-              "hex": "#1E293B",
-              "tokenAlias": "border",
-              "opacity": 1
-            }
-          ],
-          "textColor": {
-            "hex": "#94A3B8",
-            "tokenAlias": "muted-foreground"
-          }
-        }
-      },
-      {
-        "id": "I338:1737;337:236;318:231",
-        "name": "icon",
-        "path": [
-          "Container",
-          "FormField",
-          "input",
-          "icon"
-        ],
-        "mainComponentSetId": "277:120",
-        "variantOverrides": null,
-        "componentPropertyOverrides": {},
-        "resolvedStyles": {
-          "fills": [],
-          "strokes": [],
-          "textColor": null
-        }
-      },
-      {
         "id": "338:1744",
         "name": "FormField",
         "path": [
@@ -458,60 +188,6 @@
         }
       },
       {
-        "id": "I338:1744;337:236",
-        "name": "input",
-        "path": [
-          "Container",
-          "FormField",
-          "input"
-        ],
-        "mainComponentSetId": "318:230",
-        "variantOverrides": null,
-        "componentPropertyOverrides": {
-          "Icon": "lucide/circle",
-          "Has Icon": false,
-          "Placeholder": "pnpm test"
-        },
-        "resolvedStyles": {
-          "fills": [
-            {
-              "hex": "#0F172A",
-              "tokenAlias": "card",
-              "opacity": 1
-            }
-          ],
-          "strokes": [
-            {
-              "hex": "#1E293B",
-              "tokenAlias": "border",
-              "opacity": 1
-            }
-          ],
-          "textColor": {
-            "hex": "#94A3B8",
-            "tokenAlias": "muted-foreground"
-          }
-        }
-      },
-      {
-        "id": "I338:1744;337:236;318:231",
-        "name": "icon",
-        "path": [
-          "Container",
-          "FormField",
-          "input",
-          "icon"
-        ],
-        "mainComponentSetId": "277:120",
-        "variantOverrides": null,
-        "componentPropertyOverrides": {},
-        "resolvedStyles": {
-          "fills": [],
-          "strokes": [],
-          "textColor": null
-        }
-      },
-      {
         "id": "278:1511",
         "name": "Pill",
         "path": [
@@ -519,14 +195,15 @@
           "Pill"
         ],
         "mainComponentSetId": "272:120",
-        "variantOverrides": "type=button-sm, color=running, intensity=mid",
+        "variantOverrides": "type=button-sm, color=running, intensity=mid, font=sans",
         "componentPropertyOverrides": {
           "Icon": "lucide/git-pull-request",
           "Has Icon": false,
           "Label": "Cancel",
           "type": "button-sm",
           "color": "running",
-          "intensity": "mid"
+          "intensity": "mid",
+          "font": "sans"
         },
         "resolvedStyles": {
           "fills": [
@@ -550,23 +227,6 @@
         }
       },
       {
-        "id": "I278:1511;276:535",
-        "name": "icon",
-        "path": [
-          "Container",
-          "Pill",
-          "icon"
-        ],
-        "mainComponentSetId": "199:106",
-        "variantOverrides": null,
-        "componentPropertyOverrides": {},
-        "resolvedStyles": {
-          "fills": [],
-          "strokes": [],
-          "textColor": null
-        }
-      },
-      {
         "id": "278:1516",
         "name": "Pill",
         "path": [
@@ -574,14 +234,15 @@
           "Pill"
         ],
         "mainComponentSetId": "272:120",
-        "variantOverrides": "type=button-sm, color=white, intensity=loud",
+        "variantOverrides": "type=button-sm, color=white, intensity=loud, font=sans",
         "componentPropertyOverrides": {
           "Icon": "lucide/git-pull-request",
           "Has Icon": false,
           "Label": "Save",
           "type": "button-sm",
           "color": "white",
-          "intensity": "loud"
+          "intensity": "loud",
+          "font": "sans"
         },
         "resolvedStyles": {
           "fills": [
@@ -596,23 +257,6 @@
             "hex": "#09090B",
             "tokenAlias": "zinc/950"
           }
-        }
-      },
-      {
-        "id": "I278:1516;276:598",
-        "name": "icon",
-        "path": [
-          "Container",
-          "Pill",
-          "icon"
-        ],
-        "mainComponentSetId": "199:106",
-        "variantOverrides": null,
-        "componentPropertyOverrides": {},
-        "resolvedStyles": {
-          "fills": [],
-          "strokes": [],
-          "textColor": null
         }
       }
     ],

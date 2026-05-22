@@ -56,7 +56,7 @@
   },
   "enrichment": {
     "source": "plugin-api",
-    "capturedAt": "2026-05-18T14:27:02.372Z",
+    "capturedAt": "2026-05-22T15:32:33.066Z",
     "componentProperties": null,
     "mainComponent": null,
     "boundVariables": [],
@@ -89,14 +89,15 @@
           "Pill"
         ],
         "mainComponentSetId": "272:120",
-        "variantOverrides": "type=button-sm, color=running, intensity=mid",
+        "variantOverrides": "type=button-sm, color=running, intensity=mid, font=sans",
         "componentPropertyOverrides": {
           "Icon": "lucide/git-pull-request",
           "Has Icon": false,
-          "Label": "← Back",
+          "Label": "\u2190 Back",
           "type": "button-sm",
           "color": "running",
-          "intensity": "mid"
+          "intensity": "mid",
+          "font": "sans"
         },
         "resolvedStyles": {
           "fills": [
@@ -120,23 +121,6 @@
         }
       },
       {
-        "id": "I278:1465;276:535",
-        "name": "icon",
-        "path": [
-          "Container",
-          "Pill",
-          "icon"
-        ],
-        "mainComponentSetId": "199:106",
-        "variantOverrides": null,
-        "componentPropertyOverrides": {},
-        "resolvedStyles": {
-          "fills": [],
-          "strokes": [],
-          "textColor": null
-        }
-      },
-      {
         "id": "278:1470",
         "name": "Pill",
         "path": [
@@ -144,45 +128,35 @@
           "Pill"
         ],
         "mainComponentSetId": "272:120",
-        "variantOverrides": "type=button-sm, color=white, intensity=loud",
+        "variantOverrides": "type=button-sm, color=white, intensity=loud, font=sans",
         "componentPropertyOverrides": {
           "Icon": "lucide/git-pull-request",
           "Has Icon": false,
-          "Label": "Spawn agent →",
+          "Label": "Spawn agent \u2192",
           "type": "button-sm",
           "color": "white",
-          "intensity": "loud"
+          "intensity": "loud",
+          "font": "sans"
         },
         "resolvedStyles": {
           "fills": [
             {
-              "hex": "#FAFAFA",
-              "tokenAlias": "zinc/50",
+              "hex": "#1C2538",
+              "tokenAlias": "slate-1050",
               "opacity": 1
             }
           ],
-          "strokes": [],
+          "strokes": [
+            {
+              "hex": "#64748B",
+              "tokenAlias": "slate/500",
+              "opacity": 1
+            }
+          ],
           "textColor": {
-            "hex": "#09090B",
-            "tokenAlias": "zinc/950"
+            "hex": "#94A3B8",
+            "tokenAlias": "state/running"
           }
-        }
-      },
-      {
-        "id": "I278:1470;276:598",
-        "name": "icon",
-        "path": [
-          "Container",
-          "Pill",
-          "icon"
-        ],
-        "mainComponentSetId": "199:106",
-        "variantOverrides": null,
-        "componentPropertyOverrides": {},
-        "resolvedStyles": {
-          "fills": [],
-          "strokes": [],
-          "textColor": null
         }
       }
     ],

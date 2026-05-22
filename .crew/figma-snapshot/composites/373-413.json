@@ -151,7 +151,7 @@
   },
   "enrichment": {
     "source": "plugin-api",
-    "capturedAt": "2026-05-18T14:36:23.525Z",
+    "capturedAt": "2026-05-22T15:38:53.669Z",
     "componentProperties": null,
     "mainComponent": null,
     "boundVariables": [
@@ -186,14 +186,15 @@
           "cancel"
         ],
         "mainComponentSetId": "272:120",
-        "variantOverrides": "type=button-sm, color=running, intensity=mid",
+        "variantOverrides": "type=button-sm, color=running, intensity=mid, font=sans",
         "componentPropertyOverrides": {
           "Icon": "lucide/git-pull-request",
           "Has Icon": false,
           "Label": "Cancel",
           "type": "button-sm",
           "color": "running",
-          "intensity": "mid"
+          "intensity": "mid",
+          "font": "sans"
         },
         "resolvedStyles": {
           "fills": [
@@ -217,23 +218,6 @@
         }
       },
       {
-        "id": "I373:417;276:535",
-        "name": "icon",
-        "path": [
-          "footer",
-          "cancel",
-          "icon"
-        ],
-        "mainComponentSetId": "199:106",
-        "variantOverrides": null,
-        "componentPropertyOverrides": {},
-        "resolvedStyles": {
-          "fills": [],
-          "strokes": [],
-          "textColor": null
-        }
-      },
-      {
         "id": "373:422",
         "name": "action",
         "path": [
@@ -241,14 +225,15 @@
           "action"
         ],
         "mainComponentSetId": "272:120",
-        "variantOverrides": "type=button-sm, color=error, intensity=loud",
+        "variantOverrides": "type=button-sm, color=error, intensity=loud, font=sans",
         "componentPropertyOverrides": {
           "Icon": "lucide/git-pull-request",
           "Has Icon": false,
           "Label": "Continue",
           "type": "button-sm",
           "color": "error",
-          "intensity": "loud"
+          "intensity": "loud",
+          "font": "sans"
         },
         "resolvedStyles": {
           "fills": [
@@ -263,23 +248,6 @@
             "hex": "#020617",
             "tokenAlias": "state/foreground"
           }
-        }
-      },
-      {
-        "id": "I373:422;276:574",
-        "name": "icon",
-        "path": [
-          "footer",
-          "action",
-          "icon"
-        ],
-        "mainComponentSetId": "199:106",
-        "variantOverrides": null,
-        "componentPropertyOverrides": {},
-        "resolvedStyles": {
-          "fills": [],
-          "strokes": [],
-          "textColor": null
         }
       }
     ],
