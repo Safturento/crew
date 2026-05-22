@@ -76,6 +76,13 @@ export interface AgentDetailTokens {
   cache_creation: number;
 }
 
+export interface AgentDetailTokensByTool {
+  tool: string;
+  tokens: number;
+  /** Share of the agent's total tool-call tokens, 0–100. */
+  percent: number;
+}
+
 export interface AgentDetail {
   key: string;
   project: string;
@@ -84,6 +91,12 @@ export interface AgentDetail {
   state: AgentState;
   worktree_path: string;
   pr_url: string | null;
+  /** Browsable app URL for the project (CREW-178). Null when not configured. */
+  app_url: string | null;
+  /** `<jira.site>/browse/<ticket_key>` (CREW-178). Null when not derivable. */
+  jira_url: string | null;
+  /** Per-tool token aggregate served by the daemon (CREW-178). */
+  tokens_by_tool: AgentDetailTokensByTool[];
   runs: AgentDetailRun[];
   tokens: AgentDetailTokens;
   tool_call_count: number;
