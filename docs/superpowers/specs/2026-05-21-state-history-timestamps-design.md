@@ -91,3 +91,50 @@ One row per state with a connector line on the left. Each row carries `dot · la
 2. Each direction visibly uses Crew DS tokens (colors via state-token bindings, type via DS text styles, spacing via DS spacing tokens).
 3. The current state is visually distinguished (hollow dot or equivalent) and labelled to convey the live-ticker intent.
 4. User picks a direction (or a hybrid) to take forward into the implementation pass.
+
+---
+
+## Pivot (2026-05-21 evening) — merge into timeline section headers
+
+After mocking the three directions, a structural redundancy surfaced: **Direction C (vertical timeline) is essentially the existing drawer timeline when all sections are collapsed.** Keeping `StateHistoryBar` as a separate component duplicates information that the timeline section headers already carry.
+
+The drawer design (`1:378` → `Container 1:814`) confirms it: the timeline (`Section 1:938`) already groups events under per-state section headers (`1:965`, `1:1008`, `1:1114`) with chevron + state Pill + `started HH:MM:SS` + `· N events`. Only thing missing is **elapsed time in state**. Standalone State History (`Section 1:901`) becomes dead weight.
+
+### Revised approach
+
+1. **Delete the standalone `STATE HISTORY` section** from the drawer (`1:901`). Single source of truth = timeline section headers.
+2. **Add elapsed-in-state to each timeline section header**, next to (or replacing) the existing `started HH:MM:SS` text. Timestamp stays accessible — exact placement is a sub-decision (see below).
+3. **Add a Collapse-all / Expand-all toggle** to the timeline toolbar (`Container 1:942`), positioned **between the Search input and the Live mode Switch**.
+4. **"All collapsed" state = the new state-history view.** Same dataset, same DS, no parallel component.
+
+### Section-header layout — sub-decision to mock
+
+Three header layouts to compare, each shown inline at drawer width:
+
+- **L1 — All-inline, append elapsed:** `[▾] [Running pill] started 14:30:24 · 4m 22s · 8 events`. Smallest delta from today.
+- **L2 — Right-aligned timestamp:** `[▾] [Running pill] 4m 22s · 8 events                14:30:24`. Separates "what + how long" (left) from "when" (right edge).
+- **L3 — Timestamp on tooltip only:** `[▾] [Running pill] 4m 22s · 8 events`. Hover/tap the row reveals `Entered 14:30:24`. Consistent with the original spec decision and reduces noise.
+
+Each layout is mocked in both **expanded** (one row of events under the header) and **collapsed** (header only, stacked vertically with the connector line implied between headers) states. The collapsed-all stack is the "new state history" view.
+
+Live state visual treatment carries over from the original exploration: hollow/loud dot on the active state's pill, live elapsed counter ticking in real time.
+
+### What carries forward from the exploration
+
+- The state pill (`type=pill, intensity=mid`) is the visual anchor — already in use on the existing section headers.
+- The vertical connector line concept from Direction C stays — visible between headers, especially when fully collapsed.
+- The "live state distinguished" rule from Direction A's `intensity=loud` carries over for the active section.
+- Directions A and B are retired — superseded by this pivot.
+
+### Out of scope (revised)
+
+- Implementation in code — the entire drawer is being rebuilt to match the Figma; this spec covers design only.
+- Sticky section header behavior on scroll (assume sticky; mock once and call it good).
+- New-state-arrived live-mode interaction (auto-expand new section vs. let user choose) — design call to make once the rest is locked.
+
+### Acceptance (revised)
+
+1. Three section-header layouts (L1, L2, L3) exist on the `Composites` page in a new scratch frame, each shown in both expanded and collapsed-only states.
+2. The toolbar mock includes the new Collapse-all toggle in the correct position.
+3. A "fully collapsed" timeline state is shown in each layout to validate that it reads as a state-history overview.
+4. The user picks one layout (or a hybrid) to apply to the live drawer design (`1:378`). At that point the standalone State History section (`1:901`) is deleted and the toolbar updated.
