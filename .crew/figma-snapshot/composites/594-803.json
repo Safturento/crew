@@ -1,0 +1,435 @@
+{
+  "id": "594:803",
+  "name": "DrawerHeader",
+  "type": "COMPONENT",
+  "page": "Composites",
+  "raw": {
+    "id": "594:803",
+    "name": "DrawerHeader",
+    "type": "COMPONENT",
+    "scrollBehavior": "SCROLLS",
+    "componentPropertyDefinitions": {
+      "Show Open as page#594:0": {
+        "type": "BOOLEAN",
+        "defaultValue": true
+      },
+      "Show close button#594:1": {
+        "type": "BOOLEAN",
+        "defaultValue": true
+      }
+    },
+    "boundVariables": {
+      "strokes": [
+        {
+          "type": "VARIABLE_ALIAS",
+          "id": "VariableID:217:224"
+        }
+      ]
+    },
+    "blendMode": "PASS_THROUGH",
+    "clipsContent": false,
+    "background": [
+      {
+        "blendMode": "NORMAL",
+        "type": "GRADIENT_LINEAR",
+        "gradientHandlePositions": [
+          {
+            "x": 0.5,
+            "y": -2.1283872659947148e-16
+          },
+          {
+            "x": 0.5000000000000001,
+            "y": 0.9999999999999998
+          },
+          {
+            "x": 0.3496501410906422,
+            "y": -1.822225565921782e-16
+          }
+        ],
+        "gradientStops": [
+          {
+            "color": {
+              "r": 1,
+              "g": 1,
+              "b": 1,
+              "a": 0.019999999552965164
+            },
+            "position": 0
+          },
+          {
+            "color": {
+              "r": 1,
+              "g": 1,
+              "b": 1,
+              "a": 0
+            },
+            "position": 1
+          }
+        ]
+      }
+    ],
+    "fills": [
+      {
+        "blendMode": "NORMAL",
+        "type": "GRADIENT_LINEAR",
+        "gradientHandlePositions": [
+          {
+            "x": 0.5,
+            "y": -2.1283872659947148e-16
+          },
+          {
+            "x": 0.5000000000000001,
+            "y": 0.9999999999999998
+          },
+          {
+            "x": 0.3496501410906422,
+            "y": -1.822225565921782e-16
+          }
+        ],
+        "gradientStops": [
+          {
+            "color": {
+              "r": 1,
+              "g": 1,
+              "b": 1,
+              "a": 0.019999999552965164
+            },
+            "position": 0
+          },
+          {
+            "color": {
+              "r": 1,
+              "g": 1,
+              "b": 1,
+              "a": 0
+            },
+            "position": 1
+          }
+        ]
+      }
+    ],
+    "strokes": [
+      {
+        "blendMode": "NORMAL",
+        "type": "SOLID",
+        "color": {
+          "r": 0.11764705926179886,
+          "g": 0.16078431904315948,
+          "b": 0.23137255012989044,
+          "a": 1
+        },
+        "boundVariables": {
+          "color": {
+            "type": "VARIABLE_ALIAS",
+            "id": "VariableID:217:224"
+          }
+        }
+      }
+    ],
+    "strokeWeight": 0,
+    "individualStrokeWeights": {
+      "top": 0,
+      "right": 0,
+      "bottom": 1,
+      "left": 0
+    },
+    "strokeAlign": "INSIDE",
+    "backgroundColor": {
+      "r": 0,
+      "g": 0,
+      "b": 0,
+      "a": 0
+    },
+    "layoutMode": "VERTICAL",
+    "paddingLeft": 24,
+    "paddingRight": 24,
+    "paddingTop": 18,
+    "paddingBottom": 16,
+    "itemSpacing": 9.199999809265137,
+    "layoutWrap": "NO_WRAP",
+    "absoluteBoundingBox": {
+      "x": 0,
+      "y": 7338,
+      "width": 767,
+      "height": 206.78500366210938
+    },
+    "absoluteRenderBounds": {
+      "x": 0,
+      "y": 7338,
+      "width": 767,
+      "height": 206.78515625
+    },
+    "constraints": {
+      "vertical": "TOP",
+      "horizontal": "LEFT"
+    },
+    "layoutSizingHorizontal": "HUG",
+    "layoutSizingVertical": "HUG",
+    "effects": [],
+    "interactions": [],
+    "complexStrokeProperties": {
+      "strokeType": "BASIC"
+    }
+  },
+  "enrichment": {
+    "source": "plugin-api",
+    "capturedAt": "2026-05-22T15:34:36.647Z",
+    "componentProperties": null,
+    "mainComponent": null,
+    "boundVariables": [
+      {
+        "path": "strokes[0].color",
+        "variableId": "VariableID:217:224",
+        "variableName": "border",
+        "resolvedAlias": "border -> slate/800",
+        "resolvedHex": "#1E293B"
+      }
+    ],
+    "componentInstances": [
+      {
+        "id": "581:2904",
+        "name": "Pill",
+        "path": [
+          "Container",
+          "Container",
+          "Pill"
+        ],
+        "mainComponentSetId": "272:120",
+        "variantOverrides": "type=button-sm, color=running, intensity=ghost, font=sans",
+        "componentPropertyOverrides": {
+          "Has Icon": true,
+          "Icon": "lucide/arrow-up-right",
+          "Label": "Open as page",
+          "type": "button-sm",
+          "color": "running",
+          "intensity": "ghost",
+          "font": "sans"
+        },
+        "resolvedStyles": {
+          "fills": [],
+          "strokes": [],
+          "textColor": {
+            "hex": "#94A3B8",
+            "tokenAlias": "state/running"
+          }
+        }
+      },
+      {
+        "id": "581:2905",
+        "name": "Pill",
+        "path": [
+          "Container",
+          "Container",
+          "Pill"
+        ],
+        "mainComponentSetId": "272:120",
+        "variantOverrides": "type=button-sm, color=waiting, intensity=loud, font=sans",
+        "componentPropertyOverrides": {
+          "Has Icon": false,
+          "Icon": "lucide/git-pull-request",
+          "Label": "Provide input",
+          "type": "button-sm",
+          "color": "waiting",
+          "intensity": "loud",
+          "font": "sans"
+        },
+        "resolvedStyles": {
+          "fills": [
+            {
+              "hex": "#FBBF24",
+              "tokenAlias": "state/waiting",
+              "opacity": 1
+            }
+          ],
+          "strokes": [],
+          "textColor": {
+            "hex": "#020617",
+            "tokenAlias": "state/foreground"
+          }
+        }
+      },
+      {
+        "id": "581:2906",
+        "name": "Pill",
+        "path": [
+          "Container",
+          "Container",
+          "Pill"
+        ],
+        "mainComponentSetId": "272:120",
+        "variantOverrides": "type=button-icon-sm, color=running, intensity=ghost, font=sans",
+        "componentPropertyOverrides": {
+          "Label": "Label",
+          "Has Icon": true,
+          "Icon": "lucide/x",
+          "type": "button-icon-sm",
+          "color": "running",
+          "intensity": "ghost",
+          "font": "sans"
+        },
+        "resolvedStyles": {
+          "fills": [],
+          "strokes": [],
+          "textColor": null
+        }
+      },
+      {
+        "id": "581:2910",
+        "name": "Pill",
+        "path": [
+          "Container",
+          "Pill"
+        ],
+        "mainComponentSetId": "272:120",
+        "variantOverrides": "type=pill, color=waiting, intensity=mid, font=mono",
+        "componentPropertyOverrides": {
+          "Icon": "lucide/circle",
+          "Has Icon": true,
+          "Label": "Waiting",
+          "type": "pill",
+          "color": "waiting",
+          "intensity": "mid",
+          "font": "mono"
+        },
+        "resolvedStyles": {
+          "fills": [
+            {
+              "hex": "#26282A",
+              "tokenAlias": "amber-1050",
+              "opacity": 1
+            }
+          ],
+          "strokes": [
+            {
+              "hex": "#F59E0B",
+              "tokenAlias": "amber/500",
+              "opacity": 1
+            }
+          ],
+          "textColor": {
+            "hex": "#FBBF24",
+            "tokenAlias": "state/waiting"
+          }
+        }
+      },
+      {
+        "id": "596:872",
+        "name": "DockerPill",
+        "path": [
+          "Container",
+          "DockerPill"
+        ],
+        "mainComponentSetId": "272:120",
+        "variantOverrides": "type=button-default, color=idle, intensity=mid, font=mono",
+        "componentPropertyOverrides": {
+          "Icon": "lucide/container",
+          "Has Icon": true,
+          "Label": "http://localhost:7421",
+          "type": "button-default",
+          "color": "idle",
+          "intensity": "mid",
+          "font": "mono"
+        },
+        "resolvedStyles": {
+          "fills": [
+            {
+              "hex": "#172134",
+              "tokenAlias": "slate-1100",
+              "opacity": 1
+            }
+          ],
+          "strokes": [
+            {
+              "hex": "#475569",
+              "tokenAlias": "slate/600",
+              "opacity": 1
+            }
+          ],
+          "textColor": {
+            "hex": "#64748B",
+            "tokenAlias": "state/idle"
+          }
+        }
+      },
+      {
+        "id": "596:877",
+        "name": "JiraPill",
+        "path": [
+          "Container",
+          "JiraPill"
+        ],
+        "mainComponentSetId": "272:120",
+        "variantOverrides": "type=button-default, color=idle, intensity=mid, font=sans",
+        "componentPropertyOverrides": {
+          "Icon": "lucide/square-arrow-out-up-right",
+          "Has Icon": true,
+          "Label": "KAN-23",
+          "type": "button-default",
+          "color": "idle",
+          "intensity": "mid",
+          "font": "sans"
+        },
+        "resolvedStyles": {
+          "fills": [
+            {
+              "hex": "#172134",
+              "tokenAlias": "slate-1100",
+              "opacity": 1
+            }
+          ],
+          "strokes": [
+            {
+              "hex": "#475569",
+              "tokenAlias": "slate/600",
+              "opacity": 1
+            }
+          ],
+          "textColor": {
+            "hex": "#64748B",
+            "tokenAlias": "state/idle"
+          }
+        }
+      },
+      {
+        "id": "596:866",
+        "name": "WorktreePill",
+        "path": [
+          "Container",
+          "WorktreePill"
+        ],
+        "mainComponentSetId": "272:120",
+        "variantOverrides": "type=button-default, color=idle, intensity=mid, font=mono",
+        "componentPropertyOverrides": {
+          "Icon": "lucide/folder-git",
+          "Has Icon": true,
+          "Label": "~/code/kanban-api/.worktrees/KAN-23",
+          "type": "button-default",
+          "color": "idle",
+          "intensity": "mid",
+          "font": "mono"
+        },
+        "resolvedStyles": {
+          "fills": [
+            {
+              "hex": "#172134",
+              "tokenAlias": "slate-1100",
+              "opacity": 1
+            }
+          ],
+          "strokes": [
+            {
+              "hex": "#475569",
+              "tokenAlias": "slate/600",
+              "opacity": 1
+            }
+          ],
+          "textColor": {
+            "hex": "#64748B",
+            "tokenAlias": "state/idle"
+          }
+        }
+      }
+    ],
+    "depthWarnings": []
+  }
+}

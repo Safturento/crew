@@ -92,7 +92,7 @@
   },
   "enrichment": {
     "source": "plugin-api",
-    "capturedAt": "2026-05-18T14:36:23.664Z",
+    "capturedAt": "2026-05-22T15:30:31.940Z",
     "componentProperties": null,
     "mainComponent": null,
     "boundVariables": [
@@ -145,79 +145,39 @@
         }
       },
       {
-        "id": "I244:961;278:1622",
-        "name": "Pill",
+        "id": "587:3177",
+        "name": "AgentBody (full page)",
         "path": [
           "Background",
           "Background+Border+Shadow",
           "Container",
-          "TopNav",
-          "right",
-          "Pill"
+          "AgentBody (full page)"
         ],
-        "mainComponentSetId": "272:120",
-        "variantOverrides": "type=button-sm, color=idle, intensity=loud",
-        "componentPropertyOverrides": {
-          "Icon": "lucide/plus",
-          "Has Icon": true,
-          "Label": "New Run",
-          "type": "button-sm",
-          "color": "idle",
-          "intensity": "loud"
-        },
+        "mainComponentSetId": "220:246",
+        "variantOverrides": null,
+        "componentPropertyOverrides": {},
         "resolvedStyles": {
           "fills": [
             {
-              "hex": "#64748B",
-              "tokenAlias": "state/idle",
+              "hex": "#020617",
+              "tokenAlias": "background",
               "opacity": 1
             }
           ],
-          "strokes": [],
+          "strokes": [
+            {
+              "hex": "#1E293B",
+              "tokenAlias": "border",
+              "opacity": 1
+            }
+          ],
           "textColor": {
-            "hex": "#020617",
-            "tokenAlias": "state/foreground"
+            "hex": "#94A3B8",
+            "tokenAlias": "muted-foreground"
           }
         }
       }
     ],
-    "depthWarnings": [
-      {
-        "depthExceeded": true,
-        "depth": 7,
-        "atNodeId": "I244:961;243:105",
-        "atName": "logo"
-      },
-      {
-        "depthExceeded": true,
-        "depth": 7,
-        "atNodeId": "I244:961;243:114",
-        "atName": "tabs"
-      },
-      {
-        "depthExceeded": true,
-        "depth": 7,
-        "atNodeId": "I244:961;243:120",
-        "atName": "attention"
-      },
-      {
-        "depthExceeded": true,
-        "depth": 7,
-        "atNodeId": "I244:961;278:1622",
-        "atName": "Pill"
-      },
-      {
-        "depthExceeded": true,
-        "depth": 7,
-        "atNodeId": "1:1932",
-        "atName": "Header"
-      },
-      {
-        "depthExceeded": true,
-        "depth": 7,
-        "atNodeId": "1:1985",
-        "atName": "Container"
-      }
-    ]
+    "depthWarnings": []
   }
 }

@@ -275,6 +275,34 @@ The first two examples resolve once the structural fix lands. The third is a ski
 
 ### Dashboard UI
 
+#### 2026-05-22 — Layer-1 RunMetrics widget loses its drawer home in the redesign — find it a new one
+
+**What:** The 2026-05-21 drawer redesign (Figma `9FeJPriqdsdA4n9R5Xsrr8`, AgentBody `220:246`) does not include `RunMetrics` anywhere. The widget renders Layer-1 cohort metrics (`docLoadCoveragePct`, `cleanlinessPass`, `prClaimInputTokens`, `parityViolations`) and currently sits between AgentHeader and Timeline in `AgentBody.tsx:45`. The drawer code-migration plan (this session, 2026-05-22) drops it from drawer + AgentPage entirely. The component itself stays — `RunMetrics.tsx` is solid — but with no caller it'll be dead code until placed somewhere.
+
+**Why noticed:** Drawer code-migration brainstorm 2026-05-22. The Figma redesign is intentionally focused on per-agent run state (DrawerHeader + TokensByTool + TimelineSection); cohort metrics are an orthogonal concern. Drop-and-revisit was the right call mid-brainstorm, but the widget shouldn't just evaporate — Layer-1 is the whole point of CREW-164.
+
+**Anchors:**
+
+- `packages/dashboard/src/components/RunMetrics.tsx` — the widget being dropped
+- `packages/dashboard/src/components/MetricsTrendWidget.tsx` — sibling widget that may share the same fate / home
+- `packages/dashboard/src/components/AgentBody.tsx:45` — current call-site, deleted by the drawer migration
+- CREW-164 (Layer-1 metrics pipeline — what produces the data)
+- Drawer migration spec: `docs/superpowers/specs/2026-05-22-drawer-code-migration-design.md` (to be written this session)
+
+**What's been considered:**
+
+- **Dedicated `/metrics` route.** RunMetrics + MetricsTrendWidget on their own screen. Clean separation between "what's happening with this run" (drawer) and "how are runs doing across cohorts" (metrics page). Largest scope.
+- **Sidebar/footer on AgentPage.** Less disruptive but reintroduces the same "doesn't belong here" problem the drawer redesign solved.
+- **Per-run drawer footer.** Show the *single run's* metrics at the bottom of the drawer (small row of 4 values), distinct from the cohort aggregate. Requires deciding whether to keep `RunMetrics` (cohort-aware) or build a per-run variant.
+
+**Shape of work:** Decision-first. Once placement is decided, implementation is small — re-render `RunMetrics` in a different location, or build a thin per-run variant if going that route. The blocker is product/design clarity on what the metrics are *for* in this UI.
+
+**Open questions:**
+
+- What story do Layer-1 metrics tell, and to whom? (Cohort health snapshot for ops? Per-run quality gate for an author? Both?)
+- Are `RunMetrics` (cohort) and `MetricsTrendWidget` two surfaces of the same idea or distinct? They share a backend (`/api/metrics`) but render differently.
+- Does anyone actively look at these metrics today, or was the widget aspirational? If aspirational, deprecation is a third option.
+
 #### 2026-05-13 — Agent drawer Close button uses Unicode "✕" glyph instead of `lucide/x` SVG
 
 **What:** The Close button at the top-right of the Agent Drawer declares `Icon=lucide/x` in its componentProperties — the polish-pass session on 2026-05-12 migrated the Figma side to use the proper SVG. The dashboard's drawer code (`routes/AgentDrawer.tsx:42`) still renders `Close ✕` (Unicode glyph) inline, not the lucide SVG. Same class of bug as the View PR / Open as page Unicode-arrow issue caught in CREW-135 F5, but on a different button.

@@ -131,7 +131,7 @@
   },
   "enrichment": {
     "source": "plugin-api",
-    "capturedAt": "2026-05-18T14:24:12.273Z",
+    "capturedAt": "2026-05-22T15:30:31.750Z",
     "componentProperties": null,
     "mainComponent": null,
     "boundVariables": [
@@ -197,129 +197,6 @@
         }
       },
       {
-        "id": "I244:1036;245:114",
-        "name": "brandmark",
-        "path": [
-          "Background+Border+Shadow",
-          "Container",
-          "TopNav",
-          "left",
-          "logo",
-          "brandmark"
-        ],
-        "mainComponentSetId": "220:211",
-        "variantOverrides": null,
-        "componentPropertyOverrides": {},
-        "resolvedStyles": {
-          "fills": [
-            {
-              "hex": null,
-              "tokenAlias": null,
-              "opacity": 1
-            }
-          ],
-          "strokes": [],
-          "textColor": null
-        }
-      },
-      {
-        "id": "I244:1036;332:235",
-        "name": "count-pill",
-        "path": [
-          "Background+Border+Shadow",
-          "Container",
-          "TopNav",
-          "right",
-          "attention",
-          "count-pill"
-        ],
-        "mainComponentSetId": "272:120",
-        "variantOverrides": "type=pill, color=waiting, intensity=mid",
-        "componentPropertyOverrides": {
-          "Icon": "lucide/git-pull-request",
-          "Has Icon": false,
-          "Label": "3",
-          "type": "pill",
-          "color": "waiting",
-          "intensity": "mid"
-        },
-        "resolvedStyles": {
-          "fills": [
-            {
-              "hex": "#26282A",
-              "tokenAlias": "amber-1050",
-              "opacity": 1
-            }
-          ],
-          "strokes": [
-            {
-              "hex": "#F59E0B",
-              "tokenAlias": "amber/500",
-              "opacity": 1
-            }
-          ],
-          "textColor": {
-            "hex": "#FBBF24",
-            "tokenAlias": "state/waiting"
-          }
-        }
-      },
-      {
-        "id": "I244:1036;278:1627",
-        "name": "Pill",
-        "path": [
-          "Background+Border+Shadow",
-          "Container",
-          "TopNav",
-          "right",
-          "Pill"
-        ],
-        "mainComponentSetId": "272:120",
-        "variantOverrides": "type=button-sm, color=idle, intensity=loud",
-        "componentPropertyOverrides": {
-          "Icon": "lucide/plus",
-          "Has Icon": true,
-          "Label": "New Run",
-          "type": "button-sm",
-          "color": "idle",
-          "intensity": "loud"
-        },
-        "resolvedStyles": {
-          "fills": [
-            {
-              "hex": "#64748B",
-              "tokenAlias": "state/idle",
-              "opacity": 1
-            }
-          ],
-          "strokes": [],
-          "textColor": {
-            "hex": "#020617",
-            "tokenAlias": "state/foreground"
-          }
-        }
-      },
-      {
-        "id": "I244:1036;278:1627;276:514",
-        "name": "icon",
-        "path": [
-          "Background+Border+Shadow",
-          "Container",
-          "TopNav",
-          "right",
-          "Pill",
-          "icon"
-        ],
-        "mainComponentSetId": "243:102",
-        "variantOverrides": null,
-        "componentPropertyOverrides": {},
-        "resolvedStyles": {
-          "fills": [],
-          "strokes": [],
-          "textColor": null
-        }
-      },
-      {
         "id": "278:1431",
         "name": "Pill",
         "path": [
@@ -331,14 +208,15 @@
           "Pill"
         ],
         "mainComponentSetId": "272:120",
-        "variantOverrides": "type=button-sm, color=running, intensity=mid",
+        "variantOverrides": "type=button-sm, color=running, intensity=mid, font=sans",
         "componentPropertyOverrides": {
           "Icon": "lucide/git-pull-request",
           "Has Icon": false,
           "Label": "Register project",
           "type": "button-sm",
           "color": "running",
-          "intensity": "mid"
+          "intensity": "mid",
+          "font": "sans"
         },
         "resolvedStyles": {
           "fills": [
@@ -398,109 +276,13 @@
             "tokenAlias": "foreground"
           }
         }
-      },
-      {
-        "id": "I365:2247;364:375",
-        "name": "RegisterModalContent",
-        "path": [
-          "Background+Border+Shadow",
-          "Container",
-          "Main",
-          "Overlay",
-          "Modal",
-          "RegisterModalContent"
-        ],
-        "mainComponentSetId": "362:2209",
-        "variantOverrides": null,
-        "componentPropertyOverrides": {},
-        "resolvedStyles": {
-          "fills": [],
-          "strokes": [],
-          "textColor": {
-            "hex": "#94A3B8",
-            "tokenAlias": "muted-foreground"
-          }
-        }
       }
     ],
     "depthWarnings": [
       {
-        "depthExceeded": true,
-        "depth": 7,
-        "atNodeId": "I244:1036;245:114",
-        "atName": "brandmark"
-      },
-      {
-        "depthExceeded": true,
-        "depth": 7,
-        "atNodeId": "I244:1036;245:117",
-        "atName": "tab-agents"
-      },
-      {
-        "depthExceeded": true,
-        "depth": 7,
-        "atNodeId": "I244:1036;245:119",
-        "atName": "tab-projects"
-      },
-      {
-        "depthExceeded": true,
-        "depth": 7,
-        "atNodeId": "I244:1036;332:235",
-        "atName": "count-pill"
-      },
-      {
-        "depthExceeded": true,
-        "depth": 7,
-        "atNodeId": "I244:1036;278:1627;276:514",
-        "atName": "icon"
-      },
-      {
-        "depthExceeded": true,
-        "depth": 7,
-        "atNodeId": "278:1431",
-        "atName": "Pill"
-      },
-      {
-        "depthExceeded": true,
-        "depth": 7,
-        "atNodeId": "1:2687",
-        "atName": "Background+HorizontalBorder"
-      },
-      {
-        "depthExceeded": true,
-        "depth": 7,
-        "atNodeId": "1:2698",
-        "atName": "HorizontalBorder"
-      },
-      {
-        "depthExceeded": true,
-        "depth": 7,
-        "atNodeId": "1:2713",
-        "atName": "HorizontalBorder"
-      },
-      {
-        "depthExceeded": true,
-        "depth": 7,
-        "atNodeId": "1:2728",
-        "atName": "HorizontalBorder"
-      },
-      {
-        "depthExceeded": true,
-        "depth": 7,
-        "atNodeId": "1:2743",
-        "atName": "Container"
-      },
-      {
-        "depthExceeded": true,
-        "depth": 7,
-        "atNodeId": "I365:2247;355:239",
-        "atName": "header"
-      },
-      {
-        "depthExceeded": true,
-        "depth": 7,
-        "atNodeId": "I365:2247;364:375",
-        "atName": "RegisterModalContent"
+        "underInstance": "root",
+        "count": 5,
+        "sampleName": "Background+HorizontalBorder"
       }
     ]
   }

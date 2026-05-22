@@ -27,20 +27,6 @@
     "screenshotPath": "composites/220-246.png",
     "metadataPath": "composites/220-246.json"
   },
-  "220:257": {
-    "name": "StateHistoryBar",
-    "type": "COMPONENT",
-    "page": "Composites",
-    "screenshotPath": "composites/220-257.png",
-    "metadataPath": "composites/220-257.json"
-  },
-  "220:287": {
-    "name": "TokenTable",
-    "type": "COMPONENT",
-    "page": "Composites",
-    "screenshotPath": "composites/220-287.png",
-    "metadataPath": "composites/220-287.json"
-  },
   "220:292": {
     "name": "ViewportFrame",
     "type": "COMPONENT",
@@ -173,6 +159,48 @@
     "page": "Composites",
     "screenshotPath": "composites/378-462.png",
     "metadataPath": "composites/378-462.json"
+  },
+  "553:445": {
+    "name": "TranscriptRow",
+    "type": "COMPONENT",
+    "page": "Composites",
+    "screenshotPath": "composites/553-445.png",
+    "metadataPath": "composites/553-445.json"
+  },
+  "555:449": {
+    "name": "TokenBarRow",
+    "type": "COMPONENT",
+    "page": "Composites",
+    "screenshotPath": "composites/555-449.png",
+    "metadataPath": "composites/555-449.json"
+  },
+  "558:477": {
+    "name": "TimelineToolbar",
+    "type": "COMPONENT",
+    "page": "Composites",
+    "screenshotPath": "composites/558-477.png",
+    "metadataPath": "composites/558-477.json"
+  },
+  "559:650": {
+    "name": "TimelineSection",
+    "type": "COMPONENT_SET",
+    "page": "Composites",
+    "screenshotPath": "composites/559-650.png",
+    "metadataPath": "composites/559-650.json"
+  },
+  "577:643": {
+    "name": "TokensByTool",
+    "type": "COMPONENT",
+    "page": "Composites",
+    "screenshotPath": "composites/577-643.png",
+    "metadataPath": "composites/577-643.json"
+  },
+  "594:803": {
+    "name": "DrawerHeader",
+    "type": "COMPONENT",
+    "page": "Composites",
+    "screenshotPath": "composites/594-803.png",
+    "metadataPath": "composites/594-803.json"
   },
   "1:2": {
     "name": "Agents List (/)",

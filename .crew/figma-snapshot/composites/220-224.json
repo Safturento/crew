@@ -15,7 +15,7 @@
       },
       "Count Summary#231:1": {
         "type": "TEXT",
-        "defaultValue": "3 active · 4 total"
+        "defaultValue": "3 active \u00b7 4 total"
       },
       "Repo Path#231:2": {
         "type": "TEXT",
@@ -72,7 +72,7 @@
   },
   "enrichment": {
     "source": "plugin-api",
-    "capturedAt": "2026-05-18T14:33:27.623Z",
+    "capturedAt": "2026-05-22T15:38:53.785Z",
     "componentProperties": null,
     "mainComponent": null,
     "boundVariables": [],
@@ -101,32 +101,16 @@
           "Pill"
         ],
         "mainComponentSetId": "272:120",
-        "variantOverrides": "type=button-icon-xs, color=running, intensity=ghost",
+        "variantOverrides": "type=button-icon-xs, color=running, intensity=ghost, font=sans",
         "componentPropertyOverrides": {
           "Label": "Label",
           "Has Icon": true,
           "Icon": "lucide/external-link",
           "type": "button-icon-xs",
           "color": "running",
-          "intensity": "ghost"
+          "intensity": "ghost",
+          "font": "sans"
         },
-        "resolvedStyles": {
-          "fills": [],
-          "strokes": [],
-          "textColor": null
-        }
-      },
-      {
-        "id": "I310:250;307:135",
-        "name": "icon",
-        "path": [
-          "left",
-          "Pill",
-          "icon"
-        ],
-        "mainComponentSetId": "231:102",
-        "variantOverrides": null,
-        "componentPropertyOverrides": {},
         "resolvedStyles": {
           "fills": [],
           "strokes": [],

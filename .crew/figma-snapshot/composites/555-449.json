@@ -1,0 +1,120 @@
+{
+  "id": "555:449",
+  "name": "TokenBarRow",
+  "type": "COMPONENT",
+  "page": "Composites",
+  "raw": {
+    "id": "555:449",
+    "name": "TokenBarRow",
+    "type": "COMPONENT",
+    "scrollBehavior": "SCROLLS",
+    "componentPropertyDefinitions": {
+      "tool#555:0": {
+        "type": "TEXT",
+        "defaultValue": "Bash"
+      },
+      "tokens#555:1": {
+        "type": "TEXT",
+        "defaultValue": "18.4k"
+      },
+      "percent#555:2": {
+        "type": "TEXT",
+        "defaultValue": "38.4%"
+      }
+    },
+    "boundVariables": {
+      "strokes": [
+        {
+          "type": "VARIABLE_ALIAS",
+          "id": "VariableID:217:224"
+        }
+      ]
+    },
+    "blendMode": "PASS_THROUGH",
+    "clipsContent": false,
+    "background": [],
+    "fills": [],
+    "strokes": [
+      {
+        "blendMode": "NORMAL",
+        "type": "SOLID",
+        "color": {
+          "r": 0.11764705926179886,
+          "g": 0.16078431904315948,
+          "b": 0.23137255012989044,
+          "a": 1
+        },
+        "boundVariables": {
+          "color": {
+            "type": "VARIABLE_ALIAS",
+            "id": "VariableID:217:224"
+          }
+        }
+      }
+    ],
+    "strokeWeight": 0,
+    "individualStrokeWeights": {
+      "top": 0,
+      "right": 0,
+      "bottom": 1,
+      "left": 0
+    },
+    "strokeAlign": "INSIDE",
+    "backgroundColor": {
+      "r": 0,
+      "g": 0,
+      "b": 0,
+      "a": 0
+    },
+    "layoutMode": "HORIZONTAL",
+    "counterAxisSizingMode": "FIXED",
+    "primaryAxisSizingMode": "FIXED",
+    "counterAxisAlignItems": "CENTER",
+    "paddingLeft": 14,
+    "paddingRight": 14,
+    "paddingTop": 8,
+    "paddingBottom": 8,
+    "itemSpacing": 16,
+    "layoutWrap": "NO_WRAP",
+    "absoluteBoundingBox": {
+      "x": 0,
+      "y": 5687,
+      "width": 626,
+      "height": 34
+    },
+    "absoluteRenderBounds": {
+      "x": 0,
+      "y": 5687,
+      "width": 626,
+      "height": 34
+    },
+    "constraints": {
+      "vertical": "TOP",
+      "horizontal": "LEFT"
+    },
+    "layoutSizingHorizontal": "FIXED",
+    "layoutSizingVertical": "FIXED",
+    "effects": [],
+    "interactions": [],
+    "complexStrokeProperties": {
+      "strokeType": "BASIC"
+    }
+  },
+  "enrichment": {
+    "source": "plugin-api",
+    "capturedAt": "2026-05-22T15:38:53.839Z",
+    "componentProperties": null,
+    "mainComponent": null,
+    "boundVariables": [
+      {
+        "path": "strokes[0].color",
+        "variableId": "VariableID:217:224",
+        "variableName": "border",
+        "resolvedAlias": "border -> slate/800",
+        "resolvedHex": "#1E293B"
+      }
+    ],
+    "componentInstances": [],
+    "depthWarnings": []
+  }
+}

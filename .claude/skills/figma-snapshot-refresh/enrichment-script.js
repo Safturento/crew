@@ -135,6 +135,12 @@ async function walkChildren(node, depth, path, instances, depthWarnings) {
     const childPath = path.concat([child.name || child.id]);
     if (child.type === 'INSTANCE') {
       instances.push(await instanceEntry(child, childPath));
+      // Do NOT recurse into INSTANCE children. Each composite has its own enrichment
+      // file with its full nested structure; duplicating it for every consumer wastes
+      // payload (a Pill's inner `icon` swap is already captured in the Pill's own
+      // componentPropertyOverrides.Icon). The consumer (visual-fidelity-check) treats
+      // each composite as its own unit and looks up nested composites by ID.
+      continue;
     }
     if ('children' in child && Array.isArray(child.children) && child.children.length > 0) {
       await walkChildren(child, depth + 1, childPath, instances, depthWarnings);

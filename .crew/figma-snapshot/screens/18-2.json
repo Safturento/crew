@@ -131,7 +131,7 @@
   },
   "enrichment": {
     "source": "plugin-api",
-    "capturedAt": "2026-05-18T14:34:54.624Z",
+    "capturedAt": "2026-05-22T15:38:53.448Z",
     "componentProperties": null,
     "mainComponent": null,
     "boundVariables": [
@@ -197,129 +197,6 @@
         }
       },
       {
-        "id": "I244:1136;245:114",
-        "name": "brandmark",
-        "path": [
-          "Background+Border+Shadow",
-          "Container",
-          "TopNav",
-          "left",
-          "logo",
-          "brandmark"
-        ],
-        "mainComponentSetId": "220:211",
-        "variantOverrides": null,
-        "componentPropertyOverrides": {},
-        "resolvedStyles": {
-          "fills": [
-            {
-              "hex": null,
-              "tokenAlias": null,
-              "opacity": 1
-            }
-          ],
-          "strokes": [],
-          "textColor": null
-        }
-      },
-      {
-        "id": "I244:1136;332:235",
-        "name": "count-pill",
-        "path": [
-          "Background+Border+Shadow",
-          "Container",
-          "TopNav",
-          "right",
-          "attention",
-          "count-pill"
-        ],
-        "mainComponentSetId": "272:120",
-        "variantOverrides": "type=pill, color=waiting, intensity=mid",
-        "componentPropertyOverrides": {
-          "Icon": "lucide/git-pull-request",
-          "Has Icon": false,
-          "Label": "3",
-          "type": "pill",
-          "color": "waiting",
-          "intensity": "mid"
-        },
-        "resolvedStyles": {
-          "fills": [
-            {
-              "hex": "#26282A",
-              "tokenAlias": "amber-1050",
-              "opacity": 1
-            }
-          ],
-          "strokes": [
-            {
-              "hex": "#F59E0B",
-              "tokenAlias": "amber/500",
-              "opacity": 1
-            }
-          ],
-          "textColor": {
-            "hex": "#FBBF24",
-            "tokenAlias": "state/waiting"
-          }
-        }
-      },
-      {
-        "id": "I244:1136;278:1627",
-        "name": "Pill",
-        "path": [
-          "Background+Border+Shadow",
-          "Container",
-          "TopNav",
-          "right",
-          "Pill"
-        ],
-        "mainComponentSetId": "272:120",
-        "variantOverrides": "type=button-sm, color=idle, intensity=loud",
-        "componentPropertyOverrides": {
-          "Icon": "lucide/plus",
-          "Has Icon": true,
-          "Label": "New Run",
-          "type": "button-sm",
-          "color": "idle",
-          "intensity": "loud"
-        },
-        "resolvedStyles": {
-          "fills": [
-            {
-              "hex": "#64748B",
-              "tokenAlias": "state/idle",
-              "opacity": 1
-            }
-          ],
-          "strokes": [],
-          "textColor": {
-            "hex": "#020617",
-            "tokenAlias": "state/foreground"
-          }
-        }
-      },
-      {
-        "id": "I244:1136;278:1627;276:514",
-        "name": "icon",
-        "path": [
-          "Background+Border+Shadow",
-          "Container",
-          "TopNav",
-          "right",
-          "Pill",
-          "icon"
-        ],
-        "mainComponentSetId": "243:102",
-        "variantOverrides": null,
-        "componentPropertyOverrides": {},
-        "resolvedStyles": {
-          "fills": [],
-          "strokes": [],
-          "textColor": null
-        }
-      },
-      {
         "id": "376:2465",
         "name": "AlertModal",
         "path": [
@@ -359,64 +236,9 @@
     ],
     "depthWarnings": [
       {
-        "depthExceeded": true,
-        "depth": 7,
-        "atNodeId": "I244:1136;245:114",
-        "atName": "brandmark"
-      },
-      {
-        "depthExceeded": true,
-        "depth": 7,
-        "atNodeId": "I244:1136;245:117",
-        "atName": "tab-agents"
-      },
-      {
-        "depthExceeded": true,
-        "depth": 7,
-        "atNodeId": "I244:1136;245:119",
-        "atName": "tab-projects"
-      },
-      {
-        "depthExceeded": true,
-        "depth": 7,
-        "atNodeId": "I244:1136;332:235",
-        "atName": "count-pill"
-      },
-      {
-        "depthExceeded": true,
-        "depth": 7,
-        "atNodeId": "I244:1136;278:1627;276:514",
-        "atName": "icon"
-      },
-      {
-        "depthExceeded": true,
-        "depth": 7,
-        "atNodeId": "18:34",
-        "atName": "Container"
-      },
-      {
-        "depthExceeded": true,
-        "depth": 7,
-        "atNodeId": "18:41",
-        "atName": "Container"
-      },
-      {
-        "depthExceeded": true,
-        "depth": 7,
-        "atNodeId": "18:49",
-        "atName": "Heading 2"
-      },
-      {
-        "depthExceeded": true,
-        "depth": 7,
-        "atNodeId": "18:51",
-        "atName": "Section"
-      },
-      {
-        "depthExceeded": true,
-        "depth": 7,
-        "atNodeId": "I376:2465;373:416",
-        "atName": "footer"
+        "underInstance": "root",
+        "count": 4,
+        "sampleName": "Container"
       }
     ]
   }

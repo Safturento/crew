@@ -142,7 +142,7 @@
   },
   "enrichment": {
     "source": "plugin-api",
-    "capturedAt": "2026-05-18T14:36:23.720Z",
+    "capturedAt": "2026-05-22T15:38:53.735Z",
     "componentProperties": null,
     "mainComponent": null,
     "boundVariables": [
@@ -177,14 +177,15 @@
           "badge"
         ],
         "mainComponentSetId": "272:120",
-        "variantOverrides": "type=tag, color=running, intensity=muted",
+        "variantOverrides": "type=tag, color=running, intensity=muted, font=mono",
         "componentPropertyOverrides": {
           "Icon": "lucide/git-pull-request",
           "Has Icon": false,
           "Label": "4 active",
           "type": "tag",
           "color": "running",
-          "intensity": "muted"
+          "intensity": "muted",
+          "font": "mono"
         },
         "resolvedStyles": {
           "fills": [
@@ -199,23 +200,6 @@
             "hex": "#94A3B8",
             "tokenAlias": "state/running"
           }
-        }
-      },
-      {
-        "id": "I350:242;276:244",
-        "name": "icon",
-        "path": [
-          "right",
-          "badge",
-          "icon"
-        ],
-        "mainComponentSetId": "199:106",
-        "variantOverrides": null,
-        "componentPropertyOverrides": {},
-        "resolvedStyles": {
-          "fills": [],
-          "strokes": [],
-          "textColor": null
         }
       }
     ],

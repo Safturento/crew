@@ -29,22 +29,16 @@
       }
     },
     "boundVariables": {
-      "size": {
-        "y": {
-          "type": "VARIABLE_ALIAS",
-          "id": "VariableID:4e6a53c018bb207b3208627299e3ae65ffc327d1/1046:6153"
-        }
-      },
       "fills": [
         {
           "type": "VARIABLE_ALIAS",
-          "id": "VariableID:217:215"
+          "id": "VariableID:217:207"
         }
       ],
       "strokes": [
         {
           "type": "VARIABLE_ALIAS",
-          "id": "VariableID:217:224"
+          "id": "VariableID:3238af4b3badf9cfde77bbf1e18007d63afe7665/3012:6"
         }
       ]
     },
@@ -55,15 +49,15 @@
         "blendMode": "NORMAL",
         "type": "SOLID",
         "color": {
-          "r": 0.05882352963089943,
-          "g": 0.09019608050584793,
-          "b": 0.16470588743686676,
+          "r": 0.09019608050584793,
+          "g": 0.12941177189350128,
+          "b": 0.20392157137393951,
           "a": 1
         },
         "boundVariables": {
           "color": {
             "type": "VARIABLE_ALIAS",
-            "id": "VariableID:217:215"
+            "id": "VariableID:217:207"
           }
         }
       }
@@ -73,15 +67,15 @@
         "blendMode": "NORMAL",
         "type": "SOLID",
         "color": {
-          "r": 0.05882352963089943,
-          "g": 0.09019608050584793,
-          "b": 0.16470588743686676,
+          "r": 0.09019608050584793,
+          "g": 0.12941177189350128,
+          "b": 0.20392157137393951,
           "a": 1
         },
         "boundVariables": {
           "color": {
             "type": "VARIABLE_ALIAS",
-            "id": "VariableID:217:215"
+            "id": "VariableID:217:207"
           }
         }
       }
@@ -91,15 +85,15 @@
         "blendMode": "NORMAL",
         "type": "SOLID",
         "color": {
-          "r": 0.11764705926179886,
-          "g": 0.16078431904315948,
-          "b": 0.23137255012989044,
+          "r": 0.27843138575553894,
+          "g": 0.3333333432674408,
+          "b": 0.4117647111415863,
           "a": 1
         },
         "boundVariables": {
           "color": {
             "type": "VARIABLE_ALIAS",
-            "id": "VariableID:217:224"
+            "id": "VariableID:3238af4b3badf9cfde77bbf1e18007d63afe7665/3012:6"
           }
         }
       }
@@ -109,12 +103,13 @@
     "strokeWeight": 1,
     "strokeAlign": "INSIDE",
     "backgroundColor": {
-      "r": 0.05882352963089943,
-      "g": 0.09019608050584793,
-      "b": 0.16470588743686676,
+      "r": 0.09019608050584793,
+      "g": 0.12941177189350128,
+      "b": 0.20392157137393951,
       "a": 1
     },
     "layoutMode": "HORIZONTAL",
+    "counterAxisSizingMode": "FIXED",
     "primaryAxisSizingMode": "FIXED",
     "counterAxisAlignItems": "CENTER",
     "paddingLeft": 12,
@@ -127,20 +122,20 @@
       "x": 82,
       "y": 551,
       "width": 514,
-      "height": 32
+      "height": 30
     },
     "absoluteRenderBounds": {
       "x": 82,
       "y": 551,
       "width": 514,
-      "height": 32
+      "height": 30
     },
     "constraints": {
       "vertical": "TOP",
       "horizontal": "LEFT"
     },
     "layoutSizingHorizontal": "FIXED",
-    "layoutSizingVertical": "HUG",
+    "layoutSizingVertical": "FIXED",
     "effects": [],
     "interactions": [],
     "complexStrokeProperties": {
@@ -149,30 +144,30 @@
   },
   "enrichment": {
     "source": "plugin-api",
-    "capturedAt": "2026-05-18T14:36:23.755Z",
+    "capturedAt": "2026-05-22T15:38:53.779Z",
     "componentProperties": null,
     "mainComponent": null,
     "boundVariables": [
       {
         "path": "fills[0].color",
-        "variableId": "VariableID:217:215",
-        "variableName": "card",
-        "resolvedAlias": "card -> slate/900",
-        "resolvedHex": "#0F172A"
+        "variableId": "VariableID:217:207",
+        "variableName": "slate-1100",
+        "resolvedAlias": "slate-1100",
+        "resolvedHex": "#172134"
       },
       {
         "path": "strokes[0].color",
-        "variableId": "VariableID:217:224",
-        "variableName": "border",
-        "resolvedAlias": "border -> slate/800",
-        "resolvedHex": "#1E293B"
+        "variableId": "VariableID:3238af4b3badf9cfde77bbf1e18007d63afe7665/3012:6",
+        "variableName": "slate/600",
+        "resolvedAlias": "slate/600",
+        "resolvedHex": "#475569"
       },
       {
         "path": "backgrounds[0].color",
-        "variableId": "VariableID:217:215",
-        "variableName": "card",
-        "resolvedAlias": "card -> slate/900",
-        "resolvedHex": "#0F172A"
+        "variableId": "VariableID:217:207",
+        "variableName": "slate-1100",
+        "resolvedAlias": "slate-1100",
+        "resolvedHex": "#172134"
       }
     ],
     "componentInstances": [

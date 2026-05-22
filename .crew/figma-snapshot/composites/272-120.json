@@ -66,6 +66,14 @@
           "mid",
           "loud"
         ]
+      },
+      "font": {
+        "type": "VARIANT",
+        "defaultValue": "mono",
+        "variantOptions": [
+          "mono",
+          "sans"
+        ]
       }
     },
     "blendMode": "PASS_THROUGH",
@@ -83,6 +91,23 @@
       "b": 0,
       "a": 0
     },
+    "layoutGrids": [
+      {
+        "pattern": "GRID",
+        "sectionSize": 10,
+        "visible": false,
+        "color": {
+          "r": 1,
+          "g": 0,
+          "b": 0,
+          "a": 0.10000000149011612
+        },
+        "alignment": "MIN",
+        "gutterSize": 0,
+        "offset": 0,
+        "count": -1
+      }
+    ],
     "strokeDashes": [
       10,
       5
@@ -111,7 +136,7 @@
   },
   "enrichment": {
     "source": "plugin-api",
-    "capturedAt": "2026-05-18T14:36:23.800Z",
+    "capturedAt": "2026-05-22T15:38:53.847Z",
     "componentProperties": null,
     "mainComponent": null,
     "boundVariables": [],

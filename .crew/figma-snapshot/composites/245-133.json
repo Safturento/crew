@@ -73,7 +73,7 @@
   },
   "enrichment": {
     "source": "plugin-api",
-    "capturedAt": "2026-05-18T15:25:34.925Z",
+    "capturedAt": "2026-05-22T15:36:47.069Z",
     "componentProperties": null,
     "mainComponent": null,
     "boundVariables": [],
@@ -112,14 +112,15 @@
           "count-pill"
         ],
         "mainComponentSetId": "272:120",
-        "variantOverrides": "type=pill, color=waiting, intensity=mid",
+        "variantOverrides": "type=pill, color=waiting, intensity=mid, font=mono",
         "componentPropertyOverrides": {
           "Icon": "lucide/git-pull-request",
           "Has Icon": false,
           "Label": "3",
           "type": "pill",
           "color": "waiting",
-          "intensity": "mid"
+          "intensity": "mid",
+          "font": "mono"
         },
         "resolvedStyles": {
           "fills": [
@@ -143,25 +144,6 @@
         }
       },
       {
-        "id": "I332:230;276:355",
-        "name": "icon",
-        "path": [
-          "Active Tab=agents",
-          "right",
-          "attention",
-          "count-pill",
-          "icon"
-        ],
-        "mainComponentSetId": "199:106",
-        "variantOverrides": null,
-        "componentPropertyOverrides": {},
-        "resolvedStyles": {
-          "fills": [],
-          "strokes": [],
-          "textColor": null
-        }
-      },
-      {
         "id": "278:1622",
         "name": "Pill",
         "path": [
@@ -170,14 +152,15 @@
           "Pill"
         ],
         "mainComponentSetId": "272:120",
-        "variantOverrides": "type=button-sm, color=idle, intensity=loud",
+        "variantOverrides": "type=button-sm, color=idle, intensity=loud, font=sans",
         "componentPropertyOverrides": {
           "Icon": "lucide/plus",
           "Has Icon": true,
           "Label": "New Run",
           "type": "button-sm",
           "color": "idle",
-          "intensity": "loud"
+          "intensity": "loud",
+          "font": "sans"
         },
         "resolvedStyles": {
           "fills": [
@@ -192,24 +175,6 @@
             "hex": "#020617",
             "tokenAlias": "state/foreground"
           }
-        }
-      },
-      {
-        "id": "I278:1622;276:514",
-        "name": "icon",
-        "path": [
-          "Active Tab=agents",
-          "right",
-          "Pill",
-          "icon"
-        ],
-        "mainComponentSetId": "243:102",
-        "variantOverrides": null,
-        "componentPropertyOverrides": {},
-        "resolvedStyles": {
-          "fills": [],
-          "strokes": [],
-          "textColor": null
         }
       },
       {
@@ -246,14 +211,15 @@
           "count-pill"
         ],
         "mainComponentSetId": "272:120",
-        "variantOverrides": "type=pill, color=waiting, intensity=mid",
+        "variantOverrides": "type=pill, color=waiting, intensity=mid, font=mono",
         "componentPropertyOverrides": {
           "Icon": "lucide/git-pull-request",
           "Has Icon": false,
           "Label": "3",
           "type": "pill",
           "color": "waiting",
-          "intensity": "mid"
+          "intensity": "mid",
+          "font": "mono"
         },
         "resolvedStyles": {
           "fills": [
@@ -277,25 +243,6 @@
         }
       },
       {
-        "id": "I332:235;276:355",
-        "name": "icon",
-        "path": [
-          "Active Tab=projects",
-          "right",
-          "attention",
-          "count-pill",
-          "icon"
-        ],
-        "mainComponentSetId": "199:106",
-        "variantOverrides": null,
-        "componentPropertyOverrides": {},
-        "resolvedStyles": {
-          "fills": [],
-          "strokes": [],
-          "textColor": null
-        }
-      },
-      {
         "id": "278:1627",
         "name": "Pill",
         "path": [
@@ -304,14 +251,15 @@
           "Pill"
         ],
         "mainComponentSetId": "272:120",
-        "variantOverrides": "type=button-sm, color=idle, intensity=loud",
+        "variantOverrides": "type=button-sm, color=idle, intensity=loud, font=sans",
         "componentPropertyOverrides": {
           "Icon": "lucide/plus",
           "Has Icon": true,
           "Label": "New Run",
           "type": "button-sm",
           "color": "idle",
-          "intensity": "loud"
+          "intensity": "loud",
+          "font": "sans"
         },
         "resolvedStyles": {
           "fills": [
@@ -326,24 +274,6 @@
             "hex": "#020617",
             "tokenAlias": "state/foreground"
           }
-        }
-      },
-      {
-        "id": "I278:1627;276:514",
-        "name": "icon",
-        "path": [
-          "Active Tab=projects",
-          "right",
-          "Pill",
-          "icon"
-        ],
-        "mainComponentSetId": "243:102",
-        "variantOverrides": null,
-        "componentPropertyOverrides": {},
-        "resolvedStyles": {
-          "fills": [],
-          "strokes": [],
-          "textColor": null
         }
       }
     ],

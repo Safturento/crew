@@ -127,7 +127,7 @@
   },
   "enrichment": {
     "source": "plugin-api",
-    "capturedAt": "2026-05-18T14:33:27.605Z",
+    "capturedAt": "2026-05-22T15:38:53.749Z",
     "componentProperties": null,
     "mainComponent": null,
     "boundVariables": [
@@ -161,14 +161,15 @@
           "Pill"
         ],
         "mainComponentSetId": "272:120",
-        "variantOverrides": "type=pill, color=initializing, intensity=muted",
+        "variantOverrides": "type=pill, color=initializing, intensity=muted, font=mono",
         "componentPropertyOverrides": {
           "Icon": "lucide/git-pull-request",
           "Has Icon": false,
           "Label": "6",
           "type": "pill",
           "color": "initializing",
-          "intensity": "muted"
+          "intensity": "muted",
+          "font": "mono"
         },
         "resolvedStyles": {
           "fills": [
@@ -183,22 +184,6 @@
             "hex": "#60A5FA",
             "tokenAlias": "state/initializing"
           }
-        }
-      },
-      {
-        "id": "I281:146;276:328",
-        "name": "icon",
-        "path": [
-          "Pill",
-          "icon"
-        ],
-        "mainComponentSetId": "199:106",
-        "variantOverrides": null,
-        "componentPropertyOverrides": {},
-        "resolvedStyles": {
-          "fills": [],
-          "strokes": [],
-          "textColor": null
         }
       }
     ],

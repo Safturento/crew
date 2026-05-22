@@ -56,7 +56,7 @@
   },
   "enrichment": {
     "source": "plugin-api",
-    "capturedAt": "2026-05-18T14:30:08.296Z",
+    "capturedAt": "2026-05-22T15:34:36.854Z",
     "componentProperties": null,
     "mainComponent": null,
     "boundVariables": [],
@@ -92,20 +92,20 @@
         "componentPropertyOverrides": {
           "Icon": "lucide/search",
           "Has Icon": true,
-          "Placeholder": "Filter open tickets…"
+          "Placeholder": "Filter open tickets\u2026"
         },
         "resolvedStyles": {
           "fills": [
             {
-              "hex": "#0F172A",
-              "tokenAlias": "card",
+              "hex": "#172134",
+              "tokenAlias": "slate-1100",
               "opacity": 1
             }
           ],
           "strokes": [
             {
-              "hex": "#1E293B",
-              "tokenAlias": "border",
+              "hex": "#475569",
+              "tokenAlias": "slate/600",
               "opacity": 1
             }
           ],
@@ -113,22 +113,6 @@
             "hex": "#94A3B8",
             "tokenAlias": "muted-foreground"
           }
-        }
-      },
-      {
-        "id": "I319:1615;318:231",
-        "name": "icon",
-        "path": [
-          "Input",
-          "icon"
-        ],
-        "mainComponentSetId": "324:1524",
-        "variantOverrides": null,
-        "componentPropertyOverrides": {},
-        "resolvedStyles": {
-          "fills": [],
-          "strokes": [],
-          "textColor": null
         }
       },
       {
@@ -168,59 +152,6 @@
         }
       },
       {
-        "id": "I351:2372;350:242",
-        "name": "badge",
-        "path": [
-          "Container",
-          "ModalSelectionRow",
-          "right",
-          "badge"
-        ],
-        "mainComponentSetId": "272:120",
-        "variantOverrides": "type=tag, color=error, intensity=muted",
-        "componentPropertyOverrides": {
-          "Icon": "lucide/git-pull-request",
-          "Has Icon": false,
-          "Label": "High",
-          "type": "tag",
-          "color": "error",
-          "intensity": "muted"
-        },
-        "resolvedStyles": {
-          "fills": [
-            {
-              "hex": "#262031",
-              "tokenAlias": "red-1050",
-              "opacity": 1
-            }
-          ],
-          "strokes": [],
-          "textColor": {
-            "hex": "#F87171",
-            "tokenAlias": "state/error"
-          }
-        }
-      },
-      {
-        "id": "I351:2372;350:242;276:280",
-        "name": "icon",
-        "path": [
-          "Container",
-          "ModalSelectionRow",
-          "right",
-          "badge",
-          "icon"
-        ],
-        "mainComponentSetId": "199:106",
-        "variantOverrides": null,
-        "componentPropertyOverrides": {},
-        "resolvedStyles": {
-          "fills": [],
-          "strokes": [],
-          "textColor": null
-        }
-      },
-      {
         "id": "351:2382",
         "name": "ModalSelectionRow",
         "path": [
@@ -254,59 +185,6 @@
             "hex": "#E2E8F0",
             "tokenAlias": "foreground"
           }
-        }
-      },
-      {
-        "id": "I351:2382;350:242",
-        "name": "badge",
-        "path": [
-          "Container",
-          "ModalSelectionRow",
-          "right",
-          "badge"
-        ],
-        "mainComponentSetId": "272:120",
-        "variantOverrides": "type=tag, color=waiting, intensity=muted",
-        "componentPropertyOverrides": {
-          "Icon": "lucide/git-pull-request",
-          "Has Icon": false,
-          "Label": "Medium",
-          "type": "tag",
-          "color": "waiting",
-          "intensity": "muted"
-        },
-        "resolvedStyles": {
-          "fills": [
-            {
-              "hex": "#26282A",
-              "tokenAlias": "amber-1050",
-              "opacity": 1
-            }
-          ],
-          "strokes": [],
-          "textColor": {
-            "hex": "#FBBF24",
-            "tokenAlias": "state/waiting"
-          }
-        }
-      },
-      {
-        "id": "I351:2382;350:242;276:256",
-        "name": "icon",
-        "path": [
-          "Container",
-          "ModalSelectionRow",
-          "right",
-          "badge",
-          "icon"
-        ],
-        "mainComponentSetId": "199:106",
-        "variantOverrides": null,
-        "componentPropertyOverrides": {},
-        "resolvedStyles": {
-          "fills": [],
-          "strokes": [],
-          "textColor": null
         }
       },
       {
@@ -346,59 +224,6 @@
         }
       },
       {
-        "id": "I351:2392;350:242",
-        "name": "badge",
-        "path": [
-          "Container",
-          "ModalSelectionRow",
-          "right",
-          "badge"
-        ],
-        "mainComponentSetId": "272:120",
-        "variantOverrides": "type=tag, color=waiting, intensity=muted",
-        "componentPropertyOverrides": {
-          "Icon": "lucide/git-pull-request",
-          "Has Icon": false,
-          "Label": "Medium",
-          "type": "tag",
-          "color": "waiting",
-          "intensity": "muted"
-        },
-        "resolvedStyles": {
-          "fills": [
-            {
-              "hex": "#26282A",
-              "tokenAlias": "amber-1050",
-              "opacity": 1
-            }
-          ],
-          "strokes": [],
-          "textColor": {
-            "hex": "#FBBF24",
-            "tokenAlias": "state/waiting"
-          }
-        }
-      },
-      {
-        "id": "I351:2392;350:242;276:256",
-        "name": "icon",
-        "path": [
-          "Container",
-          "ModalSelectionRow",
-          "right",
-          "badge",
-          "icon"
-        ],
-        "mainComponentSetId": "199:106",
-        "variantOverrides": null,
-        "componentPropertyOverrides": {},
-        "resolvedStyles": {
-          "fills": [],
-          "strokes": [],
-          "textColor": null
-        }
-      },
-      {
         "id": "351:2402",
         "name": "ModalSelectionRow",
         "path": [
@@ -432,59 +257,6 @@
             "hex": "#E2E8F0",
             "tokenAlias": "foreground"
           }
-        }
-      },
-      {
-        "id": "I351:2402;350:242",
-        "name": "badge",
-        "path": [
-          "Container",
-          "ModalSelectionRow",
-          "right",
-          "badge"
-        ],
-        "mainComponentSetId": "272:120",
-        "variantOverrides": "type=tag, color=initializing, intensity=muted",
-        "componentPropertyOverrides": {
-          "Icon": "lucide/git-pull-request",
-          "Has Icon": false,
-          "Label": "Low",
-          "type": "tag",
-          "color": "initializing",
-          "intensity": "muted"
-        },
-        "resolvedStyles": {
-          "fills": [
-            {
-              "hex": "#17253F",
-              "tokenAlias": "blue-1050",
-              "opacity": 1
-            }
-          ],
-          "strokes": [],
-          "textColor": {
-            "hex": "#60A5FA",
-            "tokenAlias": "state/initializing"
-          }
-        }
-      },
-      {
-        "id": "I351:2402;350:242;276:232",
-        "name": "icon",
-        "path": [
-          "Container",
-          "ModalSelectionRow",
-          "right",
-          "badge",
-          "icon"
-        ],
-        "mainComponentSetId": "199:106",
-        "variantOverrides": null,
-        "componentPropertyOverrides": {},
-        "resolvedStyles": {
-          "fills": [],
-          "strokes": [],
-          "textColor": null
         }
       },
       {
@@ -524,59 +296,6 @@
         }
       },
       {
-        "id": "I351:2412;350:242",
-        "name": "badge",
-        "path": [
-          "Container",
-          "ModalSelectionRow",
-          "right",
-          "badge"
-        ],
-        "mainComponentSetId": "272:120",
-        "variantOverrides": "type=tag, color=initializing, intensity=muted",
-        "componentPropertyOverrides": {
-          "Icon": "lucide/git-pull-request",
-          "Has Icon": false,
-          "Label": "Low",
-          "type": "tag",
-          "color": "initializing",
-          "intensity": "muted"
-        },
-        "resolvedStyles": {
-          "fills": [
-            {
-              "hex": "#17253F",
-              "tokenAlias": "blue-1050",
-              "opacity": 1
-            }
-          ],
-          "strokes": [],
-          "textColor": {
-            "hex": "#60A5FA",
-            "tokenAlias": "state/initializing"
-          }
-        }
-      },
-      {
-        "id": "I351:2412;350:242;276:232",
-        "name": "icon",
-        "path": [
-          "Container",
-          "ModalSelectionRow",
-          "right",
-          "badge",
-          "icon"
-        ],
-        "mainComponentSetId": "199:106",
-        "variantOverrides": null,
-        "componentPropertyOverrides": {},
-        "resolvedStyles": {
-          "fills": [],
-          "strokes": [],
-          "textColor": null
-        }
-      },
-      {
         "id": "278:1458",
         "name": "Pill",
         "path": [
@@ -584,14 +303,15 @@
           "Pill"
         ],
         "mainComponentSetId": "272:120",
-        "variantOverrides": "type=button-sm, color=running, intensity=mid",
+        "variantOverrides": "type=button-sm, color=running, intensity=mid, font=sans",
         "componentPropertyOverrides": {
           "Icon": "lucide/git-pull-request",
           "Has Icon": false,
-          "Label": "← Back",
+          "Label": "\u2190 Back",
           "type": "button-sm",
           "color": "running",
-          "intensity": "mid"
+          "intensity": "mid",
+          "font": "sans"
         },
         "resolvedStyles": {
           "fills": [
@@ -612,23 +332,6 @@
             "hex": "#94A3B8",
             "tokenAlias": "state/running"
           }
-        }
-      },
-      {
-        "id": "I278:1458;276:535",
-        "name": "icon",
-        "path": [
-          "Container",
-          "Pill",
-          "icon"
-        ],
-        "mainComponentSetId": "199:106",
-        "variantOverrides": null,
-        "componentPropertyOverrides": {},
-        "resolvedStyles": {
-          "fills": [],
-          "strokes": [],
-          "textColor": null
         }
       }
     ],
