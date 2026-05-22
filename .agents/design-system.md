@@ -1,7 +1,7 @@
 ---
 name: design-system
 description: Crew Figma DS + token bindings + Pill primitive contract
-last_updated: 2026-05-18
+last_updated: 2026-05-22
 covers:
   - 'packages/dashboard/src/components/**'
   - '*.figma.tsx'
