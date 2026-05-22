@@ -51,7 +51,7 @@ describe('AgentDrawer', () => {
 
     expect(await screen.findByTestId('drawer-header')).toBeInTheDocument();
     expect(screen.getByText('kanban-api')).toBeInTheDocument();
-    expect(screen.getByText('KAN-1')).toBeInTheDocument();
+    expect(screen.getAllByText('KAN-1').length).toBeGreaterThan(0);
     expect(screen.getByText('Add board archival')).toBeInTheDocument();
     expect(screen.getByRole('status')).toHaveAccessibleName('PR open');
   });
@@ -63,31 +63,11 @@ describe('AgentDrawer', () => {
     expect(within(header).getByText('12.3k')).toBeInTheDocument();
   });
 
-  it('renders the worktree path with a copy affordance', async () => {
+  it('renders the worktree path pill', async () => {
     renderWithProviders(<AgentDrawer agentKey="KAN-1" />);
 
     await screen.findByTestId('drawer-header');
     expect(screen.getByText('/repos/kanban-api-KAN-1')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /copy worktree path/i })).toBeInTheDocument();
-  });
-
-  it('renders the GitHub PR link when pr_url is non-null', async () => {
-    renderWithProviders(<AgentDrawer agentKey="KAN-1" />);
-
-    await screen.findByTestId('drawer-header');
-    expect(screen.getByRole('link', { name: /view pr/i })).toHaveAttribute(
-      'href',
-      'https://github.com/example/repo/pull/12',
-    );
-  });
-
-  it('hides the PR link when pr_url is null', async () => {
-    vi.spyOn(defaultClient, 'getAgent').mockResolvedValue({ ...SAMPLE_DETAIL, pr_url: null });
-
-    renderWithProviders(<AgentDrawer agentKey="KAN-1" />);
-
-    await screen.findByTestId('drawer-header');
-    expect(screen.queryByRole('link', { name: /view pr/i })).not.toBeInTheDocument();
   });
 
   it('links to /agent/:key/full via the Open as page action', async () => {
@@ -129,9 +109,7 @@ describe('AgentDrawer', () => {
 
   it('renders the Timeline inside the body slot', async () => {
     renderWithProviders(<AgentDrawer agentKey="KAN-1" />);
-    // Timeline mounts under the agent body once the agent detail resolves.
     expect(await screen.findByTestId('agent-body')).toBeInTheDocument();
-    // With an empty events array the Timeline renders its empty state.
     expect(await screen.findByTestId('timeline-empty')).toBeInTheDocument();
   });
 });

@@ -33,15 +33,7 @@ export function AgentDrawer({ agentKey }: AgentDrawerProps) {
         className="absolute inset-0 cursor-default bg-black/40"
       />
       <aside className="relative z-10 flex h-full w-full max-w-5xl flex-col bg-background shadow-2xl">
-        <button
-          type="button"
-          aria-label="Close drawer"
-          onClick={() => navigate('/')}
-          className="absolute right-3 top-3 z-10 rounded-md border border-white/10 bg-card px-2 py-1 text-xs text-muted-foreground hover:bg-popover"
-        >
-          Close ✕
-        </button>
-        <AgentBody agentKey={agentKey} mode="drawer" />
+        <AgentBody agentKey={agentKey} mode="drawer" onClose={() => navigate('/')} />
       </aside>
     </div>
   );
