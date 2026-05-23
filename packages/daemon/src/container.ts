@@ -63,8 +63,7 @@ export function buildContainer(deps: BuildContainerDeps): AwilixContainer<Daemon
     // what it actually scans; if `DaemonConfig` later splits the two,
     // change this argument, not the service's parameter name.
     agentsService: asFunction(
-      ({ db, config }: DaemonCradle) =>
-        new AgentsService({ db, projectsDir: config.configDir }),
+      ({ db, config }: DaemonCradle) => new AgentsService({ db, projectsDir: config.configDir }),
     ).scoped(),
     metricsService: asFunction(
       ({ db, logger }: DaemonCradle) => new MetricsService({ db, logger }),
@@ -89,9 +88,10 @@ export function buildContainer(deps: BuildContainerDeps): AwilixContainer<Daemon
     // the latest run for the key + reuses `claudeProjectDirFor` so the
     // path matches what `IngestService` writes/tails.
     timelineService: asFunction(
-      ({ db, logger }: DaemonCradle) =>
+      ({ db, logger, config }: DaemonCradle) =>
         new TimelineService({
-          resolveJsonlPath: (agentKey) => resolveJsonlPathForAgent(db, agentKey),
+          resolveJsonlPath: (agentKey) =>
+            resolveJsonlPathForAgent(db, agentKey, config.transcriptsHome),
           logger,
         }),
     ).scoped(),

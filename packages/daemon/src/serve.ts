@@ -17,6 +17,16 @@ function fixtureProjectsDir(dbFile: string): string {
   return join(dirname(dbFile), 'seeded-projects');
 }
 
+/**
+ * Same RO-mount problem as `fixtureProjectsDir`: the host's
+ * `~/.claude/projects` is bind-mounted read-only, so seeded JSONL transcripts
+ * have to land under a writable path. The fixture mode also redirects
+ * `transcriptsHome` so `resolveJsonlPath` reads from this same place.
+ */
+function fixtureTranscriptsHome(dbFile: string): string {
+  return join(dirname(dbFile), 'seeded-transcripts');
+}
+
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const MIGRATIONS_PATH = join(__dirname, 'migrations');
 // `__dirname` is `packages/daemon/src/`; the dashboard's build lives at
@@ -42,13 +52,29 @@ export async function serve(env: NodeJS.ProcessEnv = process.env) {
     // Worktree compose stacks set this so a fresh anonymous-volume DB
     // boots with realistic state instead of an empty agents list. The
     // dynamic import keeps fixture data out of the production hot path.
-    const { seedFixtures, seedProjectFixtures } = await import('../seeds/dev.js');
+    const devMod = await import('./seeds/dev.js');
     logger.info('CREW_SEED_FIXTURES=1 — loading dev fixtures');
-    await seedFixtures(db);
+    await devMod.seedFixtures(db);
 
     config.configDir = fixtureProjectsDir(config.dbFile);
     mkdirSync(config.configDir, { recursive: true });
-    seedProjectFixtures(config.configDir);
+    devMod.seedProjectFixtures(config.configDir);
+
+    // state_transitions and JSONL transcripts are seeded by their own
+    // idempotent helpers — independent of `seedFixtures`'s agents-existence
+    // gate — so a running daemon whose DB was populated by an older image
+    // still picks up the new sections + drawer content on the next reload.
+    // The `typeof` checks guard against an older in-image `seeds/dev.js`
+    // that pre-dates these exports: skipping keeps the daemon serviceable
+    // until the next rebuild rather than crashing on undefined call.
+    if (typeof devMod.seedStateTransitionFixtures === 'function') {
+      await devMod.seedStateTransitionFixtures(db);
+    }
+    if (typeof devMod.seedTranscriptFixtures === 'function') {
+      config.transcriptsHome = fixtureTranscriptsHome(config.dbFile);
+      mkdirSync(config.transcriptsHome, { recursive: true });
+      devMod.seedTranscriptFixtures(config.transcriptsHome);
+    }
   }
 
   const app = await buildApp({ config, logger, db, dashboardDistDir: DASHBOARD_DIST });
