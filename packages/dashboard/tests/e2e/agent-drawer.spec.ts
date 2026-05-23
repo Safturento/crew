@@ -92,19 +92,19 @@ test.describe('Agent drawer', () => {
     await expect(page).toHaveURL(/#\/agent\/[A-Z]+-\d+$/);
   });
 
-  test('opens with timeline rendered (header + first event card visible)', async ({ page }) => {
+  test('opens with timeline rendered (header + first transcript row visible)', async ({ page }) => {
     await mockTimeline(page, SEEDED_AGENT_KEY, TWO_GROUP_EVENTS);
     await page.goto(`/#/agent/${SEEDED_AGENT_KEY}`);
 
     await expect(page.getByTestId('drawer-header')).toBeVisible();
-    await expect(page.getByTestId('event-card').first()).toBeVisible();
+    await expect(page.getByTestId('transcript-row').first()).toBeVisible();
   });
 
-  test('Filters popover toggle changes the rendered event-card count in DOM', async ({ page }) => {
+  test('Filters popover toggle changes the rendered transcript-row count in DOM', async ({ page }) => {
     await mockTimeline(page, SEEDED_AGENT_KEY, TWO_GROUP_EVENTS);
     await page.goto(`/#/agent/${SEEDED_AGENT_KEY}`);
 
-    const cards = page.getByTestId('event-card');
+    const cards = page.getByTestId('transcript-row');
     await expect(cards).toHaveCount(2);
 
     // Open Filters and toggle Tools OFF — only the conversation card should remain.
@@ -117,7 +117,7 @@ test.describe('Agent drawer', () => {
     await mockTimeline(page, SEEDED_AGENT_KEY, TWO_GROUP_EVENTS);
     await page.goto(`/#/agent/${SEEDED_AGENT_KEY}`);
 
-    await expect(page.getByTestId('event-card').first()).toBeVisible();
+    await expect(page.getByTestId('transcript-row').first()).toBeVisible();
 
     // Open Filters and toggle every category checkbox that's currently on.
     await page.getByRole('button', { name: /open timeline filters/i }).click();
@@ -131,10 +131,10 @@ test.describe('Agent drawer', () => {
 
     await expect(page.getByText(/No events match your filters/i)).toBeVisible();
     await expect(page.getByRole('button', { name: /Show all/i })).toBeVisible();
-    await expect(page.getByTestId('event-card')).toHaveCount(0);
+    await expect(page.getByTestId('transcript-row')).toHaveCount(0);
 
     await page.getByRole('button', { name: /Show all/i }).click();
-    await expect(page.getByTestId('event-card').first()).toBeVisible();
+    await expect(page.getByTestId('transcript-row').first()).toBeVisible();
   });
 
   test('full-page route /agent/:key/full renders timeline content; no drawer chrome', async ({
@@ -144,7 +144,7 @@ test.describe('Agent drawer', () => {
     await page.goto(`/#/agent/${SEEDED_AGENT_KEY}/full`);
 
     await expect(page.getByTestId('agent-body')).toBeVisible();
-    await expect(page.getByTestId('event-card').first()).toBeVisible();
+    await expect(page.getByTestId('transcript-row').first()).toBeVisible();
     await expect(page.getByTestId('drawer-backdrop')).toHaveCount(0);
     await expect(page.getByRole('button', { name: /close drawer/i })).toHaveCount(0);
   });

@@ -147,11 +147,11 @@ test.describe('Agent drawer — 2026-05-22 redesign', () => {
 
   test('Collapse-all hides every section body in one click', async ({ page }) => {
     await page.goto(`/#/agent/${SEEDED_AGENT_KEY}`);
-    await expect(page.getByTestId('event-card').first()).toBeVisible();
+    await expect(page.getByTestId('transcript-row').first()).toBeVisible();
 
     await page.getByRole('button', { name: 'Collapse all' }).click();
 
-    await expect(page.getByTestId('event-card')).toHaveCount(0);
+    await expect(page.getByTestId('transcript-row')).toHaveCount(0);
     const toggles = page.getByRole('button', { name: /^Toggle .* section$/ });
     const count = await toggles.count();
     for (let i = 0; i < count; i += 1) {

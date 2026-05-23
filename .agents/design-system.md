@@ -130,6 +130,7 @@ Figma node IDs below are in the live consolidated file (`9FeJPriqdsdA4n9R5Xsrr8`
 | `ProjectHeader`      | `220:315`        | `packages/dashboard/src/components/ProjectHeader.tsx`      |
 | `ProjectConfigBlock` | `220:318`        | `packages/dashboard/src/components/ProjectConfigBlock.tsx` |
 | `TimelineSection`    | `559:650`        | `packages/dashboard/src/components/Timeline/TimelineSection.tsx` |
+| `TranscriptRow`      | `553:445`        | `packages/dashboard/src/components/Timeline/TranscriptRow.tsx`   |
 
 `TopNav`, `AgentRow`, and `TimelineSection` resolve to component sets in the live file; the rest resolve to single components. `ErrorFallback` is the only un-built composite from the original Phase 4 inventory; it lands alongside the next fidelity ticket that surfaces a need.
 

@@ -158,7 +158,7 @@ describe('Timeline', () => {
     vi.clearAllMocks();
   });
 
-  it('renders one EventCard per event from useTimeline', () => {
+  it('renders one TranscriptRow per event from useTimeline', () => {
     mockUseTimeline.mockReturnValue(
       timelineResult({
         data: { events: [evt(1), evt(2), evt(3)] },
@@ -167,7 +167,7 @@ describe('Timeline', () => {
       }),
     );
     render(<Timeline agentKey="KAN-1" />);
-    expect(screen.getAllByTestId('event-card')).toHaveLength(3);
+    expect(screen.getAllByTestId('transcript-row')).toHaveLength(3);
   });
 
   it('shows a loading state', () => {
@@ -215,7 +215,7 @@ describe('Timeline', () => {
       }),
     );
     render(<Timeline agentKey="KAN-1" />);
-    expect(screen.getAllByTestId('event-card')).toHaveLength(1);
+    expect(screen.getAllByTestId('transcript-row')).toHaveLength(1);
   });
 
   it('filters events by case-insensitive substring against the one-liner', async () => {
@@ -229,9 +229,9 @@ describe('Timeline', () => {
       }),
     );
     render(<Timeline agentKey="KAN-1" />);
-    expect(screen.getAllByTestId('event-card')).toHaveLength(2);
+    expect(screen.getAllByTestId('transcript-row')).toHaveLength(2);
     await userEvent.type(screen.getByRole('searchbox'), 'bash');
-    expect(screen.getAllByTestId('event-card')).toHaveLength(1);
+    expect(screen.getAllByTestId('transcript-row')).toHaveLength(1);
   });
 
   it('defaults live mode ON for an active agent', () => {
@@ -344,7 +344,7 @@ describe('Timeline', () => {
     }
     expect(screen.getByText(/No events match your filters/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Show all/i })).toBeInTheDocument();
-    expect(screen.queryAllByTestId('event-card')).toHaveLength(0);
+    expect(screen.queryAllByTestId('transcript-row')).toHaveLength(0);
   });
 
   it('clicking "Show all" resets filters to the curated defaults', async () => {
@@ -364,7 +364,7 @@ describe('Timeline', () => {
     await openFilters();
     expect((screen.getByLabelText('Conversation') as HTMLInputElement).checked).toBe(true);
     expect((screen.getByLabelText('Tools') as HTMLInputElement).checked).toBe(true);
-    expect(screen.getAllByTestId('event-card')).toHaveLength(2);
+    expect(screen.getAllByTestId('transcript-row')).toHaveLength(2);
   });
 
   it('hides events whose category is toggled off', async () => {
@@ -378,12 +378,12 @@ describe('Timeline', () => {
       }),
     );
     render(<Timeline agentKey="KAN-1" />);
-    expect(screen.getAllByTestId('event-card')).toHaveLength(2);
+    expect(screen.getAllByTestId('transcript-row')).toHaveLength(2);
     await openFilters();
     await userEvent.click(screen.getByLabelText('Thinking'));
-    expect(screen.getAllByTestId('event-card')).toHaveLength(3);
+    expect(screen.getAllByTestId('transcript-row')).toHaveLength(3);
     await userEvent.click(screen.getByLabelText('Conversation'));
-    expect(screen.getAllByTestId('event-card')).toHaveLength(2);
+    expect(screen.getAllByTestId('transcript-row')).toHaveLength(2);
   });
 
   it('all-checked (default) shows every tool event; unchecking a tool subtracts those events', async () => {
@@ -402,14 +402,14 @@ describe('Timeline', () => {
     );
     render(<Timeline agentKey="KAN-1" tokensByTool={sampleTokensByTool} />);
     // Default = nothing excluded, all 3 visible.
-    expect(screen.getAllByTestId('event-card')).toHaveLength(3);
+    expect(screen.getAllByTestId('transcript-row')).toHaveLength(3);
     await openFilters();
     // Uncheck Bash — only its event disappears.
     await userEvent.click(screen.getByLabelText('Bash'));
-    expect(screen.getAllByTestId('event-card')).toHaveLength(2);
+    expect(screen.getAllByTestId('transcript-row')).toHaveLength(2);
     // Uncheck MCP:Jira too — only the Read event remains.
     await userEvent.click(screen.getByLabelText('MCP:Jira'));
-    expect(screen.getAllByTestId('event-card')).toHaveLength(1);
+    expect(screen.getAllByTestId('transcript-row')).toHaveLength(1);
   });
 
   it('non-tool events stay visible regardless of tool exclusions', async () => {
@@ -423,13 +423,13 @@ describe('Timeline', () => {
       }),
     );
     render(<Timeline agentKey="KAN-1" tokensByTool={sampleTokensByTool} />);
-    expect(screen.getAllByTestId('event-card')).toHaveLength(2);
+    expect(screen.getAllByTestId('transcript-row')).toHaveLength(2);
     await openFilters();
     // Uncheck every tool the agent used — the conversation event remains.
     for (const alias of ['Bash', 'Read', 'MCP:Jira']) {
       await userEvent.click(screen.getByLabelText(alias));
     }
-    expect(screen.getAllByTestId('event-card')).toHaveLength(1);
+    expect(screen.getAllByTestId('transcript-row')).toHaveLength(1);
   });
 
   it('falls back to a single section tagged with agentState when transitions is empty', () => {
@@ -484,9 +484,9 @@ describe('Timeline', () => {
     );
     mockUseStateHistory.mockReturnValue(stateHistoryResult(transitions));
     render(<Timeline agentKey="KAN-1" agentState="running" />);
-    expect(screen.getAllByTestId('event-card').length).toBeGreaterThan(0);
+    expect(screen.getAllByTestId('transcript-row').length).toBeGreaterThan(0);
     await userEvent.click(screen.getByRole('button', { name: /collapse all/i }));
-    expect(screen.queryAllByTestId('event-card')).toHaveLength(0);
+    expect(screen.queryAllByTestId('transcript-row')).toHaveLength(0);
     const toggles = screen.getAllByRole('button', { name: /toggle/i });
     for (const t of toggles) {
       expect(t).toHaveAttribute('aria-expanded', 'false');
