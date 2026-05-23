@@ -5,7 +5,6 @@ import { useStateHistory, useTimeline } from '../../data/queries.js';
 import type { AgentDetailTokensByTool, AgentState, TranscriptEvent } from '../../data/types.js';
 import { toolAlias } from '../../format/tool-alias.js';
 import { Button } from '../ui/button.js';
-import { EventCard } from './EventCard.js';
 import { Filters, defaultTimelineFilterState, type TimelineFilterState } from './Filters.js';
 import { LiveModeToggle, NewEventsPill } from './LiveModeToggle.js';
 import { SearchBar } from './SearchBar.js';
@@ -17,6 +16,7 @@ import {
 } from './eventClassification.js';
 import { groupEventsByState, type TimelineSectionData } from './groupEventsByState.js';
 import { TimelineSection } from './TimelineSection.js';
+import { TranscriptRow } from './TranscriptRow.js';
 
 interface TimelineProps {
   agentKey: string;
@@ -179,7 +179,7 @@ export function Timeline({ agentKey, agentState, tokensByTool = [] }: TimelinePr
                 onToggle={() => toggleSection(key)}
               >
                 {s.events.map((event) => (
-                  <EventCard key={eventKey(event)} event={event} />
+                  <TranscriptRow key={eventKey(event)} event={event} />
                 ))}
               </TimelineSection>
             );
