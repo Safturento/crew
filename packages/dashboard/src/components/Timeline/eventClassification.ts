@@ -1,46 +1,74 @@
 import type { TranscriptEvent } from '../../data/types.js';
 
 /**
- * Six chip groups per UI spec §7.4. Identifiers are kebab-case so they
- * survive URL/query-string serialization later if we want shareable
- * filter state.
+ * Slim 5 event categories used by the Filters dropdown. Identifiers are
+ * kebab-case so they survive URL/query-string serialization later if we
+ * want shareable filter state.
  */
-export type ChipGroup =
-  | 'tool-calls'
-  | 'assistant-prose'
-  | 'thinking'
-  | 'system'
-  | 'hooks-and-skills'
-  | 'other';
+export type CategoryId = 'conversation' | 'tools' | 'thinking' | 'hooks-and-skills' | 'system';
 
-export interface ChipGroupMeta {
-  id: ChipGroup;
+export interface CategoryMeta {
+  id: CategoryId;
   label: string;
   defaultVisible: boolean;
 }
 
-export const CHIP_GROUPS: readonly ChipGroupMeta[] = [
-  { id: 'tool-calls', label: 'Tool calls', defaultVisible: true },
-  { id: 'assistant-prose', label: 'Assistant prose', defaultVisible: true },
+export const CATEGORIES: readonly CategoryMeta[] = [
+  { id: 'conversation', label: 'Conversation', defaultVisible: true },
+  { id: 'tools', label: 'Tools', defaultVisible: true },
   { id: 'thinking', label: 'Thinking', defaultVisible: false },
-  { id: 'system', label: 'System', defaultVisible: false },
   { id: 'hooks-and-skills', label: 'Hooks & skills', defaultVisible: false },
-  { id: 'other', label: 'Other', defaultVisible: false },
+  { id: 'system', label: 'System', defaultVisible: false },
 ] as const;
 
-export const defaultVisibleSet: ReadonlySet<ChipGroup> = new Set(
-  CHIP_GROUPS.filter((g) => g.defaultVisible).map((g) => g.id),
+export const defaultVisibleCategorySet: ReadonlySet<CategoryId> = new Set(
+  CATEGORIES.filter((c) => c.defaultVisible).map((c) => c.id),
 );
 
-const HOOKS_AND_SKILLS_ATTACHMENTS = new Set([
+/**
+ * Top-level event types that never reach the timeline UI. Pure bookkeeping
+ * from the daemon's perspective — `queue-operation` alone is ~121k events
+ * in the historical-transcript scan that drove this list.
+ */
+const DROPPED_TOP_LEVEL_TYPES: ReadonlySet<string> = new Set([
+  'queue-operation',
+  'last-prompt',
+  'ai-title',
+  'pr-link',
+  'file-history-snapshot',
+  'bridge-session',
+  'custom-title',
+  'agent-name',
+  'permission-mode',
+]);
+
+/** Attachment subtypes filtered at the data layer before classification. */
+const DROPPED_ATTACHMENT_SUBTYPES: ReadonlySet<string> = new Set(['queued_command']);
+
+const HOOKS_AND_SKILLS_ATTACHMENTS: ReadonlySet<string> = new Set([
   'hook_success',
   'hook_additional_context',
   'hook_system_message',
   'hook_non_blocking_error',
+  'hook_cancelled',
+  'async_hook_response',
   'skill_listing',
   'invoked_skills',
   'command_permissions',
   'deferred_tools_delta',
+  'mcp_instructions_delta',
+  'task_reminder',
+  'todo_reminder',
+  'nested_memory',
+  'plan_mode',
+  'plan_mode_exit',
+  'plan_mode_reentry',
+  'ultrathink_effort',
+  'date_change',
+  'edited_text_file',
+  'opened_file_in_ide',
+  'file',
+  'compact_file_reference',
 ]);
 
 interface ContentBlock {
@@ -66,64 +94,98 @@ interface AttachmentShape {
 }
 
 /**
- * Returns the set of chip groups an event belongs to. Assistant / user
- * events with mixed content (e.g. text + tool_use) classify into every
- * group that any of their content blocks would.
+ * True for events that should never reach the timeline UI — pure
+ * bookkeeping from the daemon. Apply this filter at the data layer
+ * before classification + grouping.
  */
-export function eventChipGroups(event: TranscriptEvent): Set<ChipGroup> {
-  const groups = new Set<ChipGroup>();
+export function isDroppedEvent(event: TranscriptEvent): boolean {
+  const type = (event as { type?: string }).type;
+  if (type && DROPPED_TOP_LEVEL_TYPES.has(type)) return true;
+  if (type === 'attachment') {
+    const subtype = (event as AttachmentShape).attachment?.type;
+    if (subtype && DROPPED_ATTACHMENT_SUBTYPES.has(subtype)) return true;
+  }
+  return false;
+}
+
+/**
+ * Returns the set of Slim 5 categories an event belongs to. Assistant /
+ * user events with mixed content (text + tool_use + thinking) classify
+ * into every category their content blocks would.
+ */
+export function eventCategories(event: TranscriptEvent): Set<CategoryId> {
+  const categories = new Set<CategoryId>();
   switch (event.type) {
     case 'assistant': {
       const content = (event as AssistantOrUserShape).message?.content;
       if (Array.isArray(content)) {
         for (const block of content) {
-          if (block.type === 'tool_use') groups.add('tool-calls');
-          else if (block.type === 'text') groups.add('assistant-prose');
-          else if (block.type === 'thinking') groups.add('thinking');
-          else groups.add('other');
+          if (block.type === 'tool_use') categories.add('tools');
+          else if (block.type === 'text') categories.add('conversation');
+          else if (block.type === 'thinking') categories.add('thinking');
+          else categories.add('system');
         }
       }
-      if (groups.size === 0) groups.add('other');
-      return groups;
+      if (categories.size === 0) categories.add('system');
+      return categories;
     }
     case 'user': {
       const content = (event as AssistantOrUserShape).message?.content;
+      if (typeof content === 'string') {
+        categories.add('conversation');
+        return categories;
+      }
       if (Array.isArray(content)) {
         for (const block of content) {
-          if (block.type === 'tool_result') groups.add('tool-calls');
-          else if (block.type === 'text') groups.add('assistant-prose');
-          else groups.add('other');
+          if (block.type === 'tool_result') categories.add('tools');
+          else if (block.type === 'text') categories.add('conversation');
+          else categories.add('system');
         }
-      } else {
-        // Bare-string user content (a typed prompt). Treat as prose.
-        groups.add('assistant-prose');
       }
-      if (groups.size === 0) groups.add('other');
-      return groups;
+      if (categories.size === 0) categories.add('system');
+      return categories;
     }
     case 'system':
-      groups.add('system');
-      return groups;
+      categories.add('system');
+      return categories;
     case 'attachment': {
       const attachmentType = (event as AttachmentShape).attachment?.type;
       if (attachmentType && HOOKS_AND_SKILLS_ATTACHMENTS.has(attachmentType)) {
-        groups.add('hooks-and-skills');
+        categories.add('hooks-and-skills');
       } else {
-        groups.add('other');
+        categories.add('system');
       }
-      return groups;
+      return categories;
     }
     default:
-      groups.add('other');
-      return groups;
+      categories.add('system');
+      return categories;
   }
 }
 
 /**
+ * Returns every tool_use name carried by an event (assistant.tool_use
+ * blocks only). user.tool_result blocks carry only the linked
+ * `tool_use_id` — resolving that to a name would require cross-event
+ * lookup; callers that need to filter by tool against a tool_result
+ * should reconstruct the name→id map themselves.
+ */
+export function eventToolNames(event: TranscriptEvent): string[] {
+  if (event.type !== 'assistant') return [];
+  const content = (event as AssistantOrUserShape).message?.content;
+  if (!Array.isArray(content)) return [];
+  const names: string[] = [];
+  for (const block of content) {
+    if (block.type === 'tool_use' && typeof block.name === 'string') {
+      names.push(block.name);
+    }
+  }
+  return names;
+}
+
+/**
  * Returns a one-line summary of an event suitable for substring search
- * (and, in CREW-L, for the EventCard line-1 renderer). Concatenates
- * salient strings from each content block / envelope field; never
- * truncates here — UI consumers can clip per their layout.
+ * and the EventCard line-1 renderer.
  */
 export function eventOneLiner(event: TranscriptEvent): string {
   switch (event.type) {
@@ -196,8 +258,6 @@ function summarizeContentBlock(block: ContentBlock): string {
 
 function formatToolInput(input: Record<string, unknown> | undefined): string {
   if (!input) return '';
-  // Prefer the most recognizable keys first; otherwise serialize the
-  // first scalar value.
   for (const key of ['command', 'file_path', 'path', 'pattern', 'query', 'description']) {
     const value = input[key];
     if (typeof value === 'string') return value;
