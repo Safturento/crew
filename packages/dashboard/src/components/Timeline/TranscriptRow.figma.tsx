@@ -13,22 +13,24 @@ figma.connect(
     // the full Slim 5 category coverage.
     example: () => (
       <TranscriptRow
-        event={{
-          type: 'assistant',
-          timestamp: '2026-05-22T14:30:04.000Z',
-          message: {
-            role: 'assistant',
-            content: [
-              {
-                type: 'tool_use',
-                id: 'tu-1',
-                name: 'Bash',
-                input: { command: 'docker compose -f docker-compose.dev.yml up -d' },
-              },
-            ],
-            usage: { output_tokens: 180 },
-          },
-        } as never}
+        event={
+          {
+            type: 'assistant',
+            timestamp: '2026-05-22T14:30:04.000Z',
+            message: {
+              role: 'assistant',
+              content: [
+                {
+                  type: 'tool_use',
+                  id: 'tu-1',
+                  name: 'Bash',
+                  input: { command: 'docker compose -f docker-compose.dev.yml up -d' },
+                },
+              ],
+              usage: { output_tokens: 180 },
+            },
+          } as never
+        }
       />
     ),
   },
