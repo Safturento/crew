@@ -44,7 +44,11 @@ export function AgentBody({ agentKey, mode, onClose }: AgentBodyProps) {
       >
         <TokensByTool tokensByTool={data.tokens_by_tool} total={data.tokens.total} />
         <div className="min-h-0 flex-1">
-          <Timeline agentKey={agentKey} agentState={data.state} />
+          <Timeline
+            agentKey={agentKey}
+            agentState={data.state}
+            tokensByTool={data.tokens_by_tool}
+          />
         </div>
       </div>
     </div>

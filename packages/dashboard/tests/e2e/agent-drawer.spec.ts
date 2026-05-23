@@ -100,15 +100,16 @@ test.describe('Agent drawer', () => {
     await expect(page.getByTestId('event-card').first()).toBeVisible();
   });
 
-  test('filter chip toggle changes the rendered event-card count in DOM', async ({ page }) => {
+  test('Filters popover toggle changes the rendered event-card count in DOM', async ({ page }) => {
     await mockTimeline(page, SEEDED_AGENT_KEY, TWO_GROUP_EVENTS);
     await page.goto(`/#/agent/${SEEDED_AGENT_KEY}`);
 
     const cards = page.getByTestId('event-card');
     await expect(cards).toHaveCount(2);
 
-    // Toggle Tool calls OFF — only the assistant-prose card should remain.
-    await page.getByRole('button', { name: 'Tool calls' }).click();
+    // Open Filters and toggle Tools OFF — only the conversation card should remain.
+    await page.getByRole('button', { name: /open timeline filters/i }).click();
+    await page.getByLabel('Tools').click();
     await expect(cards).toHaveCount(1);
   });
 
@@ -118,18 +119,15 @@ test.describe('Agent drawer', () => {
 
     await expect(page.getByTestId('event-card').first()).toBeVisible();
 
-    // Toggle every chip *off*: click only the ones currently pressed.
-    for (const label of [
-      'Tool calls',
-      'Assistant prose',
-      'Thinking',
-      'System',
-      'Hooks & skills',
-      'Other',
-    ]) {
-      const btn = page.getByRole('button', { name: label });
-      if ((await btn.getAttribute('aria-pressed')) === 'true') await btn.click();
+    // Open Filters and toggle every category checkbox that's currently on.
+    await page.getByRole('button', { name: /open timeline filters/i }).click();
+    for (const label of ['Conversation', 'Tools', 'Thinking', 'Hooks & skills', 'System']) {
+      const cb = page.getByLabel(label);
+      if (await cb.isChecked()) await cb.click();
     }
+    // Close the popover by clicking its trigger again so the empty-state CTA
+    // beneath becomes interactive. (Escape would also close the drawer.)
+    await page.getByRole('button', { name: /open timeline filters/i }).click();
 
     await expect(page.getByText(/No events match your filters/i)).toBeVisible();
     await expect(page.getByRole('button', { name: /Show all/i })).toBeVisible();

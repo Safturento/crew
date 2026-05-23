@@ -2,17 +2,18 @@ import { ListCollapse } from 'lucide-react';
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 
 import { useStateHistory, useTimeline } from '../../data/queries.js';
-import type { AgentState, TranscriptEvent } from '../../data/types.js';
+import type { AgentDetailTokensByTool, AgentState, TranscriptEvent } from '../../data/types.js';
+import { toolAlias } from '../../format/tool-alias.js';
 import { Button } from '../ui/button.js';
 import { EventCard } from './EventCard.js';
-import { FilterChips } from './FilterChips.js';
+import { Filters, defaultTimelineFilterState, type TimelineFilterState } from './Filters.js';
 import { LiveModeToggle, NewEventsPill } from './LiveModeToggle.js';
 import { SearchBar } from './SearchBar.js';
 import {
-  defaultVisibleSet,
-  eventChipGroups,
+  eventCategories,
   eventOneLiner,
-  type ChipGroup,
+  eventToolNames,
+  isDroppedEvent,
 } from './eventClassification.js';
 import { groupEventsByState, type TimelineSectionData } from './groupEventsByState.js';
 import { TimelineSection } from './TimelineSection.js';
@@ -26,6 +27,12 @@ interface TimelineProps {
    * component can be rendered standalone in tests.
    */
   agentState?: AgentState;
+  /**
+   * Per-tool token aggregate from `AgentDetail.tokens_by_tool`. Drives the
+   * Filters popover's "Tools" rows (alias-aggregated, descending). Default
+   * empty so the component renders standalone in tests.
+   */
+  tokensByTool?: AgentDetailTokensByTool[];
 }
 
 const isLiveByDefault = (state?: AgentState): boolean => state !== 'finished' && state !== 'error';
@@ -44,37 +51,31 @@ function eventTokens(e: TranscriptEvent): number {
   );
 }
 
-export function Timeline({ agentKey, agentState }: TimelineProps) {
+export function Timeline({ agentKey, agentState, tokensByTool = [] }: TimelineProps) {
   const { data: timelineData, isLoading } = useTimeline(agentKey);
   const { data: historyData } = useStateHistory(agentKey);
-  const [visibleGroups, setVisibleGroups] = useState<ReadonlySet<ChipGroup>>(
-    () => new Set(defaultVisibleSet),
+  const [filterState, setFilterState] = useState<TimelineFilterState>(
+    () => defaultTimelineFilterState,
   );
   const [searchInput, setSearchInput] = useState('');
   const deferredSearch = useDeferredValue(searchInput);
   const [liveMode, setLiveMode] = useState<boolean>(() => isLiveByDefault(agentState));
 
-  const events = timelineData?.events ?? [];
+  const rawEvents = timelineData?.events ?? [];
+  const events = useMemo(() => rawEvents.filter((e) => !isDroppedEvent(e)), [rawEvents]);
   const transitions = historyData?.transitions ?? [];
   const fallbackState: AgentState = agentState ?? 'running';
 
   const filteredEvents = useMemo(() => {
     const needle = deferredSearch.trim().toLowerCase();
-    return events.filter((evt) => {
-      if (!intersects(eventChipGroups(evt), visibleGroups)) return false;
-      if (needle.length === 0) return true;
-      return eventOneLiner(evt).toLowerCase().includes(needle);
-    });
-  }, [events, visibleGroups, deferredSearch]);
+    return events.filter((evt) => matchesFilters(evt, filterState, needle));
+  }, [events, filterState, deferredSearch]);
 
   const sections = useMemo(
     () => groupEventsByState(filteredEvents, transitions, fallbackState),
     [filteredEvents, transitions, fallbackState],
   );
 
-  // Per-section collapsed map keyed by `${state}:${startedAt}` so the
-  // section-state survives re-renders that re-compute the sections array
-  // identity but not its content.
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const collapseAll = () => {
     setCollapsed(Object.fromEntries(sections.map((s) => [sectionKey(s), true])));
@@ -83,7 +84,6 @@ export function Timeline({ agentKey, agentState }: TimelineProps) {
     setCollapsed((c) => ({ ...c, [key]: !c[key] }));
   };
 
-  // Tick `now` every second so the active section's elapsedMs counts up live.
   const hasActiveSection = sections.some((s) => s.endedAt === null);
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
@@ -94,21 +94,20 @@ export function Timeline({ agentKey, agentState }: TimelineProps) {
 
   // New-events pill is driven by the *unfiltered* server-side length so
   // toggling a chip never registers as "new events arrived."
-  const lastSeenServerLengthRef = useRef<number>(events.length);
+  const lastSeenServerLengthRef = useRef<number>(rawEvents.length);
   const [pendingNewCount, setPendingNewCount] = useState(0);
   useEffect(() => {
     const prev = lastSeenServerLengthRef.current;
-    const next = events.length;
+    const next = rawEvents.length;
     if (next > prev && !liveMode) {
       setPendingNewCount((c) => c + (next - prev));
     }
     lastSeenServerLengthRef.current = next;
-  }, [events.length, liveMode]);
+  }, [rawEvents.length, liveMode]);
   useEffect(() => {
     if (liveMode) setPendingNewCount(0);
   }, [liveMode]);
 
-  // Auto-scroll to the bottom on new events when live mode is ON.
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const lastSeenVisibleLengthRef = useRef<number>(filteredEvents.length);
   useEffect(() => {
@@ -132,15 +131,16 @@ export function Timeline({ agentKey, agentState }: TimelineProps) {
   }
 
   const resetFilters = () => {
-    setVisibleGroups(new Set(defaultVisibleSet));
+    setFilterState(defaultTimelineFilterState);
     setSearchInput('');
   };
 
   return (
     <div className="relative flex h-full min-h-0 flex-col">
       <TimelineToolbar
-        visibleGroups={visibleGroups}
-        onVisibleGroupsChange={setVisibleGroups}
+        filterState={filterState}
+        onFilterStateChange={setFilterState}
+        tokensByTool={tokensByTool}
         searchValue={searchInput}
         onSearchChange={setSearchInput}
         liveMode={liveMode}
@@ -228,8 +228,9 @@ function FilterEmptyState({ onShowAll }: FilterEmptyStateProps) {
 }
 
 interface TimelineToolbarProps {
-  visibleGroups: ReadonlySet<ChipGroup>;
-  onVisibleGroupsChange: (next: Set<ChipGroup>) => void;
+  filterState: TimelineFilterState;
+  onFilterStateChange: (next: TimelineFilterState) => void;
+  tokensByTool: AgentDetailTokensByTool[];
   searchValue: string;
   onSearchChange: (next: string) => void;
   liveMode: boolean;
@@ -239,8 +240,9 @@ interface TimelineToolbarProps {
 }
 
 function TimelineToolbar({
-  visibleGroups,
-  onVisibleGroupsChange,
+  filterState,
+  onFilterStateChange,
+  tokensByTool,
   searchValue,
   onSearchChange,
   liveMode,
@@ -250,7 +252,7 @@ function TimelineToolbar({
 }: TimelineToolbarProps) {
   return (
     <div className="flex items-center gap-2 border-b border-white/10 px-3 py-2 text-xs text-muted-foreground">
-      <FilterChips visible={visibleGroups} onChange={onVisibleGroupsChange} />
+      <Filters state={filterState} onChange={onFilterStateChange} tokensByTool={tokensByTool} />
       <SearchBar value={searchValue} onChange={onSearchChange} />
       <Button
         color="idle"
@@ -272,7 +274,33 @@ function eventKey(event: TranscriptEvent): string {
   return r.uuid ?? r.timestamp ?? Math.random().toString(36).slice(2);
 }
 
-function intersects<T>(a: ReadonlySet<T>, b: ReadonlySet<T>): boolean {
-  for (const x of a) if (b.has(x)) return true;
-  return false;
+function matchesFilters(
+  event: TranscriptEvent,
+  state: TimelineFilterState,
+  needle: string,
+): boolean {
+  const cats = eventCategories(event);
+  let categoryMatch = false;
+  for (const c of cats) {
+    if (state.categories.has(c)) {
+      categoryMatch = true;
+      break;
+    }
+  }
+  if (!categoryMatch) return false;
+
+  if (state.tools.size > 0) {
+    const aliases = eventToolNames(event).map(toolAlias);
+    let toolMatch = false;
+    for (const a of aliases) {
+      if (state.tools.has(a)) {
+        toolMatch = true;
+        break;
+      }
+    }
+    if (!toolMatch) return false;
+  }
+
+  if (needle.length === 0) return true;
+  return eventOneLiner(event).toLowerCase().includes(needle);
 }
