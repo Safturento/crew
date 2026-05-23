@@ -5,14 +5,20 @@ interface TokenBarRowProps {
   tokens: number;
   /** Share of the agent's total tool-call tokens, 0–100. */
   percent: number;
+  /**
+   * Optional hover/title text. Used by TokensByTool to list the raw
+   * `tool_name` values that contribute to an aliased row (e.g.
+   * "MCP:Jira (jira_get_issue, jira_transition_issue)").
+   */
+  title?: string;
 }
 
 const TOKEN_BAR_ROW_GRID = 'grid grid-cols-[1fr_auto_3fr_auto] items-center gap-4 px-3.5 py-2';
 
-export function TokenBarRow({ tool, tokens, percent }: TokenBarRowProps) {
+export function TokenBarRow({ tool, tokens, percent, title }: TokenBarRowProps) {
   const clamped = Math.max(0, Math.min(100, percent));
   return (
-    <div className={`${TOKEN_BAR_ROW_GRID} border-t border-border text-sm`}>
+    <div className={`${TOKEN_BAR_ROW_GRID} border-t border-border text-sm`} title={title}>
       <span className="font-mono text-foreground">{tool}</span>
       <span className="text-right font-mono tabular-nums text-foreground">
         {formatTokens(tokens)}

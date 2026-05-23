@@ -331,22 +331,6 @@ The first two examples resolve once the structural fix lands. The third is a ski
 - Are `RunMetrics` (cohort) and `MetricsTrendWidget` two surfaces of the same idea or distinct? They share a backend (`/api/metrics`) but render differently.
 - Does anyone actively look at these metrics today, or was the widget aspirational? If aspirational, deprecation is a third option.
 
-#### 2026-05-13 — Agent drawer / agent page search input missing leading magnifying-glass icon
-
-**What:** The search input above the event timeline on Agent Drawer (`1:756`) + Agent full page (`1:1900`) Figma frames has a `Has Icon=true, Icon=lucide/search` leading-icon configuration. The dashboard code (`components/Timeline/SearchBar.tsx`) renders the same input as a bare `<input type="search">` with placeholder text only — no leading icon SVG. Once CREW-136 (T2 Form composites) lands the `leadingIcon` prop on `Input`, the caller needs to be updated to pass `leadingIcon={<Search />}`.
-
-**Why noticed:** 2026-05-13 ultimate-test visual comparison. Verified 2026-05-21: `Timeline/SearchBar.tsx` is bare `<input>`, no icon.
-
-**Anchors:**
-
-- `packages/dashboard/src/components/Timeline/SearchBar.tsx` — current bare-input implementation
-- CREW-136 (T2 Form composites) — adds the `leadingIcon` prop to `Input`
-- Figma instance: search input field on agent drawer + agent page screens
-
-**Shape of work:** Small — one or two file edits. Blocked on CREW-136 landing.
-
-**Open questions:** Anywhere else in the dashboard with a search input that should also use the leading icon? Worth a grep when the leadingIcon prop ships.
-
 #### 2026-05-13 — TopNav BrandMark renders a different glyph than the Figma "crew" mark
 
 **What:** The `BrandMark` component at the top-left of the TopNav renders a check-in-rounded-square SVG in code (two rounded rects + a checkmark path) while the Figma reference shows a squarish-dotted "crew" mark. Verified 2026-05-21 against `packages/dashboard/src/components/BrandMark.tsx`: current SVG is `<rect>... <path d="M7 12 L11 16 L17 8" .../>` — clearly checkbox-styled, not the Figma mark.
@@ -1238,6 +1222,20 @@ The other two open questions (sandbox config drift, Phase 2 + Phase 3 separation
 - Should priority on the markdown side map directly to Jira priority, or stay a separate signal?
 
 ## Resolved
+
+### 2026-05-13 — Agent drawer / agent page search input missing leading magnifying-glass icon
+
+**What:** The search input above the event timeline on Agent Drawer (`1:756`) + Agent full page (`1:1900`) Figma frames has a `Has Icon=true, Icon=lucide/search` leading-icon configuration. The dashboard code (`components/Timeline/SearchBar.tsx`) renders the same input as a bare `<input type="search">` with placeholder text only — no leading icon SVG. Once CREW-136 (T2 Form composites) lands the `leadingIcon` prop on `Input`, the caller needs to be updated to pass `leadingIcon={<Search />}`.
+
+**Why noticed:** 2026-05-13 ultimate-test visual comparison. Verified 2026-05-21: `Timeline/SearchBar.tsx` is bare `<input>`, no icon.
+
+**Anchors:**
+
+- `packages/dashboard/src/components/Timeline/SearchBar.tsx` — current bare-input implementation
+- CREW-136 (T2 Form composites) — adds the `leadingIcon` prop to `Input`
+- Figma instance: search input field on agent drawer + agent page screens
+
+**Resolved 2026-05-22:** CREW-187 added a `leadingIcon?: ReactNode` prop to the DS `Input` primitive (`packages/dashboard/src/components/ui/input.tsx`) and refactored `Timeline/SearchBar.tsx` onto it with `leadingIcon={<Search aria-hidden />}` — search input now matches Figma `558:477` / `318:230`.
 
 ### 2026-05-13 — Agent drawer Close button uses Unicode "✕" glyph instead of `lucide/x` SVG
 

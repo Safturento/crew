@@ -5,7 +5,11 @@ import type { UseQueryResult } from '@tanstack/react-query';
 
 import { Timeline } from './Timeline.js';
 import { useStateHistory, useTimeline } from '../../data/queries.js';
-import type { StateTransition, TranscriptEvent } from '../../data/types.js';
+import type {
+  AgentDetailTokensByTool,
+  StateTransition,
+  TranscriptEvent,
+} from '../../data/types.js';
 
 vi.mock('../../data/queries.js', () => ({
   useTimeline: vi.fn(),
@@ -133,11 +137,20 @@ const assistantThinking = (i: number, text: string): TranscriptEvent =>
     },
   }) as unknown as TranscriptEvent;
 
+const openFilters = async (): Promise<void> => {
+  await userEvent.click(screen.getByRole('button', { name: /open timeline filters/i }));
+};
+
+const sampleTokensByTool: AgentDetailTokensByTool[] = [
+  { tool: 'Bash', tokens: 10_000, percent: 60 },
+  { tool: 'Read', tokens: 4_000, percent: 25 },
+  { tool: 'mcp__atlassian__jira_get_issue', tokens: 1_000, percent: 6 },
+];
+
 describe('Timeline', () => {
   beforeEach(() => {
     mockUseTimeline.mockReset();
     mockUseStateHistory.mockReset();
-    // Default: no transitions — Timeline falls back to a single section.
     mockUseStateHistory.mockReturnValue(stateHistoryResult([]));
   });
 
@@ -179,6 +192,30 @@ describe('Timeline', () => {
     );
     render(<Timeline agentKey="KAN-1" />);
     expect(screen.getByTestId('timeline-empty')).toBeInTheDocument();
+  });
+
+  it('drops bookkeeping events (DROPPED_TYPES) before classification', () => {
+    const droppable = {
+      type: 'queue-operation',
+      uuid: 'q1',
+      timestamp: '2026-04-29T12:00:09Z',
+      operation: 'enqueue',
+    } as unknown as TranscriptEvent;
+    const queuedCmd = {
+      type: 'attachment',
+      uuid: 'a1',
+      timestamp: '2026-04-29T12:00:09Z',
+      attachment: { type: 'queued_command' },
+    } as unknown as TranscriptEvent;
+    mockUseTimeline.mockReturnValue(
+      timelineResult({
+        data: { events: [droppable, evt(1), queuedCmd] },
+        isSuccess: true,
+        status: 'success',
+      }),
+    );
+    render(<Timeline agentKey="KAN-1" />);
+    expect(screen.getAllByTestId('event-card')).toHaveLength(1);
   });
 
   it('filters events by case-insensitive substring against the one-liner', async () => {
@@ -256,7 +293,7 @@ describe('Timeline', () => {
     expect(screen.queryByRole('button', { name: /new events/i })).toBeNull();
   });
 
-  it('does not treat chip toggling as new events (no pill on filter change)', async () => {
+  it('does not treat filter toggling as new events (no pill on filter change)', async () => {
     mockUseTimeline.mockReturnValue(
       timelineResult({
         data: { events: [evt(1), assistantThinking(2, 'pondering')] },
@@ -266,9 +303,8 @@ describe('Timeline', () => {
     );
     render(<Timeline agentKey="KAN-1" agentState="finished" />);
     expect(screen.queryByRole('button', { name: /new events/i })).toBeNull();
-    // Toggle thinking ON — visible event count grows from 1 to 2,
-    // but no events arrived from the server, so no pill.
-    await userEvent.click(screen.getByRole('button', { name: 'Thinking' }));
+    await openFilters();
+    await userEvent.click(screen.getByLabelText('Thinking'));
     expect(screen.queryByRole('button', { name: /new events/i })).toBeNull();
   });
 
@@ -292,7 +328,7 @@ describe('Timeline', () => {
     expect(screen.queryByRole('button', { name: /new events/i })).toBeNull();
   });
 
-  it('renders the all-off empty state when every chip is toggled off', async () => {
+  it('renders the all-off empty state when every category is toggled off', async () => {
     mockUseTimeline.mockReturnValue(
       timelineResult({
         data: { events: [evt(1), assistantToolUse(2, 'Bash')] },
@@ -301,25 +337,17 @@ describe('Timeline', () => {
       }),
     );
     render(<Timeline agentKey="KAN-1" />);
-    for (const label of [
-      'Tool calls',
-      'Assistant prose',
-      'Thinking',
-      'System',
-      'Hooks & skills',
-      'Other',
-    ]) {
-      const btn = screen.getByRole('button', { name: label });
-      if (btn.getAttribute('aria-pressed') === 'true') {
-        await userEvent.click(btn);
-      }
+    await openFilters();
+    for (const label of ['Conversation', 'Tools', 'Thinking', 'Hooks & skills', 'System']) {
+      const cb = screen.getByLabelText(label) as HTMLInputElement;
+      if (cb.checked) await userEvent.click(cb);
     }
     expect(screen.getByText(/No events match your filters/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Show all/i })).toBeInTheDocument();
     expect(screen.queryAllByTestId('event-card')).toHaveLength(0);
   });
 
-  it('clicking "Show all" resets chips to the curated defaults', async () => {
+  it('clicking "Show all" resets filters to the curated defaults', async () => {
     mockUseTimeline.mockReturnValue(
       timelineResult({
         data: { events: [evt(1), assistantToolUse(2, 'Bash')] },
@@ -328,23 +356,18 @@ describe('Timeline', () => {
       }),
     );
     render(<Timeline agentKey="KAN-1" />);
-    // Toggle the two default-on chips OFF — produces the empty state.
-    await userEvent.click(screen.getByRole('button', { name: 'Tool calls' }));
-    await userEvent.click(screen.getByRole('button', { name: 'Assistant prose' }));
+    await openFilters();
+    await userEvent.click(screen.getByLabelText('Conversation'));
+    await userEvent.click(screen.getByLabelText('Tools'));
     expect(screen.getByText(/No events match your filters/i)).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: /Show all/i }));
-    expect(screen.getByRole('button', { name: 'Tool calls' })).toHaveAttribute(
-      'aria-pressed',
-      'true',
-    );
-    expect(screen.getByRole('button', { name: 'Assistant prose' })).toHaveAttribute(
-      'aria-pressed',
-      'true',
-    );
+    await openFilters();
+    expect((screen.getByLabelText('Conversation') as HTMLInputElement).checked).toBe(true);
+    expect((screen.getByLabelText('Tools') as HTMLInputElement).checked).toBe(true);
     expect(screen.getAllByTestId('event-card')).toHaveLength(2);
   });
 
-  it('hides events whose chip group is toggled off', async () => {
+  it('hides events whose category is toggled off', async () => {
     mockUseTimeline.mockReturnValue(
       timelineResult({
         data: {
@@ -355,14 +378,58 @@ describe('Timeline', () => {
       }),
     );
     render(<Timeline agentKey="KAN-1" />);
-    // Default: tool-calls + assistant-prose ON, thinking OFF — 2 cards.
     expect(screen.getAllByTestId('event-card')).toHaveLength(2);
-    // Toggle thinking ON — third card shows.
-    await userEvent.click(screen.getByRole('button', { name: 'Thinking' }));
+    await openFilters();
+    await userEvent.click(screen.getByLabelText('Thinking'));
     expect(screen.getAllByTestId('event-card')).toHaveLength(3);
-    // Toggle assistant prose OFF — only tool-call + thinking remain.
-    await userEvent.click(screen.getByRole('button', { name: 'Assistant prose' }));
+    await userEvent.click(screen.getByLabelText('Conversation'));
     expect(screen.getAllByTestId('event-card')).toHaveLength(2);
+  });
+
+  it('all-checked (default) shows every tool event; unchecking a tool subtracts those events', async () => {
+    mockUseTimeline.mockReturnValue(
+      timelineResult({
+        data: {
+          events: [
+            assistantToolUse(1, 'Bash'),
+            assistantToolUse(2, 'Read'),
+            assistantToolUse(3, 'mcp__atlassian__jira_get_issue'),
+          ],
+        },
+        isSuccess: true,
+        status: 'success',
+      }),
+    );
+    render(<Timeline agentKey="KAN-1" tokensByTool={sampleTokensByTool} />);
+    // Default = nothing excluded, all 3 visible.
+    expect(screen.getAllByTestId('event-card')).toHaveLength(3);
+    await openFilters();
+    // Uncheck Bash — only its event disappears.
+    await userEvent.click(screen.getByLabelText('Bash'));
+    expect(screen.getAllByTestId('event-card')).toHaveLength(2);
+    // Uncheck MCP:Jira too — only the Read event remains.
+    await userEvent.click(screen.getByLabelText('MCP:Jira'));
+    expect(screen.getAllByTestId('event-card')).toHaveLength(1);
+  });
+
+  it('non-tool events stay visible regardless of tool exclusions', async () => {
+    mockUseTimeline.mockReturnValue(
+      timelineResult({
+        data: {
+          events: [evt(1), assistantToolUse(2, 'Bash')],
+        },
+        isSuccess: true,
+        status: 'success',
+      }),
+    );
+    render(<Timeline agentKey="KAN-1" tokensByTool={sampleTokensByTool} />);
+    expect(screen.getAllByTestId('event-card')).toHaveLength(2);
+    await openFilters();
+    // Uncheck every tool the agent used — the conversation event remains.
+    for (const alias of ['Bash', 'Read', 'MCP:Jira']) {
+      await userEvent.click(screen.getByLabelText(alias));
+    }
+    expect(screen.getAllByTestId('event-card')).toHaveLength(1);
   });
 
   it('falls back to a single section tagged with agentState when transitions is empty', () => {
@@ -417,11 +484,9 @@ describe('Timeline', () => {
     );
     mockUseStateHistory.mockReturnValue(stateHistoryResult(transitions));
     render(<Timeline agentKey="KAN-1" agentState="running" />);
-    // Sections start open → at least one event-card visible.
     expect(screen.getAllByTestId('event-card').length).toBeGreaterThan(0);
     await userEvent.click(screen.getByRole('button', { name: /collapse all/i }));
     expect(screen.queryAllByTestId('event-card')).toHaveLength(0);
-    // Every section's toggle button should be aria-expanded=false.
     const toggles = screen.getAllByRole('button', { name: /toggle/i });
     for (const t of toggles) {
       expect(t).toHaveAttribute('aria-expanded', 'false');

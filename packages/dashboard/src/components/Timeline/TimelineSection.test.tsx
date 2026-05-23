@@ -62,7 +62,7 @@ describe('TimelineSection', () => {
         <div />
       </TimelineSection>,
     );
-    expect(screen.getByText(/^· 1 event$/)).toBeInTheDocument();
+    expect(screen.getByText(/^1 event$/)).toBeInTheDocument();
   });
 
   it('renders the section state on a data attribute for styling', () => {

@@ -1,7 +1,7 @@
 ---
 name: design-system
 description: Crew Figma DS + token bindings + Pill primitive contract
-last_updated: 2026-05-22
+last_updated: 2026-05-23
 covers:
   - 'packages/dashboard/src/components/**'
   - '*.figma.tsx'
@@ -137,7 +137,7 @@ Figma node IDs below are in the live consolidated file (`9FeJPriqdsdA4n9R5Xsrr8`
 
 ### `components/ui/` vs `components/<feature>/` split
 
-- `packages/dashboard/src/components/ui/` — **shadcn primitives + DS primitives** (`button`, `badge`, `tag`, `input`, `dialog`, `label`, `separator`, `form`). One file per primitive plus its `.figma.tsx` mapping. `pill-base.tsx` is the one exception — an internal shared anatomy for `button` / `badge` / `tag`, never exported or imported outside those three; it has no `.figma.tsx`. Don't put crew-specific composites here.
+- `packages/dashboard/src/components/ui/` — **shadcn primitives + DS primitives** (`button`, `badge`, `tag`, `input`, `dialog`, `label`, `separator`, `form`, `popover`, `state-icon`, `meta-list`). One file per primitive plus its `.figma.tsx` mapping. `pill-base.tsx` is the one exception — an internal shared anatomy for `button` / `badge` / `tag`, never exported or imported outside those three; it has no `.figma.tsx`. `popover`, `state-icon`, and `meta-list` are also `.figma.tsx`-less: `popover` wraps `radix-ui`'s Popover for the Filters dropdown (CREW-187), `state-icon` is the canonical filled-disc glyph rendered inside every state Pill (it has no Figma counterpart because Figma's `Pill` set already names `Icon: lucide/circle` directly — the wrapper exists to pin the absolute stroke-width that makes the outline read as a filled disc across AgentRow / DrawerHeader / TimelineSection), and `meta-list` is the inline-metadata-strip primitive that injects `·` separators via CSS `[&>li+li]:before:content-['·']` so the dot can never get out of sync with its items (used by AgentRow, DrawerHeader, TimelineSection — keep new metadata strips going through it instead of inlining `·` in JSX). Don't put crew-specific composites here.
 - `packages/dashboard/src/components/` (top level) — **Crew composites** that compose primitives + crew logic. `AgentRow`, `ProjectSection`, etc.
 
 This is the canonical shadcn convention; the `components.json` `aliases` block maps `ui → @/components/ui`.
