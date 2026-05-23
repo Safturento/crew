@@ -81,6 +81,8 @@ Organization: Active is grouped by topic (not chronology) since the dominant acc
 
 #### 2026-05-11 — Crew DS is partial vs Dashboard Screens; Timeline container + Bash event tags missing
 
+**Ticket:** [CREW-189](https://safturento.atlassian.net/browse/CREW-189) (Epic) — *the per-tool color question is answered by child **[CREW-192](https://safturento.atlassian.net/browse/CREW-192)**; resolution of this followup is gated on the Epic's full close (per Epic exception in the followup convention).*
+
 **Re-audited 2026-05-13 (CREW-147):** Confirmed via figma metadata + search_design_system against `9FeJPriqdsdA4n9R5Xsrr8` that the Composites page (the only page in the file today) still has no `Timeline`, `EventCard`, `FilterChips`, `LiveModeToggle`, or `SearchBar` component. The CREW-147 spec's `.figma.tsx` gap-fills on these five cannot be authored against a non-existent counterpart.
 
 **2026-05-16 (visual-fidelity close-out):** CREW-147 closed; its Timeline `.figma.tsx` criterion was retired as a false premise. When this followup's design work builds the Timeline composites, it must also author the `.figma.tsx` Code Connect files for each — that authoring is part of _this_ followup's scope, not a separate ticket. Until then, `visual-fidelity-check` correctly degrades to "no Code Connect mapping" for Timeline components, which does not block the visual-fidelity workstream.
