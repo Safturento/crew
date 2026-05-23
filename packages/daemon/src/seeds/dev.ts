@@ -22,6 +22,17 @@ site = "https://example.atlassian.net"
 
 [github]
 repo = "Safturento/crew"
+
+# Seeded so AgentsService.deriveAppUrl returns a non-null value for fixture
+# agents and the drawer's docker URL pill renders (CREW-187). [playwright]
+# is the canonical source of app_url; the schema requires a sibling
+# [playwright.smoke] or [playwright.authored] block and start_command.
+[playwright]
+app_url = "http://localhost:29649"
+start_command = "npm run dev"
+
+[playwright.smoke]
+enabled = true
 `,
   },
   {
