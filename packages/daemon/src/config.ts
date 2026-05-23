@@ -15,6 +15,12 @@ const daemonConfigSchema = z.object({
   CREW_DB_FILE: z.string().default(() => join(defaultCrewHome(), 'state.db')),
   CREW_PID_FILE: z.string().default(() => join(defaultCrewHome(), 'daemon.pid')),
   CREW_LOG_FILE: z.string().default(() => join(defaultCrewHome(), 'daemon.log')),
+  // Override the home dir resolveJsonlPath uses to find JSONL transcripts.
+  // Default of empty string → resolver falls back to `homedir()` (the
+  // canonical `~/.claude/projects/<encoded>/<session>.jsonl` location).
+  // Fixture mode (CREW_SEED_FIXTURES=1) redirects to a writable sibling
+  // of CREW_DB_FILE since the host's `~/.claude/projects` mount is RO.
+  CREW_TRANSCRIPTS_HOME: z.string().default(''),
 });
 
 export interface DaemonConfig {
@@ -24,6 +30,8 @@ export interface DaemonConfig {
   dbFile: string;
   pidFile: string;
   logFile: string;
+  /** When set, replaces `homedir()` in transcript path resolution. */
+  transcriptsHome: string | undefined;
 }
 
 /**
@@ -42,5 +50,6 @@ export function parseDaemonConfig(
     dbFile: parsed.CREW_DB_FILE,
     pidFile: parsed.CREW_PID_FILE,
     logFile: parsed.CREW_LOG_FILE,
+    transcriptsHome: parsed.CREW_TRANSCRIPTS_HOME === '' ? undefined : parsed.CREW_TRANSCRIPTS_HOME,
   };
 }

@@ -13,6 +13,7 @@ import type { DaemonDatabase } from '../db.js';
 export async function resolveJsonlPathForAgent(
   db: Kysely<DaemonDatabase>,
   agentKey: string,
+  transcriptsHome?: string,
 ): Promise<string | null> {
   const row = await db
     .selectFrom('runs')
@@ -24,5 +25,5 @@ export async function resolveJsonlPathForAgent(
     .limit(1)
     .executeTakeFirst();
   if (!row) return null;
-  return join(claudeProjectDirFor(row.worktreePath), `${row.sessionId}.jsonl`);
+  return join(claudeProjectDirFor(row.worktreePath, transcriptsHome), `${row.sessionId}.jsonl`);
 }

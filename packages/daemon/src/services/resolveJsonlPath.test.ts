@@ -110,4 +110,23 @@ describe('resolveJsonlPathForAgent', () => {
       await db.destroy();
     }
   });
+
+  // CREW-186: fixture seed writes JSONL into a sibling-of-dbFile path so the
+  // canonical `${HOME}/.claude/projects` host bind stays read-only. The
+  // resolver therefore needs to honor a configurable transcripts home that
+  // overrides `homedir()`.
+  it('uses transcriptsHome override in place of homedir()', async () => {
+    const db = await freshDb();
+    try {
+      const wt = '/work/KAN-4';
+      await makeAgent(db, 'KAN-4', wt);
+      await makeRun(db, 'KAN-4', 'session-xyz', 'run');
+      const out = await resolveJsonlPathForAgent(db, 'KAN-4', '/state/seeded-transcripts');
+      expect(out).toBe(
+        join(claudeProjectDirFor(wt, '/state/seeded-transcripts'), 'session-xyz.jsonl'),
+      );
+    } finally {
+      await db.destroy();
+    }
+  });
 });

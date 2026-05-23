@@ -1,11 +1,11 @@
 ---
 name: local-dev
 description: Docker stack, env.toml, worktree isolation, sandbox baseline
-last_updated: 2026-05-14
+last_updated: 2026-05-22
 covers:
   - 'docker-compose*.yml'
   - 'env.toml'
-  - 'packages/daemon/seeds/**'
+  - 'packages/daemon/src/seeds/**'
 ---
 
 # Local development
@@ -25,9 +25,15 @@ An anonymous `node_modules` volume preserves `npm ci` output from being clobbere
 
 The canonical stack persists state at the `crew-state` named volume (`/state/state.db` inside the container). Per-worktree stacks use their own ephemeral volume and re-seed from fixtures on every bring-up.
 
-Seeding is gated by `CREW_SEED_FIXTURES=1`. When set, the daemon runs [`packages/daemon/seeds/dev.ts`](../packages/daemon/seeds/dev.ts) at startup — deterministic project TOMLs, agents, runs, tool calls, and a fixture transcript. Tests target these fixtures, never your canonical state. `crew run <KEY>` always exports `CREW_SEED_FIXTURES=1` for the worktree stack.
+Seeding is gated by `CREW_SEED_FIXTURES=1`. When set, the daemon runs [`packages/daemon/src/seeds/dev.ts`](../packages/daemon/src/seeds/dev.ts) at startup — deterministic project TOMLs, agents, runs, tool calls, state transitions, and a fixture JSONL transcript. Tests target these fixtures, never your canonical state. `crew run <KEY>` always exports `CREW_SEED_FIXTURES=1` for the worktree stack.
 
-When you add a fixture, edit `seeds/dev.ts` and bump the fixture set together with any test that depends on it. The seed file is `git`-tracked; don't write per-developer fixtures.
+The seed runs three independent idempotent steps so a daemon reload picks up new content without a DB wipe:
+
+- `seedFixtures(db)` — gated on `agents` being empty. Inserts agents, runs, tool_calls.
+- `seedStateTransitionFixtures(db)` — gated per `agent_key`. Inserts state_transitions for the demo agent so the redesigned drawer renders ≥2 `TimelineSection` components.
+- `seedTranscriptFixtures(transcriptsHome)` — gated per-file. Writes JSONL to `<transcriptsHome>/.claude/projects/<encoded-worktree>/<session>.jsonl`. Lives under the same `transcriptsHome` `resolveJsonlPath` reads, redirected by `serve.ts` to a writable sibling of the DB file (the host's `~/.claude/projects` mount is RO).
+
+The seed dir lives under `src/` so the `tsx watch` bind-mount picks up changes without an image rebuild. When you add a fixture, edit `src/seeds/dev.ts` and bump the fixture set together with any test that depends on it. The seed file is `git`-tracked; don't write per-developer fixtures.
 
 ## `env.toml` is the source of truth for per-worktree env
 
