@@ -1,7 +1,7 @@
 ---
 name: design-system
 description: Crew Figma DS + token bindings + Pill primitive contract
-last_updated: 2026-05-22
+last_updated: 2026-05-23
 covers:
   - 'packages/dashboard/src/components/**'
   - '*.figma.tsx'
@@ -137,7 +137,7 @@ Figma node IDs below are in the live consolidated file (`9FeJPriqdsdA4n9R5Xsrr8`
 
 ### `components/ui/` vs `components/<feature>/` split
 
-- `packages/dashboard/src/components/ui/` — **shadcn primitives + DS primitives** (`button`, `badge`, `tag`, `input`, `dialog`, `label`, `separator`, `form`). One file per primitive plus its `.figma.tsx` mapping. `pill-base.tsx` is the one exception — an internal shared anatomy for `button` / `badge` / `tag`, never exported or imported outside those three; it has no `.figma.tsx`. Don't put crew-specific composites here.
+- `packages/dashboard/src/components/ui/` — **shadcn primitives + DS primitives** (`button`, `badge`, `tag`, `input`, `dialog`, `label`, `separator`, `form`, `popover`). One file per primitive plus its `.figma.tsx` mapping. `pill-base.tsx` is the one exception — an internal shared anatomy for `button` / `badge` / `tag`, never exported or imported outside those three; it has no `.figma.tsx`. `popover` is the second exception — it wraps `radix-ui`'s Popover for the Filters dropdown (CREW-187); no Figma counterpart yet, so no `.figma.tsx` until the design system adds a Popover composite. Don't put crew-specific composites here.
 - `packages/dashboard/src/components/` (top level) — **Crew composites** that compose primitives + crew logic. `AgentRow`, `ProjectSection`, etc.
 
 This is the canonical shadcn convention; the `components.json` `aliases` block maps `ui → @/components/ui`.
