@@ -22,4 +22,10 @@ describe('SearchBar', () => {
     expect(onChange).toHaveBeenCalledWith('a');
     expect(onChange).toHaveBeenCalledWith('b');
   });
+
+  it('renders a leading search icon (lucide/search)', () => {
+    const { container } = render(<SearchBar value="" onChange={() => {}} />);
+    // lucide-react attaches `lucide-search` to the rendered svg.
+    expect(container.querySelector('svg.lucide-search')).not.toBeNull();
+  });
 });
