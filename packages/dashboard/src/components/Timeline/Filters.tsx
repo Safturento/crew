@@ -9,7 +9,13 @@ import { CATEGORIES, defaultVisibleCategorySet, type CategoryId } from './eventC
 
 export interface TimelineFilterState {
   categories: ReadonlySet<CategoryId>;
-  tools: ReadonlySet<string>;
+  /**
+   * Aliases the user has explicitly turned OFF. Empty = "all tools shown".
+   * Inverted-checkbox semantics: a row reads as checked when its alias is
+   * NOT in this set; unchecking a row adds the alias here. Matches the
+   * UX convention "all checked = see everything; unchecking subtracts."
+   */
+  excludedTools: ReadonlySet<string>;
 }
 
 interface FiltersProps {
@@ -21,7 +27,7 @@ interface FiltersProps {
 
 export const defaultTimelineFilterState: TimelineFilterState = {
   categories: new Set(defaultVisibleCategorySet),
-  tools: new Set(),
+  excludedTools: new Set(),
 };
 
 export function Filters({ state, onChange, tokensByTool }: FiltersProps) {
@@ -34,20 +40,23 @@ export function Filters({ state, onChange, tokensByTool }: FiltersProps) {
     [tokensByTool],
   );
 
-  const divergenceCount = useMemo(() => countDivergences(state.categories, state.tools), [state]);
+  const divergenceCount = useMemo(
+    () => countDivergences(state.categories, state.excludedTools),
+    [state],
+  );
 
   const toggleCategory = (id: CategoryId) => {
     const next = new Set(state.categories);
     if (next.has(id)) next.delete(id);
     else next.add(id);
-    onChange({ categories: next, tools: state.tools });
+    onChange({ categories: next, excludedTools: state.excludedTools });
   };
 
   const toggleTool = (alias: string) => {
-    const next = new Set(state.tools);
+    const next = new Set(state.excludedTools);
     if (next.has(alias)) next.delete(alias);
     else next.add(alias);
-    onChange({ categories: state.categories, tools: next });
+    onChange({ categories: state.categories, excludedTools: next });
   };
 
   return (
@@ -98,7 +107,7 @@ export function Filters({ state, onChange, tokensByTool }: FiltersProps) {
                   id={`filter-tool-${row.alias}`}
                   label={row.alias}
                   title={row.title}
-                  checked={state.tools.has(row.alias)}
+                  checked={!state.excludedTools.has(row.alias)}
                   onToggle={() => toggleTool(row.alias)}
                 />
               ))
@@ -153,11 +162,14 @@ function FilterRow({ id, label, title, checked, onToggle }: FilterRowProps) {
   );
 }
 
-function countDivergences(categories: ReadonlySet<CategoryId>, tools: ReadonlySet<string>): number {
+function countDivergences(
+  categories: ReadonlySet<CategoryId>,
+  excludedTools: ReadonlySet<string>,
+): number {
   let diff = 0;
   for (const c of CATEGORIES) {
     const isOn = categories.has(c.id);
     if (isOn !== c.defaultVisible) diff += 1;
   }
-  return diff + tools.size;
+  return diff + excludedTools.size;
 }

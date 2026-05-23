@@ -386,7 +386,7 @@ describe('Timeline', () => {
     expect(screen.getAllByTestId('event-card')).toHaveLength(2);
   });
 
-  it('narrows visible events to selected tool aliases when Tools rows are toggled on', async () => {
+  it('all-checked (default) shows every tool event; unchecking a tool subtracts those events', async () => {
     mockUseTimeline.mockReturnValue(
       timelineResult({
         data: {
@@ -401,13 +401,35 @@ describe('Timeline', () => {
       }),
     );
     render(<Timeline agentKey="KAN-1" tokensByTool={sampleTokensByTool} />);
+    // Default = nothing excluded, all 3 visible.
     expect(screen.getAllByTestId('event-card')).toHaveLength(3);
     await openFilters();
+    // Uncheck Bash — only its event disappears.
     await userEvent.click(screen.getByLabelText('Bash'));
-    expect(screen.getAllByTestId('event-card')).toHaveLength(1);
-    await userEvent.click(screen.getByLabelText('MCP:Jira'));
-    // Bash + MCP:Jira = 2 visible.
     expect(screen.getAllByTestId('event-card')).toHaveLength(2);
+    // Uncheck MCP:Jira too — only the Read event remains.
+    await userEvent.click(screen.getByLabelText('MCP:Jira'));
+    expect(screen.getAllByTestId('event-card')).toHaveLength(1);
+  });
+
+  it('non-tool events stay visible regardless of tool exclusions', async () => {
+    mockUseTimeline.mockReturnValue(
+      timelineResult({
+        data: {
+          events: [evt(1), assistantToolUse(2, 'Bash')],
+        },
+        isSuccess: true,
+        status: 'success',
+      }),
+    );
+    render(<Timeline agentKey="KAN-1" tokensByTool={sampleTokensByTool} />);
+    expect(screen.getAllByTestId('event-card')).toHaveLength(2);
+    await openFilters();
+    // Uncheck every tool the agent used — the conversation event remains.
+    for (const alias of ['Bash', 'Read', 'MCP:Jira']) {
+      await userEvent.click(screen.getByLabelText(alias));
+    }
+    expect(screen.getAllByTestId('event-card')).toHaveLength(1);
   });
 
   it('falls back to a single section tagged with agentState when transitions is empty', () => {

@@ -289,16 +289,17 @@ function matchesFilters(
   }
   if (!categoryMatch) return false;
 
-  if (state.tools.size > 0) {
+  // Tools section uses inverted-checkbox semantics: an alias in
+  // `excludedTools` means the user unchecked it. Event passes iff it has
+  // no tool_use blocks OR every one of its aliased tool_use names is
+  // still checked (not in the exclusion set).
+  if (state.excludedTools.size > 0) {
     const aliases = eventToolNames(event).map(toolAlias);
-    let toolMatch = false;
-    for (const a of aliases) {
-      if (state.tools.has(a)) {
-        toolMatch = true;
-        break;
+    if (aliases.length > 0) {
+      for (const a of aliases) {
+        if (state.excludedTools.has(a)) return false;
       }
     }
-    if (!toolMatch) return false;
   }
 
   if (needle.length === 0) return true;
