@@ -1223,6 +1223,21 @@ The other two open questions (sandbox config drift, Phase 2 + Phase 3 separation
 
 ## Resolved
 
+### 2026-05-23 — Drawer Timeline still rendering EventCard, not Figma-spec TranscriptRow
+
+**What:** CREW-187 (PR #264) shipped the Timeline UX expansion (Filters dropdown, tool aliasing, Slim 5 categories) but explicitly left the per-event renderer alone — the drawer Timeline still rendered events via the old `EventCard` + `renderers/*Card` tree, which didn't match the Figma `2026-05-21` drawer redesign (one horizontal Tag · text · meta row per content block at node `553:445`).
+
+**Why noticed:** Post-merge review of PR #264 on 2026-05-22 against Figma `220:246` (AgentBody) and `553:445` (TranscriptRow). The visible mismatch: EventCard's two-line stacked layout with its own pad+border framing vs. Figma's single-row Tag + truncated text + right-aligned meta. Ticketed as CREW-188 the same day.
+
+**Anchors:**
+
+- `packages/dashboard/src/components/Timeline/Timeline.tsx` — call site that swapped `<EventCard>` for `<TranscriptRow>`
+- `packages/dashboard/src/components/Timeline/TranscriptRow.tsx` — new composite (created in this PR)
+- Figma node `553:445` (TranscriptRow), captured in `.crew/figma-snapshot/composites/553-445.{json,png}`
+- Predecessor: CREW-187 / PR #264 / commit `6a88075`
+
+**Resolved 2026-05-23:** TranscriptRow composite shipped, drawer Timeline now matches Figma 553:445 spec. The old `EventCard` + `renderers/` directory was deleted wholesale — only call site was `Timeline.tsx`. Per-block iteration preserved (an assistant turn carrying text + thinking + tool_use still renders as three rows). Slim 5 categories drive Tag colour (conversation→running, tools→waiting, thinking→pr_open, hooks-and-skills→initializing, system→idle); error tones override on `tool_result.is_error`, `system/api_error`, and `hook_non_blocking_error`. Note: the original CREW-188 ticket cited `318:230` and `558:477` as the TranscriptRow / drawer node IDs — those actually point at `Input` and `TimelineToolbar`. Real node IDs are `553:445` (TranscriptRow) and `594:803` (DrawerHeader). Ticket body kept the misleading IDs; the implementation followed the snapshot.
+
 ### 2026-05-13 — Agent drawer / agent page search input missing leading magnifying-glass icon
 
 **What:** The search input above the event timeline on Agent Drawer (`1:756`) + Agent full page (`1:1900`) Figma frames has a `Has Icon=true, Icon=lucide/search` leading-icon configuration. The dashboard code (`components/Timeline/SearchBar.tsx`) renders the same input as a bare `<input type="search">` with placeholder text only — no leading icon SVG. Once CREW-136 (T2 Form composites) lands the `leadingIcon` prop on `Input`, the caller needs to be updated to pass `leadingIcon={<Search />}`.
