@@ -20,14 +20,12 @@ export function MetaList({ children, className }: MetaListProps) {
     <ul
       className={cn(
         'flex flex-wrap items-center gap-2 font-mono text-xs text-muted-foreground',
-        "[&>li+li]:before:mr-2 [&>li+li]:before:content-['·'] [&>li+li]:before:text-muted-foreground/40",
+        "[&>li+li]:before:mr-2 [&>li+li]:before:content-['·'] [&>li+li]:before:text-muted-foreground/60",
         className,
       )}
     >
       {items.map((child, i) => (
-        <li key={i} className="inline-flex items-center gap-1.5">
-          {child}
-        </li>
+        <li key={i}>{child}</li>
       ))}
     </ul>
   );
