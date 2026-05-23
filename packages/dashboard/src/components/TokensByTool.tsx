@@ -1,5 +1,8 @@
+import { useMemo } from 'react';
+
 import type { AgentDetailTokensByTool } from '../data/types.js';
 import { formatTokens } from '../format/tokens.js';
+import { aggregateByAlias } from '../format/tool-alias.js';
 import { TokenBarRow, TOKEN_BAR_ROW_GRID_CLASSES } from './TokenBarRow.js';
 
 interface TokensByToolProps {
@@ -9,6 +12,17 @@ interface TokensByToolProps {
 }
 
 export function TokensByTool({ tokensByTool, total }: TokensByToolProps) {
+  const aliasRows = useMemo(() => {
+    const aggregated = aggregateByAlias(tokensByTool.map(({ tool, tokens }) => ({ tool, tokens })));
+    const sum = aggregated.reduce((acc, row) => acc + row.tokens, 0);
+    return aggregated.map((row) => ({
+      alias: row.alias,
+      tokens: row.tokens,
+      percent: sum > 0 ? (row.tokens / sum) * 100 : 0,
+      title: `${row.alias} (${row.raw.join(', ')})`,
+    }));
+  }, [tokensByTool]);
+
   return (
     <section
       role="region"
@@ -24,13 +38,19 @@ export function TokensByTool({ tokensByTool, total }: TokensByToolProps) {
         <span className="text-right">Share</span>
       </div>
       <div data-testid="tokens-by-tool-body">
-        {tokensByTool.length === 0 ? (
+        {aliasRows.length === 0 ? (
           <div className="border-t border-border px-3.5 py-6 text-center text-sm italic text-muted-foreground">
             No tool usage yet
           </div>
         ) : (
-          tokensByTool.map((row) => (
-            <TokenBarRow key={row.tool} tool={row.tool} tokens={row.tokens} percent={row.percent} />
+          aliasRows.map((row) => (
+            <TokenBarRow
+              key={row.alias}
+              tool={row.alias}
+              tokens={row.tokens}
+              percent={row.percent}
+              title={row.title}
+            />
           ))
         )}
       </div>
