@@ -17,7 +17,7 @@ export function SearchBar({ value, onChange }: SearchBarProps) {
       placeholder="Search events…"
       aria-label="Search timeline events"
       leadingIcon={<Search aria-hidden />}
-      className="h-8 min-w-0 flex-1 border-border bg-card font-mono text-xs"
+      className="h-8 min-w-0 flex-1 border-slate-600 bg-slate-1100 font-mono text-xs"
     />
   );
 }
