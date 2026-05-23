@@ -1,13 +1,5 @@
 import { useEffect, useState } from 'react';
-import {
-  ArrowUpRight,
-  Circle,
-  Container,
-  FolderGit,
-  GitPullRequest,
-  SquareArrowOutUpRight,
-  X,
-} from 'lucide-react';
+import { ArrowUpRight, Circle, Container, FolderGit, SquareArrowOutUpRight, X } from 'lucide-react';
 
 import { formatDuration } from '../format/duration.js';
 import { formatTokens } from '../format/tokens.js';
@@ -63,12 +55,7 @@ export function DrawerHeader({
             </Button>
           )}
           {isWaiting && (
-            <Button
-              color="waiting"
-              intensity="loud"
-              size="sm"
-              icon={<GitPullRequest aria-hidden />}
-            >
+            <Button color="waiting" intensity="loud" size="sm">
               Provide input
             </Button>
           )}

@@ -1,11 +1,5 @@
 import { ListCollapse } from 'lucide-react';
-import {
-  useDeferredValue,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from 'react';
+import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 
 import { useStateHistory, useTimeline } from '../../data/queries.js';
 import type { AgentState, TranscriptEvent } from '../../data/types.js';
@@ -164,7 +158,10 @@ export function Timeline({ agentKey, agentState }: TimelineProps) {
       ) : filteredEvents.length === 0 ? (
         <FilterEmptyState onShowAll={resetFilters} />
       ) : (
-        <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto">
+        <div
+          ref={scrollRef}
+          className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto px-1 py-1"
+        >
           {sections.map((s) => {
             const key = sectionKey(s);
             const isOpen = !collapsed[key];
