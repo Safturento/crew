@@ -34,6 +34,7 @@ import {
   resolveSuperpowersChrome,
   smokeEnabled,
   verifyAfterRunEnabled,
+  writeMcpDiagnosticLog,
   writeMcpFile,
 } from '../lib/mcp-config/index.js';
 import {
@@ -46,6 +47,7 @@ import {
   dockerLogPathFor,
   findNewestTranscript,
   hasBinary,
+  mcpLogPathFor,
   prepareAgentEnvironment,
   preflightTools,
   readWorktreeState,
@@ -336,10 +338,14 @@ export async function runRun(key: string, opts: RunOptions): Promise<never> {
             resolverCwd: config.repo_path,
           }
         : undefined;
+    const mcpWarnings: string[] = [];
     const writeResult = await writeMcpFile(worktree, {
       playwright: playwrightOpts,
       chrome: wantsChrome ? {} : undefined,
-      warn: (msg) => console.warn(pc.yellow(`  ! ${msg}`)),
+      warn: (msg) => {
+        mcpWarnings.push(msg);
+        console.warn(pc.yellow(`  ! ${msg}`));
+      },
     });
     console.log(pc.dim(`→ wrote ${join(worktree, '.mcp.json')}`));
     if (playwrightOpts) {
@@ -364,6 +370,20 @@ export async function runRun(key: string, opts: RunOptions): Promise<never> {
     if (writeResult.existed) {
       console.warn(pc.yellow('  ! .mcp.json already existed in worktree — overwritten'));
     }
+    // Diagnostic log of resolved MCP wiring + warnings. Lets a debugger
+    // working from the host explain "chrome MCP tool was missing from the
+    // agent's session" without re-running the dispatch. CREW-184.
+    const mcpLogPath = mcpLogPathFor(key);
+    writeMcpDiagnosticLog({
+      logPath: mcpLogPath,
+      mcpJsonPath: join(worktree, '.mcp.json'),
+      chromiumPath: writeResult.chromiumPath,
+      chromeMcpPath: writeResult.chromeMcpPath,
+      wantsPlaywright,
+      wantsChrome,
+      warnings: mcpWarnings,
+    });
+    console.log(pc.dim(`    mcp log: ${mcpLogPath}`));
   }
 
   console.log(pc.dim('→ injecting dispatcher-managed skills into the worktree…'));

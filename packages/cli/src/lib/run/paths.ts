@@ -29,3 +29,7 @@ export function npmInstallLogPathFor(key: string): string {
 export function verifyGateLogPathFor(key: string): string {
   return `/tmp/crew-verify-gate-${key}.log`;
 }
+
+export function mcpLogPathFor(key: string): string {
+  return `/tmp/crew-mcp-${key}.log`;
+}

@@ -47,7 +47,7 @@ Detailed step-by-step procedure lives in **`workflow.md`** — read it when invo
 3. Map each to a Figma node via the matching `.figma.tsx`
 4. **Structural check** — what classes does the code emit per variant? Compare to Figma's resolved tokens
 5. **Caller check** — what props do call sites pass? Compare to Figma's variant choices for the same context
-6. **Live DOM check** (required when `dashboardUrl` is set and chrome is wired) — open the dashboard via the chrome MCP, read computed styles + rendered SVG, compare to the Figma snapshot enrichment
+6. **Live DOM check** (fail-closed when `dashboardUrl` is set) — open the dashboard via the chrome MCP (`mcp__chrome__use_browser`), read computed styles + rendered SVG, compare to the Figma snapshot enrichment. If chrome MCP is missing from the tool inventory on a `[visual_fidelity]`-configured project, surface as a blocker — do not "log gap and pass."
 7. Compile the findings report (markdown, grouped by severity)
 8. **Decide whether to claim done** — any high-severity = stop, fix, re-run
 
@@ -99,6 +99,8 @@ The mechanical version of this rule lives in `workflow.md` Step 4. The rule live
 - **No snapshot:** project has `[visual_fidelity]` config but no `.crew/figma-snapshot/`. Likely the snapshot generator didn't run pre-dispatch. **Block** — tell user to run `crew figma-snapshot` and re-dispatch.
 - **No config:** project has visual surfaces but no `[visual_fidelity]` config. Flag as "project should be wired up" — don't block this task on it.
 - **Component has no `.figma.tsx`:** flag as "no Code Connect mapping" — fall through to caller/parent context.
+- **Chrome MCP missing on a `[visual_fidelity]` project:** the host wired `chrome` into `.mcp.json` but `mcp__chrome__use_browser` is not in your tool inventory. **Block** — Step 5 is required; check `/tmp/crew-mcp-<key>.log` (written by the dispatcher) for the resolved chrome MCP path and any plugin-resolution warnings.
+- **Dashboard unreachable when chrome MCP is wired:** docker stack is down or port is wrong. **Block** — surface in the report and PR description; don't treat as "Step 5 skipped."
 
 ## Related skills
 

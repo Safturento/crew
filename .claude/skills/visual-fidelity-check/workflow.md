@@ -115,17 +115,21 @@ This sub-flow is mechanical. Follow it as a checklist — no judgment calls abou
 
 **Never** diff against a component **set** variant when a render composite exists. If a finding's "Figma reference" line names `composites/272-120.json` (or any other set's JSON) instead of a render composite, the diff target is wrong — re-do Step 4 with the proper composite.
 
-## Step 5: Live DOM check (required when `dashboardUrl` is set and chrome is wired)
+## Step 5: Live DOM check (fail-closed when `dashboardUrl` is set)
 
 Steps 3–4 read code and callers; neither reads the _rendered_ DOM. Step 5 opens the running dashboard via the chrome MCP server and inspects live elements — computed styles and rendered SVG — against the Figma snapshot's `enrichment` data. This catches runtime-only failures the static checks cannot: purged Tailwind classes, CSS specificity wars, theme overrides, and icons where the source looks right but the rendered glyph is wrong.
 
-**When this step runs:**
+**Step 5.0 — Pre-flight: confirm chrome MCP is in your tool inventory.** Before doing anything else in Step 5:
 
-- `dashboardUrl` set **and** the `chrome` MCP server is wired (`mcp__chrome__use_browser` available) → Step 5 is **required**.
-- `dashboardUrl` set but chrome is **not** wired (the `superpowers-chrome` plugin is not installed on this machine) → log a verification gap, skip 5.1–5.5, and record the gap in the report so the user can decide to install the plugin or accept partial coverage.
-- `dashboardUrl` **not** set → skip Step 5 (consistent with Steps 1–4 behavior).
+- If `dashboardUrl` is set in the project config **and** the `mcp__chrome__use_browser` tool is **not** in your available tools, **STOP and surface as a blocker**. Do **not** "log a verification gap and pass." On a `[visual_fidelity]`-configured project the host already wrote `chrome` into `.mcp.json`; if the tool isn't reachable the wiring broke and the gate is no longer meaningful.
 
-**Step 5.1 — Open the dashboard.** Call `mcp__chrome__use_browser` with `action: "navigate"` to the resolved `dashboardUrl`. Wait for a known ready-state element (`await_element` on a landing-page selector). If chrome is unreachable or navigate fails, log `verification gap: chrome unreachable` and skip 5.2–5.5.
+  Reporting language: > **HIGH (blocker):** chrome MCP unreachable. `[visual_fidelity]` is configured, but `mcp__chrome__use_browser` is not in this session's tool inventory. Check `/tmp/crew-mcp-<key>.log` (written by the dispatcher) for the resolved chrome MCP path and any plugin-resolution warnings. Do not claim done; surface in the PR description as a verification blocker.
+
+- If `dashboardUrl` is **not** set, skip Step 5 entirely (consistent with Steps 1–4 behavior).
+
+**When Step 5 runs (no blocker):** Steps 5.1–5.5 below are **required**.
+
+**Step 5.1 — Open the dashboard.** Call `mcp__chrome__use_browser` with `action: "navigate"` to the resolved `dashboardUrl`. Wait for a known ready-state element (`await_element` on a landing-page selector). If navigate fails (dashboard unreachable, docker stack down, port mismatch), **fail closed**: surface as `HIGH (blocker): dashboard unreachable at <url>` and do **not** skip the remaining sub-steps — fix the underlying reachability problem and re-run.
 
 **Step 5.2 — Navigate to a screen exercising each touched component.** For each `(component, variant)` the code can produce, identify the dashboard URL or in-app navigation that surfaces an instance of that variant. Reuse the caller map from Step 4 to pick a screen.
 
@@ -148,7 +152,7 @@ Step 5.4 is the runtime counterpart to Step 4's caller-side icon check — it ca
 
 **Step 5.5 — Screenshot cross-reference.** `use_browser` auto-captures a viewport PNG on every action. Cite the most recent capture path in the report and cross-reference it with `<snapshotPath>/screens/<screen-node>.png` from the Figma snapshot. If 5.1–5.4 already surfaced findings, link the screenshot pair as supporting evidence rather than re-describing it in prose.
 
-**Failure mode:** if chrome is wired but the dashboard is unreachable (docker stack down, port mismatch), Step 5 fails closed — log `verification gap: dashboard unreachable at <url>` and surface it in the report. Do **not** treat dashboard-unreachable as "Step 5 passed."
+**Failure mode:** Step 5 is fail-closed end-to-end. Chrome MCP missing from the tool inventory, dashboard unreachable, navigate failure, mid-flow chrome error — all surface as `HIGH (blocker)` findings. Do **not** treat any of them as "Step 5 passed" or "skipped, soft warning." The gate exists because soft warnings shipped visually-broken UI (CREW-181 Timeline). If you can't run a sub-step, the gate has not been satisfied.
 
 ## Step 6: Compile findings report
 

@@ -17,3 +17,7 @@ export {
   resolveSuperpowersChrome,
   type SuperpowersChromePaths,
 } from './resolve-superpowers-chrome.js';
+export {
+  writeMcpDiagnosticLog,
+  type WriteMcpDiagnosticLogOptions,
+} from './write-mcp-log.js';
