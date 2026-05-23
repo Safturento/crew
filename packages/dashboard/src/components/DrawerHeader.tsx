@@ -1,13 +1,5 @@
 import { useEffect, useState } from 'react';
-import {
-  ArrowUpRight,
-  Circle,
-  Container,
-  FolderGit,
-  GitPullRequest,
-  SquareArrowOutUpRight,
-  X,
-} from 'lucide-react';
+import { ArrowUpRight, Circle, Container, FolderGit, SquareArrowOutUpRight, X } from 'lucide-react';
 
 import { formatDuration } from '../format/duration.js';
 import { formatTokens } from '../format/tokens.js';
@@ -36,7 +28,6 @@ export function DrawerHeader({
   const runtime = useLiveRuntime(startedAt, live);
   const meta = STATE_META[detail.state];
   const isWaiting = detail.state === 'waiting';
-  const startedClock = formatStartedClock(startedAt);
 
   return (
     <header
@@ -63,12 +54,7 @@ export function DrawerHeader({
             </Button>
           )}
           {isWaiting && (
-            <Button
-              color="waiting"
-              intensity="loud"
-              size="sm"
-              icon={<GitPullRequest aria-hidden />}
-            >
+            <Button color="waiting" intensity="loud" size="sm">
               Provide input
             </Button>
           )}
@@ -99,16 +85,8 @@ export function DrawerHeader({
         >
           {meta.label}
         </Badge>
-        <PipeSep />
         <StatusItem label="runtime" value={runtime ?? '—'} />
-        <PipeSep />
         <StatusItem label="tokens" value={formatTokens(detail.tokens.total)} />
-        {startedClock && (
-          <>
-            <PipeSep />
-            <StatusItem label="started" value={startedClock} />
-          </>
-        )}
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
@@ -160,21 +138,6 @@ function StatusItem({ label, value }: { label: string; value: string }) {
       <span className="tabular-nums text-foreground/80">{value}</span>
     </span>
   );
-}
-
-function PipeSep() {
-  return (
-    <span aria-hidden className="text-muted-foreground/40">
-      |
-    </span>
-  );
-}
-
-function formatStartedClock(startedAt: string | undefined): string | null {
-  if (!startedAt) return null;
-  const d = new Date(startedAt);
-  if (Number.isNaN(d.getTime())) return null;
-  return d.toLocaleTimeString('en-GB', { hour12: false });
 }
 
 function useLiveRuntime(startedAt: string | undefined, live: boolean): string | null {

@@ -1,7 +1,7 @@
 import { ChevronDown, ChevronRight, Circle } from 'lucide-react';
 import type { ReactNode } from 'react';
 
-import { STATE_META } from '../../data/state-meta.js';
+import { STATE_CLASSES, STATE_META } from '../../data/state-meta.js';
 import type { AgentState } from '../../data/types.js';
 import { formatDuration } from '../../format/duration.js';
 import { formatTokens } from '../../format/tokens.js';
@@ -32,7 +32,11 @@ export function TimelineSection({
   const timestamp = new Date(startedAt).toISOString().slice(11, 19);
 
   return (
-    <section data-testid="timeline-section" data-state={state} className="border-b border-white/5">
+    <section
+      data-testid="timeline-section"
+      data-state={state}
+      className={`overflow-hidden rounded-[5px] border ${STATE_CLASSES[state].solidBorder}`}
+    >
       <button
         type="button"
         aria-label={`Toggle ${meta.label} section`}

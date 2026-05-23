@@ -276,6 +276,33 @@ The first two examples resolve once the structural fix lands. The third is a ski
 
 ### Dashboard UI
 
+#### 2026-05-22 — `${APP_URL}` template literal in DrawerHeader docker pill (backend bug)
+
+**What:** The DrawerHeader's docker pill renders the literal string `${APP_URL}` for some agents in production (DOM `href` becomes `https://crew.tail82463c.ts.net/$%7BAPP_URL%7D` — the `${…}` is URL-encoded by the browser). The dashboard is showing exactly what the daemon returns; the bug is in `deriveAppUrl` in `packages/shared/src/config/derive-urls.ts` returning the project-config template verbatim without expanding `${CREW_VITE_PORT}` (or whichever env var the project's `app_url` template references) against the worktree's `env.toml`.
+
+**Why noticed:** PR #262 review of CREW-185 (drawer visual fidelity). Reviewer caught it on the live production drawer using chrome MCP. Out of scope for CREW-185 because the ticket is "Frontend-only" and explicitly says "If a finding requires a new data field, surface as out-of-scope + file a followup" — the fix is in `shared/`, not the dashboard.
+
+**Anchors:**
+
+- `packages/shared/src/config/derive-urls.ts` — `deriveAppUrl` (where template expansion should happen)
+- `packages/dashboard/src/components/DrawerHeader.tsx:101–113` — the consumer pill that surfaces whatever string it gets
+- Project config `app_url` field — typically `"http://localhost:${CREW_VITE_PORT}"` or similar
+- Worktree `env.toml` — where `CREW_VITE_PORT` (and similar per-worktree vars) get materialized
+- CREW-185 PR #262 review comment (2026-05-23)
+
+**What's been considered:**
+
+- Expand against `process.env` directly in `deriveAppUrl` — simple but conflates daemon-process env with worktree env.
+- Pass the worktree's resolved env into `deriveAppUrl` as a second arg — cleaner, matches how the rest of `shared/config/` handles per-worktree state.
+- Render a friendlier error in the dashboard (e.g. "app URL not configured for this worktree") rather than the literal string — defensive, but masks the upstream bug.
+
+**Shape of work:** Small. Locate `deriveAppUrl`, thread the worktree's resolved env vars in, substitute `${VAR}` tokens before returning. Add a unit test for the template-expansion path. ~30 min including tests.
+
+**Open questions:**
+
+- Should expansion fail loudly (throw) or silently (leave the token unexpanded) when a referenced var isn't set? Loud is better for catching misconfigured worktrees early.
+- Is `${VAR}` the only template syntax to support, or also `$VAR` / `{{ VAR }}`? Existing `env.toml` usage will dictate this.
+
 #### 2026-05-22 — Layer-1 RunMetrics widget loses its drawer home in the redesign — find it a new one
 
 **What:** The 2026-05-21 drawer redesign (Figma `9FeJPriqdsdA4n9R5Xsrr8`, AgentBody `220:246`) does not include `RunMetrics` anywhere. The widget renders Layer-1 cohort metrics (`docLoadCoveragePct`, `cleanlinessPass`, `prClaimInputTokens`, `parityViolations`) and currently sits between AgentHeader and Timeline in `AgentBody.tsx:45`. The drawer code-migration plan (this session, 2026-05-22) drops it from drawer + AgentPage entirely. The component itself stays — `RunMetrics.tsx` is solid — but with no caller it'll be dead code until placed somewhere.
