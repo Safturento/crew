@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react';
 import type { MouseEvent, ReactNode } from 'react';
 import { cva } from 'class-variance-authority';
-import { Circle, Clock, Currency, GitPullRequest, Hash } from 'lucide-react';
+import { Clock, Currency, GitPullRequest, Hash } from 'lucide-react';
 
 import type { Agent, AgentState } from '@/data/types';
 import { STATE_CLASSES, STATE_META } from '@/data/state-meta';
 import { Badge } from './ui/badge.js';
 import { Button } from './ui/button.js';
+import { StateIcon } from './ui/state-icon.js';
 import { formatDuration } from '@/format/duration';
 import { formatTokens } from '@/format/tokens';
 
@@ -65,7 +66,7 @@ export function AgentRow({ agent, onSelect, onAction }: AgentRowProps) {
           className={`absolute inset-y-1.5 left-0 w-1 rounded-full ${stateClasses.solidBg} animate-att-pulse`}
         />
       )}
-      <div className={"w-24"}>
+      <div className={'w-24'}>
         <Badge
           role="status"
           aria-label={meta.label}
@@ -106,12 +107,6 @@ function MetaItem({ icon, value }: { icon: ReactNode; value: string }) {
 
 function MetaSeparator() {
   return <span aria-hidden>·</span>;
-}
-
-// Every state-badge instance in the Figma Pill set uses `lucide/circle` as its
-// Icon INSTANCE_SWAP — the badge's color, not its glyph, carries the state.
-function StateIcon() {
-  return <Circle className="p-0.5" aria-hidden strokeWidth={6} absoluteStrokeWidth />;
 }
 
 function QuickActions({

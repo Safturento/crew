@@ -1,4 +1,4 @@
-import { ChevronDown, ChevronRight, Circle } from 'lucide-react';
+import { ChevronDown, ChevronRight } from 'lucide-react';
 import type { ReactNode } from 'react';
 
 import { STATE_CLASSES, STATE_META } from '../../data/state-meta.js';
@@ -6,6 +6,7 @@ import type { AgentState } from '../../data/types.js';
 import { formatDuration } from '../../format/duration.js';
 import { formatTokens } from '../../format/tokens.js';
 import { Badge } from '../ui/badge.js';
+import { StateIcon } from '../ui/state-icon.js';
 
 interface TimelineSectionProps {
   state: AgentState;
@@ -35,7 +36,7 @@ export function TimelineSection({
     <section
       data-testid="timeline-section"
       data-state={state}
-      className={`overflow-hidden rounded-[5px] border ${STATE_CLASSES[state].solidBorder}`}
+      className={`overflow-hidden border-l-2 ${STATE_CLASSES[state].solidBorder}`}
     >
       <button
         type="button"
@@ -49,19 +50,17 @@ export function TimelineSection({
         ) : (
           <ChevronRight aria-hidden className="size-4 text-muted-foreground" />
         )}
-        <Badge color={state} intensity="mid" icon={<Circle aria-hidden />}>
+        <Badge color={state} intensity="mid" icon={<StateIcon />}>
           {meta.label}
         </Badge>
-        <span className="font-mono text-xs text-muted-foreground tabular-nums">{timestamp}</span>
-        <span className="font-mono text-xs text-muted-foreground tabular-nums">
-          {formatDuration(elapsedMs)}
-        </span>
-        <span className="font-mono text-xs text-muted-foreground tabular-nums">
-          · {eventCount} event{eventCount === 1 ? '' : 's'}
-        </span>
-        <span className="font-mono text-xs text-muted-foreground tabular-nums">
-          · {formatTokens(tokenSum)} tokens
-        </span>
+        <div className="ml-auto flex flex-wrap items-center gap-2 font-mono text-xs text-muted-foreground tabular-nums">
+          <span>{timestamp}</span>
+          <span>{formatDuration(elapsedMs)}</span>
+          <span>
+            · {eventCount} event{eventCount === 1 ? '' : 's'}
+          </span>
+          <span>· {formatTokens(tokenSum)} tokens</span>
+        </div>
       </button>
       {isOpen && <div className="pl-9 pr-3 pb-2">{children}</div>}
     </section>
