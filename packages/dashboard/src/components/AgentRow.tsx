@@ -81,7 +81,7 @@ export function AgentRow({ agent, onSelect, onAction }: AgentRowProps) {
       </div>
       <div className="flex min-w-0 flex-1 flex-col gap-0.5">
         <span className="truncate text-sm text-foreground">{agent.ticketTitle}</span>
-        <MetaList className="gap-1.5">
+        <MetaList>
           <MetaItem icon={<Hash className="h-3 w-3" aria-hidden />} value={agent.key} />
           <MetaItem icon={<Clock className="h-3 w-3" aria-hidden />} value={runtime} />
           <MetaItem
