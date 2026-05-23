@@ -7,6 +7,7 @@ import type { Agent, AgentState } from '@/data/types';
 import { STATE_CLASSES, STATE_META } from '@/data/state-meta';
 import { Badge } from './ui/badge.js';
 import { Button } from './ui/button.js';
+import { MetaList } from './ui/meta-list.js';
 import { StateIcon } from './ui/state-icon.js';
 import { formatDuration } from '@/format/duration';
 import { formatTokens } from '@/format/tokens';
@@ -80,16 +81,14 @@ export function AgentRow({ agent, onSelect, onAction }: AgentRowProps) {
       </div>
       <div className="flex min-w-0 flex-1 flex-col gap-0.5">
         <span className="truncate text-sm text-foreground">{agent.ticketTitle}</span>
-        <div className="flex items-center gap-1.5 font-mono text-xs text-muted-foreground">
+        <MetaList className="gap-1.5">
           <MetaItem icon={<Hash className="h-3 w-3" aria-hidden />} value={agent.key} />
-          <MetaSeparator />
           <MetaItem icon={<Clock className="h-3 w-3" aria-hidden />} value={runtime} />
-          <MetaSeparator />
           <MetaItem
             icon={<Currency className="h-3 w-3" aria-hidden />}
             value={formatTokens(agent.tokens)}
           />
-        </div>
+        </MetaList>
       </div>
       <QuickActions agent={agent} onAction={onAction} />
     </div>
@@ -103,10 +102,6 @@ function MetaItem({ icon, value }: { icon: ReactNode; value: string }) {
       <span>{value}</span>
     </span>
   );
-}
-
-function MetaSeparator() {
-  return <span aria-hidden>·</span>;
 }
 
 function QuickActions({

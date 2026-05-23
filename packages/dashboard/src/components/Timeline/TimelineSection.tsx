@@ -6,6 +6,7 @@ import type { AgentState } from '../../data/types.js';
 import { formatDuration } from '../../format/duration.js';
 import { formatTokens } from '../../format/tokens.js';
 import { Badge } from '../ui/badge.js';
+import { MetaList } from '../ui/meta-list.js';
 import { StateIcon } from '../ui/state-icon.js';
 
 interface TimelineSectionProps {
@@ -53,14 +54,16 @@ export function TimelineSection({
         <Badge color={state} intensity="mid" icon={<StateIcon />}>
           {meta.label}
         </Badge>
-        <div className="ml-auto flex flex-wrap items-center gap-2 font-mono text-xs text-muted-foreground tabular-nums">
-          <span>{timestamp}</span>
+        <MetaList className="tabular-nums">
           <span>{formatDuration(elapsedMs)}</span>
           <span>
-            · {eventCount} event{eventCount === 1 ? '' : 's'}
+            {eventCount} event{eventCount === 1 ? '' : 's'}
           </span>
-          <span>· {formatTokens(tokenSum)} tokens</span>
-        </div>
+          <span>{formatTokens(tokenSum)} tokens</span>
+        </MetaList>
+        <span className="ml-auto font-mono text-xs text-muted-foreground tabular-nums">
+          {timestamp}
+        </span>
       </button>
       {isOpen && <div className="pl-9 pr-3 pb-2">{children}</div>}
     </section>

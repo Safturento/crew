@@ -7,6 +7,7 @@ import type { AgentDetail, AgentState } from '../data/types.js';
 import { STATE_META } from '../data/state-meta.js';
 import { Badge } from './ui/badge.js';
 import { Button } from './ui/button.js';
+import { MetaList } from './ui/meta-list.js';
 import { StateIcon } from './ui/state-icon.js';
 
 const ACTIVE_STATES = new Set<AgentState>(['running', 'initializing']);
@@ -76,7 +77,7 @@ export function DrawerHeader({
         {detail.ticket_title ?? detail.ticket_key}
       </h1>
 
-      <div className="flex flex-wrap items-center gap-3 font-mono text-xs text-muted-foreground">
+      <div className="flex flex-wrap items-center gap-2">
         <Badge
           role="status"
           aria-label={meta.label}
@@ -86,8 +87,10 @@ export function DrawerHeader({
         >
           {meta.label}
         </Badge>
-        <StatusItem label="runtime" value={runtime ?? '—'} />
-        <StatusItem label="tokens" value={formatTokens(detail.tokens.total)} />
+        <MetaList>
+          <StatusItem label="runtime" value={runtime ?? '—'} />
+          <StatusItem label="tokens" value={formatTokens(detail.tokens.total)} />
+        </MetaList>
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
