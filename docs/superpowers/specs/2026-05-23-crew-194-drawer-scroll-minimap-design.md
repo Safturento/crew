@@ -60,13 +60,14 @@ The brainstorm walked through five questions in order; each settled a downstream
 - *Rejected: equal share per section.* Decouples thumb position from segment colors, breaking the "minimap = scroll position" mental model.
 
 ### Q3 — Minimap visual treatment
-**Decision: Informative (8px stripe + hover tooltip + active-section outline).**
+**Decision: 8px stripe + hover tooltip. NO viewport indicator on the stripe itself.**
 
-- Stripe width: **8px** (slightly wider than v1's 4px to support the active outline and feel less anemic).
-- Active section indicator: **1px white outline** around the segment currently in viewport. (No brightness diff between active and inactive — outline is enough; brightness changes feel less stable as the user scrolls.)
+- Stripe width: **8px** (slightly wider than v1's 4px so the tooltip target feels comfortable and the colors aren't anemic).
+- Segments: rendered at 100% opacity. No brightness/active variation per segment.
 - Hover: **tooltip** showing `"<State label> · <HH:MM:SS> · <N> events"` (e.g. `"Waiting · 14:42:11 · 2 events"`). Tooltip positions to the LEFT of the segment (since the stripe is at the right edge of the drawer).
-- Inactive segments: rendered at 100% opacity (no muted-vs-active brightness — saves us from re-thinking color contrast logic).
+- **No viewport-range indicator on the stripe.** The native scrollbar thumb (just to the right of the stripe) already says "you are here"; layering a second indicator on the minimap would duplicate it. The user reads thumb position alongside segment colors to know which state they're currently viewing — that thumb-vs-segment alignment IS the indicator.
 
+- *Rejected: 1px white outline around the "active" segment.* The viewport almost always spans multiple segments, so "the active one" is ill-defined; and a viewport-range overlay (the natural fix) duplicates the native scrollbar thumb.
 - *Rejected: minimal (4px, no hover).* Doesn't tell users what each color means; relies on tribal knowledge of state colors.
 - *Rejected: rich (12px+ with always-visible labels).* Eats horizontal space; labels need a legend; brackets fighting with segment color.
 
@@ -158,23 +159,22 @@ interface MinimapStripeProps {
     eventCount: number;      // for tooltip
     elementRef: RefObject<HTMLElement>;  // section's outer DOM ref for height measurement
   }>;
-  scrollRef: RefObject<HTMLDivElement>;
-  liveMode: boolean;
-  onSectionJump: (sectionIdx: number) => void;  // breaks live mode if true; smooth-scrolls
+  onSectionJump: (sectionIdx: number) => void;  // caller smooth-scrolls + breaks live mode
 }
 ```
 
 Internal state:
 - `sectionHeights: number[]` — observed via `ResizeObserver` per section element.
-- `viewportRange: { top: number; bottom: number }` — observed via `scroll` event on `scrollRef.current`.
 - `hoveredIdx: number | null` — for tooltip rendering.
 
-Rendering:
+(No scroll-position state. The minimap doesn't render any viewport indicator; the native scrollbar thumb handles that. Big simplification — no `scroll` event listener, no `requestAnimationFrame` throttling.)
+
+Rendering — the minimap is a **compressed representation of the entire timeline** that always fills the stripe height regardless of how much scroll content exists:
+
 - Outer absolute-positioned div: `right: 14px; top: 0; bottom: 0; width: 8px;` (left of native scrollbar gutter).
-- Per section: compute `clamped = max(rawProportional, MIN_SEG_PX)`. Normalize so total = scroll content height (rebalance to preserve scroll-position fidelity).
-- Render each segment as an absolute-positioned div using the running sum of clamped heights.
-- Active segment (where `viewportRange.top` falls within its range): `outline: 1px solid white; outline-offset: -1px;` (inside-outline so it doesn't bump width).
-- Hovered segment renders the tooltip positioned to its left.
+- For each section: compute `clamped = max(section.scrollHeight, MIN_SEG_PX)`. Normalize so all clamped heights together fill the stripe height — i.e. scale by `stripeHeight / sum(clamped)`. Net effect: total segment heights = stripe height; small sections are bumped up to MIN_SEG_PX; large sections shrink proportionally to compensate.
+- Render each segment as an absolute-positioned div at the running sum of normalized heights.
+- On hover, render the tooltip to the left of the hovered segment.
 
 Constants:
 - `MIN_SEG_PX = 16` — minimum clamped segment height.
@@ -188,11 +188,13 @@ Keyboard: `onKeyDown` on the stripe — ArrowUp/Down → onSectionJump(currentId
 
 ### Data flow
 
-Section heights live in `Timeline.tsx` state as `sectionHeights: number[]`, populated by a `useResizeObserver`-style hook that observes each section's outer element. The hook collects refs via a `useRef-per-section` pattern OR by walking the scrollRef's children.
+Section heights live in `Timeline.tsx` state as `sectionHeights: number[]`, populated by a `useResizeObserver`-style hook that observes each section's outer DOM element. The hook collects refs via a `useRef-per-section` pattern.
 
-The minimap consumes `sectionHeights` + `scrollRef.current.scrollTop` + `scrollRef.current.clientHeight` to compute segment positions and the active-segment index.
+The minimap consumes `sectionHeights` only — it doesn't need scroll position at all. Segment heights are computed locally from the clamped + normalized formula above.
 
-Scroll position observation: standard `addEventListener('scroll', handler, { passive: true })` on the scroll container; throttled via `requestAnimationFrame`.
+For `onSectionJump(idx)`: `Timeline.tsx` smooth-scrolls `scrollRef.current` to the matching section's `offsetTop` via `element.scrollTo({ top, behavior: 'smooth' })` and calls `setLiveMode(false)` if live mode was on.
+
+No scroll event listener required — Q3's omission of the viewport indicator removed that data path entirely. (Live mode's existing auto-scroll behavior in `Timeline.tsx:111-121` already observes `filteredEvents.length` changes; that stays untouched.)
 
 ## Testing
 
@@ -200,11 +202,11 @@ Scroll position observation: standard `addEventListener('scroll', handler, { pas
 - `MinimapStripe.test.tsx`:
   - Renders N segments matching N sections.
   - Segment colors map to state via `STATE_CLASSES[state].solidBg`.
-  - Min-clamp: a 1-event section in a 100-event timeline still renders ≥16px.
-  - Active segment outline applies based on mocked scroll position.
-  - Hover renders tooltip with correct format.
-  - Click on segment calls `onSectionJump(idx)` and breaks live mode.
-  - Keyboard ArrowUp/Down call `onSectionJump` with correct neighbors.
+  - Min-clamp: a section that would render below `MIN_SEG_PX` is clamped to exactly `MIN_SEG_PX`; larger siblings shrink proportionally to keep the sum equal to stripe height.
+  - Total segment height equals stripe height (sanity check on the normalization).
+  - Hover renders tooltip with correct format `"<State> · HH:MM:SS · N events"`.
+  - Click on segment calls `onSectionJump(idx)`.
+  - Keyboard ArrowUp/Down call `onSectionJump` with the correct neighbor index.
 - `Timeline.test.tsx` updates:
   - Toolbar stays sticky in the scroll region (test via container CSS class assertion).
   - Section content not clipped (assert a section's `.scrollHeight > .clientHeight` is now `false` for the section itself).
@@ -235,9 +237,9 @@ Scroll position observation: standard `addEventListener('scroll', handler, { pas
 ## Risks
 
 - **ResizeObserver thrash.** If the section content changes frequently (live mode adding events), the observer fires per-resize. Mitigate by throttling height updates via `requestAnimationFrame` in the resize callback.
-- **Scrollbar gutter width varies by OS.** macOS auto-hides; Windows is typically ~17px; Linux varies by GTK theme. The `SCROLLBAR_GUTTER = 14` constant is a guess; may need to use `element.offsetWidth - element.clientWidth` to detect actual gutter and position the stripe accordingly.
+- **Scrollbar gutter width varies by OS.** macOS auto-hides; Windows is typically ~17px; Linux varies by GTK theme. The `SCROLLBAR_GUTTER = 14` constant is a guess; better is to set `scrollbar-gutter: stable` on the scroll viewport and/or use `element.offsetWidth - element.clientWidth` to detect actual gutter and position the stripe accordingly.
 - **Sticky toolbar + scroll container interaction.** `position: sticky` requires a non-`overflow:hidden` ancestor that's tall enough. The new `relative flex flex-col overflow-y-auto` should work but worth testing in Firefox.
-- **Min-clamp breaks scroll-position fidelity.** With clamp, the thumb position no longer matches the segment colors 1:1 (other segments shrink to compensate). Tradeoff accepted per Q2 brainstorm — clickability wins over strict fidelity.
+- **Native scrollbar thumb vs minimap segment drift under min-clamp.** When small sections are bumped to `MIN_SEG_PX`, larger segments shrink to compensate. This means the thumb position (which the browser computes from pure proportional scroll math) won't align 1:1 with the same segment color on the minimap — there's a small drift. In the worst case (one ~1% segment in an otherwise-uniform timeline), drift can be ~15px out of 500. Acceptable per Q2; users still read "thumb is near the red region" with usable accuracy.
 
 ## Open questions
 
