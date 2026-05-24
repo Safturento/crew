@@ -104,6 +104,12 @@ export async function buildApp({
   const ingest = container.cradle.ingestService;
   // CREW-202: PrPoller is also a singleton; lifecycle hooked alongside.
   const prPoller = container.cradle.prPoller;
+  // Tests build the app inside vitest, where shelling out to `gh` is both
+  // noise (real network) and a source of flakiness (it can publish SSE
+  // events mid-test). Vitest sets `VITEST=true`; CREW_PR_POLLER_DISABLED
+  // is also honored for non-vitest test runners or local debugging.
+  const prPollerDisabled =
+    process.env.VITEST === 'true' || process.env.CREW_PR_POLLER_DISABLED === '1';
   app.addHook('onReady', async () => {
     await ingest.start();
     // CREW-201: also attach the chokidar watcher for the CLI's startup-
@@ -119,10 +125,10 @@ export async function buildApp({
     }
     // CREW-202: start the background PR-status poller. Each round walks
     // pr_open agents and asks `gh pr view` for the current PR state.
-    prPoller.start();
+    if (!prPollerDisabled) prPoller.start();
   });
   app.addHook('onClose', async () => {
-    prPoller.stop();
+    if (!prPollerDisabled) prPoller.stop();
     await ingest.stop();
   });
 

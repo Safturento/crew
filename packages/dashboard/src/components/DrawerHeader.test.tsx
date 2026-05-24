@@ -7,8 +7,10 @@ import type { ReactNode } from 'react';
 import { DrawerHeader } from './DrawerHeader.js';
 import type { AgentDetail, AgentState } from '../data/types.js';
 
+import type * as QueriesModule from '../data/queries.js';
+
 vi.mock('../data/queries.js', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('../data/queries.js')>();
+  const actual = await importOriginal<typeof QueriesModule>();
   return {
     ...actual,
     useRefreshPrStatus: vi.fn(),
