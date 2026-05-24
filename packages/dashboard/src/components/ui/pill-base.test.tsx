@@ -54,6 +54,38 @@ describe('PillBase', () => {
     expect(el.dataset.intensity).toBe('loud');
   });
 
+  it('applies tool-color classes when toolColor is set', () => {
+    render(
+      <PillBase toolColor="bash" intensity="mid" shape="h-5 px-2">
+        bash
+      </PillBase>,
+    );
+    const el = screen.getByText('bash');
+    expect(el.className).toContain('text-amber-300');
+    expect(el.className).toContain('border-amber-500');
+  });
+
+  it('toolColor takes precedence over color when both are passed', () => {
+    render(
+      <PillBase color="running" toolColor="bash" intensity="mid" shape="h-5 px-2">
+        bash
+      </PillBase>,
+    );
+    const el = screen.getByText('bash');
+    expect(el.className).toContain('text-amber-300');
+    expect(el.className).not.toContain('text-slate');
+  });
+
+  it('default toolColor falls back to slate-400 text', () => {
+    render(
+      <PillBase toolColor="default" intensity="mid" shape="h-5 px-2">
+        unk
+      </PillBase>,
+    );
+    const el = screen.getByText('unk');
+    expect(el.className).toContain('text-slate-400');
+  });
+
   it('asChild composes icon slot + class string onto the wrapped child element', () => {
     render(
       <PillBase asChild shape="h-6 px-2" icon={<svg data-testid="icon" />}>

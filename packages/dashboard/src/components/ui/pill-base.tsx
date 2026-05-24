@@ -3,9 +3,11 @@ import { Slot } from 'radix-ui';
 
 import { cn } from '@/lib/utils';
 import { pillSurfaceClasses, type PillColor, type PillIntensity } from '@/lib/pill-variants';
+import type { ToolColorKey } from '@/data/tool-colors';
 
 export type PillBaseProps = Omit<React.HTMLAttributes<HTMLElement>, 'color'> & {
   color?: PillColor;
+  toolColor?: ToolColorKey;
   intensity?: PillIntensity;
   icon?: React.ReactNode;
   shape: string;
@@ -15,6 +17,7 @@ export type PillBaseProps = Omit<React.HTMLAttributes<HTMLElement>, 'color'> & {
 
 export function PillBase({
   color = 'running',
+  toolColor,
   intensity = 'mid',
   icon,
   shape,
@@ -27,9 +30,11 @@ export function PillBase({
   const mergedClassName = cn(
     'inline-flex w-fit items-center whitespace-nowrap',
     shape,
-    pillSurfaceClasses(color, intensity),
+    pillSurfaceClasses(color, intensity, toolColor),
     className,
   );
+
+  const dataColor = toolColor ?? color;
 
   // `asChild` takes precedence over `as`: when set, the element comes from the
   // wrapped child and the `as` prop is ignored.
@@ -37,7 +42,7 @@ export function PillBase({
     return (
       <Slot.Root
         data-slot="pill"
-        data-color={color}
+        data-color={dataColor}
         data-intensity={intensity}
         className={mergedClassName}
         {...(rest as React.HTMLAttributes<HTMLElement>)}
@@ -52,7 +57,7 @@ export function PillBase({
   return (
     <Comp
       data-slot="pill"
-      data-color={color}
+      data-color={dataColor}
       data-intensity={intensity}
       className={mergedClassName}
       {...(rest as React.HTMLAttributes<HTMLElement>)}

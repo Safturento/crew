@@ -25,4 +25,11 @@ describe('Tag', () => {
     expect(el.dataset.color).toBe('running');
     expect(el.dataset.intensity).toBe('mid');
   });
+
+  it('forwards toolColor to the pill base', () => {
+    render(<Tag toolColor="grep">findall</Tag>);
+    const el = screen.getByText('findall');
+    expect(el.className).toContain('text-violet-300');
+    expect(el.dataset.color).toBe('grep');
+  });
 });

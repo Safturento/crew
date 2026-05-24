@@ -69,6 +69,87 @@ describe('TranscriptRow', () => {
       render(<TranscriptRow event={event} />);
       expect(screen.getByTestId('transcript-row')).toHaveAttribute('data-tone', 'error');
     });
+
+    it('renders tool_use Tag with the per-tool color', () => {
+      const event: AssistantEvent = {
+        type: 'assistant',
+        timestamp: ts,
+        message: {
+          role: 'assistant',
+          content: [{ type: 'tool_use', id: 'tu-1', name: 'Bash', input: { command: 'ls' } }],
+          usage: { output_tokens: 1 },
+        },
+      } as AssistantEvent;
+      render(<TranscriptRow event={event} />);
+      const tag = screen.getByTestId('transcript-row-tag');
+      expect(tag.className).toContain('text-amber-300');
+      expect(tag.dataset.color).toBe('bash');
+    });
+
+    it('aliased MCP tool gets the MCP family color and aliased label', () => {
+      const event: AssistantEvent = {
+        type: 'assistant',
+        timestamp: ts,
+        message: {
+          role: 'assistant',
+          content: [
+            { type: 'tool_use', id: 'tu-1', name: 'mcp__atlassian__jira_get_issue', input: {} },
+          ],
+          usage: { output_tokens: 1 },
+        },
+      } as AssistantEvent;
+      render(<TranscriptRow event={event} />);
+      const tag = screen.getByTestId('transcript-row-tag');
+      expect(tag).toHaveTextContent('MCP:Jira');
+      expect(tag.className).toContain('text-blue-300');
+      expect(tag.dataset.color).toBe('mcpJira');
+    });
+
+    it('unknown tool gets the default slate palette', () => {
+      const event: AssistantEvent = {
+        type: 'assistant',
+        timestamp: ts,
+        message: {
+          role: 'assistant',
+          content: [{ type: 'tool_use', id: 'tu-1', name: 'NeverBeforeSeenTool', input: {} }],
+          usage: { output_tokens: 1 },
+        },
+      } as AssistantEvent;
+      render(<TranscriptRow event={event} />);
+      const tag = screen.getByTestId('transcript-row-tag');
+      expect(tag.className).toContain('text-slate-400');
+      expect(tag.dataset.color).toBe('default');
+    });
+
+    it('error tool_result still renders red regardless of tool color', () => {
+      const event: UserEvent = {
+        type: 'user',
+        timestamp: ts,
+        message: {
+          role: 'user',
+          content: [{ type: 'tool_result', tool_use_id: 'tu-1', content: 'boom', is_error: true }],
+        },
+      } as UserEvent;
+      render(<TranscriptRow event={event} />);
+      const tag = screen.getByTestId('transcript-row-tag');
+      expect(tag.className).toMatch(/text-red-\d+/);
+    });
+
+    it('non-tool rows do not pick up a tool color', () => {
+      const event: AssistantEvent = {
+        type: 'assistant',
+        timestamp: ts,
+        message: {
+          role: 'assistant',
+          content: [{ type: 'text', text: 'hi' }],
+          usage: { output_tokens: 1 },
+        },
+      } as AssistantEvent;
+      render(<TranscriptRow event={event} />);
+      const tag = screen.getByTestId('transcript-row-tag');
+      expect(tag.className).not.toContain('amber');
+      expect(tag.className).not.toContain('text-blue-300');
+    });
   });
 
   describe('conversation category', () => {
