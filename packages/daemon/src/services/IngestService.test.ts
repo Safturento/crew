@@ -557,6 +557,53 @@ describe('IngestService.processEventForTest — fix-pr cycle (CREW-198)', () => 
     }
   });
 
+  it('primes lastRunIdCache from latest tool_call on agent attach so daemon restart mid-fix-pr still detects the cycle', async () => {
+    // Daemon restart scenario: agent in pr_open from the original run, then a
+    // fix-pr run starts. The first tool_call AFTER the restart should still
+    // trigger pr_open → running because the cache was primed from the latest
+    // tool_call's run_id on the original run.
+    const { db, runId: originalRunId, agentKey, sessionId } = await setup();
+    try {
+      // Original run wrote a tool_call + reached pr_open.
+      const svcA = new IngestService({ db, logger: silentLogger, eventBus: new EventBus() });
+      await svcA.processEventForTest({
+        runId: originalRunId,
+        agentKey,
+        event: makeBashToolUse({
+          id: 'tu_pr',
+          command: 'gh pr create --title hi',
+          ts: '2026-04-29T12:00:00Z',
+        }),
+      });
+      expect(await getLatestState(db, agentKey)).toBe('pr_open');
+
+      // Simulate daemon restart: brand-new IngestService instance with an
+      // empty in-memory cache, then attach prior to seeing any events.
+      const fixPrRunId = await insertRun(db, agentKey, 'fix-pr', 'session-fix-pr-restart');
+      const customDir = tmp();
+      const jsonlPath = join(customDir, `${sessionId}.jsonl`);
+      writeFileSync(jsonlPath, '');
+      const svcB = new IngestService({ db, logger: silentLogger, eventBus: new EventBus() });
+      svcB.attach({ runId: fixPrRunId, jsonlPath });
+      // Give the tail's priming step a beat to complete before the first event
+      // lands on disk; this mirrors the real ordering (priming awaited before
+      // events flow). We also explicitly call attachAgent to make the test
+      // resilient to background-priming timing.
+      await svcB.primeAgentForTest(agentKey);
+
+      // First tool_call from fix-pr arrives. Should trigger pr_open → running.
+      await svcB.processEventForTest({
+        runId: fixPrRunId,
+        agentKey,
+        event: makeBashToolUse({ id: 'tu_fp', command: 'ls', ts: '2026-04-29T12:01:00Z' }),
+      });
+      expect(await getLatestState(db, agentKey)).toBe('running');
+      svcB.detach(fixPrRunId);
+    } finally {
+      await db.destroy();
+    }
+  });
+
   it('recordRunCompleted is a no-op when previous state is not running', async () => {
     const { db, agentKey } = await setup();
     try {

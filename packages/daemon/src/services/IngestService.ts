@@ -244,6 +244,13 @@ export class IngestService {
     await this.processEvent(input);
   }
 
+  /** Test seam — drives the same `lastRunIdCache` priming the live tail
+   *  runs at attach. Used by the CREW-198 restart test to bypass tail
+   *  timing without hand-wiring the cache. */
+  async primeAgentForTest(agentKey: string): Promise<void> {
+    await this.primeLastRunIdCacheForAgent(agentKey);
+  }
+
   private async processEvent(input: ProcessEventInput): Promise<void> {
     const { event } = input;
     if (event.type === 'assistant') {
@@ -409,6 +416,16 @@ export class IngestService {
   }
 
   private async runTail(runId: number, path: string, signal: AbortSignal): Promise<void> {
+    // CREW-198: prime lastRunIdCache before the first event so a daemon
+    // restart mid-fix-pr correctly detects the `pr_open → running` cycle on
+    // the new run's first tool_call. Best-effort — a priming failure mustn't
+    // crash the tail.
+    try {
+      const agentKey = await this.resolveAgentKey(runId);
+      if (agentKey) await this.primeLastRunIdCacheForAgent(agentKey);
+    } catch (err) {
+      this.logger.warn({ err, runId, path }, 'lastRunIdCache prime failed');
+    }
     for await (const event of tailTranscript(path, { signal })) {
       try {
         await this.ingestEvent(runId, event);
@@ -416,6 +433,26 @@ export class IngestService {
         this.logger.warn({ err, runId, path }, 'ingestEvent failed');
       }
     }
+  }
+
+  /**
+   * Seed `lastRunIdCache[agentKey]` from the most-recently-ingested tool_call
+   * (across all of the agent's runs) so a fresh-process attach correctly
+   * detects a subsequent new-run-id transition. No-op when the cache is
+   * already populated (in-process state wins over DB read) or when the agent
+   * has no prior tool_calls.
+   */
+  private async primeLastRunIdCacheForAgent(agentKey: string): Promise<void> {
+    if (this.lastRunIdCache.has(agentKey)) return;
+    const latest = await this.db
+      .selectFrom('tool_calls')
+      .innerJoin('runs', 'runs.id', 'tool_calls.run_id')
+      .where('runs.agent_key', '=', agentKey)
+      .select('tool_calls.run_id as lastRunId')
+      .orderBy('tool_calls.occurred_at', 'desc')
+      .orderBy('tool_calls.id', 'desc')
+      .executeTakeFirst();
+    if (latest) this.lastRunIdCache.set(agentKey, latest.lastRunId);
   }
 }
 
