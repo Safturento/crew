@@ -18,22 +18,27 @@ tests {
   test("tokens_by_tool surfaces an Assistant row (CREW-191)", () => {
     const assistant = res.body.tokens_by_tool.find((r) => r.tool === "Assistant");
     expect(assistant, "expected an Assistant row in tokens_by_tool").to.exist;
-    expect(assistant.tokens).to.be.a("number");
-    expect(assistant.tokens).to.be.greaterThan(0);
+    expect(assistant.tokens).to.be.an("object");
+    expect(assistant.totalTokens).to.be.a("number");
+    expect(assistant.totalTokens).to.be.greaterThan(0);
   });
 
   test("Assistant row is the first entry in tokens_by_tool", () => {
     expect(res.body.tokens_by_tool[0].tool).to.equal("Assistant");
   });
 
-  test("Assistant row's percent is within 0-100 and matches its share of the combined total", () => {
-    const rows = res.body.tokens_by_tool;
-    const total = rows.reduce((s, r) => s + r.tokens, 0);
-    const assistant = rows[0];
-    expect(assistant.percent).to.be.within(0, 100);
-    const expected = total > 0 ? (assistant.tokens / total) * 100 : 0;
-    // Allow ≤0.5pp drift for the daemon's rounding (Math.round(... * 10000)/100).
-    expect(Math.abs(assistant.percent - expected)).to.be.below(0.5);
+  test("Assistant bucket carries every per-category field (CREW-195)", () => {
+    const assistant = res.body.tokens_by_tool[0];
+    for (const key of ["input", "output", "cacheCreation", "cacheRead"]) {
+      expect(assistant.tokens[key], `assistant.tokens.${key}`).to.be.a("number");
+    }
+  });
+
+  test("dominant model is exposed for cost weighting (CREW-195)", () => {
+    expect(res.body.model).to.be.a("string");
+    // CREW-102 fixture stamps every assistant event with claude-sonnet-4-6,
+    // so the daemon's mode-of-models picks the same value.
+    expect(res.body.model).to.equal("claude-sonnet-4-6");
   });
 }
 

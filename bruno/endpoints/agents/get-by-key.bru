@@ -26,6 +26,7 @@ assert {
   res.body.runs: isArray
   res.body.tool_call_count: isNumber
   res.body.tokens_by_tool: isArray
+  res.body.model: isString
 }
 
 tests {
@@ -75,14 +76,27 @@ tests {
     expect(res.body.jira_url === null || typeof res.body.jira_url === "string").to.equal(true);
   });
 
-  test("tokens_by_tool rows shape: { tool: string, tokens: number, percent: number }", () => {
+  test("tokens_by_tool rows shape: { tool, tokens: bucket, totalTokens } (CREW-195)", () => {
     for (const row of res.body.tokens_by_tool) {
       expect(row.tool).to.be.a("string");
-      expect(row.tokens).to.be.a("number");
-      expect(row.tokens).to.be.at.least(0);
-      expect(row.percent).to.be.a("number");
-      expect(row.percent).to.be.within(0, 100);
+      expect(row.tokens).to.be.an("object");
+      for (const key of ["input", "output", "cacheCreation", "cacheRead"]) {
+        expect(row.tokens[key], `tokens.${key}`).to.be.a("number");
+        expect(row.tokens[key], `tokens.${key}`).to.be.at.least(0);
+      }
+      expect(row.totalTokens).to.be.a("number");
+      expect(row.totalTokens).to.be.at.least(0);
+      const sum =
+        row.tokens.input +
+        row.tokens.output +
+        row.tokens.cacheCreation +
+        row.tokens.cacheRead;
+      expect(row.totalTokens, "totalTokens matches bucket sum").to.equal(sum);
     }
+  });
+
+  test("dominant model is a string (empty when no transcript) (CREW-195)", () => {
+    expect(res.body.model).to.be.a("string");
   });
 
   test("Assistant row (CREW-191) sorts first when present", () => {
