@@ -1,17 +1,21 @@
 import { render, screen, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 
+import type { AgentDetailTokensByTool } from '../data/types.js';
 import { TokensByTool } from './TokensByTool.js';
+
+const bucket = (output: number) => ({ input: 0, output, cacheCreation: 0, cacheRead: 0 });
+const row = (tool: string, output: number): AgentDetailTokensByTool => ({
+  tool,
+  tokens: bucket(output),
+  totalTokens: output,
+});
 
 describe('TokensByTool', () => {
   it('renders one TokenBarRow per input, preserving order', () => {
     render(
       <TokensByTool
-        tokensByTool={[
-          { tool: 'Bash', tokens: 18_400, percent: 38.4 },
-          { tool: 'Read', tokens: 12_100, percent: 25.2 },
-          { tool: 'Edit', tokens: 9_600, percent: 20.1 },
-        ]}
+        tokensByTool={[row('Bash', 18_400), row('Read', 12_100), row('Edit', 9_600)]}
         total={48_000}
       />,
     );
@@ -28,12 +32,7 @@ describe('TokensByTool', () => {
   });
 
   it('renders the formatted total in the footer', () => {
-    render(
-      <TokensByTool
-        tokensByTool={[{ tool: 'Bash', tokens: 18_400, percent: 100 }]}
-        total={48_000}
-      />,
-    );
+    render(<TokensByTool tokensByTool={[row('Bash', 18_400)]} total={48_000} />);
     const footer = screen.getByTestId('tokens-by-tool-footer');
     expect(within(footer).getByText(/^total$/i)).toBeInTheDocument();
     expect(within(footer).getByText('48.0k')).toBeInTheDocument();
@@ -59,10 +58,7 @@ describe('TokensByTool', () => {
   it('recomputes percent client-side against the aliased-row total', () => {
     render(
       <TokensByTool
-        tokensByTool={[
-          { tool: 'Bash', tokens: 60_000, percent: 12 },
-          { tool: 'Edit', tokens: 40_000, percent: 8 },
-        ]}
+        tokensByTool={[row('Bash', 60_000), row('Edit', 40_000)]}
         total={500_000}
       />,
     );
@@ -75,9 +71,9 @@ describe('TokensByTool', () => {
     render(
       <TokensByTool
         tokensByTool={[
-          { tool: 'Bash', tokens: 12_000, percent: 60 },
-          { tool: 'mcp__atlassian__jira_get_issue', tokens: 5_000, percent: 25 },
-          { tool: 'mcp__atlassian__jira_transition_issue', tokens: 3_000, percent: 15 },
+          row('Bash', 12_000),
+          row('mcp__atlassian__jira_get_issue', 5_000),
+          row('mcp__atlassian__jira_transition_issue', 3_000),
         ]}
         total={20_000}
       />,
@@ -95,15 +91,18 @@ describe('TokensByTool', () => {
     render(
       <TokensByTool
         tokensByTool={[
-          { tool: 'mcp__atlassian__jira_get_issue', tokens: 5_000, percent: 50 },
-          { tool: 'mcp__atlassian__jira_transition_issue', tokens: 5_000, percent: 50 },
+          row('mcp__atlassian__jira_get_issue', 5_000),
+          row('mcp__atlassian__jira_transition_issue', 5_000),
         ]}
         total={10_000}
       />,
     );
-    const row = screen.getByText('MCP:Jira').closest('[title]');
-    expect(row).toHaveAttribute('title', expect.stringContaining('mcp__atlassian__jira_get_issue'));
-    expect(row).toHaveAttribute(
+    const target = screen.getByText('MCP:Jira').closest('[title]');
+    expect(target).toHaveAttribute(
+      'title',
+      expect.stringContaining('mcp__atlassian__jira_get_issue'),
+    );
+    expect(target).toHaveAttribute(
       'title',
       expect.stringContaining('mcp__atlassian__jira_transition_issue'),
     );
@@ -121,10 +120,7 @@ describe('TokensByTool', () => {
     it('renders an Assistant row with a sparkles icon', () => {
       render(
         <TokensByTool
-          tokensByTool={[
-            { tool: 'Assistant', tokens: 12_000, percent: 60 },
-            { tool: 'Bash', tokens: 4_000, percent: 20 },
-          ]}
+          tokensByTool={[row('Assistant', 12_000), row('Bash', 4_000)]}
           total={20_000}
         />,
       );
@@ -138,12 +134,7 @@ describe('TokensByTool', () => {
     });
 
     it('does NOT render a sparkles icon on non-Assistant rows', () => {
-      render(
-        <TokensByTool
-          tokensByTool={[{ tool: 'Bash', tokens: 4_000, percent: 100 }]}
-          total={4_000}
-        />,
-      );
+      render(<TokensByTool tokensByTool={[row('Bash', 4_000)]} total={4_000} />);
       const body = screen.getByTestId('tokens-by-tool-body');
       expect(body.querySelector('.lucide-sparkles')).toBeNull();
     });
@@ -151,11 +142,7 @@ describe('TokensByTool', () => {
     it('places the Assistant row first regardless of source array order', () => {
       render(
         <TokensByTool
-          tokensByTool={[
-            { tool: 'Bash', tokens: 999_000, percent: 99 },
-            { tool: 'Assistant', tokens: 100, percent: 0.01 },
-            { tool: 'Edit', tokens: 50_000, percent: 5 },
-          ]}
+          tokensByTool={[row('Bash', 999_000), row('Assistant', 100), row('Edit', 50_000)]}
           total={1_049_100}
         />,
       );

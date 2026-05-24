@@ -10,19 +10,22 @@ figma.connect(
     // of TokenBarRow instances; runtime takes `tokensByTool: AgentDetailTokensByTool[]`
     // (driven by the daemon's per-tool aggregate query) plus the agent's total token
     // count for the footer. The snippet documents the canonical render.
-    example: () => (
-      <TokensByTool
-        tokensByTool={[
-          { tool: 'Bash', tokens: 18_400, percent: 38.4 },
-          { tool: 'Read', tokens: 12_100, percent: 25.2 },
-          { tool: 'Edit', tokens: 9_600, percent: 20.1 },
-          { tool: 'Grep', tokens: 4_200, percent: 8.8 },
-          { tool: 'Glob', tokens: 1_800, percent: 3.8 },
-          { tool: 'Question', tokens: 1_200, percent: 2.6 },
-          { tool: 'Write', tokens: 510, percent: 1.1 },
-        ]}
-        total={48_000}
-      />
-    ),
+    example: () => {
+      const bucket = (output: number) => ({ input: 0, output, cacheCreation: 0, cacheRead: 0 });
+      return (
+        <TokensByTool
+          tokensByTool={[
+            { tool: 'Bash', tokens: bucket(18_400), totalTokens: 18_400 },
+            { tool: 'Read', tokens: bucket(12_100), totalTokens: 12_100 },
+            { tool: 'Edit', tokens: bucket(9_600), totalTokens: 9_600 },
+            { tool: 'Grep', tokens: bucket(4_200), totalTokens: 4_200 },
+            { tool: 'Glob', tokens: bucket(1_800), totalTokens: 1_800 },
+            { tool: 'Question', tokens: bucket(1_200), totalTokens: 1_200 },
+            { tool: 'Write', tokens: bucket(510), totalTokens: 510 },
+          ]}
+          total={48_000}
+        />
+      );
+    },
   },
 );

@@ -76,11 +76,20 @@ export interface AgentDetailTokens {
   cache_creation: number;
 }
 
+/** Per-category token bucket (CREW-195) — drives cost-weighted display. */
+export interface TokenCategoryBucket {
+  input: number;
+  output: number;
+  cacheCreation: number;
+  cacheRead: number;
+}
+
 export interface AgentDetailTokensByTool {
   tool: string;
-  tokens: number;
-  /** Share of the agent's total tool-call tokens, 0–100. */
-  percent: number;
+  /** Per-category bucket — multiply by per-model rates for USD cost. */
+  tokens: TokenCategoryBucket;
+  /** Sum of all bucket entries — convenience for sort + bar widths. */
+  totalTokens: number;
 }
 
 export interface AgentDetail {
@@ -95,8 +104,14 @@ export interface AgentDetail {
   app_url: string | null;
   /** `<jira.site>/browse/<ticket_key>` (CREW-178). Null when not derivable. */
   jira_url: string | null;
-  /** Per-tool token aggregate served by the daemon (CREW-178). */
+  /** Per-tool token aggregate served by the daemon (CREW-178/195). */
   tokens_by_tool: AgentDetailTokensByTool[];
+  /**
+   * Dominant transcript model (CREW-195). Drives per-row cost weighting in
+   * TokensByTool. Empty string when unknown — pricing helpers fall back to
+   * Sonnet rates.
+   */
+  model: string;
   runs: AgentDetailRun[];
   tokens: AgentDetailTokens;
   tool_call_count: number;

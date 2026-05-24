@@ -114,12 +114,20 @@ function makeProjectsDir(toml: Record<string, string> = {}): string {
 interface AssistantEventInput {
   /** Per-message output_tokens. `undefined` becomes a missing field (treated as 0). */
   outputTokens?: number;
+  /** Per-message input_tokens. */
+  inputTokens?: number;
+  /** Per-message cache_read_input_tokens. */
+  cacheReadTokens?: number;
+  /** Per-message cache_creation_input_tokens. */
+  cacheCreationTokens?: number;
   /** Tool uses on this message — emitted as `tool_use` content blocks alongside text. */
   toolUses?: { name: string; input?: Record<string, unknown> }[];
   /** Optional text content block; emitted before the tool_use blocks. */
   text?: string;
   /** ISO timestamp. Defaults to a synthetic increasing value per call. */
   timestamp?: string;
+  /** Optional model id stamped on message.model. */
+  model?: string;
 }
 
 let assistantEventCounter = 0;
@@ -138,15 +146,21 @@ function makeAssistantEventLine(opts: AssistantEventInput): string {
   if (content.length === 0) content.push({ type: 'text', text: 'assistant body' });
   const usage: Record<string, number> = {};
   if (opts.outputTokens !== undefined) usage.output_tokens = opts.outputTokens;
+  if (opts.inputTokens !== undefined) usage.input_tokens = opts.inputTokens;
+  if (opts.cacheReadTokens !== undefined) usage.cache_read_input_tokens = opts.cacheReadTokens;
+  if (opts.cacheCreationTokens !== undefined)
+    usage.cache_creation_input_tokens = opts.cacheCreationTokens;
+  const message: Record<string, unknown> = {
+    role: 'assistant',
+    content,
+    usage,
+  };
+  if (opts.model !== undefined) message.model = opts.model;
   return JSON.stringify({
     type: 'assistant',
     timestamp:
       opts.timestamp ?? `2026-05-23T12:00:${String(assistantEventCounter).padStart(2, '0')}Z`,
-    message: {
-      role: 'assistant',
-      content,
-      usage,
-    },
+    message,
   });
 }
 
@@ -584,7 +598,7 @@ describe('AgentsService.getByKey', () => {
     }
   });
 
-  it("aggregates tokens_by_tool across all of the agent's runs, ordered by tokens desc", async () => {
+  it("aggregates tokens_by_tool across all of the agent's runs, ordered by totalTokens desc", async () => {
     const db = await freshDb();
     try {
       await makeAgent(db, 'KAN-23', { projectName: 'kanban-api' });
@@ -622,14 +636,23 @@ describe('AgentsService.getByKey', () => {
       });
       const projectsDir = makeProjectsDir({ 'kanban-api': KANBAN_TOML });
       const detail = await new AgentsService({ db, projectsDir }).getByKey('KAN-23');
-      // Total = 2700. Order by tokens desc: Bash 1800, Edit 700, Read 200.
+      // totalTokens-desc: Bash 1800, Edit 700, Read 200.
       expect(detail?.tokens_by_tool).toHaveLength(3);
-      expect(detail?.tokens_by_tool[0]).toMatchObject({ tool: 'Bash', tokens: 1800 });
-      expect(detail?.tokens_by_tool[0].percent).toBeCloseTo(66.67, 1);
-      expect(detail?.tokens_by_tool[1]).toMatchObject({ tool: 'Edit', tokens: 700 });
-      expect(detail?.tokens_by_tool[1].percent).toBeCloseTo(25.93, 1);
-      expect(detail?.tokens_by_tool[2]).toMatchObject({ tool: 'Read', tokens: 200 });
-      expect(detail?.tokens_by_tool[2].percent).toBeCloseTo(7.41, 1);
+      expect(detail?.tokens_by_tool[0]).toMatchObject({
+        tool: 'Bash',
+        totalTokens: 1800,
+        tokens: { input: 0, output: 1800, cacheCreation: 0, cacheRead: 0 },
+      });
+      expect(detail?.tokens_by_tool[1]).toMatchObject({
+        tool: 'Edit',
+        totalTokens: 700,
+        tokens: { input: 0, output: 700, cacheCreation: 0, cacheRead: 0 },
+      });
+      expect(detail?.tokens_by_tool[2]).toMatchObject({
+        tool: 'Read',
+        totalTokens: 200,
+        tokens: { input: 0, output: 200, cacheCreation: 0, cacheRead: 0 },
+      });
     } finally {
       await db.destroy();
     }
@@ -648,7 +671,7 @@ describe('AgentsService.getByKey', () => {
     }
   });
 
-  it('aggregates tokens_by_tool across all token columns (input + output + cache_read + cache_creation)', async () => {
+  it('surfaces per-category buckets per tool row (CREW-195)', async () => {
     const db = await freshDb();
     try {
       await makeAgent(db, 'KAN-23', { projectName: 'kanban-api' });
@@ -662,7 +685,13 @@ describe('AgentsService.getByKey', () => {
       });
       const projectsDir = makeProjectsDir({ 'kanban-api': KANBAN_TOML });
       const detail = await new AgentsService({ db, projectsDir }).getByKey('KAN-23');
-      expect(detail?.tokens_by_tool).toEqual([{ tool: 'Bash', tokens: 200, percent: 100 }]);
+      expect(detail?.tokens_by_tool).toEqual([
+        {
+          tool: 'Bash',
+          tokens: { input: 50, output: 100, cacheCreation: 25, cacheRead: 25 },
+          totalTokens: 200,
+        },
+      ]);
     } finally {
       await db.destroy();
     }
@@ -673,7 +702,7 @@ describe('AgentsService.getByKey', () => {
   // from the JSONL transcript via TimelineService, since text-only / thinking-
   // only assistant turns never make it to the tool_calls table.
   describe('Assistant row (CREW-191)', () => {
-    it('prepends an Assistant row summing output_tokens across all assistant events', async () => {
+    it('prepends an Assistant row summing output_tokens across text-only assistant events', async () => {
       const db = await freshDb();
       try {
         await makeAgent(db, 'KAN-AS-1');
@@ -693,7 +722,9 @@ describe('AgentsService.getByKey', () => {
         expect(detail).not.toBeNull();
         const assistant = detail?.tokens_by_tool.find((r) => r.tool === 'Assistant');
         expect(assistant).toBeDefined();
-        expect(assistant?.tokens).toBe(350);
+        // Text-only turns (100 + 50). The tool-bearing turn flows to Bash.
+        expect(assistant?.tokens.output).toBe(150);
+        expect(assistant?.totalTokens).toBe(150);
       } finally {
         await db.destroy();
       }
@@ -704,7 +735,6 @@ describe('AgentsService.getByKey', () => {
       try {
         await makeAgent(db, 'KAN-AS-2');
         const r1 = await makeRun(db, 'KAN-AS-2', 's1');
-        // Big tool row — would normally sort first if tokens-desc alone won.
         await makeToolCall(db, r1, { tool: 'Bash', tokens: 999_000 });
         const path = writeTranscriptJsonl([
           makeAssistantEventLine({ text: 'tiny', outputTokens: 100 }),
@@ -719,7 +749,7 @@ describe('AgentsService.getByKey', () => {
       }
     });
 
-    it('omits the Assistant row when no assistant events have output_tokens', async () => {
+    it('omits the Assistant row when no text-only assistant events carry tokens', async () => {
       const db = await freshDb();
       try {
         await makeAgent(db, 'KAN-AS-3');
@@ -733,50 +763,35 @@ describe('AgentsService.getByKey', () => {
           timelineService: makeTimelineForPath(path),
         }).getByKey('KAN-AS-3');
         expect(detail?.tokens_by_tool.find((r) => r.tool === 'Assistant')).toBeUndefined();
-        // Existing tool row still present + percent unchanged.
-        expect(detail?.tokens_by_tool).toEqual([{ tool: 'Bash', tokens: 500, percent: 100 }]);
+        expect(detail?.tokens_by_tool).toEqual([
+          {
+            tool: 'Bash',
+            tokens: { input: 0, output: 500, cacheCreation: 0, cacheRead: 0 },
+            totalTokens: 500,
+          },
+        ]);
       } finally {
         await db.destroy();
       }
     });
 
-    it('treats missing/zero output_tokens as 0 when summing across events', async () => {
+    it('treats missing/zero usage fields as 0 when summing across events', async () => {
       const db = await freshDb();
       try {
         await makeAgent(db, 'KAN-AS-4');
         await makeRun(db, 'KAN-AS-4', 's1');
         const path = writeTranscriptJsonl([
-          makeAssistantEventLine({ text: 'a' }), // no output_tokens
+          makeAssistantEventLine({ text: 'a' }),
           makeAssistantEventLine({ text: 'b', outputTokens: 100 }),
         ]);
         const detail = await new AgentsService({
           db,
           timelineService: makeTimelineForPath(path),
         }).getByKey('KAN-AS-4');
-        expect(detail?.tokens_by_tool.find((r) => r.tool === 'Assistant')?.tokens).toBe(100);
-      } finally {
-        await db.destroy();
-      }
-    });
-
-    it('recomputes tool percents over the combined total when Assistant is present', async () => {
-      const db = await freshDb();
-      try {
-        await makeAgent(db, 'KAN-AS-5');
-        const r1 = await makeRun(db, 'KAN-AS-5', 's1');
-        await makeToolCall(db, r1, { tool: 'Bash', tokens: 300 });
-        const path = writeTranscriptJsonl([
-          makeAssistantEventLine({ text: 'hi', outputTokens: 700 }),
-        ]);
-        const detail = await new AgentsService({
-          db,
-          timelineService: makeTimelineForPath(path),
-        }).getByKey('KAN-AS-5');
-        // Combined total = 1000. Assistant = 700 → 70%, Bash = 300 → 30%.
-        expect(detail?.tokens_by_tool).toEqual([
-          { tool: 'Assistant', tokens: 700, percent: 70 },
-          { tool: 'Bash', tokens: 300, percent: 30 },
-        ]);
+        const assistant = detail?.tokens_by_tool.find((r) => r.tool === 'Assistant');
+        expect(assistant?.tokens.output).toBe(100);
+        expect(assistant?.tokens.cacheRead).toBe(0);
+        expect(assistant?.tokens.cacheCreation).toBe(0);
       } finally {
         await db.destroy();
       }
@@ -789,7 +804,13 @@ describe('AgentsService.getByKey', () => {
         const r1 = await makeRun(db, 'KAN-AS-6', 's1');
         await makeToolCall(db, r1, { tool: 'Bash', tokens: 100 });
         const detail = await new AgentsService({ db }).getByKey('KAN-AS-6');
-        expect(detail?.tokens_by_tool).toEqual([{ tool: 'Bash', tokens: 100, percent: 100 }]);
+        expect(detail?.tokens_by_tool).toEqual([
+          {
+            tool: 'Bash',
+            tokens: { input: 0, output: 100, cacheCreation: 0, cacheRead: 0 },
+            totalTokens: 100,
+          },
+        ]);
       } finally {
         await db.destroy();
       }
@@ -803,7 +824,81 @@ describe('AgentsService.getByKey', () => {
         await makeToolCall(db, r1, { tool: 'Bash', tokens: 100 });
         const tl = new TimelineService({ resolveJsonlPath: async () => null });
         const detail = await new AgentsService({ db, timelineService: tl }).getByKey('KAN-AS-7');
-        expect(detail?.tokens_by_tool).toEqual([{ tool: 'Bash', tokens: 100, percent: 100 }]);
+        expect(detail?.tokens_by_tool).toEqual([
+          {
+            tool: 'Bash',
+            tokens: { input: 0, output: 100, cacheCreation: 0, cacheRead: 0 },
+            totalTokens: 100,
+          },
+        ]);
+      } finally {
+        await db.destroy();
+      }
+    });
+  });
+
+  // CREW-195: per-category buckets enable cost-weighted display in the
+  // dashboard. The Assistant row also tracks input + cache fields, and
+  // AgentDetail surfaces the dominant model so the dashboard can pick rates.
+  describe('cost-weighting foundation (CREW-195)', () => {
+    it("Assistant bucket includes input + cache fields from text-only turns", async () => {
+      const db = await freshDb();
+      try {
+        await makeAgent(db, 'KAN-CW-1');
+        await makeRun(db, 'KAN-CW-1', 's1');
+        const path = writeTranscriptJsonl([
+          makeAssistantEventLine({
+            text: 'thinking…',
+            inputTokens: 200,
+            outputTokens: 50,
+            cacheReadTokens: 5000,
+            cacheCreationTokens: 100,
+          }),
+        ]);
+        const detail = await new AgentsService({
+          db,
+          timelineService: makeTimelineForPath(path),
+        }).getByKey('KAN-CW-1');
+        const assistant = detail?.tokens_by_tool.find((r) => r.tool === 'Assistant');
+        expect(assistant?.tokens).toEqual({
+          input: 200,
+          output: 50,
+          cacheCreation: 100,
+          cacheRead: 5000,
+        });
+        expect(assistant?.totalTokens).toBe(200 + 50 + 100 + 5000);
+      } finally {
+        await db.destroy();
+      }
+    });
+
+    it('exposes the dominant model on AgentDetail (mode of message.model)', async () => {
+      const db = await freshDb();
+      try {
+        await makeAgent(db, 'KAN-CW-2');
+        await makeRun(db, 'KAN-CW-2', 's1');
+        const path = writeTranscriptJsonl([
+          makeAssistantEventLine({ model: 'claude-sonnet-4-6', text: 'a', outputTokens: 1 }),
+          makeAssistantEventLine({ model: 'claude-sonnet-4-6', text: 'b', outputTokens: 1 }),
+          makeAssistantEventLine({ model: 'claude-haiku-4-5', text: 'c', outputTokens: 1 }),
+        ]);
+        const detail = await new AgentsService({
+          db,
+          timelineService: makeTimelineForPath(path),
+        }).getByKey('KAN-CW-2');
+        expect(detail?.model).toBe('claude-sonnet-4-6');
+      } finally {
+        await db.destroy();
+      }
+    });
+
+    it('falls back to empty model string when transcript has no assistant events', async () => {
+      const db = await freshDb();
+      try {
+        await makeAgent(db, 'KAN-CW-3');
+        await makeRun(db, 'KAN-CW-3', 's1');
+        const detail = await new AgentsService({ db }).getByKey('KAN-CW-3');
+        expect(detail?.model).toBe('');
       } finally {
         await db.destroy();
       }

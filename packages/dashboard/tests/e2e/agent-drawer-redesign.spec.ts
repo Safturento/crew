@@ -31,10 +31,23 @@ async function mockAgentDetail(page: Page, agentKey: string): Promise<void> {
         app_url: 'http://localhost:7421',
         jira_url: 'https://safturento.atlassian.net/browse/CREW-101',
         tokens_by_tool: [
-          { tool: 'Bash', tokens: 18_400, percent: 38.4 },
-          { tool: 'Read', tokens: 12_100, percent: 25.2 },
-          { tool: 'Edit', tokens: 9_600, percent: 20.1 },
+          {
+            tool: 'Bash',
+            tokens: { input: 0, output: 18_400, cacheCreation: 0, cacheRead: 0 },
+            totalTokens: 18_400,
+          },
+          {
+            tool: 'Read',
+            tokens: { input: 0, output: 12_100, cacheCreation: 0, cacheRead: 0 },
+            totalTokens: 12_100,
+          },
+          {
+            tool: 'Edit',
+            tokens: { input: 0, output: 9_600, cacheCreation: 0, cacheRead: 0 },
+            totalTokens: 9_600,
+          },
         ],
+        model: 'claude-sonnet-4-6',
         runs: [
           {
             id: 'r1',

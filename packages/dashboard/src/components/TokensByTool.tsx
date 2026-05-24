@@ -17,7 +17,9 @@ const ASSISTANT_ROW = 'Assistant';
 
 export function TokensByTool({ tokensByTool, total }: TokensByToolProps) {
   const aliasRows = useMemo(() => {
-    const aggregated = aggregateByAlias(tokensByTool.map(({ tool, tokens }) => ({ tool, tokens })));
+    const aggregated = aggregateByAlias(
+      tokensByTool.map(({ tool, totalTokens }) => ({ tool, tokens: totalTokens })),
+    );
     const sum = aggregated.reduce((acc, row) => acc + row.tokens, 0);
     const mapped = aggregated.map((row) => ({
       alias: row.alias,

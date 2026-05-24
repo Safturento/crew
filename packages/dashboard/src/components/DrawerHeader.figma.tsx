@@ -18,6 +18,7 @@ const SAMPLE_DETAIL: AgentDetail = {
   app_url: 'http://localhost:7421',
   jira_url: 'https://safturento.atlassian.net/browse/KAN-23',
   tokens_by_tool: [],
+  model: '',
   runs: [],
   tokens: { total: 48_000, input: 0, output: 0, cache_read: 0, cache_creation: 0 },
   tool_call_count: 0,

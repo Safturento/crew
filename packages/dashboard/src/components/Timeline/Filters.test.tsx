@@ -5,12 +5,13 @@ import { describe, expect, it, vi } from 'vitest';
 import type { AgentDetailTokensByTool } from '../../data/types.js';
 import { Filters, defaultTimelineFilterState, type TimelineFilterState } from './Filters.js';
 
+const bucket = (output: number) => ({ input: 0, output, cacheCreation: 0, cacheRead: 0 });
 const rows: AgentDetailTokensByTool[] = [
-  { tool: 'Bash', tokens: 12_600_000, percent: 50 },
-  { tool: 'Edit', tokens: 3_400_000, percent: 13 },
-  { tool: 'mcp__atlassian__jira_get_issue', tokens: 400_000, percent: 2 },
-  { tool: 'mcp__atlassian__jira_transition_issue', tokens: 200_000, percent: 1 },
-  { tool: 'mcp__plugin_figma_figma__use_figma', tokens: 309_000, percent: 1 },
+  { tool: 'Bash', tokens: bucket(12_600_000), totalTokens: 12_600_000 },
+  { tool: 'Edit', tokens: bucket(3_400_000), totalTokens: 3_400_000 },
+  { tool: 'mcp__atlassian__jira_get_issue', tokens: bucket(400_000), totalTokens: 400_000 },
+  { tool: 'mcp__atlassian__jira_transition_issue', tokens: bucket(200_000), totalTokens: 200_000 },
+  { tool: 'mcp__plugin_figma_figma__use_figma', tokens: bucket(309_000), totalTokens: 309_000 },
 ];
 
 describe('Filters', () => {

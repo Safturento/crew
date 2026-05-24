@@ -33,7 +33,9 @@ export const defaultTimelineFilterState: TimelineFilterState = {
 export function Filters({ state, onChange, tokensByTool }: FiltersProps) {
   const aliasRows = useMemo(
     () =>
-      aggregateByAlias(tokensByTool.map(({ tool, tokens }) => ({ tool, tokens }))).map((row) => ({
+      aggregateByAlias(
+        tokensByTool.map(({ tool, totalTokens }) => ({ tool, tokens: totalTokens })),
+      ).map((row) => ({
         ...row,
         title: `${row.alias} (${row.raw.join(', ')})`,
       })),

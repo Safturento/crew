@@ -68,10 +68,16 @@ const AgentDetailSchema = z.object({
   tokens_by_tool: z.array(
     z.object({
       tool: z.string(),
-      tokens: z.number(),
-      percent: z.number(),
+      tokens: z.object({
+        input: z.number(),
+        output: z.number(),
+        cacheCreation: z.number(),
+        cacheRead: z.number(),
+      }),
+      totalTokens: z.number(),
     }),
   ),
+  model: z.string(),
   runs: z.array(
     z.object({
       id: z.string(),
