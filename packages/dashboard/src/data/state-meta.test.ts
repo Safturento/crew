@@ -13,9 +13,10 @@ const agent = (key: string, state: Agent['state'], startedAt: string): Agent => 
 });
 
 describe('STATE_META', () => {
-  it('marks waiting, pr_open, and error as attention states', () => {
+  it('marks waiting, pr_open, pr_merged, and error as attention states', () => {
     expect(STATE_META.waiting.attention).toBe(true);
     expect(STATE_META.pr_open.attention).toBe(true);
+    expect(STATE_META.pr_merged.attention).toBe(true);
     expect(STATE_META.error.attention).toBe(true);
   });
 
@@ -25,10 +26,17 @@ describe('STATE_META', () => {
     expect(STATE_META.idle.attention).toBe(false);
     expect(STATE_META.finished.attention).toBe(false);
   });
+
+  // CREW-202: pr_merged is the "ready to finish" success state. Its label
+  // and sortRank live between pr_open (the active wait) and running (the
+  // wider active work) so it doesn't get buried at the bottom of the list.
+  it('pr_merged is labeled "PR merged"', () => {
+    expect(STATE_META.pr_merged.label).toBe('PR merged');
+  });
 });
 
 describe('sortAgentsByPriority', () => {
-  it('orders states: waiting > error > pr_open > running > initializing > idle > finished', () => {
+  it('orders states: waiting > error > pr_open > pr_merged > running > initializing > idle > finished', () => {
     const agents: Agent[] = [
       agent('a', 'finished', '2026-04-26T10:00:00Z'),
       agent('b', 'idle', '2026-04-26T10:00:00Z'),
@@ -37,9 +45,10 @@ describe('sortAgentsByPriority', () => {
       agent('e', 'pr_open', '2026-04-26T10:00:00Z'),
       agent('f', 'error', '2026-04-26T10:00:00Z'),
       agent('g', 'waiting', '2026-04-26T10:00:00Z'),
+      agent('h', 'pr_merged', '2026-04-26T10:00:00Z'),
     ];
     const sorted = sortAgentsByPriority(agents);
-    expect(sorted.map((a) => a.key)).toEqual(['g', 'f', 'e', 'd', 'c', 'b', 'a']);
+    expect(sorted.map((a) => a.key)).toEqual(['g', 'f', 'e', 'h', 'd', 'c', 'b', 'a']);
   });
 
   it('within the same state, orders by startedAt descending', () => {
@@ -59,9 +68,18 @@ const ALL_STATES: AgentState[] = [
   'idle',
   'waiting',
   'pr_open',
+  'pr_merged',
   'error',
   'finished',
 ];
+
+describe('pr_merged class tokens (CREW-202)', () => {
+  it('uses the emerald success family to signal "done, ready to finish"', () => {
+    const tokens = STATE_CLASSES.pr_merged;
+    expect(tokens.text).toMatch(/emerald/);
+    expect(tokens.solidBg).toMatch(/emerald/);
+  });
+});
 
 const TOKEN_KEYS = ['text', 'bg', 'border', 'solidBg', 'solidBorder'] as const;
 

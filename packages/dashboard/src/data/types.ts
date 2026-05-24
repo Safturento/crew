@@ -6,6 +6,7 @@ export type AgentState =
   | 'idle'
   | 'waiting'
   | 'pr_open'
+  | 'pr_merged'
   | 'error'
   | 'finished';
 
@@ -14,11 +15,15 @@ export type AgentState =
  * `init` instead of `initializing`, plus `idle`/`waiting` derived from
  * tool-call quiescence. Kept separate from `AgentState` so the list
  * shape doesn't drift.
+ *
+ * CREW-202: `pr_merged` is written by the daemon's PrPoller when GitHub
+ * reports a PR is no longer OPEN. Both vocabularies carry it.
  */
 export type TransitionState =
   | 'init'
   | 'running'
   | 'pr_open'
+  | 'pr_merged'
   | 'error'
   | 'finished'
   | 'idle'
