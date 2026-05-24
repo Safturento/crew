@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { MouseEvent, ReactNode } from 'react';
 import { cva } from 'class-variance-authority';
-import { Clock, Currency, GitPullRequest, Hash } from 'lucide-react';
+import { Clock, Currency, GitMerge, GitPullRequest, Hash } from 'lucide-react';
 
 import type { Agent, AgentState } from '@/data/types';
 import { STATE_CLASSES, STATE_META } from '@/data/state-meta';
@@ -33,6 +33,10 @@ const agentRow = cva(
         finished: 'border-white/10',
         waiting: `${STATE_CLASSES.waiting.border} ${STATE_CLASSES.waiting.bg}`,
         pr_open: `${STATE_CLASSES.pr_open.border} ${STATE_CLASSES.pr_open.bg}`,
+        // CREW-202: pr_merged borrows the emerald success family — the row
+        // tinted green so the "ready to Finish" cohort is immediately visible
+        // in the list view alongside the other attention states.
+        pr_merged: `${STATE_CLASSES.pr_merged.border} ${STATE_CLASSES.pr_merged.bg}`,
         error: `${STATE_CLASSES.error.border} ${STATE_CLASSES.error.bg}`,
       },
     },
@@ -149,6 +153,27 @@ function QuickActions({
           >
             <a href={agent.prUrl ?? '#'} target="_blank" rel="noreferrer" onClick={stop}>
               View PR
+            </a>
+          </Button>
+          <Button color="running" intensity="ghost" size="sm" onClick={fire('finish')}>
+            Finish
+          </Button>
+        </QaGroup>
+      );
+    case 'pr_merged':
+      // CREW-202: same shape as pr_open, reworded label + git-merge icon to
+      // signal "PR done." Finish is the meaningful next action.
+      return (
+        <QaGroup>
+          <Button
+            color="running"
+            intensity="mid"
+            size="sm"
+            icon={<GitMerge aria-hidden />}
+            asChild
+          >
+            <a href={agent.prUrl ?? '#'} target="_blank" rel="noreferrer" onClick={stop}>
+              View merged PR
             </a>
           </Button>
           <Button color="running" intensity="ghost" size="sm" onClick={fire('finish')}>

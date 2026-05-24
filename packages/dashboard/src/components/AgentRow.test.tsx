@@ -72,6 +72,34 @@ describe('AgentRow', () => {
     expect(screen.getByRole('button', { name: 'Finish' })).toBeInTheDocument();
   });
 
+  // CREW-202: pr_merged replaces the "View PR" pill with "View merged PR"
+  // (lucide git-merge icon) so the user knows the PR is done. Finish stays
+  // actionable as the next user step.
+  it('renders "View merged PR" + "Finish" quick actions for pr_merged state', () => {
+    render(
+      <AgentRow
+        agent={{ ...baseAgent, state: 'pr_merged', prUrl: 'https://example.com/pr/9' }}
+        onSelect={() => {}}
+      />,
+    );
+    expect(screen.getByRole('link', { name: /View merged PR/ })).toHaveAttribute(
+      'href',
+      'https://example.com/pr/9',
+    );
+    expect(screen.getByRole('button', { name: 'Finish' })).toBeInTheDocument();
+  });
+
+  it('the pr_merged "View merged PR" pill uses the lucide git-merge icon', () => {
+    render(
+      <AgentRow
+        agent={{ ...baseAgent, state: 'pr_merged', prUrl: 'https://example.com/pr/9' }}
+        onSelect={() => {}}
+      />,
+    );
+    const link = screen.getByRole('link', { name: /View merged PR/ });
+    expect(link.querySelector('svg')?.classList.toString()).toMatch(/lucide-git-merge/);
+  });
+
   it('renders "Resume" + "Finish" quick actions for idle state', () => {
     render(<AgentRow agent={{ ...baseAgent, state: 'idle' }} onSelect={() => {}} />);
     expect(screen.getByRole('button', { name: 'Resume' })).toBeInTheDocument();
