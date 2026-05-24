@@ -40,7 +40,10 @@ interface TimelineProps {
 
 const isLiveByDefault = (state?: AgentState): boolean => state !== 'finished' && state !== 'error';
 
-const sectionKey = (s: TimelineSectionData): string => `${s.state}:${s.startedAt}`;
+// Index-prefixed so the leading initial-state section can't collide with the
+// post-transition section when both share state + startedAt (zero-width case).
+const sectionKey = (s: TimelineSectionData, i: number): string =>
+  `${i}:${s.state}:${s.startedAt}`;
 
 function eventTokens(e: TranscriptEvent): number {
   if (e.type !== 'assistant') return 0;
@@ -81,7 +84,7 @@ export function Timeline({ agentKey, agentState, tokensByTool = [] }: TimelinePr
 
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const collapseAll = () => {
-    setCollapsed(Object.fromEntries(sections.map((s) => [sectionKey(s), true])));
+    setCollapsed(Object.fromEntries(sections.map((s, i) => [sectionKey(s, i), true])));
   };
   const toggleSection = (key: string) => {
     setCollapsed((c) => ({ ...c, [key]: !c[key] }));
@@ -218,7 +221,7 @@ export function Timeline({ agentKey, agentState, tokensByTool = [] }: TimelinePr
         ) : (
           <div className="flex flex-col gap-2 px-1 py-1">
             {sections.map((s, i) => {
-              const key = sectionKey(s);
+              const key = sectionKey(s, i);
               const isOpen = !collapsed[key];
               const elapsedMs = (s.endedAt ?? now) - s.startedAt;
               const tokenSum = s.events.reduce((sum, e) => sum + eventTokens(e), 0);
