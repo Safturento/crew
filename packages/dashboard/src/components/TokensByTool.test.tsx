@@ -113,4 +113,55 @@ describe('TokensByTool', () => {
     render(<TokensByTool tokensByTool={[]} total={0} />);
     expect(screen.getByRole('region', { name: /tokens by tool/i })).toBeInTheDocument();
   });
+
+  // CREW-191: the daemon prepends an "Assistant" row to surface the model's
+  // own output tokens. The frontend defensively re-pins it to first and
+  // decorates it with a Sparkles icon.
+  describe('Assistant row (CREW-191)', () => {
+    it('renders an Assistant row with a sparkles icon', () => {
+      render(
+        <TokensByTool
+          tokensByTool={[
+            { tool: 'Assistant', tokens: 12_000, percent: 60 },
+            { tool: 'Bash', tokens: 4_000, percent: 20 },
+          ]}
+          total={20_000}
+        />,
+      );
+      const body = screen.getByTestId('tokens-by-tool-body');
+      const assistantLabel = within(body).getByText('Assistant');
+      const assistantRow = assistantLabel.parentElement;
+      expect(assistantRow).not.toBeNull();
+      const svg = assistantRow!.querySelector('svg');
+      expect(svg).not.toBeNull();
+      expect(svg!.classList.contains('lucide-sparkles')).toBe(true);
+    });
+
+    it('does NOT render a sparkles icon on non-Assistant rows', () => {
+      render(
+        <TokensByTool
+          tokensByTool={[{ tool: 'Bash', tokens: 4_000, percent: 100 }]}
+          total={4_000}
+        />,
+      );
+      const body = screen.getByTestId('tokens-by-tool-body');
+      expect(body.querySelector('.lucide-sparkles')).toBeNull();
+    });
+
+    it('places the Assistant row first regardless of source array order', () => {
+      render(
+        <TokensByTool
+          tokensByTool={[
+            { tool: 'Bash', tokens: 999_000, percent: 99 },
+            { tool: 'Assistant', tokens: 100, percent: 0.01 },
+            { tool: 'Edit', tokens: 50_000, percent: 5 },
+          ]}
+          total={1_049_100}
+        />,
+      );
+      const body = screen.getByTestId('tokens-by-tool-body');
+      const labels = within(body).getAllByText(/^(Bash|Edit|Assistant)$/);
+      expect(labels[0].textContent).toBe('Assistant');
+    });
+  });
 });

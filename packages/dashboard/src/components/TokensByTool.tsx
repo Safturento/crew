@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { Sparkles } from 'lucide-react';
 
 import type { AgentDetailTokensByTool } from '../data/types.js';
 import { formatTokens } from '../format/tokens.js';
@@ -11,16 +12,26 @@ interface TokensByToolProps {
   total: number;
 }
 
+/** Synthetic row label the daemon prepends for model output tokens (CREW-191). */
+const ASSISTANT_ROW = 'Assistant';
+
 export function TokensByTool({ tokensByTool, total }: TokensByToolProps) {
   const aliasRows = useMemo(() => {
     const aggregated = aggregateByAlias(tokensByTool.map(({ tool, tokens }) => ({ tool, tokens })));
     const sum = aggregated.reduce((acc, row) => acc + row.tokens, 0);
-    return aggregated.map((row) => ({
+    const mapped = aggregated.map((row) => ({
       alias: row.alias,
       tokens: row.tokens,
       percent: sum > 0 ? (row.tokens / sum) * 100 : 0,
       title: `${row.alias} (${row.raw.join(', ')})`,
     }));
+    // Pin the Assistant row to the top regardless of token count — the daemon
+    // already prepends it, but the defensive sort here keeps the contract
+    // explicit on the frontend so future API changes can't reorder it away.
+    const assistantIdx = mapped.findIndex((r) => r.alias === ASSISTANT_ROW);
+    if (assistantIdx <= 0) return mapped;
+    const [assistant] = mapped.splice(assistantIdx, 1);
+    return [assistant, ...mapped];
   }, [tokensByTool]);
 
   return (
@@ -50,6 +61,11 @@ export function TokensByTool({ tokensByTool, total }: TokensByToolProps) {
               tokens={row.tokens}
               percent={row.percent}
               title={row.title}
+              icon={
+                row.alias === ASSISTANT_ROW ? (
+                  <Sparkles aria-hidden className="size-3.5 text-foreground/70" />
+                ) : null
+              }
             />
           ))
         )}

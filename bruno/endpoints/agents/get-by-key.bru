@@ -84,6 +84,17 @@ tests {
       expect(row.percent).to.be.within(0, 100);
     }
   });
+
+  test("Assistant row (CREW-191) sorts first when present", () => {
+    // BRUNO-1 has no JSONL transcript, so no Assistant row is expected on
+    // this card — the positive case is asserted in get-by-key-with-transcript.bru
+    // against CREW-102. This guards the contract: IF the synthetic "Assistant"
+    // row is present, it must be at index 0.
+    const assistantIdx = res.body.tokens_by_tool.findIndex((r) => r.tool === "Assistant");
+    if (assistantIdx >= 0) {
+      expect(assistantIdx).to.equal(0);
+    }
+  });
 }
 
 docs {
