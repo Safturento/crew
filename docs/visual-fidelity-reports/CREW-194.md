@@ -7,12 +7,12 @@
 
 ## Components in scope
 
-| Component | Figma node | Status |
-|---|---|---|
-| `MinimapStripe` | _(no Figma counterpart — feature-internal, registered in `.agents/design-system.md`)_ | No reference to compare; rendered behaviour verified live |
-| `Timeline` | _(orchestrator, no Figma node)_ | Structural-only refactor (single ScrollViewport + sticky toolbar) |
-| `TimelineSection` | `559:650` (Composites/TimelineSection) | One CSS class removed (`overflow-hidden`); visually unchanged |
-| `useSectionHeights` | _(hook, no UI surface)_ | n/a |
+| Component           | Figma node                                                                            | Status                                                            |
+| ------------------- | ------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
+| `MinimapStripe`     | _(no Figma counterpart — feature-internal, registered in `.agents/design-system.md`)_ | No reference to compare; rendered behaviour verified live         |
+| `Timeline`          | _(orchestrator, no Figma node)_                                                       | Structural-only refactor (single ScrollViewport + sticky toolbar) |
+| `TimelineSection`   | `559:650` (Composites/TimelineSection)                                                | One CSS class removed (`overflow-hidden`); visually unchanged     |
+| `useSectionHeights` | _(hook, no UI surface)_                                                               | n/a                                                               |
 
 ## Structural check
 
