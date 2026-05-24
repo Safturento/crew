@@ -49,19 +49,22 @@ const PILL_TOKENS: Record<PillColor, PillTokens> = {
 };
 
 const TOOL_PILL_TOKENS = Object.fromEntries(
-  (Object.entries(TOOL_COLOR_CLASSES) as [ToolColorKey, (typeof TOOL_COLOR_CLASSES)[ToolColorKey]][]).map(
-    ([key, c]) => [
-      key,
-      {
-        text: c.text,
-        textOnSolid: 'text-slate-950',
-        bg: c.bg,
-        border: c.border,
-        solidBg: c.solidBg,
-        solidBorder: c.solidBorder,
-      },
-    ],
-  ),
+  (
+    Object.entries(TOOL_COLOR_CLASSES) as [
+      ToolColorKey,
+      (typeof TOOL_COLOR_CLASSES)[ToolColorKey],
+    ][]
+  ).map(([key, c]) => [
+    key,
+    {
+      text: c.text,
+      textOnSolid: 'text-slate-950',
+      bg: c.bg,
+      border: c.border,
+      solidBg: c.solidBg,
+      solidBorder: c.solidBorder,
+    },
+  ]),
 ) as Record<ToolColorKey, PillTokens>;
 
 export function pillSurfaceClasses(

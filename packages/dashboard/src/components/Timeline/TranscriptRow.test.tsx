@@ -127,9 +127,7 @@ describe('TranscriptRow', () => {
         timestamp: ts,
         message: {
           role: 'user',
-          content: [
-            { type: 'tool_result', tool_use_id: 'tu-1', content: 'boom', is_error: true },
-          ],
+          content: [{ type: 'tool_result', tool_use_id: 'tu-1', content: 'boom', is_error: true }],
         },
       } as UserEvent;
       render(<TranscriptRow event={event} />);
