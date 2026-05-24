@@ -21,6 +21,10 @@ describe('colorForTool', () => {
     expect(colorForTool('WebSearch')).toBe('webNet');
   });
 
+  it('MCP:Confluence shares the Atlassian vendor cluster (blue)', () => {
+    expect(colorForTool('MCP:Confluence')).toBe('mcpAtlassian');
+  });
+
   it('returns "default" for unknown tools', () => {
     expect(colorForTool('SomeFutureTool')).toBe('default');
     expect(colorForTool('')).toBe('default');

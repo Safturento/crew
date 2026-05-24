@@ -9,6 +9,7 @@ const TOOL_COLOR_MAP: Record<string, ToolColorKey> = {
   TodoWrite: 'todoWrite',
   Task: 'task',
   'MCP:Jira': 'mcpJira',
+  'MCP:Confluence': 'mcpAtlassian',
   'MCP:Figma': 'mcpFigma',
   'MCP:Chrome': 'mcpChrome',
   'MCP:Playwright': 'mcpPlaywright',
