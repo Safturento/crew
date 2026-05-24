@@ -165,13 +165,19 @@ test.describe('Agent drawer — 2026-05-22 redesign', () => {
     );
   });
 
-  test('Timeline renders one section per state transition', async ({ page }) => {
+  test('Timeline renders a leading initial-state section plus one per transition', async ({
+    page,
+  }) => {
+    // CREW-196: groupEventsByState prepends a leading section for the agent's
+    // initial state. With 2 mocked transitions (null→init, init→running) the
+    // timeline renders 3 sections: leading 'initializing' (from null fallback),
+    // 'initializing' (from to:'init'), and 'running'.
     await page.goto(`/#/agent/${SEEDED_AGENT_KEY}`);
     const sections = page.getByTestId('timeline-section');
-    await expect(sections).toHaveCount(2);
+    await expect(sections).toHaveCount(3);
     await expect(
       page.locator('[data-testid="timeline-section"][data-state="initializing"]'),
-    ).toHaveCount(1);
+    ).toHaveCount(2);
     await expect(
       page.locator('[data-testid="timeline-section"][data-state="running"]'),
     ).toHaveCount(1);

@@ -69,7 +69,7 @@ export function MinimapStripe({ sections, stripeHeight, onSectionJump }: Minimap
     >
       {sections.map((sec, i) => (
         <button
-          key={`${sec.state}:${sec.startedAt}`}
+          key={`${i}:${sec.state}:${sec.startedAt}`}
           type="button"
           data-testid="minimap-segment"
           data-state={sec.state}

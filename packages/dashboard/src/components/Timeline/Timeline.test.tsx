@@ -475,7 +475,11 @@ describe('Timeline', () => {
     mockUseStateHistory.mockReturnValue(stateHistoryResult(transitions));
     render(<Timeline agentKey="KAN-1" agentState="waiting" />);
     const sections = screen.getAllByTestId('timeline-section');
+    // N transitions yield N+1 sections; the first is the leading initial-state
+    // section (from === null falls back to 'init' → 'initializing'), the second
+    // is the to: 'init' section (also 'initializing').
     expect(sections.map((s) => s.getAttribute('data-state'))).toEqual([
+      'initializing',
       'initializing',
       'running',
       'waiting',
@@ -589,9 +593,11 @@ describe('Timeline', () => {
     mockUseStateHistory.mockReturnValue(stateHistoryResult(transitions));
     render(<Timeline agentKey="KAN-1" agentState="running" />);
     const toggles = screen.getAllByRole('button', { name: /toggle/i });
-    expect(toggles).toHaveLength(2);
+    // Leading initial-state section adds one toggle on top of the 2 transitions.
+    expect(toggles).toHaveLength(3);
     await userEvent.click(toggles[0]);
     expect(toggles[0]).toHaveAttribute('aria-expanded', 'false');
     expect(toggles[1]).toHaveAttribute('aria-expanded', 'true');
+    expect(toggles[2]).toHaveAttribute('aria-expanded', 'true');
   });
 });
