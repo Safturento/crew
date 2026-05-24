@@ -89,6 +89,11 @@ export class IngestService {
   /** runId → agent_key resolution cache so the per-event hot path doesn't
    *  re-SELECT from `runs`. Populated lazily (or by `attach`). */
   private readonly runToAgent = new Map<number, string>();
+  /** Per-agent the `run_id` of the most-recently-ingested tool_call. Drives
+   *  the `pr_open → running` re-cycle when a `crew fix-pr` (or any future
+   *  re-dispatch) starts a structurally-new run on an agent already in
+   *  `pr_open`. CREW-198. */
+  private readonly lastRunIdCache = new Map<string, number>();
 
   constructor(deps: IngestServiceDeps) {
     this.db = deps.db;
@@ -178,6 +183,50 @@ export class IngestService {
     });
   }
 
+  /**
+   * Records the `running → pr_open` cycle-back transition that closes the
+   * fix-pr loop (CREW-198). Only fires when (a) the agent is currently
+   * `running`, and (b) the completing run's command is `fix-pr` — a
+   * completing initial `run` doesn't snap an agent into `pr_open` it never
+   * reached on its own. Called from the runs/:runId/complete route alongside
+   * `recordFinishCompleted`.
+   */
+  async recordRunCompleted(
+    agentKey: string,
+    runId: number,
+    completedAtIso: string,
+  ): Promise<void> {
+    const previous = await this.getCachedAgentState(agentKey);
+    if (previous !== 'running') return;
+
+    const run = await this.db
+      .selectFrom('runs')
+      .select('command')
+      .where('id', '=', runId)
+      .executeTakeFirst();
+    if (run?.command !== 'fix-pr') return;
+
+    const ts = Date.parse(completedAtIso);
+    if (!Number.isFinite(ts)) {
+      this.logger.warn(
+        { agentKey, completedAtIso },
+        'unparseable completedAt; skipping fix-pr cycle-back transition',
+      );
+      return;
+    }
+
+    await this.db
+      .insertInto('state_transitions')
+      .values({ agent_key: agentKey, from_state: 'running', to_state: 'pr_open', ts })
+      .execute();
+
+    this.agentStateCache.set(agentKey, 'pr_open');
+    this.eventBus.publish({
+      type: 'agent.state_changed',
+      data: { key: agentKey, from: 'running', to: 'pr_open', ts },
+    });
+  }
+
   async ingestEvent(runId: number, event: TranscriptEvent): Promise<void> {
     const agentKey = await this.resolveAgentKey(runId);
     if (!agentKey) return;
@@ -193,6 +242,13 @@ export class IngestService {
    */
   async processEventForTest(input: ProcessEventInput): Promise<void> {
     await this.processEvent(input);
+  }
+
+  /** Test seam — drives the same `lastRunIdCache` priming the live tail
+   *  runs at attach. Used by the CREW-198 restart test to bypass tail
+   *  timing without hand-wiring the cache. */
+  async primeAgentForTest(agentKey: string): Promise<void> {
+    await this.primeLastRunIdCacheForAgent(agentKey);
   }
 
   private async processEvent(input: ProcessEventInput): Promise<void> {
@@ -241,6 +297,7 @@ export class IngestService {
 
     await this.applyStateTransition({
       agentKey,
+      runId,
       toolName: toolUse.name,
       summary,
       tsIso: event.timestamp,
@@ -288,12 +345,20 @@ export class IngestService {
 
   private async applyStateTransition(input: {
     agentKey: string;
+    runId: number;
     toolName: string;
     summary: string;
     tsIso: string;
   }): Promise<void> {
     const previous = await this.getCachedAgentState(input.agentKey);
-    const next = computeNextState(previous, input.toolName, input.summary);
+    const lastSeenRunId = this.lastRunIdCache.get(input.agentKey);
+    const next = computeNextState(previous, input.toolName, input.summary, {
+      currentRunId: input.runId,
+      lastSeenRunId,
+    });
+    // Track the latest ingested run regardless of whether a transition fired;
+    // subsequent same-run calls must not re-trigger the cycle.
+    this.lastRunIdCache.set(input.agentKey, input.runId);
     if (next === previous) return;
 
     const ts = Date.parse(input.tsIso);
@@ -351,6 +416,16 @@ export class IngestService {
   }
 
   private async runTail(runId: number, path: string, signal: AbortSignal): Promise<void> {
+    // CREW-198: prime lastRunIdCache before the first event so a daemon
+    // restart mid-fix-pr correctly detects the `pr_open → running` cycle on
+    // the new run's first tool_call. Best-effort — a priming failure mustn't
+    // crash the tail.
+    try {
+      const agentKey = await this.resolveAgentKey(runId);
+      if (agentKey) await this.primeLastRunIdCacheForAgent(agentKey);
+    } catch (err) {
+      this.logger.warn({ err, runId, path }, 'lastRunIdCache prime failed');
+    }
     for await (const event of tailTranscript(path, { signal })) {
       try {
         await this.ingestEvent(runId, event);
@@ -358,6 +433,26 @@ export class IngestService {
         this.logger.warn({ err, runId, path }, 'ingestEvent failed');
       }
     }
+  }
+
+  /**
+   * Seed `lastRunIdCache[agentKey]` from the most-recently-ingested tool_call
+   * (across all of the agent's runs) so a fresh-process attach correctly
+   * detects a subsequent new-run-id transition. No-op when the cache is
+   * already populated (in-process state wins over DB read) or when the agent
+   * has no prior tool_calls.
+   */
+  private async primeLastRunIdCacheForAgent(agentKey: string): Promise<void> {
+    if (this.lastRunIdCache.has(agentKey)) return;
+    const latest = await this.db
+      .selectFrom('tool_calls')
+      .innerJoin('runs', 'runs.id', 'tool_calls.run_id')
+      .where('runs.agent_key', '=', agentKey)
+      .select('tool_calls.run_id as lastRunId')
+      .orderBy('tool_calls.occurred_at', 'desc')
+      .orderBy('tool_calls.id', 'desc')
+      .executeTakeFirst();
+    if (latest) this.lastRunIdCache.set(agentKey, latest.lastRunId);
   }
 }
 
@@ -378,6 +473,15 @@ function resolveAttachPath(input: AttachInput): string {
   );
 }
 
+interface ComputeContext {
+  /** The run_id of the tool_call currently being ingested. */
+  currentRunId: number;
+  /** The run_id of the most recently-ingested tool_call for this agent.
+   *  Undefined when no tool_call has yet been ingested for this agent in
+   *  the daemon's lifetime (cold start, pre-priming). */
+  lastSeenRunId: number | undefined;
+}
+
 /**
  * Forward-walk one step in the live state machine. The slice 1b helper
  * `deriveStateFromToolCalls` re-derives state from a *full* tool-call slice;
@@ -386,6 +490,8 @@ function resolveAttachPath(input: AttachInput): string {
  *
  *   - any Bash `gh pr create …` → `pr_open` (and stays)
  *   - else, any tool_call once we were `init` → `running`
+ *   - CREW-198: when in `pr_open` and the tool_call belongs to a NEW run
+ *     (different `run_id` than the last-seen one), cycle back to `running`.
  *   - else, no flip
  *
  * The standalone helper stays the canonical re-derivation for the migration
@@ -396,8 +502,19 @@ function computeNextState(
   previous: TransitionState,
   toolName: string,
   summary: string,
+  ctx: ComputeContext,
 ): TransitionState {
   if (previous === 'finished') return 'finished';
+  // CREW-198: a new run starting on a pr_open agent (e.g. crew fix-pr) cycles
+  // state back to running. The `lastSeenRunId !== undefined` guard prevents
+  // the first-ever tool_call from spuriously firing this transition.
+  if (
+    previous === 'pr_open' &&
+    ctx.lastSeenRunId !== undefined &&
+    ctx.currentRunId !== ctx.lastSeenRunId
+  ) {
+    return 'running';
+  }
   if (previous === 'pr_open') return 'pr_open';
   if (toolName === 'Bash' && summary.startsWith('gh pr create')) return 'pr_open';
   return 'running';

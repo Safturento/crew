@@ -405,6 +405,254 @@ describe('IngestService.processEventForTest — state_transitions + agent.state_
   });
 });
 
+describe('IngestService.processEventForTest — fix-pr cycle (CREW-198)', () => {
+  it('fires pr_open → running when a new run starts producing tool_calls', async () => {
+    const { db, runId: firstRunId, agentKey } = await setup();
+    try {
+      const svc = new IngestService({ db, logger: silentLogger, eventBus: new EventBus() });
+
+      // Original run: ends with gh pr create → pr_open.
+      await svc.processEventForTest({
+        runId: firstRunId,
+        agentKey,
+        event: makeBashToolUse({
+          id: 'tu_pr',
+          command: 'gh pr create --title hi',
+          ts: '2026-04-29T12:00:00Z',
+        }),
+      });
+      expect((await getLatestState(db, agentKey))).toBe('pr_open');
+
+      // Fix-pr dispatch creates a new run. First tool_call from the new run → pr_open → running.
+      const fixPrRunId = await insertRun(db, agentKey, 'fix-pr', 'session-fix-pr-1');
+      await svc.processEventForTest({
+        runId: fixPrRunId,
+        agentKey,
+        event: makeBashToolUse({
+          id: 'tu_fp_1',
+          command: 'ls',
+          ts: '2026-04-29T12:01:00Z',
+        }),
+      });
+      expect(await getLatestState(db, agentKey)).toBe('running');
+
+      const rows = await db
+        .selectFrom('state_transitions')
+        .selectAll()
+        .orderBy('id', 'asc')
+        .execute();
+      expect(rows.map((r) => `${r.from_state}->${r.to_state}`)).toEqual([
+        'init->pr_open',
+        'pr_open->running',
+      ]);
+    } finally {
+      await db.destroy();
+    }
+  });
+
+  it('does NOT transition pr_open → running on continued activity within the same run', async () => {
+    const { db, runId, agentKey } = await setup();
+    try {
+      const svc = new IngestService({ db, logger: silentLogger, eventBus: new EventBus() });
+
+      await svc.processEventForTest({
+        runId,
+        agentKey,
+        event: makeBashToolUse({
+          id: 'tu_pr',
+          command: 'gh pr create --title hi',
+          ts: '2026-04-29T12:00:00Z',
+        }),
+      });
+      // Within the same run, after pr_open, additional tool_calls don't transition.
+      await svc.processEventForTest({
+        runId,
+        agentKey,
+        event: makeBashToolUse({ id: 'tu_2', command: 'ls', ts: '2026-04-29T12:00:01Z' }),
+      });
+      expect(await getLatestState(db, agentKey)).toBe('pr_open');
+    } finally {
+      await db.destroy();
+    }
+  });
+
+  it('does NOT spuriously transition on the first-ever tool_call (empty lastRunIdCache)', async () => {
+    // Fresh agent never observed before — first tool_call from the only-ever
+    // run should fall through the running-state logic, not falsely trigger
+    // pr_open → running.
+    const { db, runId, agentKey } = await setup();
+    try {
+      const svc = new IngestService({ db, logger: silentLogger, eventBus: new EventBus() });
+      await svc.processEventForTest({
+        runId,
+        agentKey,
+        event: makeBashToolUse({ id: 'tu_1', command: 'ls', ts: '2026-04-29T12:00:00Z' }),
+      });
+      expect(await getLatestState(db, agentKey)).toBe('running');
+    } finally {
+      await db.destroy();
+    }
+  });
+
+  it('recordRunCompleted fires running → pr_open + publishes for fix-pr runs', async () => {
+    const { db, runId: originalRunId, agentKey } = await setup();
+    try {
+      const bus = new EventBus({ bufferSize: 10 });
+      const seen: SseEvent[] = [];
+      bus.subscribe({ onEvent: (e) => seen.push(e) });
+      const svc = new IngestService({ db, logger: silentLogger, eventBus: bus });
+
+      // Bring the agent up to pr_open from the original run, then trigger the
+      // fix-pr cycle's first half (pr_open → running).
+      await svc.processEventForTest({
+        runId: originalRunId,
+        agentKey,
+        event: makeBashToolUse({
+          id: 'tu_pr',
+          command: 'gh pr create --title hi',
+          ts: '2026-04-29T12:00:00Z',
+        }),
+      });
+      const fixPrRunId = await insertRun(db, agentKey, 'fix-pr', 'session-fix-pr-2');
+      await svc.processEventForTest({
+        runId: fixPrRunId,
+        agentKey,
+        event: makeBashToolUse({ id: 'tu_fp', command: 'ls', ts: '2026-04-29T12:01:00Z' }),
+      });
+      expect(await getLatestState(db, agentKey)).toBe('running');
+
+      seen.length = 0;
+      await svc.recordRunCompleted(agentKey, fixPrRunId, '2026-04-29T12:02:00Z');
+
+      expect(await getLatestState(db, agentKey)).toBe('pr_open');
+      const transitions = seen.filter((e) => e.type === 'agent.state_changed');
+      expect(transitions).toHaveLength(1);
+      expect(transitions[0]).toMatchObject({
+        type: 'agent.state_changed',
+        data: { key: agentKey, from: 'running', to: 'pr_open' },
+      });
+    } finally {
+      await db.destroy();
+    }
+  });
+
+  it('recordRunCompleted is a no-op for non-fix-pr runs', async () => {
+    // A regular `run` command completing shouldn't push a `running` agent to
+    // pr_open — only fix-pr runs trigger the cycle-back transition.
+    const { db, runId, agentKey } = await setup();
+    try {
+      const svc = new IngestService({ db, logger: silentLogger, eventBus: new EventBus() });
+      await svc.processEventForTest({
+        runId,
+        agentKey,
+        event: makeBashToolUse({ id: 'tu_1', command: 'ls', ts: '2026-04-29T12:00:00Z' }),
+      });
+      expect(await getLatestState(db, agentKey)).toBe('running');
+
+      await svc.recordRunCompleted(agentKey, runId, '2026-04-29T12:01:00Z');
+      // Still running — the `run` command's completion does not cycle.
+      expect(await getLatestState(db, agentKey)).toBe('running');
+    } finally {
+      await db.destroy();
+    }
+  });
+
+  it('primes lastRunIdCache from latest tool_call on agent attach so daemon restart mid-fix-pr still detects the cycle', async () => {
+    // Daemon restart scenario: agent in pr_open from the original run, then a
+    // fix-pr run starts. The first tool_call AFTER the restart should still
+    // trigger pr_open → running because the cache was primed from the latest
+    // tool_call's run_id on the original run.
+    const { db, runId: originalRunId, agentKey, sessionId } = await setup();
+    try {
+      // Original run wrote a tool_call + reached pr_open.
+      const svcA = new IngestService({ db, logger: silentLogger, eventBus: new EventBus() });
+      await svcA.processEventForTest({
+        runId: originalRunId,
+        agentKey,
+        event: makeBashToolUse({
+          id: 'tu_pr',
+          command: 'gh pr create --title hi',
+          ts: '2026-04-29T12:00:00Z',
+        }),
+      });
+      expect(await getLatestState(db, agentKey)).toBe('pr_open');
+
+      // Simulate daemon restart: brand-new IngestService instance with an
+      // empty in-memory cache, then attach prior to seeing any events.
+      const fixPrRunId = await insertRun(db, agentKey, 'fix-pr', 'session-fix-pr-restart');
+      const customDir = tmp();
+      const jsonlPath = join(customDir, `${sessionId}.jsonl`);
+      writeFileSync(jsonlPath, '');
+      const svcB = new IngestService({ db, logger: silentLogger, eventBus: new EventBus() });
+      svcB.attach({ runId: fixPrRunId, jsonlPath });
+      // Give the tail's priming step a beat to complete before the first event
+      // lands on disk; this mirrors the real ordering (priming awaited before
+      // events flow). We also explicitly call attachAgent to make the test
+      // resilient to background-priming timing.
+      await svcB.primeAgentForTest(agentKey);
+
+      // First tool_call from fix-pr arrives. Should trigger pr_open → running.
+      await svcB.processEventForTest({
+        runId: fixPrRunId,
+        agentKey,
+        event: makeBashToolUse({ id: 'tu_fp', command: 'ls', ts: '2026-04-29T12:01:00Z' }),
+      });
+      expect(await getLatestState(db, agentKey)).toBe('running');
+      svcB.detach(fixPrRunId);
+    } finally {
+      await db.destroy();
+    }
+  });
+
+  it('recordRunCompleted is a no-op when previous state is not running', async () => {
+    const { db, agentKey } = await setup();
+    try {
+      const svc = new IngestService({ db, logger: silentLogger, eventBus: new EventBus() });
+      const fixPrRunId = await insertRun(db, agentKey, 'fix-pr', 'session-fix-pr-noop');
+      // Agent state is `init` (never ingested anything). Completion shouldn't
+      // transition.
+      await svc.recordRunCompleted(agentKey, fixPrRunId, '2026-04-29T12:00:00Z');
+      expect(await getLatestState(db, agentKey)).toBeNull();
+    } finally {
+      await db.destroy();
+    }
+  });
+});
+
+async function getLatestState(
+  db: Kysely<DaemonDatabase>,
+  agentKey: string,
+): Promise<string | null> {
+  const row = await db
+    .selectFrom('state_transitions')
+    .select('to_state')
+    .where('agent_key', '=', agentKey)
+    .orderBy('id', 'desc')
+    .executeTakeFirst();
+  return row?.to_state ?? null;
+}
+
+async function insertRun(
+  db: Kysely<DaemonDatabase>,
+  agentKey: string,
+  command: 'run' | 'fix-pr' | 'finish',
+  sessionId: string,
+): Promise<number> {
+  const inserted = await db
+    .insertInto('runs')
+    .values({
+      agent_key: agentKey,
+      command,
+      session_id: sessionId,
+      started_at: new Date().toISOString(),
+      completed_at: null,
+      exit_code: null,
+    })
+    .returning('id')
+    .executeTakeFirstOrThrow();
+  return inserted.id;
+}
+
 describe('IngestService.processEventForTest — tool_calls.changed pings', () => {
   it('publishes tool_calls.changed after each tool_calls insert', async () => {
     const { db, runId, agentKey } = await setup();

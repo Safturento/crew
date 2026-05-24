@@ -412,4 +412,91 @@ describe('POST /api/agents/runs/:runId/complete', () => {
       await db.destroy();
     }
   });
+
+  // CREW-198: a clean fix-pr completion closes the cycle by transitioning
+  // `running → pr_open`. recordRunCompleted only fires when the agent is in
+  // `running`, so the route doesn't need to filter explicitly.
+  it('writes a running → pr_open transition when a fix-pr run completes ok with the agent in running', async () => {
+    const { app, db } = await setupApp();
+    try {
+      // Seed: agent in `running` via a prior state transition.
+      const reg = await app.inject({
+        method: 'POST',
+        url: '/api/agents/runs',
+        payload: { ...validBody, sessionId: 'fixpr-complete-ok', command: 'fix-pr' },
+      });
+      const runId = (reg.json() as { run: { id: number } }).run.id;
+      await db
+        .insertInto('state_transitions')
+        .values({
+          agent_key: validBody.key,
+          from_state: 'pr_open',
+          to_state: 'running',
+          ts: Date.parse('2026-04-29T12:30:00Z'),
+        })
+        .execute();
+
+      await app.inject({
+        method: 'POST',
+        url: `/api/agents/runs/${runId}/complete`,
+        payload: { exitCode: 0, completedAt: '2026-04-29T13:00:00Z' },
+      });
+
+      const transitions = await db
+        .selectFrom('state_transitions')
+        .selectAll()
+        .where('agent_key', '=', validBody.key)
+        .orderBy('id', 'asc')
+        .execute();
+      expect(transitions.map((t) => `${t.from_state}->${t.to_state}`)).toEqual([
+        'pr_open->running',
+        'running->pr_open',
+      ]);
+      expect(transitions[1]).toMatchObject({
+        ts: Date.parse('2026-04-29T13:00:00Z'),
+      });
+    } finally {
+      await app.close();
+      await db.destroy();
+    }
+  });
+
+  it('does not write a fix-pr cycle-back transition when exit_code is non-zero', async () => {
+    const { app, db } = await setupApp();
+    try {
+      const reg = await app.inject({
+        method: 'POST',
+        url: '/api/agents/runs',
+        payload: { ...validBody, sessionId: 'fixpr-complete-fail', command: 'fix-pr' },
+      });
+      const runId = (reg.json() as { run: { id: number } }).run.id;
+      await db
+        .insertInto('state_transitions')
+        .values({
+          agent_key: validBody.key,
+          from_state: 'pr_open',
+          to_state: 'running',
+          ts: Date.parse('2026-04-29T12:30:00Z'),
+        })
+        .execute();
+
+      await app.inject({
+        method: 'POST',
+        url: `/api/agents/runs/${runId}/complete`,
+        payload: { exitCode: 1, completedAt: '2026-04-29T13:00:00Z' },
+      });
+
+      const cycleBack = await db
+        .selectFrom('state_transitions')
+        .selectAll()
+        .where('agent_key', '=', validBody.key)
+        .where('from_state', '=', 'running')
+        .where('to_state', '=', 'pr_open')
+        .execute();
+      expect(cycleBack).toHaveLength(0);
+    } finally {
+      await app.close();
+      await db.destroy();
+    }
+  });
 });
