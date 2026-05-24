@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { MinimapStripe, MIN_SEG_PX, STRIPE_WIDTH } from './MinimapStripe.js';
 import { STATE_CLASSES } from '../../data/state-meta.js';
@@ -95,5 +95,54 @@ describe('MinimapStripe', () => {
     await user.hover(segments[2]);
     const tooltip = await screen.findByTestId('minimap-tooltip');
     expect(tooltip).toHaveTextContent(/1 event(?!s)/);
+  });
+
+  it('calls onSectionJump(idx) when a segment is clicked', async () => {
+    const user = userEvent.setup();
+    const onSectionJump = vi.fn();
+    render(<MinimapStripe {...baseProps} onSectionJump={onSectionJump} />);
+    const segments = screen.getAllByTestId('minimap-segment');
+    await user.click(segments[1]);
+    expect(onSectionJump).toHaveBeenCalledTimes(1);
+    expect(onSectionJump).toHaveBeenCalledWith(1);
+  });
+
+  it('is keyboard focusable and moves between sections with arrow keys', async () => {
+    const user = userEvent.setup();
+    const onSectionJump = vi.fn();
+    render(<MinimapStripe {...baseProps} onSectionJump={onSectionJump} />);
+    const stripe = screen.getByTestId('minimap-stripe');
+    expect(stripe).toHaveAttribute('tabindex', '0');
+    stripe.focus();
+    await user.keyboard('{ArrowDown}');
+    expect(onSectionJump).toHaveBeenLastCalledWith(0);
+    await user.keyboard('{ArrowDown}');
+    expect(onSectionJump).toHaveBeenLastCalledWith(1);
+    await user.keyboard('{ArrowDown}');
+    expect(onSectionJump).toHaveBeenLastCalledWith(2);
+    await user.keyboard('{ArrowDown}');
+    // At last section already, no further movement.
+    expect(onSectionJump).toHaveBeenCalledTimes(3);
+    await user.keyboard('{ArrowUp}');
+    expect(onSectionJump).toHaveBeenLastCalledWith(1);
+  });
+
+  it('Home/End jump to first/last section', async () => {
+    const user = userEvent.setup();
+    const onSectionJump = vi.fn();
+    render(<MinimapStripe {...baseProps} onSectionJump={onSectionJump} />);
+    const stripe = screen.getByTestId('minimap-stripe');
+    stripe.focus();
+    await user.keyboard('{End}');
+    expect(onSectionJump).toHaveBeenLastCalledWith(2);
+    await user.keyboard('{Home}');
+    expect(onSectionJump).toHaveBeenLastCalledWith(0);
+  });
+
+  it('exposes accessible role + label for assistive tech', () => {
+    render(<MinimapStripe {...baseProps} />);
+    const stripe = screen.getByTestId('minimap-stripe');
+    expect(stripe).toHaveAttribute('role', 'listbox');
+    expect(stripe).toHaveAccessibleName(/timeline minimap/i);
   });
 });

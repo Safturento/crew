@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type KeyboardEvent } from 'react';
 
 import { STATE_CLASSES, STATE_META } from '../../data/state-meta.js';
 import type { AgentState } from '../../data/types.js';
@@ -34,9 +34,10 @@ interface MinimapStripeProps {
 export function MinimapStripe({
   sections,
   stripeHeight,
-  onSectionJump: _onSectionJump,
+  onSectionJump,
 }: MinimapStripeProps) {
   const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
+  const [activeIdx, setActiveIdx] = useState<number>(-1);
   if (sections.length === 0) return null;
   const segments = computeSegmentHeights(sections, stripeHeight);
   const tooltipTop =
@@ -44,21 +45,48 @@ export function MinimapStripe({
       ? 0
       : segments.slice(0, hoveredIdx).reduce((sum, h) => sum + h, 0) +
         segments[hoveredIdx] / 2;
+
+  const jumpTo = (idx: number) => {
+    setActiveIdx(idx);
+    onSectionJump(idx);
+  };
+
+  const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
+    const last = sections.length - 1;
+    let nextIdx = activeIdx;
+    if (e.key === 'ArrowDown') nextIdx = Math.min(activeIdx + 1, last);
+    else if (e.key === 'ArrowUp') nextIdx = Math.max(activeIdx - 1, 0);
+    else if (e.key === 'Home') nextIdx = 0;
+    else if (e.key === 'End') nextIdx = last;
+    else return;
+    e.preventDefault();
+    if (nextIdx !== activeIdx) jumpTo(nextIdx);
+  };
+
   return (
     <div
       data-testid="minimap-stripe"
-      className="absolute top-0 bottom-0 z-10 flex flex-col"
+      role="listbox"
+      aria-label="Timeline minimap — click a section or use arrow keys to navigate"
+      tabIndex={0}
+      onKeyDown={onKeyDown}
+      className="absolute top-0 bottom-0 z-10 flex flex-col outline-none focus-visible:ring-1 focus-visible:ring-foreground/40"
       style={{ right: `${SCROLLBAR_GUTTER}px`, width: `${STRIPE_WIDTH}px` }}
     >
       {sections.map((sec, i) => (
-        <div
+        <button
           key={i}
+          type="button"
           data-testid="minimap-segment"
           data-state={sec.state}
-          className={cn('w-full', STATE_CLASSES[sec.state].solidBg)}
+          aria-label={`${STATE_META[sec.state].label} section, ${sec.eventCount} event${
+            sec.eventCount === 1 ? '' : 's'
+          }`}
+          className={cn('w-full cursor-pointer', STATE_CLASSES[sec.state].solidBg)}
           style={{ height: `${segments[i]}px` }}
           onMouseEnter={() => setHoveredIdx(i)}
           onMouseLeave={() => setHoveredIdx(null)}
+          onClick={() => jumpTo(i)}
         />
       ))}
       {hoveredIdx !== null && (
