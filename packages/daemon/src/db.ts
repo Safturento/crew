@@ -59,11 +59,27 @@ export interface StateTransitionsTable {
   ts: number;
 }
 
+/** CREW-201: per-phase startup events captured by the CLI's dispatch flow.
+ *  Insert path: IngestService.ingestStartupEvent (chokidar watcher on
+ *  ~/.crew/startup/<key>.jsonl). Read path: AgentsService.getTimeline
+ *  merges started+terminal pairs into StartupPhaseRow per phase. */
+export interface StartupEventsTable {
+  id: Generated<number>;
+  agent_key: string;
+  subtype: string;
+  status: 'started' | 'completed' | 'failed';
+  ts: number;
+  summary: string;
+  duration_ms: number | null;
+  log_path: string | null;
+}
+
 export interface DaemonDatabase {
   agents: AgentsTable;
   runs: RunsTable;
   tool_calls: ToolCallsTable;
   state_transitions: StateTransitionsTable;
+  startup_events: StartupEventsTable;
 }
 
 /**
