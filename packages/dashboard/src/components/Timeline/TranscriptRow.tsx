@@ -1,4 +1,5 @@
-import { type ReactNode, useState } from 'react';
+import { ChevronDown, ChevronRight } from 'lucide-react';
+import { type ReactNode, type RefObject, useEffect, useRef, useState } from 'react';
 import type {
   AssistantContent,
   AssistantEvent,
@@ -16,7 +17,7 @@ import type {
 
 import { cn } from '../../lib/utils.js';
 import type { PillColor } from '../../lib/pill-variants.js';
-import type { ToolColorKey } from '../../data/tool-colors.js';
+import { TOOL_COLOR_CLASSES, type ToolColorKey } from '../../data/tool-colors.js';
 import { toolAlias } from '../../format/tool-alias.js';
 import { Tag } from '../ui/tag.js';
 import { colorForTool } from './event-palette.js';
@@ -45,6 +46,27 @@ const CATEGORY_COLOR: Record<RowSpec['category'], PillColor> = {
   system: 'idle',
 };
 
+const STRUCTURED_BLOCK_TYPES: ReadonlySet<string> = new Set([
+  'tool_use',
+  'tool_result',
+  'attachment',
+  'system',
+]);
+
+function useIsClamped(ref: RefObject<HTMLElement | null>): boolean {
+  const [clamped, setClamped] = useState(false);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const check = () => setClamped(el.scrollHeight > el.clientHeight + 1);
+    check();
+    const ro = new ResizeObserver(check);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [ref]);
+  return clamped;
+}
+
 interface TranscriptRowProps {
   event: TranscriptEvent;
 }
@@ -61,6 +83,11 @@ export function TranscriptRow({ event }: TranscriptRowProps) {
 
 function Row({ spec }: { spec: RowSpec }) {
   const [open, setOpen] = useState(false);
+  const onelinerRef = useRef<HTMLSpanElement>(null);
+  const isClamped = useIsClamped(onelinerRef);
+  const isStructured = STRUCTURED_BLOCK_TYPES.has(spec.blockType);
+  const showChevron = isClamped || isStructured;
+
   const tagColorProps: { color?: PillColor; toolColor?: ToolColorKey } =
     spec.tone === 'error'
       ? { color: 'error' }
@@ -69,6 +96,12 @@ function Row({ spec }: { spec: RowSpec }) {
         : { color: CATEGORY_COLOR[spec.category] };
   const meta = formatMeta(spec.timestamp, spec.tokens);
   const ariaLabel = `${spec.tagLabel} · ${spec.oneLiner}`.trim();
+  const chevronColorClass =
+    spec.tone === 'error'
+      ? 'text-red-300'
+      : spec.toolColor
+        ? TOOL_COLOR_CLASSES[spec.toolColor].text
+        : 'text-muted-foreground';
 
   return (
     <div
@@ -84,15 +117,21 @@ function Row({ spec }: { spec: RowSpec }) {
         aria-label={ariaLabel}
         aria-expanded={open}
         onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center gap-2 px-2.5 py-1.5 text-left"
+        className="flex w-full items-start gap-2 px-2.5 py-1.5 text-left"
       >
-        <Tag {...tagColorProps} intensity="mid" data-testid="transcript-row-tag">
+        <Tag
+          {...tagColorProps}
+          intensity="mid"
+          data-testid="transcript-row-tag"
+          className="mt-0.5 shrink-0"
+        >
           {spec.tagLabel}
         </Tag>
         <span
+          ref={onelinerRef}
           data-testid="transcript-row-text"
           className={cn(
-            'min-w-0 flex-1 truncate font-mono text-xs',
+            'min-w-0 flex-1 line-clamp-3 whitespace-normal font-mono text-xs',
             spec.tone === 'error' ? 'text-red-400' : 'text-muted-foreground',
           )}
         >
@@ -101,16 +140,23 @@ function Row({ spec }: { spec: RowSpec }) {
         {meta ? (
           <span
             data-testid="transcript-row-meta"
-            className="shrink-0 font-mono text-xs text-muted-foreground tabular-nums"
+            className="mt-0.5 shrink-0 font-mono text-xs text-muted-foreground tabular-nums"
           >
             {meta}
           </span>
         ) : null}
+        <span
+          data-testid="transcript-row-chevron"
+          aria-hidden
+          className={cn('mt-0.5 shrink-0', chevronColorClass, !showChevron && 'invisible')}
+        >
+          {open ? <ChevronDown className="size-3.5" /> : <ChevronRight className="size-3.5" />}
+        </span>
       </button>
       {open ? (
         <pre
           data-testid="transcript-row-expanded"
-          className="mx-2.5 mb-2 overflow-x-auto rounded-sm bg-black/30 p-2 text-xs whitespace-pre-wrap text-foreground"
+          className="mx-2.5 mb-2 max-h-[300px] overflow-x-auto overflow-y-auto rounded-sm bg-black/30 p-2 text-xs whitespace-pre-wrap text-foreground"
         >
           {spec.expanded}
         </pre>
