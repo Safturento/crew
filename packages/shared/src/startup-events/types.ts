@@ -1,20 +1,14 @@
 import { z } from 'zod';
 import type { systemStartupPhaseRowSchema } from '../transcripts/schemas.js';
+import { STARTUP_PHASE_SUBTYPES_INTERNAL } from '../transcripts/schemas.js';
 
 /**
  * The seven CLI startup phases captured by `crew run` / `crew fix-pr`.
  * Order mirrors the dispatch sequence; phases that don't run (e.g. fix-pr
- * skips worktree + npm_install) simply emit no events.
+ * skips worktree + npm_install) simply emit no events. Re-exported from
+ * the schema module so the tuple lives in exactly one place.
  */
-export const STARTUP_PHASE_SUBTYPES = [
-  'crew_startup_preflight',
-  'crew_startup_worktree',
-  'crew_startup_env_spec',
-  'crew_startup_npm_install',
-  'crew_startup_docker',
-  'crew_startup_mcp',
-  'crew_startup_claude_spawn',
-] as const;
+export const STARTUP_PHASE_SUBTYPES = STARTUP_PHASE_SUBTYPES_INTERNAL;
 
 export type StartupPhaseSubtype = (typeof STARTUP_PHASE_SUBTYPES)[number];
 

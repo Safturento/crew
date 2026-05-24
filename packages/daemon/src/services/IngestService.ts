@@ -101,9 +101,15 @@ export class IngestService {
   /** CREW-201: chokidar watcher on ~/.crew/startup. One watcher per
    *  daemon — covers every agent. */
   private startupWatcher: FSWatcher | undefined;
-  /** Per-file byte offset of the last read position; lets the watcher
-   *  re-read only new lines on `change`. */
+  /** Per-file byte offset of the last fully-consumed (i.e. ended in `\n`)
+   *  position; lets the watcher re-read only new lines on `change` and
+   *  preserves any trailing partial line so a mid-append `change` event
+   *  doesn't drop the in-flight event. */
   private readonly startupFileOffsets = new Map<string, number>();
+  /** Per-file leftover bytes from a `change` event that fired before
+   *  the appending CLI flushed the trailing newline. Prepended to the
+   *  next read so the line eventually completes intact. */
+  private readonly startupFileBuffers = new Map<string, string>();
 
   constructor(deps: IngestServiceDeps) {
     this.db = deps.db;
@@ -202,6 +208,7 @@ export class IngestService {
     await this.startupWatcher.close();
     this.startupWatcher = undefined;
     this.startupFileOffsets.clear();
+    this.startupFileBuffers.clear();
   }
 
   /** Test seam — feeds a single parsed event through the same code path
@@ -277,40 +284,58 @@ export class IngestService {
     if (stat.size < lastOffset) {
       // Truncated (or rotated) — restart from the beginning.
       this.startupFileOffsets.set(filePath, 0);
+      this.startupFileBuffers.delete(filePath);
     }
     const startOffset = this.startupFileOffsets.get(filePath) ?? 0;
 
     const fh = await fsp.open(filePath, 'r');
+    let appended: string;
     try {
       const len = stat.size - startOffset;
       const buf = Buffer.alloc(len);
       await fh.read(buf, 0, len, startOffset);
-      this.startupFileOffsets.set(filePath, stat.size);
-      const lines = buf
-        .toString('utf8')
-        .split('\n')
-        .map((l) => l.trim())
-        .filter((l) => l.length > 0);
-      for (const line of lines) {
-        let parsed: unknown;
-        try {
-          parsed = JSON.parse(line);
-        } catch (err) {
-          this.logger.warn({ err, agentKey, line }, 'startup event JSON parse failed');
-          continue;
-        }
-        const result = startupEventSchema.safeParse(parsed);
-        if (!result.success) {
-          this.logger.warn(
-            { issues: result.error.issues, agentKey, line },
-            'startup event schema mismatch',
-          );
-          continue;
-        }
-        await this.ingestStartupEvent(agentKey, result.data);
-      }
+      appended = buf.toString('utf8');
     } finally {
       await fh.close();
+    }
+
+    // Splice carried-over partial line in front of the new bytes. Then
+    // split on `\n` and reserve the final (possibly empty, possibly
+    // partial) chunk as the new leftover — only chunks before the
+    // trailing newline are guaranteed complete.
+    const carried = this.startupFileBuffers.get(filePath) ?? '';
+    const combined = carried + appended;
+    const lastNewlineIdx = combined.lastIndexOf('\n');
+    if (lastNewlineIdx === -1) {
+      // No newline yet — entire append is partial, hold for next change.
+      this.startupFileBuffers.set(filePath, combined);
+      this.startupFileOffsets.set(filePath, stat.size);
+      return;
+    }
+    const consumable = combined.slice(0, lastNewlineIdx);
+    const leftover = combined.slice(lastNewlineIdx + 1);
+    this.startupFileBuffers.set(filePath, leftover);
+    this.startupFileOffsets.set(filePath, stat.size);
+
+    for (const raw of consumable.split('\n')) {
+      const line = raw.trim();
+      if (line.length === 0) continue;
+      let parsed: unknown;
+      try {
+        parsed = JSON.parse(line);
+      } catch (err) {
+        this.logger.warn({ err, agentKey, line }, 'startup event JSON parse failed');
+        continue;
+      }
+      const result = startupEventSchema.safeParse(parsed);
+      if (!result.success) {
+        this.logger.warn(
+          { issues: result.error.issues, agentKey, line },
+          'startup event schema mismatch',
+        );
+        continue;
+      }
+      await this.ingestStartupEvent(agentKey, result.data);
     }
   }
 

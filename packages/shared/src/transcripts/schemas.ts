@@ -270,6 +270,9 @@ export const systemAwaySummarySchema = baseEnvelopeSchema
  * subtypes — keeps the inferred `StartupPhaseRow` type as a single
  * object type with a union-typed `subtype`, which is what callers want
  * when constructing rows from a variable.
+ *
+ * The subtype tuple is the canonical list — `startup-events/types.ts`
+ * re-exports it as `STARTUP_PHASE_SUBTYPES`.
  */
 export const STARTUP_PHASE_SUBTYPES_INTERNAL = [
   'crew_startup_preflight',
@@ -295,11 +298,13 @@ export const systemStartupPhaseRowSchema = baseEnvelopeSchema
   .passthrough();
 
 /**
- * `z.union` (not `z.discriminatedUnion`) because the startup-phase variant
- * carries a `z.enum`-typed subtype rather than a single literal — making
- * `subtype` a non-literal discriminator across the union. The runtime cost
- * is negligible for seven variants and the resulting `SystemEvent` type
- * stays accurate.
+ * `z.union` (not `z.discriminatedUnion`) because the startup-phase
+ * variant carries a `z.enum`-typed subtype rather than a single literal
+ * — making `subtype` a non-literal discriminator across the union.
+ * The runtime cost is negligible at this arm count (8 variants) and
+ * the resulting `SystemEvent` type stays accurate. Switching to a
+ * generated per-literal discriminated form is a documented tradeoff:
+ * it weakens `TranscriptEvent` inference downstream (CREW-201 review).
  */
 export const systemEventSchema = z.union([
   systemTurnDurationSchema,

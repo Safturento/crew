@@ -1001,6 +1001,58 @@ describe('IngestService.watchStartupEvents', () => {
     }
   }, 10_000);
 
+  it('preserves a partial line written without a trailing newline (race-safe)', async () => {
+    const { db, agentKey } = await setup();
+    const startupDir = tmp();
+    const svc = new IngestService({ db, logger: silentLogger, eventBus: new EventBus() });
+    try {
+      await svc.watchStartupEvents(startupDir);
+      const path = join(startupDir, `${agentKey}.jsonl`);
+      const event1 = JSON.stringify({
+        type: 'system',
+        subtype: 'crew_startup_preflight',
+        status: 'started',
+        timestamp: '2026-05-23T10:00:00.000Z',
+        summary: 'preflight begun',
+      });
+      const event2 = JSON.stringify({
+        type: 'system',
+        subtype: 'crew_startup_preflight',
+        status: 'completed',
+        timestamp: '2026-05-23T10:00:01.000Z',
+        summary: 'preflight ok',
+        durationMs: 1000,
+      });
+
+      // First write lands an event WITHOUT the trailing newline — mimics
+      // chokidar firing mid-flush. The handler must buffer it, not consume
+      // half a line and skip past.
+      writeFileSync(path, event1);
+      await delay(800);
+      const partialRows = await db
+        .selectFrom('startup_events')
+        .selectAll()
+        .where('agent_key', '=', agentKey)
+        .execute();
+      expect(partialRows).toHaveLength(0);
+
+      // Subsequent append completes the first line and adds a second.
+      appendFileSync(path, '\n' + event2 + '\n');
+      await delay(800);
+      const rows = await db
+        .selectFrom('startup_events')
+        .selectAll()
+        .where('agent_key', '=', agentKey)
+        .orderBy('ts', 'asc')
+        .execute();
+      expect(rows).toHaveLength(2);
+      expect(rows.map((r) => r.status)).toEqual(['started', 'completed']);
+    } finally {
+      await svc.stopStartupWatcher();
+      await db.destroy();
+    }
+  }, 10_000);
+
   it('skips malformed JSON lines', async () => {
     const { db, agentKey } = await setup();
     const startupDir = tmp();
