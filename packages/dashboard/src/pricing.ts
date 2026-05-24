@@ -3,6 +3,12 @@
  *
  * Rates verified against https://www.anthropic.com/pricing on 2026-05-23.
  * Re-check + update annually (or when Anthropic announces price changes).
+ *
+ * Placement: dashboard-local (not crew-shared) because the dashboard's docker
+ * container only ships type-only imports from shared — runtime helpers can't
+ * be reached from Vite. TokensByTool is the only consumer. If a daemon-side
+ * cost computation ever ships, lift this to a workspace that both packages
+ * include at runtime.
  */
 
 export interface ModelRates {
@@ -63,12 +69,14 @@ export function weightedTokenCost(model: string | undefined, tokens: TokenBucket
 
 /**
  * Format a USD cost with adaptive precision.
+ *   $0      (exact zero — no precision needed)
  *   $0.0024 (sub-cent: 4 decimals)
  *   $0.12   (sub-dollar: 2 decimals)
  *   $12.34  (dollar+: 2 decimals)
  *   $123    (hundreds+: integer)
  */
 export function formatCost(usd: number): string {
+  if (usd === 0) return '$0';
   if (usd < 0.01) return `$${usd.toFixed(4)}`;
   if (usd < 100) return `$${usd.toFixed(2)}`;
   return `$${Math.round(usd)}`;

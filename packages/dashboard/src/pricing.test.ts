@@ -57,7 +57,7 @@ describe('formatCost', () => {
   it('uses integer for hundreds+', () => {
     expect(formatCost(123.45)).toBe('$123');
   });
-  it('handles zero', () => {
-    expect(formatCost(0)).toBe('$0.0000');
+  it('handles zero with no fractional padding', () => {
+    expect(formatCost(0)).toBe('$0');
   });
 });

@@ -3,7 +3,7 @@ import { Sparkles } from 'lucide-react';
 import type { AgentDetailTokensByTool, TokenCategoryBucket } from '../data/types.js';
 import { formatCost, weightedTokenCost, type TokenBucket } from '../pricing.js';
 import { formatTokens } from '../format/tokens.js';
-import { aggregateByAlias } from '../format/tool-alias.js';
+import { aggregateByAlias, toolAlias } from '../format/tool-alias.js';
 import { TokenBarRow, TOKEN_BAR_ROW_GRID_CLASSES } from './TokenBarRow.js';
 
 interface TokensByToolProps {
@@ -50,11 +50,12 @@ function aggregateRows(
   const aggregated = aggregateByAlias(
     tokensByTool.map(({ tool, totalTokens }) => ({ tool, tokens: totalTokens })),
   );
-  // Re-walk the source rows to attach per-category buckets per alias — the
-  // alias helper only sums totals, so the bucket merge happens here.
+  // aggregateByAlias only sums totals; merge per-category buckets by calling
+  // toolAlias() directly on each source row, avoiding an O(rows × aliases)
+  // walk through `aggregated.raw`.
   const bucketsByAlias = new Map<string, TokenCategoryBucket>();
   for (const row of tokensByTool) {
-    const alias = aggregated.find((a) => a.raw.includes(row.tool))?.alias ?? row.tool;
+    const alias = toolAlias(row.tool);
     const existing = bucketsByAlias.get(alias) ?? emptyBucket();
     bucketsByAlias.set(alias, sumBuckets(existing, row.tokens));
   }

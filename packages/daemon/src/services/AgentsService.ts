@@ -481,6 +481,10 @@ export class AgentsService {
       bucket.cacheCreation += usage.cache_creation_input_tokens ?? 0;
       bucket.cacheRead += usage.cache_read_input_tokens ?? 0;
     }
+    // Strict `>` means ties go to the chronologically-first model — JS Map
+    // iteration is insertion-order, and assistant events feed in transcript
+    // order. Stable + predictable; sufficient since the price brackets
+    // (Sonnet/Opus/Haiku) only matter at the model boundary, not within ties.
     let dominantModel = '';
     let bestCount = 0;
     for (const [model, count] of modelCounts) {
