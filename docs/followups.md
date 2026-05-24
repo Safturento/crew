@@ -610,6 +610,28 @@ The "synthetic Unregistered section" feels right — single render path, no extr
 
 ### Daemon, CLI & Dispatch
 
+#### 2026-05-23 — GitHub webhook as a future PR-status detection mechanism (parking-lot)
+
+**What:** CREW-202 settled on `gh api` polling + a manual "Refresh PR status" button for PR-closure detection. A GitHub webhook → daemon HTTP endpoint would be the realtime alternative: GitHub fires `pull_request` events the moment a PR is merged/closed/reopened, daemon receives them via `POST /api/github/webhook`, transitions state immediately without lag. Worth revisiting once we have the bandwidth.
+
+**Why noticed:** Explicit parking-lot during the CREW-202 brainstorm. User has Tailscale set up so the daemon's HTTP could be reached without a public ingress — makes the webhook path more feasible than usual (most users would need ngrok or similar).
+
+**Anchors:** CREW-202 (polling-based detection ships first); `packages/daemon/src/routes/` (where the webhook route would land); Tailscale Funnel docs for non-public-IP exposure.
+
+**What's been considered:**
+
+- Polling is "good enough" for v1 — bounded lag (minutes) is acceptable for a PR-merge signal that's typically minutes-to-hours of human inattention anyway.
+- Webhook adds: HMAC signature verification (per repo or per organization), per-repo configuration step (the user has to set the webhook URL + secret in GitHub repo settings), exposure (Tailscale Funnel or public IP).
+- Could be additive — webhook fires immediately when configured; polling fallback runs for repos where the webhook isn't set up.
+
+**Shape of work:** New daemon route + GitHub webhook config helper (CLI subcommand?) + signature-verification middleware. Probably medium — most of the cost is the per-repo wiring rather than the daemon code itself.
+
+**Open questions:**
+
+- Per-repo or per-organization webhook? Per-org is fewer configurations but only works for orgs you admin.
+- Should the daemon expose the webhook URL via Tailscale by default, or require explicit opt-in?
+- Coexistence with polling: if both are active, debounce so duplicate transitions don't fire?
+
 #### 2026-05-22 — CREW-183's `installNodeModules` fix doesn't extend to `crew fix-pr`
 
 **What:** CREW-183 (PR #256) added an `installNodeModules` step before `installPlaywrightBrowsers` inside `prepareAgentEnvironment` so bare worktrees no longer no-op the chromium install. The fix covers `crew run` and `crew resume`, but **not `crew fix-pr`** — that command uses `runResumePreflight` instead of `prepareAgentEnvironment`, and `runResumePreflight` never installs node_modules. Result: a `crew fix-pr` dispatch on a freshly bare worktree still trips the silent `npx playwright install` no-op (warning only, rc=0), the worktree-pinned chromium revision never lands on disk, and `npm run test:e2e` from the fix-pr agent fails with `Executable doesn't exist at .../chromium_headless_shell-<rev>/...`.
