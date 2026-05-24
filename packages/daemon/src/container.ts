@@ -9,6 +9,7 @@ import { IngestService } from './services/IngestService.js';
 import { EventBus } from './services/EventBus.js';
 import { TimelineService } from './services/TimelineService.js';
 import { MetricsService } from './services/MetricsService.js';
+import { PrPoller } from './services/PrPoller.js';
 import { resolveJsonlPathForAgent } from './services/resolveJsonlPath.js';
 
 /**
@@ -32,6 +33,7 @@ export interface DaemonCradle {
   eventBus: EventBus;
   timelineService: TimelineService;
   metricsService: MetricsService;
+  prPoller: PrPoller;
 }
 
 declare module '@fastify/awilix' {
@@ -99,6 +101,13 @@ export function buildContainer(deps: BuildContainerDeps): AwilixContainer<Daemon
           db,
         }),
     ).scoped(),
+    // CREW-202: background + on-demand poller of GitHub PR state. Singleton
+    // because `start()` schedules a setInterval the app owns the lifetime
+    // of — request-scoped instances would each schedule their own timer.
+    prPoller: asFunction(
+      ({ db, eventBus, logger }: DaemonCradle) =>
+        new PrPoller({ db, eventBus, logger }),
+    ).singleton(),
   });
   return container;
 }
