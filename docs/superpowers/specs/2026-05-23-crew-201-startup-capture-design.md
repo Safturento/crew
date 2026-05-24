@@ -15,25 +15,29 @@ Surface the `crew run` / `crew fix-pr` CLI's pre-agent startup work (worktree cr
 - **Telemetry / metrics.** Phases get rendered; no aggregation, no histograms.
 - **Capturing every CLI subcommand's startup.** Limit to dispatch-initiating commands: `crew run`, `crew fix-pr`, `crew finish` (which also brings down stacks). Other commands stay quiet.
 
-## Design (brainstormed 2026-05-23)
+## Design (brainstormed 2026-05-23, full pass)
 
 | Q | Decision |
 |---|---|
 | Transport | CLI writes structured JSONL events to `~/.crew/startup/<key>.jsonl`. Daemon's IngestService gains a chokidar watcher for that dir. Consistent with the existing transcript-watching pattern. |
-| Event grain | Per-phase events (not per-line). One event when a phase starts; one event when it finishes (success or fail) with a `summary` + optional `logPath` pointing at the existing /tmp log for deep-dive. |
-| Frontend rendering | Use the existing TranscriptRow `system` event handling. Add per-phase label entries to `event-labels.ts` (CREW-190). Failed phases get the existing red `tone: 'error'` treatment. |
-| Storage | New `startup_events` SQLite table in the daemon. Timeline endpoint merges with transcript events by timestamp. |
+| Event grain | Per-phase events. CLI emits TWO events per phase — one when it starts (so the dashboard shows in-flight visibility for slow phases like npm install / docker bringup), one when it completes or fails. Each event carries `summary`, optional `durationMs`, optional `logPath` pointing at the existing /tmp log. |
+| Storage | New `startup_events` SQLite table in the daemon + chokidar ingest + SSE notifications on insert so the dashboard auto-refreshes. Migration adds the table. |
+| Failure handling | Failed phase fires `recordError` → agent transitions `initializing → error` so the dashboard list shows the red error badge immediately. User can see the failure from the list without opening the drawer. |
+| Phases instrumented | 7 phases: Preflight, Worktree, Env-spec materialization, npm install, Docker, MCP wiring, Claude spawn. |
+| Frontend rendering | Daemon's timeline endpoint MERGES each phase's started+completed events into one logical entry per row. Frontend sees a single row per phase that updates from "in flight" to "completed N s" via SSE. Reuses TranscriptRow's existing system-event path; failed renders red via existing `tone: 'error'`. |
 
 ## Architecture
 
 ### Event shape
 
 ```ts
-// shared/src/types.ts — new event variant
+// shared/src/types.ts — new event variant emitted by the CLI
 export interface StartupEvent {
   type: 'system';
   subtype:
+    | 'crew_startup_preflight'
     | 'crew_startup_worktree'
+    | 'crew_startup_env_spec'
     | 'crew_startup_npm_install'
     | 'crew_startup_docker'
     | 'crew_startup_mcp'
@@ -41,8 +45,20 @@ export interface StartupEvent {
   status: 'started' | 'completed' | 'failed';
   timestamp: string;       // ISO 8601
   summary: string;         // short human-readable: "Worktree created at /home/.../crew-CREW-201" or "npm install failed (exit 1)"
-  durationMs?: number;     // set on completed/failed
-  logPath?: string;        // /tmp/crew-*.log for the failing phase — drawer row links out
+  durationMs?: number;     // set on completed/failed; the elapsed time since the matching `started` event
+  logPath?: string;        // /tmp/crew-*.log for the phase (most useful on failure)
+}
+
+// daemon → frontend wire shape: the merged-per-phase row that the timeline returns
+export interface StartupPhaseRow {
+  type: 'system';
+  subtype: StartupEvent['subtype'];
+  startedAt: string;             // ISO 8601 — from the started event
+  completedAt: string | null;    // ISO 8601 from completed/failed event; null while in-flight
+  status: 'in_flight' | 'completed' | 'failed';
+  summary: string;               // updated to the completed/failed event's summary once available
+  durationMs: number | null;
+  logPath: string | null;
 }
 ```
 
@@ -74,14 +90,19 @@ try {
 }
 ```
 
-Phases to instrument (in order):
-1. `crew_startup_worktree` — worktree creation (`git worktree add`)
-2. `crew_startup_npm_install` — `npm ci` in the worktree
-3. `crew_startup_docker` — `docker compose up --build --wait` for the worktree stack
-4. `crew_startup_mcp` — MCP config write + chrome/etc. wiring
-5. `crew_startup_claude_spawn` — `claude` subprocess spawn (last phase; transitions to the agent's own transcript stream)
+Phases to instrument (in order, 7 total):
 
-The CLI already produces logs at `/tmp/crew-*-<key>.log` for steps 2-4; logPath references those.
+1. `crew_startup_preflight` — port allocation + env validation + project-config resolution
+2. `crew_startup_worktree` — worktree creation (`git worktree add`)
+3. `crew_startup_env_spec` — env.toml materialization for the worktree
+4. `crew_startup_npm_install` — `npm ci` in the worktree
+5. `crew_startup_docker` — `docker compose up --build --wait` for the worktree stack
+6. `crew_startup_mcp` — MCP config write + chrome/etc. wiring
+7. `crew_startup_claude_spawn` — `claude` subprocess spawn (last phase; transitions to the agent's own transcript stream)
+
+`crew fix-pr` skips phases 2 and 4 (worktree + npm) since the worktree already exists with deps installed — emits ~5 phase events instead of 7. Phases only emit events when they actually run.
+
+The CLI already produces logs at `/tmp/crew-*-<key>.log` for slow phases (4-7); logPath references those.
 
 ### Daemon ingest
 
@@ -141,27 +162,53 @@ CREATE TABLE IF NOT EXISTS startup_events (
 CREATE INDEX IF NOT EXISTS startup_events_agent_ts ON startup_events (agent_key, ts);
 ```
 
-### Timeline endpoint — merge startup events into the stream
+### Timeline endpoint — merge started+completed into one logical phase row, then merge with transcript
 
-`AgentsService.getTimeline(agentKey)` currently reads the transcript JSONL. Extend to also fetch startup events from the new table and merge by ts:
+`AgentsService.getTimeline(agentKey)` currently reads the transcript JSONL. Extend to:
+
+1. Fetch all `startup_events` rows for the agent.
+2. **Pair started+completed events per phase** into a single `StartupPhaseRow` (one row per `subtype`). A `started` row with no matching `completed`/`failed` row → `status: 'in_flight'`. A failed pair → `status: 'failed'`. A completed pair → `status: 'completed'`.
+3. Convert each merged row to the system-event TranscriptEvent shape.
+4. Merge with transcript events ordered by `startedAt`.
 
 ```ts
 async getTimeline(agentKey: string): Promise<{ events: TranscriptEvent[] }> {
   const transcriptEvents = await this.readTranscript(agentKey);
-  const startupEvents = await this.db.selectFrom('startup_events')
+  const rawStartupEvents = await this.db.selectFrom('startup_events')
     .where('agent_key', '=', agentKey)
     .selectAll()
     .orderBy('ts')
     .execute();
 
-  const startupAsTranscript = startupEvents.map(rowToTranscriptEvent);
+  const phaseRows = mergeStartedAndCompleted(rawStartupEvents);  // see helper below
+  const startupAsTranscript = phaseRows.map(rowToTranscriptEvent);
   return {
-    events: [...startupAsTranscript, ...transcriptEvents].sort(byTs),
+    events: [...startupAsTranscript, ...transcriptEvents].sort(byStartedAt),
   };
+}
+
+function mergeStartedAndCompleted(rows: StartupEventRow[]): StartupPhaseRow[] {
+  const bySubtype = new Map<string, { started?: StartupEventRow; terminal?: StartupEventRow }>();
+  for (const row of rows) {
+    const entry = bySubtype.get(row.subtype) ?? {};
+    if (row.status === 'started') entry.started = row;
+    else entry.terminal = row;  // 'completed' or 'failed'
+    bySubtype.set(row.subtype, entry);
+  }
+  return [...bySubtype.entries()].map(([subtype, { started, terminal }]) => ({
+    type: 'system',
+    subtype: subtype as StartupEvent['subtype'],
+    startedAt: new Date(started?.ts ?? terminal!.ts).toISOString(),
+    completedAt: terminal ? new Date(terminal.ts).toISOString() : null,
+    status: terminal ? (terminal.status === 'failed' ? 'failed' : 'completed') : 'in_flight',
+    summary: terminal?.summary ?? started?.summary ?? '',
+    durationMs: terminal?.duration_ms ?? null,
+    logPath: (terminal ?? started)?.log_path ?? null,
+  }));
 }
 ```
 
-`rowToTranscriptEvent` maps the DB row to a TranscriptEvent shape the frontend already handles — specifically the system-event subtype with custom payload.
+The frontend receives one row per phase, with `status: 'in_flight'` rows updating to `'completed'` / `'failed'` via SSE as new events ingest. No "duplicate row" feel — the timeline shows N phases, period.
 
 ### State-transition implications
 
@@ -186,8 +233,10 @@ SYSTEM_LABELS = {
   stop_hook_summary: 'Stop hook',
   turn_duration: 'Turn',
   api_error: 'API error',
-  // new (CREW-201)
+  // new (CREW-201) — 7 phases
+  crew_startup_preflight: 'Preflight',
   crew_startup_worktree: 'Worktree',
+  crew_startup_env_spec: 'Env spec',
   crew_startup_npm_install: 'npm install',
   crew_startup_docker: 'Docker',
   crew_startup_mcp: 'MCP',
