@@ -258,7 +258,50 @@ export const systemAwaySummarySchema = baseEnvelopeSchema
   })
   .passthrough();
 
-export const systemEventSchema = z.discriminatedUnion('subtype', [
+/**
+ * CREW-201 startup phase row. Daemon merges the CLI's paired
+ * started+completed events into one row per phase, then serves them as a
+ * synthetic `system` variant alongside the agent's transcript. The
+ * schema pins the wire shape; runtime construction lives in
+ * `AgentsService.mergeStartedAndCompleted`, never round-tripped through
+ * `parseTranscriptLine`.
+ *
+ * One schema (not seven), with `subtype` as a `z.enum` of the phase
+ * subtypes — keeps the inferred `StartupPhaseRow` type as a single
+ * object type with a union-typed `subtype`, which is what callers want
+ * when constructing rows from a variable.
+ */
+export const STARTUP_PHASE_SUBTYPES_INTERNAL = [
+  'crew_startup_preflight',
+  'crew_startup_worktree',
+  'crew_startup_env_spec',
+  'crew_startup_npm_install',
+  'crew_startup_docker',
+  'crew_startup_mcp',
+  'crew_startup_claude_spawn',
+] as const;
+
+export const systemStartupPhaseRowSchema = baseEnvelopeSchema
+  .extend({
+    type: z.literal('system'),
+    subtype: z.enum(STARTUP_PHASE_SUBTYPES_INTERNAL),
+    startedAt: z.string(),
+    completedAt: z.string().nullable(),
+    status: z.enum(['in_flight', 'completed', 'failed']),
+    summary: z.string(),
+    durationMs: z.number().nullable(),
+    logPath: z.string().nullable(),
+  })
+  .passthrough();
+
+/**
+ * `z.union` (not `z.discriminatedUnion`) because the startup-phase variant
+ * carries a `z.enum`-typed subtype rather than a single literal — making
+ * `subtype` a non-literal discriminator across the union. The runtime cost
+ * is negligible for seven variants and the resulting `SystemEvent` type
+ * stays accurate.
+ */
+export const systemEventSchema = z.union([
   systemTurnDurationSchema,
   systemStopHookSummarySchema,
   systemLocalCommandSchema,
@@ -266,6 +309,7 @@ export const systemEventSchema = z.discriminatedUnion('subtype', [
   systemBridgeStatusSchema,
   systemApiErrorSchema,
   systemAwaySummarySchema,
+  systemStartupPhaseRowSchema,
 ]);
 
 // ─── attachment subtypes (20) — nested z.union on `attachment.type` ───
@@ -446,6 +490,13 @@ export const KNOWN_SYSTEM_SUBTYPES = new Set<string>([
   'bridge_status',
   'api_error',
   'away_summary',
+  'crew_startup_preflight',
+  'crew_startup_worktree',
+  'crew_startup_env_spec',
+  'crew_startup_npm_install',
+  'crew_startup_docker',
+  'crew_startup_mcp',
+  'crew_startup_claude_spawn',
 ]);
 
 export const KNOWN_ATTACHMENT_TYPES = new Set<string>([
