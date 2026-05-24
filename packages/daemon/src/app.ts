@@ -1,4 +1,5 @@
 import { existsSync } from 'node:fs';
+import { homedir } from 'node:os';
 import { join } from 'node:path';
 import Fastify, {
   type FastifyError,
@@ -103,6 +104,17 @@ export async function buildApp({
   const ingest = container.cradle.ingestService;
   app.addHook('onReady', async () => {
     await ingest.start();
+    // CREW-201: also attach the chokidar watcher for the CLI's startup-
+    // event JSONL stream. Defaults to ~/.crew/startup (the path the CLI
+    // writes to); docker-compose mounts ${HOME}/.crew/startup into the
+    // container at /root/.crew/startup, so os.homedir() == /root inside
+    // the daemon resolves to the same place.
+    const startupDir = process.env.CREW_STARTUP_EVENTS_DIR ?? join(homedir(), '.crew', 'startup');
+    try {
+      await ingest.watchStartupEvents(startupDir);
+    } catch (err) {
+      logger.warn({ err, startupDir }, 'startup-event watcher failed to attach');
+    }
   });
   app.addHook('onClose', async () => {
     await ingest.stop();

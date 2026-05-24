@@ -799,3 +799,235 @@ describe('IngestService.processEventForTest — PR URL extraction', () => {
     }
   });
 });
+
+// ─── CREW-201: startup event ingest ───
+
+describe('IngestService.ingestStartupEvent', () => {
+  it('inserts a row + publishes startup_events.changed', async () => {
+    const { db, agentKey } = await setup();
+    try {
+      const bus = new EventBus({ bufferSize: 10 });
+      const seen: SseEvent[] = [];
+      bus.subscribe({ onEvent: (e) => seen.push(e) });
+      const svc = new IngestService({ db, logger: silentLogger, eventBus: bus });
+
+      await svc.ingestStartupEvent(agentKey, {
+        type: 'system',
+        subtype: 'crew_startup_npm_install',
+        status: 'started',
+        timestamp: '2026-05-23T10:00:00.000Z',
+        summary: 'npm ci begun',
+      });
+
+      const rows = await db.selectFrom('startup_events').selectAll().execute();
+      expect(rows).toHaveLength(1);
+      expect(rows[0]).toMatchObject({
+        agent_key: agentKey,
+        subtype: 'crew_startup_npm_install',
+        status: 'started',
+        summary: 'npm ci begun',
+      });
+      expect(rows[0].ts).toBe(Date.parse('2026-05-23T10:00:00.000Z'));
+      expect(seen.some((e) => e.type === 'startup_events.changed')).toBe(true);
+    } finally {
+      await db.destroy();
+    }
+  });
+
+  it('dedupes a re-ingested event (same agent_key/subtype/status/ts)', async () => {
+    const { db, agentKey } = await setup();
+    try {
+      const svc = new IngestService({ db, logger: silentLogger, eventBus: new EventBus() });
+      const event = {
+        type: 'system' as const,
+        subtype: 'crew_startup_docker' as const,
+        status: 'completed' as const,
+        timestamp: '2026-05-23T10:01:00.000Z',
+        summary: 'docker healthy',
+        durationMs: 5_000,
+      };
+
+      await svc.ingestStartupEvent(agentKey, event);
+      await svc.ingestStartupEvent(agentKey, event);
+
+      const rows = await db.selectFrom('startup_events').selectAll().execute();
+      expect(rows).toHaveLength(1);
+    } finally {
+      await db.destroy();
+    }
+  });
+
+  it('failed event transitions the agent to error', async () => {
+    const { db, agentKey } = await setup();
+    try {
+      const bus = new EventBus({ bufferSize: 10 });
+      const seen: SseEvent[] = [];
+      bus.subscribe({ onEvent: (e) => seen.push(e) });
+      const svc = new IngestService({ db, logger: silentLogger, eventBus: bus });
+
+      await svc.ingestStartupEvent(agentKey, {
+        type: 'system',
+        subtype: 'crew_startup_npm_install',
+        status: 'failed',
+        timestamp: '2026-05-23T10:00:00.000Z',
+        summary: 'exit 1',
+        logPath: '/tmp/crew-npm-install-KAN-1.log',
+      });
+
+      const trans = await db
+        .selectFrom('state_transitions')
+        .selectAll()
+        .where('agent_key', '=', agentKey)
+        .orderBy('id', 'asc')
+        .execute();
+      expect(trans.map((t) => t.to_state)).toContain('error');
+      const stateChanged = seen.filter(
+        (e) => e.type === 'agent.state_changed' && (e.data as { to?: string }).to === 'error',
+      );
+      expect(stateChanged).toHaveLength(1);
+    } finally {
+      await db.destroy();
+    }
+  });
+
+  it('does not re-fire error transition for an agent already in error', async () => {
+    const { db, agentKey } = await setup();
+    try {
+      const svc = new IngestService({ db, logger: silentLogger, eventBus: new EventBus() });
+      await svc.ingestStartupEvent(agentKey, {
+        type: 'system',
+        subtype: 'crew_startup_docker',
+        status: 'failed',
+        timestamp: '2026-05-23T10:00:00.000Z',
+        summary: 'first failure',
+      });
+      await svc.ingestStartupEvent(agentKey, {
+        type: 'system',
+        subtype: 'crew_startup_mcp',
+        status: 'failed',
+        timestamp: '2026-05-23T10:00:01.000Z',
+        summary: 'second failure (already in error)',
+      });
+
+      const errorTrans = await db
+        .selectFrom('state_transitions')
+        .selectAll()
+        .where('agent_key', '=', agentKey)
+        .where('to_state', '=', 'error')
+        .execute();
+      expect(errorTrans).toHaveLength(1);
+    } finally {
+      await db.destroy();
+    }
+  });
+
+  it('does not transition to error for non-failed events', async () => {
+    const { db, agentKey } = await setup();
+    try {
+      const svc = new IngestService({ db, logger: silentLogger, eventBus: new EventBus() });
+      await svc.ingestStartupEvent(agentKey, {
+        type: 'system',
+        subtype: 'crew_startup_npm_install',
+        status: 'started',
+        timestamp: '2026-05-23T10:00:00.000Z',
+        summary: 'begun',
+      });
+      await svc.ingestStartupEvent(agentKey, {
+        type: 'system',
+        subtype: 'crew_startup_npm_install',
+        status: 'completed',
+        timestamp: '2026-05-23T10:00:01.000Z',
+        summary: 'done',
+        durationMs: 1000,
+      });
+
+      const errorTrans = await db
+        .selectFrom('state_transitions')
+        .selectAll()
+        .where('agent_key', '=', agentKey)
+        .where('to_state', '=', 'error')
+        .execute();
+      expect(errorTrans).toHaveLength(0);
+    } finally {
+      await db.destroy();
+    }
+  });
+});
+
+describe('IngestService.watchStartupEvents', () => {
+  it('ingests events from new files appended in the watched dir', async () => {
+    const { db, agentKey } = await setup();
+    const startupDir = tmp();
+    const svc = new IngestService({ db, logger: silentLogger, eventBus: new EventBus() });
+    try {
+      await svc.watchStartupEvents(startupDir);
+      const path = join(startupDir, `${agentKey}.jsonl`);
+      writeFileSync(
+        path,
+        JSON.stringify({
+          type: 'system',
+          subtype: 'crew_startup_preflight',
+          status: 'started',
+          timestamp: '2026-05-23T10:00:00.000Z',
+          summary: 'preflight begun',
+        }) + '\n',
+      );
+      // chokidar fire latency
+      await delay(800);
+      appendFileSync(
+        path,
+        JSON.stringify({
+          type: 'system',
+          subtype: 'crew_startup_preflight',
+          status: 'completed',
+          timestamp: '2026-05-23T10:00:01.000Z',
+          summary: 'preflight ok',
+          durationMs: 1000,
+        }) + '\n',
+      );
+      await delay(800);
+
+      const rows = await db
+        .selectFrom('startup_events')
+        .selectAll()
+        .where('agent_key', '=', agentKey)
+        .orderBy('ts', 'asc')
+        .execute();
+      expect(rows).toHaveLength(2);
+      expect(rows.map((r) => r.status)).toEqual(['started', 'completed']);
+    } finally {
+      await svc.stopStartupWatcher();
+      await db.destroy();
+    }
+  }, 10_000);
+
+  it('skips malformed JSON lines', async () => {
+    const { db, agentKey } = await setup();
+    const startupDir = tmp();
+    const svc = new IngestService({ db, logger: silentLogger, eventBus: new EventBus() });
+    try {
+      await svc.watchStartupEvents(startupDir);
+      writeFileSync(
+        join(startupDir, `${agentKey}.jsonl`),
+        'not json at all\n' +
+          JSON.stringify({
+            type: 'system',
+            subtype: 'crew_startup_mcp',
+            status: 'completed',
+            timestamp: '2026-05-23T10:00:00.000Z',
+            summary: 'wrote .mcp.json',
+            durationMs: 50,
+          }) +
+          '\n',
+      );
+      await delay(800);
+
+      const rows = await db.selectFrom('startup_events').selectAll().execute();
+      expect(rows).toHaveLength(1);
+      expect(rows[0].subtype).toBe('crew_startup_mcp');
+    } finally {
+      await svc.stopStartupWatcher();
+      await db.destroy();
+    }
+  }, 10_000);
+});

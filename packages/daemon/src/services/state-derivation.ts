@@ -7,7 +7,7 @@
  * `crew finish` run completes cleanly (CREW-116) — it is not produced by
  * the tool-call-driven `deriveStateFromToolCalls` helper below.
  */
-export type TransitionState = 'init' | 'running' | 'pr_open' | 'finished';
+export type TransitionState = 'init' | 'running' | 'pr_open' | 'finished' | 'error';
 
 export interface ToolCallSlice {
   tool_name: string;

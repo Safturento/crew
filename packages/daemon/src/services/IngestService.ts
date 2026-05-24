@@ -1,11 +1,15 @@
-import { join } from 'node:path';
+import { promises as fsp, mkdirSync } from 'node:fs';
+import { basename, join } from 'node:path';
+import chokidar, { type FSWatcher } from 'chokidar';
 import type { Kysely } from 'kysely';
 import type { Logger } from 'pino';
 import {
   claudeProjectDirFor,
+  startupEventSchema,
   summarizeInput,
   tailTranscript,
   type AssistantEvent,
+  type StartupEvent,
   type ToolResultContent,
   type ToolUseContent,
   type TranscriptEvent,
@@ -94,6 +98,12 @@ export class IngestService {
    *  re-dispatch) starts a structurally-new run on an agent already in
    *  `pr_open`. CREW-198. */
   private readonly lastRunIdCache = new Map<string, number>();
+  /** CREW-201: chokidar watcher on ~/.crew/startup. One watcher per
+   *  daemon — covers every agent. */
+  private startupWatcher: FSWatcher | undefined;
+  /** Per-file byte offset of the last read position; lets the watcher
+   *  re-read only new lines on `change`. */
+  private readonly startupFileOffsets = new Map<string, number>();
 
   constructor(deps: IngestServiceDeps) {
     this.db = deps.db;
@@ -149,6 +159,160 @@ export class IngestService {
   async stop(): Promise<void> {
     for (const controller of this.tails.values()) controller.abort();
     this.tails.clear();
+    await this.stopStartupWatcher();
+  }
+
+  /**
+   * CREW-201: watch `~/.crew/startup/*.jsonl` and ingest per-phase
+   * startup events as they arrive. Mirrors the chokidar pattern named
+   * in the spec (parallel to the existing per-run JSONL tail). Re-fires
+   * `change` events while a file is being appended — the offset cache
+   * skips lines already ingested, and the (agent_key, subtype, status,
+   * ts) UNIQUE keeps anything that slips through idempotent.
+   */
+  async watchStartupEvents(startupDir: string): Promise<void> {
+    mkdirSync(startupDir, { recursive: true });
+    // Watch the directory itself (not a glob); chokidar's glob support is
+    // deferred to consumer libs in v4. Filter to `.jsonl` in the handler.
+    this.startupWatcher = chokidar.watch(startupDir, {
+      persistent: true,
+      ignoreInitial: false,
+      depth: 1,
+      awaitWriteFinish: { stabilityThreshold: 100, pollInterval: 50 },
+    });
+    const handle = (filePath: string): void => {
+      if (!filePath.endsWith('.jsonl')) return;
+      void this.onStartupFile(filePath).catch((err: unknown) => {
+        this.logger.warn({ err, filePath }, 'startup-event file handler crashed');
+      });
+    };
+    this.startupWatcher.on('add', handle);
+    this.startupWatcher.on('change', handle);
+    // chokidar resolves the watcher asynchronously; in tests we want to
+    // await the initial scan so a writeFileSync-just-after-await isn't
+    // racing against the watcher attaching.
+    await new Promise<void>((resolve) => {
+      this.startupWatcher!.once('ready', () => resolve());
+    });
+  }
+
+  async stopStartupWatcher(): Promise<void> {
+    if (!this.startupWatcher) return;
+    await this.startupWatcher.close();
+    this.startupWatcher = undefined;
+    this.startupFileOffsets.clear();
+  }
+
+  /** Test seam — feeds a single parsed event through the same code path
+   *  the live watcher uses. */
+  async ingestStartupEvent(agentKey: string, event: StartupEvent): Promise<void> {
+    const ts = Date.parse(event.timestamp);
+    if (!Number.isFinite(ts)) {
+      this.logger.warn(
+        { agentKey, subtype: event.subtype, timestamp: event.timestamp },
+        'unparseable startup-event timestamp; skipping',
+      );
+      return;
+    }
+    await this.db
+      .insertInto('startup_events')
+      .values({
+        agent_key: agentKey,
+        subtype: event.subtype,
+        status: event.status,
+        ts,
+        summary: event.summary,
+        duration_ms: event.durationMs ?? null,
+        log_path: event.logPath ?? null,
+      })
+      .onConflict((oc) =>
+        oc.columns(['agent_key', 'subtype', 'status', 'ts']).doNothing(),
+      )
+      .execute();
+
+    this.eventBus.publish({
+      type: 'startup_events.changed',
+      data: { key: agentKey },
+    });
+
+    if (event.status === 'failed') {
+      await this.recordError(agentKey, ts, event.summary);
+    }
+  }
+
+  /**
+   * CREW-201: transition an agent to `error` when a startup phase
+   * fails. Idempotent — once already in `error` (or `finished`), this
+   * is a no-op. The `finished` guard avoids regressing a late failure
+   * notification past a clean finish. Publishes the SSE flip alongside
+   * the state_transitions row so the dashboard's list view turns red
+   * immediately.
+   */
+  async recordError(agentKey: string, ts: number, _summary: string): Promise<void> {
+    const previous = await this.getCachedAgentState(agentKey);
+    if (previous === 'error' || previous === 'finished') return;
+
+    await this.db
+      .insertInto('state_transitions')
+      .values({ agent_key: agentKey, from_state: previous, to_state: 'error', ts })
+      .execute();
+    this.agentStateCache.set(agentKey, 'error');
+    this.eventBus.publish({
+      type: 'agent.state_changed',
+      data: { key: agentKey, from: previous, to: 'error', ts },
+    });
+  }
+
+  private async onStartupFile(filePath: string): Promise<void> {
+    const agentKey = basename(filePath, '.jsonl');
+    let stat;
+    try {
+      stat = await fsp.stat(filePath);
+    } catch (err) {
+      this.logger.debug({ err, filePath }, 'startup file stat failed (likely transient)');
+      return;
+    }
+
+    const lastOffset = this.startupFileOffsets.get(filePath) ?? 0;
+    if (stat.size === lastOffset) return;
+    if (stat.size < lastOffset) {
+      // Truncated (or rotated) — restart from the beginning.
+      this.startupFileOffsets.set(filePath, 0);
+    }
+    const startOffset = this.startupFileOffsets.get(filePath) ?? 0;
+
+    const fh = await fsp.open(filePath, 'r');
+    try {
+      const len = stat.size - startOffset;
+      const buf = Buffer.alloc(len);
+      await fh.read(buf, 0, len, startOffset);
+      this.startupFileOffsets.set(filePath, stat.size);
+      const lines = buf
+        .toString('utf8')
+        .split('\n')
+        .map((l) => l.trim())
+        .filter((l) => l.length > 0);
+      for (const line of lines) {
+        let parsed: unknown;
+        try {
+          parsed = JSON.parse(line);
+        } catch (err) {
+          this.logger.warn({ err, agentKey, line }, 'startup event JSON parse failed');
+          continue;
+        }
+        const result = startupEventSchema.safeParse(parsed);
+        if (!result.success) {
+          this.logger.warn(
+            { issues: result.error.issues, agentKey, line },
+            'startup event schema mismatch',
+          );
+          continue;
+        }
+        await this.ingestStartupEvent(agentKey, result.data);
+      }
+    } finally {
+      await fh.close();
+    }
   }
 
   /**
