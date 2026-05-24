@@ -1,4 +1,4 @@
-import { promises as fs } from 'node:fs';
+import { promises as fs, appendFileSync, mkdirSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { dirname, join } from 'node:path';
 
@@ -35,6 +35,30 @@ export async function emitStartupEvent(
   try {
     await fs.mkdir(dirname(file), { recursive: true });
     await fs.appendFile(file, `${JSON.stringify(event)}\n`, 'utf8');
+  } catch (err) {
+    process.stderr.write(
+      `crew: failed to emit startup event for ${key}/${event.subtype}/${event.status}: ${
+        err instanceof Error ? err.message : String(err)
+      }\n`,
+    );
+  }
+}
+
+/**
+ * Synchronous variant of `emitStartupEvent`. Used in error paths that
+ * immediately call `process.exit()`: the async variant's microtask
+ * would never resolve before the process tears down, so the failed
+ * event would be lost. Same best-effort error handling.
+ */
+export function emitStartupEventSync(
+  key: string,
+  event: StartupEvent,
+  opts: EmitOptions = {},
+): void {
+  const file = startupEventsFilePath(key, opts.home);
+  try {
+    mkdirSync(dirname(file), { recursive: true });
+    appendFileSync(file, `${JSON.stringify(event)}\n`, 'utf8');
   } catch (err) {
     process.stderr.write(
       `crew: failed to emit startup event for ${key}/${event.subtype}/${event.status}: ${

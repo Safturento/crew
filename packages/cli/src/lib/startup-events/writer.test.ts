@@ -5,6 +5,7 @@ import { join } from 'node:path';
 
 import {
   emitStartupEvent,
+  emitStartupEventSync,
   startupEventsFilePath,
   startupEventsRootForHome,
 } from './writer.js';
@@ -110,6 +111,25 @@ describe('emitStartupEvent', () => {
     expect(JSON.parse(lines[0]).status).toBe('started');
     expect(JSON.parse(lines[1]).status).toBe('completed');
     expect(JSON.parse(lines[1]).durationMs).toBe(5000);
+  });
+
+  it('emitStartupEventSync appends synchronously', () => {
+    emitStartupEventSync(
+      'CREW-201',
+      {
+        type: 'system',
+        subtype: 'crew_startup_preflight',
+        status: 'failed',
+        timestamp: '2026-05-23T10:00:00.000Z',
+        summary: 'config missing',
+      },
+      { home: homeDir },
+    );
+
+    const contents = readFileSync(startupEventsFilePath('CREW-201', homeDir), 'utf8');
+    const parsed = JSON.parse(contents.trim());
+    expect(parsed.status).toBe('failed');
+    expect(parsed.summary).toBe('config missing');
   });
 
   it('preserves optional logPath on failed events', async () => {
