@@ -61,4 +61,45 @@ describe('useSectionHeights', () => {
     rerender({ n: 4 });
     expect(result.current.heights).toEqual([0, 0, 0, 0]);
   });
+
+  it('refFor(i) returns the same callback reference across renders', () => {
+    // Stable per-index callbacks are load-bearing: React's callback-ref
+    // semantics fire (null, then el) on every change, which would force
+    // ResizeObserver to unobserve+observe each section every render. That
+    // in turn fires the observer callback (initial-size emit on observe),
+    // which re-renders, which makes a new ref, which... — infinite loop.
+    // The Timeline section-collapse regression in PR #275 was this loop.
+    const { result, rerender } = renderHook(() => useSectionHeights(3));
+    const cbAfterFirst = result.current.refFor(0);
+    rerender();
+    const cbAfterSecond = result.current.refFor(0);
+    expect(cbAfterFirst).toBe(cbAfterSecond);
+    // Different indices return different functions (sanity).
+    expect(result.current.refFor(1)).not.toBe(cbAfterFirst);
+  });
+
+  it('setHeights is a no-op when an observed resize reports identical heights', async () => {
+    // Suspenders to the cached-ref belt: even if some future call site
+    // re-introduces unstable refs, identical heights must not trigger a
+    // render (otherwise the loop comes back).
+    const { result } = renderHook(() => useSectionHeights(1));
+    const el = document.createElement('section');
+    act(() => {
+      result.current.refFor(0)(el);
+    });
+    const flushRaf = (): Promise<void> =>
+      new Promise<void>((r) => requestAnimationFrame(() => r()));
+    await act(async () => {
+      FakeResizeObserver.instances[0].fire([{ target: el, contentRect: { height: 200 } }]);
+      await flushRaf();
+    });
+    const firstHeights = result.current.heights;
+    expect(firstHeights).toEqual([200]);
+    await act(async () => {
+      FakeResizeObserver.instances[0].fire([{ target: el, contentRect: { height: 200 } }]);
+      await flushRaf();
+    });
+    // Same array reference == no setHeights commit == no re-render trigger.
+    expect(result.current.heights).toBe(firstHeights);
+  });
 });
