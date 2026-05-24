@@ -19,11 +19,28 @@ interface TokenBarRowProps {
    * glyph (CREW-191) — tool rows pass nothing.
    */
   icon?: ReactNode;
+  /**
+   * Pre-formatted USD cost for the row (CREW-195). Rendered in a dedicated
+   * cell when provided; omitted entirely otherwise so callers that don't
+   * weight by cost are unaffected.
+   */
+  cost?: string;
+  /** Hover/title for the cost cell — per-category bucket breakdown. */
+  costTitle?: string;
 }
 
-const TOKEN_BAR_ROW_GRID = 'grid grid-cols-[1fr_auto_3fr_auto] items-center gap-4 px-3.5 py-2';
+const TOKEN_BAR_ROW_GRID =
+  'grid grid-cols-[1fr_auto_3fr_auto_auto] items-center gap-4 px-3.5 py-2';
 
-export function TokenBarRow({ tool, tokens, percent, title, icon }: TokenBarRowProps) {
+export function TokenBarRow({
+  tool,
+  tokens,
+  percent,
+  title,
+  icon,
+  cost,
+  costTitle,
+}: TokenBarRowProps) {
   const clamped = Math.max(0, Math.min(100, percent));
   return (
     <div className={`${TOKEN_BAR_ROW_GRID} border-t border-border text-sm`} title={title}>
@@ -48,6 +65,17 @@ export function TokenBarRow({ tool, tokens, percent, title, icon }: TokenBarRowP
       <span className="text-right font-mono tabular-nums text-muted-foreground">
         {percent.toFixed(1)}%
       </span>
+      {cost !== undefined ? (
+        <span
+          data-testid="tokens-by-tool-row-cost"
+          className="text-right font-mono tabular-nums text-foreground/80"
+          title={costTitle}
+        >
+          {cost}
+        </span>
+      ) : (
+        <span aria-hidden />
+      )}
     </div>
   );
 }

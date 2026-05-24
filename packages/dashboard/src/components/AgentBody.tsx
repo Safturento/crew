@@ -42,7 +42,11 @@ export function AgentBody({ agentKey, mode, onClose }: AgentBodyProps) {
         data-testid="agent-body-container"
         className="flex min-h-0 flex-1 flex-col gap-7 px-6 pb-8 pt-5"
       >
-        <TokensByTool tokensByTool={data.tokens_by_tool} total={data.tokens.total} />
+        <TokensByTool
+          tokensByTool={data.tokens_by_tool}
+          total={data.tokens.total}
+          model={data.model}
+        />
         <div className="min-h-0 flex-1">
           <Timeline
             agentKey={agentKey}

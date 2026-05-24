@@ -151,4 +151,115 @@ describe('TokensByTool', () => {
       expect(labels[0].textContent).toBe('Assistant');
     });
   });
+
+  // CREW-195: TokensByTool weights each row by the agent's dominant model's
+  // per-category pricing. A cost cell renders per row and the grand total
+  // ships in the panel footer next to total tokens.
+  describe('cost weighting (CREW-195)', () => {
+    it('renders a cost cell per row using model + bucket', () => {
+      // 1k input + 100 output on Sonnet 4.6 = $0.003 + $0.0015 = $0.0045
+      render(
+        <TokensByTool
+          tokensByTool={[
+            {
+              tool: 'Bash',
+              tokens: { input: 1000, output: 100, cacheCreation: 0, cacheRead: 0 },
+              totalTokens: 1100,
+            },
+          ]}
+          total={1100}
+          model="claude-sonnet-4-6"
+        />,
+      );
+      expect(screen.getByTestId('tokens-by-tool-row-cost')).toHaveTextContent('$0.0045');
+    });
+
+    it('renders the grand total cost in the panel footer', () => {
+      // 1.5M output tokens on Sonnet 4.6 = $22.50
+      render(
+        <TokensByTool
+          tokensByTool={[
+            {
+              tool: 'Bash',
+              tokens: { input: 0, output: 1_000_000, cacheCreation: 0, cacheRead: 0 },
+              totalTokens: 1_000_000,
+            },
+            {
+              tool: 'Assistant',
+              tokens: { input: 0, output: 500_000, cacheCreation: 0, cacheRead: 0 },
+              totalTokens: 500_000,
+            },
+          ]}
+          total={1_500_000}
+          model="claude-sonnet-4-6"
+        />,
+      );
+      const footer = screen.getByTestId('tokens-by-tool-footer');
+      expect(within(footer).getByTestId('tokens-by-tool-grand-cost')).toHaveTextContent('$22.50');
+    });
+
+    it("cost cell title exposes per-category breakdown for hover", () => {
+      render(
+        <TokensByTool
+          tokensByTool={[
+            {
+              tool: 'Bash',
+              tokens: { input: 1000, output: 100, cacheCreation: 0, cacheRead: 5000 },
+              totalTokens: 6100,
+            },
+          ]}
+          total={6100}
+          model="claude-sonnet-4-6"
+        />,
+      );
+      const cost = screen.getByTestId('tokens-by-tool-row-cost');
+      const title = cost.getAttribute('title') ?? '';
+      expect(title).toMatch(/input/i);
+      expect(title).toMatch(/output/i);
+      expect(title).toMatch(/cache-read/i);
+      expect(title).toMatch(/cache-write/i);
+    });
+
+    it('falls back to Sonnet pricing when model prop is omitted', () => {
+      render(
+        <TokensByTool
+          tokensByTool={[
+            {
+              tool: 'Bash',
+              tokens: { input: 0, output: 1_000_000, cacheCreation: 0, cacheRead: 0 },
+              totalTokens: 1_000_000,
+            },
+          ]}
+          total={1_000_000}
+        />,
+      );
+      // 1M output on Sonnet = $15
+      expect(screen.getByTestId('tokens-by-tool-row-cost')).toHaveTextContent('$15.00');
+    });
+
+    it('aggregates cost across alias-merged rows (MCP collapse)', () => {
+      // Two MCP:Jira tools, each 1M output tokens on Sonnet = $30 combined.
+      render(
+        <TokensByTool
+          tokensByTool={[
+            {
+              tool: 'mcp__atlassian__jira_get_issue',
+              tokens: { input: 0, output: 1_000_000, cacheCreation: 0, cacheRead: 0 },
+              totalTokens: 1_000_000,
+            },
+            {
+              tool: 'mcp__atlassian__jira_transition_issue',
+              tokens: { input: 0, output: 1_000_000, cacheCreation: 0, cacheRead: 0 },
+              totalTokens: 1_000_000,
+            },
+          ]}
+          total={2_000_000}
+          model="claude-sonnet-4-6"
+        />,
+      );
+      const target = screen.getByText('MCP:Jira').closest('[title]');
+      const cost = within(target as HTMLElement).getByTestId('tokens-by-tool-row-cost');
+      expect(cost).toHaveTextContent('$30.00');
+    });
+  });
 });
