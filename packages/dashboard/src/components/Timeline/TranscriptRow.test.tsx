@@ -133,7 +133,7 @@ describe('TranscriptRow', () => {
   });
 
   describe('hooks-and-skills category', () => {
-    it('renders a hook attachment tagged with the hook subtype', () => {
+    it('renders a hook attachment tagged with a human-readable label', () => {
       const event = {
         type: 'attachment',
         timestamp: ts,
@@ -142,13 +142,23 @@ describe('TranscriptRow', () => {
       render(<TranscriptRow event={event} />);
       const row = screen.getByTestId('transcript-row');
       expect(row).toHaveAttribute('data-category', 'hooks-and-skills');
-      expect(screen.getByTestId('transcript-row-tag')).toHaveTextContent('hook_success');
+      expect(screen.getByTestId('transcript-row-tag')).toHaveTextContent('Hook');
       expect(screen.getByTestId('transcript-row-text')).toHaveTextContent('pre-commit');
+    });
+
+    it('falls back to humanized label for unknown attachment subtype', () => {
+      const event = {
+        type: 'attachment',
+        timestamp: ts,
+        attachment: { type: 'future_unknown_subtype' },
+      } as unknown as AttachmentEvent;
+      render(<TranscriptRow event={event} />);
+      expect(screen.getByTestId('transcript-row-tag')).toHaveTextContent('Future unknown subtype');
     });
   });
 
   describe('system category', () => {
-    it('renders a system event tagged with its subtype', () => {
+    it('renders a system event tagged with a human-readable label', () => {
       const event = {
         type: 'system',
         subtype: 'turn_duration',
@@ -159,7 +169,7 @@ describe('TranscriptRow', () => {
       render(<TranscriptRow event={event} />);
       const row = screen.getByTestId('transcript-row');
       expect(row).toHaveAttribute('data-category', 'system');
-      expect(screen.getByTestId('transcript-row-tag')).toHaveTextContent('turn_duration');
+      expect(screen.getByTestId('transcript-row-tag')).toHaveTextContent('Turn');
     });
   });
 

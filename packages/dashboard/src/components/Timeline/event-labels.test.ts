@@ -1,0 +1,72 @@
+import { describe, expect, it } from 'vitest';
+
+import {
+  ATTACHMENT_LABELS,
+  SYSTEM_LABELS,
+  humanize,
+  labelForAttachment,
+  labelForSystem,
+} from './event-labels.js';
+
+describe('humanize', () => {
+  it('snake_case → Sentence case', () => {
+    expect(humanize('hook_success')).toBe('Hook success');
+    expect(humanize('plan_mode_reentry')).toBe('Plan mode reentry');
+  });
+  it('kebab-case → Sentence case', () => {
+    expect(humanize('api-error')).toBe('Api error');
+  });
+  it('single word', () => {
+    expect(humanize('file')).toBe('File');
+  });
+  it('empty string → empty string', () => {
+    expect(humanize('')).toBe('');
+  });
+  it('collapses repeated separators', () => {
+    expect(humanize('weird__thing__here')).toBe('Weird thing here');
+  });
+});
+
+describe('labelForAttachment', () => {
+  it('returns mapped label for known type', () => {
+    expect(labelForAttachment('local_command')).toBe('Local command');
+    expect(labelForAttachment('hook_success')).toBe('Hook');
+    expect(labelForAttachment('skill_listing')).toBe('Skills');
+    expect(labelForAttachment('compact_file_reference')).toBe('File ref');
+  });
+  it('falls back to humanize for unknown type', () => {
+    expect(labelForAttachment('weird_thing')).toBe('Weird thing');
+    expect(labelForAttachment('future_event_type')).toBe('Future event type');
+  });
+  it('every known classification subtype has a mapping', () => {
+    const KNOWN_HOOKS = [
+      'hook_success',
+      'hook_additional_context',
+      'hook_system_message',
+      'hook_non_blocking_error',
+      'async_hook_response',
+      'skill_listing',
+      'invoked_skills',
+      'command_permissions',
+      'plan_mode',
+      'date_change',
+    ];
+    for (const k of KNOWN_HOOKS) {
+      expect(ATTACHMENT_LABELS[k]).toBeDefined();
+    }
+  });
+});
+
+describe('labelForSystem', () => {
+  it('returns mapped label for known subtype', () => {
+    expect(labelForSystem('turn_duration')).toBe('Turn');
+    expect(labelForSystem('api_error')).toBe('API error');
+    expect(labelForSystem('stop_hook_summary')).toBe('Stop hook');
+  });
+  it('falls back to humanize for unknown subtype', () => {
+    expect(labelForSystem('something_new')).toBe('Something new');
+  });
+  it('SYSTEM_LABELS is non-empty', () => {
+    expect(Object.keys(SYSTEM_LABELS).length).toBeGreaterThan(0);
+  });
+});

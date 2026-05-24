@@ -17,6 +17,7 @@ import type {
 import { cn } from '../../lib/utils.js';
 import type { PillColor } from '../../lib/pill-variants.js';
 import { Tag } from '../ui/tag.js';
+import { labelForAttachment, labelForSystem } from './event-labels.js';
 
 const LINE_ONE_MAX = 80;
 type Tone = 'default' | 'error';
@@ -231,7 +232,7 @@ function specForSystem(event: SystemEvent): RowSpec {
     blockType: 'system',
     category: 'system',
     tone: subtype === 'api_error' ? 'error' : 'default',
-    tagLabel: subtype,
+    tagLabel: labelForSystem(subtype),
     oneLiner: truncate(summary),
     timestamp: event.timestamp,
     expanded: prettyJson(event),
@@ -246,7 +247,7 @@ function specForAttachment(event: AttachmentEvent): RowSpec {
     blockType: 'attachment',
     category,
     tone: type === 'hook_non_blocking_error' ? 'error' : 'default',
-    tagLabel: type,
+    tagLabel: labelForAttachment(type),
     oneLiner: truncate(summarizeAttachment(att)),
     timestamp: event.timestamp,
     expanded: prettyJson(event.attachment),
