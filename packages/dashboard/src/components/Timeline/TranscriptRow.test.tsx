@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 import type {
@@ -359,6 +359,183 @@ describe('TranscriptRow', () => {
       await user.click(screen.getByTestId('transcript-row-trigger'));
       expect(screen.getByTestId('transcript-row-expanded')).toHaveTextContent('npm test');
       expect(screen.getByTestId('transcript-row-expanded')).toHaveTextContent('Run tests');
+    });
+  });
+
+  describe('wrap + chevron + expansion cap (CREW-193)', () => {
+    it('replaces truncate with line-clamp-3 + whitespace-normal on the oneliner', () => {
+      const event: AssistantEvent = {
+        type: 'assistant',
+        timestamp: ts,
+        message: {
+          role: 'assistant',
+          content: [{ type: 'text', text: 'medium length' }],
+          usage: { output_tokens: 1 },
+        },
+      } as AssistantEvent;
+      render(<TranscriptRow event={event} />);
+      const text = screen.getByTestId('transcript-row-text');
+      expect(text.className).toContain('line-clamp-3');
+      expect(text.className).toContain('whitespace-normal');
+      expect(text.className).not.toContain('truncate');
+    });
+
+    it('renders a chevron for tool_use blocks', () => {
+      const event: AssistantEvent = {
+        type: 'assistant',
+        timestamp: ts,
+        message: {
+          role: 'assistant',
+          content: [{ type: 'tool_use', id: 'tu-1', name: 'Bash', input: { command: 'ls' } }],
+          usage: { output_tokens: 1 },
+        },
+      } as AssistantEvent;
+      render(<TranscriptRow event={event} />);
+      const chevron = screen.getByTestId('transcript-row-chevron');
+      expect(chevron).toBeInTheDocument();
+      expect(chevron.className).not.toContain('invisible');
+    });
+
+    it('renders a chevron for tool_result blocks', () => {
+      const event: UserEvent = {
+        type: 'user',
+        timestamp: ts,
+        message: {
+          role: 'user',
+          content: [{ type: 'tool_result', tool_use_id: 'tu-9', content: 'ok' }],
+        },
+      } as UserEvent;
+      render(<TranscriptRow event={event} />);
+      const chevron = screen.getByTestId('transcript-row-chevron');
+      expect(chevron).toBeInTheDocument();
+      expect(chevron.className).not.toContain('invisible');
+    });
+
+    it('renders a chevron for attachment blocks', () => {
+      const event = {
+        type: 'attachment',
+        timestamp: ts,
+        attachment: { type: 'hook_success', hookName: 'pre-commit' },
+      } as unknown as AttachmentEvent;
+      render(<TranscriptRow event={event} />);
+      const chevron = screen.getByTestId('transcript-row-chevron');
+      expect(chevron).toBeInTheDocument();
+      expect(chevron.className).not.toContain('invisible');
+    });
+
+    it('renders a chevron for system blocks', () => {
+      const event = {
+        type: 'system',
+        subtype: 'turn_duration',
+        timestamp: ts,
+        durationMs: 1000,
+        messageCount: 1,
+      } as unknown as SystemEvent;
+      render(<TranscriptRow event={event} />);
+      const chevron = screen.getByTestId('transcript-row-chevron');
+      expect(chevron).toBeInTheDocument();
+      expect(chevron.className).not.toContain('invisible');
+    });
+
+    it('chevron is invisible (reserved space) for short text blocks to prevent layout shift', () => {
+      const event: AssistantEvent = {
+        type: 'assistant',
+        timestamp: ts,
+        message: {
+          role: 'assistant',
+          content: [{ type: 'text', text: 'short' }],
+          usage: { output_tokens: 1 },
+        },
+      } as AssistantEvent;
+      render(<TranscriptRow event={event} />);
+      const chevron = screen.getByTestId('transcript-row-chevron');
+      expect(chevron).toBeInTheDocument();
+      expect(chevron.className).toContain('invisible');
+    });
+
+    it('expanded pre is capped at max-h-[300px] with internal scroll', () => {
+      const event: AssistantEvent = {
+        type: 'assistant',
+        timestamp: ts,
+        message: {
+          role: 'assistant',
+          content: [
+            {
+              type: 'tool_use',
+              id: 'tu-1',
+              name: 'Bash',
+              input: { command: 'x'.repeat(2000) },
+            },
+          ],
+          usage: { output_tokens: 1 },
+        },
+      } as AssistantEvent;
+      render(<TranscriptRow event={event} />);
+      fireEvent.click(screen.getByTestId('transcript-row-trigger'));
+      const expanded = screen.getByTestId('transcript-row-expanded');
+      expect(expanded.className).toMatch(/max-h-\[300px\]/);
+      expect(expanded.className).toContain('overflow-y-auto');
+    });
+
+    it('aria-expanded reflects open state', () => {
+      const event: AssistantEvent = {
+        type: 'assistant',
+        timestamp: ts,
+        message: {
+          role: 'assistant',
+          content: [{ type: 'tool_use', id: 'tu-1', name: 'Bash', input: {} }],
+          usage: { output_tokens: 1 },
+        },
+      } as AssistantEvent;
+      render(<TranscriptRow event={event} />);
+      const trigger = screen.getByTestId('transcript-row-trigger');
+      expect(trigger).toHaveAttribute('aria-expanded', 'false');
+      fireEvent.click(trigger);
+      expect(trigger).toHaveAttribute('aria-expanded', 'true');
+    });
+
+    it('chevron picks up the tool color from CREW-192 palette for tool rows', () => {
+      const event: AssistantEvent = {
+        type: 'assistant',
+        timestamp: ts,
+        message: {
+          role: 'assistant',
+          content: [{ type: 'tool_use', id: 'tu-1', name: 'Bash', input: { command: 'ls' } }],
+          usage: { output_tokens: 1 },
+        },
+      } as AssistantEvent;
+      render(<TranscriptRow event={event} />);
+      const chevron = screen.getByTestId('transcript-row-chevron');
+      expect(chevron.className).toContain('text-amber-300');
+    });
+
+    it('chevron stays muted-foreground for non-tool rows', () => {
+      const event: AssistantEvent = {
+        type: 'assistant',
+        timestamp: ts,
+        message: {
+          role: 'assistant',
+          content: [{ type: 'text', text: 'hi' }],
+          usage: { output_tokens: 1 },
+        },
+      } as AssistantEvent;
+      render(<TranscriptRow event={event} />);
+      const chevron = screen.getByTestId('transcript-row-chevron');
+      expect(chevron.className).toContain('text-muted-foreground');
+    });
+
+    it('chevron renders red on error rows regardless of tool color', () => {
+      const event: UserEvent = {
+        type: 'user',
+        timestamp: ts,
+        message: {
+          role: 'user',
+          content: [{ type: 'tool_result', tool_use_id: 'tu-1', content: 'boom', is_error: true }],
+        },
+      } as UserEvent;
+      render(<TranscriptRow event={event} />);
+      const chevron = screen.getByTestId('transcript-row-chevron');
+      expect(chevron.className).toMatch(/text-red-\d+/);
     });
   });
 
