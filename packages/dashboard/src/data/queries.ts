@@ -1,8 +1,14 @@
 import { useEffect } from 'react';
-import { useQuery, useQueryClient, type UseQueryResult } from '@tanstack/react-query';
+import {
+  useMutation,
+  useQuery,
+  useQueryClient,
+  type UseMutationResult,
+  type UseQueryResult,
+} from '@tanstack/react-query';
 
 import { eventStream } from './eventStream.js';
-import { HttpDaemonClient } from './HttpDaemonClient.js';
+import { HttpDaemonClient, type RefreshPrStatusResponse } from './HttpDaemonClient.js';
 import type {
   AgentDetail,
   AggregateMetrics,
@@ -109,6 +115,26 @@ export function useProject(slug: string): UseQueryResult<ProjectDetailResponse> 
     queryKey: ['project', slug],
     queryFn: () => defaultClient.getProject(slug),
     refetchInterval: POLL_INTERVAL_MS,
+  });
+}
+
+/**
+ * CREW-202: mutation hook backing the drawer's "Refresh PR" button.
+ * The daemon either no-ops or writes a `pr_open → pr_merged` transition;
+ * we invalidate the agent + state-history + list views so the change
+ * lands in the UI immediately (SSE picks up the same event in parallel).
+ */
+export function useRefreshPrStatus(
+  key: string,
+): UseMutationResult<RefreshPrStatusResponse, Error, void> {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => defaultClient.refreshPrStatus(key),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['agent', key] });
+      void qc.invalidateQueries({ queryKey: ['agent', key, 'state-history'] });
+      void qc.invalidateQueries({ queryKey: ['agents'] });
+    },
   });
 }
 

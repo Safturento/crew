@@ -47,7 +47,16 @@ const AgentSchema = z.object({
   key: z.string(),
   projectName: z.string(),
   ticketTitle: z.string(),
-  state: z.enum(['initializing', 'running', 'idle', 'waiting', 'pr_open', 'error', 'finished']),
+  state: z.enum([
+    'initializing',
+    'running',
+    'idle',
+    'waiting',
+    'pr_open',
+    'pr_merged',
+    'error',
+    'finished',
+  ]),
   startedAt: z.string(),
   tokens: z.number(),
   prUrl: z.string().optional(),
@@ -60,7 +69,16 @@ const AgentDetailSchema = z.object({
   project: z.string(),
   ticket_key: z.string(),
   ticket_title: z.string().nullable(),
-  state: z.enum(['initializing', 'running', 'idle', 'waiting', 'pr_open', 'error', 'finished']),
+  state: z.enum([
+    'initializing',
+    'running',
+    'idle',
+    'waiting',
+    'pr_open',
+    'pr_merged',
+    'error',
+    'finished',
+  ]),
   worktree_path: z.string(),
   pr_url: z.string().nullable(),
   app_url: z.string().nullable(),
@@ -104,11 +122,34 @@ const TransitionStateEnum = z.enum([
   'init',
   'running',
   'pr_open',
+  'pr_merged',
   'error',
   'finished',
   'idle',
   'waiting',
 ]);
+
+const AgentStateEnum = z.enum([
+  'initializing',
+  'running',
+  'idle',
+  'waiting',
+  'pr_open',
+  'pr_merged',
+  'error',
+  'finished',
+]);
+
+/**
+ * CREW-202: POST /api/agents/:key/refresh-pr-status response shape.
+ * `newState` is only present when `stateChanged: true`.
+ */
+const RefreshPrStatusResponseSchema = z.object({
+  stateChanged: z.boolean(),
+  newState: AgentStateEnum.optional(),
+});
+
+export type RefreshPrStatusResponse = z.infer<typeof RefreshPrStatusResponseSchema>;
 
 const StateHistoryResponseSchema = z.object({
   transitions: z.array(
@@ -197,5 +238,23 @@ export class HttpDaemonClient implements DaemonClient {
     const events = parsed.events as unknown as TranscriptEvent[];
     const warning = res.headers.get('X-Crew-Warning');
     return warning ? { events, warnings: [warning] } : { events };
+  }
+
+  /**
+   * CREW-202: trigger the daemon's manual PR-state check for one agent.
+   * Backs the drawer's "Refresh PR" button. The daemon either no-ops
+   * (PR still OPEN, agent not in pr_open, or agent has no pr_url) or
+   * writes a `pr_open → pr_merged` transition and returns `newState`.
+   * 404s become AgentNotFoundError so the UI can match its existing
+   * not-found pattern; other non-2xx throw the generic shape.
+   */
+  async refreshPrStatus(key: string): Promise<RefreshPrStatusResponse> {
+    const res = await fetch(
+      `${this.baseUrl}/api/agents/${encodeURIComponent(key)}/refresh-pr-status`,
+      { method: 'POST' },
+    );
+    if (res.status === 404) throw new AgentNotFoundError(key);
+    if (!res.ok) throw new Error(`POST /api/agents/${key}/refresh-pr-status: ${res.status}`);
+    return RefreshPrStatusResponseSchema.parse(await res.json());
   }
 }
