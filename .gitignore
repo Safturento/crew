@@ -1,5 +1,9 @@
 /.idea
 
+# Ad-hoc git worktrees provisioned by Claude planning sessions
+# (see .agents/workflow.md § "Worktree-per-planning-session")
+/.planning-worktrees
+
 # Dependencies
 node_modules
 

@@ -71,7 +71,32 @@ Two patterns coexist on crew, both visible in `git log --oneline -30`:
 
 Universal rule: never commit on `main`. `crew run` creates the `<KEY>` branch for you; for hand-authored work, branch before staging anything. See user-level `~/.claude/CLAUDE.md` "Branching" section for the pre-commit branch check.
 
-## 8. The "stop after planning + ticketing" rule
+## 8. Worktree-per-planning-session
+
+When starting any brainstorm or `writing-plans` flow, provision a dedicated git worktree before touching files. This isolates planning work from any other session (a parallel Claude agent, or your own canonical worktree) so concurrent branch switches and `npm install` runs can't clobber each other.
+
+```bash
+# At start of planning. Use the ticket key when known, else a topic slug.
+git -C ~/Repos/crew worktree add \
+  -b docs/<topic>-spec \
+  .planning-worktrees/<topic> \
+  origin/main
+```
+
+Rules:
+
+- **Path:** worktrees go under `.planning-worktrees/<topic>/` inside the main repo. The path is gitignored. (`~/Repos/crew-plan-<topic>/` outside the repo also works for human-driven sessions, but Claude Code sandboxes typically can't write outside the main repo dir.)
+- **Branch off `origin/main`** explicitly so the new worktree doesn't inherit whatever branch the main worktree happens to be on.
+- **All file ops target absolute paths under the worktree.** Read/Edit/Write the full `.planning-worktrees/<topic>/...` path; never relative paths that resolve to main.
+- **All git ops use `git -C .planning-worktrees/<topic>`.** Bare `git` from the wrong CWD lands the change on the wrong branch.
+- **Bash with CWD dependencies:** `cd .planning-worktrees/<topic> && ...`.
+- **On merge** (or when the planning session ends and the branch is no longer needed): `git -C ~/Repos/crew worktree remove .planning-worktrees/<topic>`.
+
+This convention applies even when only one session is active — `.planning-worktrees/<topic>` is cheap, and the discipline keeps a future parallel session safe by default.
+
+The previous convention (operating directly in the main worktree) is still acceptable for: small in-place doc edits with no in-flight planning elsewhere, fix-pr review comments, ticket-body updates that don't touch repo files.
+
+## 9. The "stop after planning + ticketing" rule
 
 This repo is the canonical site of the rule — crew itself is what runs the autonomous-dispatch flow that the rule gates on. Concretely:
 
