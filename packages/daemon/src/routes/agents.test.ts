@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { afterEach, describe, it, expect, vi } from 'vitest';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -8,6 +8,12 @@ import { buildApp } from '../app.js';
 import { parseDaemonConfig } from '../config.js';
 import { createDb, runMigrations } from '../db.js';
 import { useTmpDir } from '../test/tmpdir.js';
+
+vi.mock('../services/github/fetch-pr-state.js', () => ({
+  fetchPrStateViaGh: vi.fn(),
+}));
+import { fetchPrStateViaGh } from '../services/github/fetch-pr-state.js';
+const mockedFetchPr = vi.mocked(fetchPrStateViaGh);
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const MIGRATIONS_DIR = resolve(__dirname, '..', 'migrations');
@@ -604,6 +610,106 @@ describe('PATCH /api/agents/:key', () => {
         payload: {},
       });
       expect(res.statusCode).toBe(400);
+    } finally {
+      await app.close();
+      await db.destroy();
+    }
+  });
+});
+
+describe('POST /api/agents/:key/refresh-pr-status (CREW-202)', () => {
+  afterEach(() => {
+    mockedFetchPr.mockReset();
+  });
+
+  async function seedPrOpenAgent(
+    db: Awaited<ReturnType<typeof setupApp>>['db'],
+    key: string,
+    prUrl: string,
+  ): Promise<void> {
+    await db
+      .insertInto('agents')
+      .values({
+        key,
+        project_name: 'demo',
+        ticket_title: `${key} title`,
+        worktree_path: `/w/${key}`,
+        branch: key,
+        pr_url: prUrl,
+        created_at: '2026-05-23T12:00:00Z',
+      })
+      .execute();
+    await db
+      .insertInto('state_transitions')
+      .values({
+        agent_key: key,
+        from_state: null,
+        to_state: 'pr_open',
+        ts: 1000,
+      })
+      .execute();
+  }
+
+  it('returns {stateChanged: false} when the PR is still OPEN', async () => {
+    const { app, db } = await setupApp();
+    try {
+      // Wait for the daemon's onReady (which starts PrPoller's immediate
+      // poll round) to settle on an empty agents table, THEN seed. Avoids
+      // the immediate-poll consuming the test's mock queue.
+      await app.ready();
+      await seedPrOpenAgent(db, 'KAN-PR-1', 'https://github.com/o/r/pull/1');
+      mockedFetchPr.mockResolvedValueOnce('OPEN');
+
+      const res = await app.inject({
+        method: 'POST',
+        url: '/api/agents/KAN-PR-1/refresh-pr-status',
+      });
+
+      expect(res.statusCode).toBe(200);
+      expect(res.json()).toEqual({ stateChanged: false });
+    } finally {
+      await app.close();
+      await db.destroy();
+    }
+  });
+
+  it('returns {stateChanged: true, newState: pr_merged} when the PR is merged', async () => {
+    const { app, db } = await setupApp();
+    try {
+      await app.ready();
+      await seedPrOpenAgent(db, 'KAN-PR-2', 'https://github.com/o/r/pull/2');
+      mockedFetchPr.mockResolvedValueOnce('MERGED');
+
+      const res = await app.inject({
+        method: 'POST',
+        url: '/api/agents/KAN-PR-2/refresh-pr-status',
+      });
+
+      expect(res.statusCode).toBe(200);
+      expect(res.json()).toEqual({ stateChanged: true, newState: 'pr_merged' });
+      const latest = await db
+        .selectFrom('state_transitions')
+        .selectAll()
+        .where('agent_key', '=', 'KAN-PR-2')
+        .orderBy('id', 'desc')
+        .executeTakeFirst();
+      expect(latest?.to_state).toBe('pr_merged');
+    } finally {
+      await app.close();
+      await db.destroy();
+    }
+  });
+
+  it('returns 404 for an unknown agent key', async () => {
+    const { app, db } = await setupApp();
+    try {
+      await app.ready();
+      const res = await app.inject({
+        method: 'POST',
+        url: '/api/agents/NOPE-99/refresh-pr-status',
+      });
+      expect(res.statusCode).toBe(404);
+      expect(res.json()).toMatchObject({ error: 'agent_not_found' });
     } finally {
       await app.close();
       await db.destroy();

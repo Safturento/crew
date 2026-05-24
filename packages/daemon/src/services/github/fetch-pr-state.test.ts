@@ -14,30 +14,30 @@ afterEach(() => {
 });
 
 describe('fetchPrStateViaGh', () => {
-  it('returns MERGED when GitHub reports merged: true (state ignored)', async () => {
+  it('returns MERGED when gh reports state=MERGED', async () => {
     mockedExeca.mockResolvedValueOnce({
-      stdout: JSON.stringify({ state: 'MERGED', merged: true }),
+      stdout: JSON.stringify({ state: 'MERGED' }),
     } as never);
     expect(await fetchPrStateViaGh('https://github.com/o/r/pull/1')).toBe('MERGED');
   });
 
-  it('returns CLOSED when state=CLOSED and merged: false', async () => {
+  it('returns CLOSED when gh reports state=CLOSED', async () => {
     mockedExeca.mockResolvedValueOnce({
-      stdout: JSON.stringify({ state: 'CLOSED', merged: false }),
+      stdout: JSON.stringify({ state: 'CLOSED' }),
     } as never);
     expect(await fetchPrStateViaGh('https://github.com/o/r/pull/2')).toBe('CLOSED');
   });
 
-  it('returns OPEN when state=OPEN', async () => {
+  it('returns OPEN when gh reports state=OPEN', async () => {
     mockedExeca.mockResolvedValueOnce({
-      stdout: JSON.stringify({ state: 'OPEN', merged: false }),
+      stdout: JSON.stringify({ state: 'OPEN' }),
     } as never);
     expect(await fetchPrStateViaGh('https://github.com/o/r/pull/3')).toBe('OPEN');
   });
 
-  it('invokes `gh pr view <url> --json state,merged`', async () => {
+  it('invokes `gh pr view <url> --json state`', async () => {
     mockedExeca.mockResolvedValueOnce({
-      stdout: JSON.stringify({ state: 'OPEN', merged: false }),
+      stdout: JSON.stringify({ state: 'OPEN' }),
     } as never);
     await fetchPrStateViaGh('https://github.com/o/r/pull/5');
     expect(mockedExeca).toHaveBeenCalledWith('gh', [
@@ -45,7 +45,7 @@ describe('fetchPrStateViaGh', () => {
       'view',
       'https://github.com/o/r/pull/5',
       '--json',
-      'state,merged',
+      'state',
     ]);
   });
 
