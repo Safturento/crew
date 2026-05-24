@@ -16,10 +16,18 @@ Crew runs as a docker compose stack on the host: a `daemon` service (Fastify + S
 
 Both services source-mount from the worktree, so edits land without rebuild:
 
-- `daemon`: `tsx watch`. Mounts `./packages/daemon/src` and `./packages/shared/src` into `/app/packages/.../src`.
+- `daemon`: `nodemon` (config in `packages/daemon/nodemon.json`). Watches `./packages/daemon/src` and `./packages/shared/src` explicitly; runs `tsx src/bin.ts`. Path-explicit watching avoids the symlink-resolution gap `tsx watch` had with workspace-package imports (e.g. cross-workspace schema changes in `crew-shared` that didn't trigger restart).
 - `dashboard`: Vite dev server. Mounts `./packages/dashboard/src`.
 
-An anonymous `node_modules` volume preserves `npm ci` output from being clobbered by the source bind-mount. If a fresh dependency doesn't show up, that volume is the place to look — `docker compose down -v` clears it.
+An anonymous `node_modules` volume preserves `npm ci` output from being clobbered by the source bind-mount. **When you add a new dependency to the daemon, the stale anonymous volume shadows the new image's `node_modules`** — symptom is `sh: 1: <dep>: not found` after `docker compose up --build`. Refresh the anonymous volume without nuking the named `crew-state` volume:
+
+```
+docker compose stop daemon
+docker compose rm -fv daemon       # -v removes anonymous volumes only; named volumes (crew-state) stay
+docker compose up -d --build daemon
+```
+
+`docker compose down -v` would also work but it drops `crew-state` (the canonical SQLite DB). Reserve that for full resets.
 
 ## Worktree DBs are ephemeral and seeded
 
