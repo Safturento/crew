@@ -1,6 +1,6 @@
 # CREW-202 — Detect PR closure, transition agent to `pr_merged`
 
-**Ticket:** CREW-202 (to be filed)
+**Ticket:** [CREW-202](https://safturento.atlassian.net/browse/CREW-202)
 **Epic:** [CREW-200 — Agent lifecycle observability](https://safturento.atlassian.net/browse/CREW-200)
 **Date:** 2026-05-23
 
