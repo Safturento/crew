@@ -248,9 +248,18 @@ enabled = true
       expect(body.app_url).toBe('http://localhost:7421');
       expect(body.jira_url).toBe('https://safturento.atlassian.net/browse/KAN-DR-1');
       expect(body.tokens_by_tool).toEqual([
-        { tool: 'Bash', tokens: 800, percent: 80 },
-        { tool: 'Read', tokens: 200, percent: 20 },
+        {
+          tool: 'Bash',
+          tokens: { input: 0, output: 800, cacheCreation: 0, cacheRead: 0 },
+          totalTokens: 800,
+        },
+        {
+          tool: 'Read',
+          tokens: { input: 0, output: 200, cacheCreation: 0, cacheRead: 0 },
+          totalTokens: 200,
+        },
       ]);
+      expect(body.model).toBe('');
     } finally {
       await app.close();
       await db.destroy();

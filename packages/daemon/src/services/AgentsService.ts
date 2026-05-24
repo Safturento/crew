@@ -39,11 +39,20 @@ export interface AgentDetailTokens {
   cache_creation: number;
 }
 
+/** Per-category token bucket (CREW-195) — drives cost-weighted display. */
+export interface TokenCategoryBucket {
+  input: number;
+  output: number;
+  cacheCreation: number;
+  cacheRead: number;
+}
+
 export interface AgentDetailTokensByTool {
   tool: string;
-  tokens: number;
-  /** Share of the agent's total tool-call tokens, 0–100, rounded to 0.01. */
-  percent: number;
+  /** Per-category bucket — multiply by per-model rates for USD cost. */
+  tokens: TokenCategoryBucket;
+  /** Sum of all bucket entries — convenience for sort + bar widths. */
+  totalTokens: number;
 }
 
 export interface AgentDetail {
@@ -58,8 +67,14 @@ export interface AgentDetail {
   app_url: string | null;
   /** `<jira.site>/browse/<ticket_key>`. Null when ticket key is empty. */
   jira_url: string | null;
-  /** Per-tool token aggregate across all of the agent's runs, ordered by tokens desc. */
+  /** Per-tool token aggregate across all of the agent's runs, ordered by totalTokens desc. */
   tokens_by_tool: AgentDetailTokensByTool[];
+  /**
+   * Dominant model across the agent's transcript events (mode of
+   * `message.model`). Empty string when no transcript or no model field —
+   * pricing helpers fall back to Sonnet rates in that case.
+   */
+  model: string;
   runs: AgentDetailRun[];
   tokens: AgentDetailTokens;
   tool_call_count: number;
@@ -315,53 +330,55 @@ export class AgentsService {
       }
     }
 
-    // Per-tool token aggregate. Sums every token column so a tool's row
-    // reflects its full footprint (input + output + both cache buckets),
-    // matching the agent-wide `tokens.total`. Percent is computed server-
-    // side from the row total so the dashboard never has to re-derive it.
+    // Per-tool, per-category token aggregate. CREW-195 surfaces the
+    // input/output/cache_creation/cache_read split so the dashboard can
+    // weight each row by per-model API pricing. Attribution is already
+    // first-tool-in-turn — IngestService stores each assistant turn's full
+    // usage under its first tool_use block, so summing here preserves that.
     const tokensByToolRows = await this.db
       .selectFrom('tool_calls as tc')
       .innerJoin('runs as r', 'r.id', 'tc.run_id')
       .select([
         'tc.tool_name as tool',
-        sql<number>`COALESCE(SUM(tc.input_tokens + tc.output_tokens + tc.cache_read_tokens + tc.cache_creation_tokens), 0)`.as(
-          'tokens',
-        ),
+        sql<number>`COALESCE(SUM(tc.input_tokens), 0)`.as('input'),
+        sql<number>`COALESCE(SUM(tc.output_tokens), 0)`.as('output'),
+        sql<number>`COALESCE(SUM(tc.cache_creation_tokens), 0)`.as('cacheCreation'),
+        sql<number>`COALESCE(SUM(tc.cache_read_tokens), 0)`.as('cacheRead'),
       ])
       .where('r.agent_key', '=', key)
       .groupBy('tc.tool_name')
-      .orderBy('tokens', 'desc')
       .execute();
 
-    const toolRowTotal = tokensByToolRows.reduce((s, r) => s + Number(r.tokens), 0);
-
     // CREW-191: re-parse the JSONL transcript to surface the model's own
-    // output tokens. Text-only / thinking-only assistant turns never make
-    // it to `tool_calls`, so the SQL aggregate alone understates the panel.
-    // Tool rows are left as-is; F (CREW-195) will introduce per-category
-    // attribution that splits the overlap with `tool_calls.output_tokens`.
-    const assistantTokens = await this.computeAssistantOutputTokens(key);
+    // tokens from text-only / thinking-only assistant turns — these never
+    // make it to `tool_calls`, so SQL alone understates the panel.
+    // CREW-195: extended to per-category buckets + dominant model.
+    const { assistantBucket, dominantModel } = await this.computeAssistantBucketAndModel(key);
 
-    const combinedTotal = toolRowTotal + assistantTokens;
     const toolRows: AgentDetailTokensByTool[] = tokensByToolRows.map((r) => {
-      const t = Number(r.tokens);
+      const bucket: TokenCategoryBucket = {
+        input: Number(r.input),
+        output: Number(r.output),
+        cacheCreation: Number(r.cacheCreation),
+        cacheRead: Number(r.cacheRead),
+      };
       return {
         tool: r.tool,
-        tokens: t,
-        percent: combinedTotal === 0 ? 0 : Math.round((t / combinedTotal) * 10000) / 100,
+        tokens: bucket,
+        totalTokens: bucket.input + bucket.output + bucket.cacheCreation + bucket.cacheRead,
       };
     });
+    toolRows.sort((a, b) => b.totalTokens - a.totalTokens);
+
+    const assistantTotal =
+      assistantBucket.input +
+      assistantBucket.output +
+      assistantBucket.cacheCreation +
+      assistantBucket.cacheRead;
     const tokensByTool: AgentDetailTokensByTool[] =
-      assistantTokens > 0
+      assistantTotal > 0
         ? [
-            {
-              tool: ASSISTANT_TOOL_LABEL,
-              tokens: assistantTokens,
-              percent:
-                combinedTotal === 0
-                  ? 0
-                  : Math.round((assistantTokens / combinedTotal) * 10000) / 100,
-            },
+            { tool: ASSISTANT_TOOL_LABEL, tokens: assistantBucket, totalTokens: assistantTotal },
             ...toolRows,
           ]
         : toolRows;
@@ -377,6 +394,7 @@ export class AgentsService {
       app_url: appUrl,
       jira_url: jiraUrl,
       tokens_by_tool: tokensByTool,
+      model: dominantModel,
       runs: runRows.map((r) => ({
         id: String(r.id),
         command: r.command,
@@ -430,20 +448,52 @@ export class AgentsService {
   }
 
   /**
-   * Sum `usage.output_tokens` across every assistant event in the agent's
-   * JSONL transcript. Returns 0 when no `timelineService` was injected, the
-   * transcript can't be located, or no assistant events carry output tokens.
-   * Backs the "Assistant" row CREW-191 prepends to `tokens_by_tool`.
+   * Single transcript pass producing:
+   *   - the Assistant bucket: per-category usage summed across text-only /
+   *     thinking-only assistant turns (turns with no tool_use blocks).
+   *     IngestService already attributes tool-bearing turns to their first
+   *     tool_use via `tool_calls`, so subtracting them here avoids double
+   *     counting in the panel.
+   *   - the dominant model: mode of `message.model` across all assistant
+   *     events. Empty string when none carry a model field. The dashboard's
+   *     pricing helper falls back to Sonnet when this is empty.
+   *
+   * Returns the empty bucket + empty model when no `timelineService` was
+   * injected or the transcript can't be located.
    */
-  private async computeAssistantOutputTokens(agentKey: string): Promise<number> {
-    if (!this.timelineService) return 0;
+  private async computeAssistantBucketAndModel(
+    agentKey: string,
+  ): Promise<{ assistantBucket: TokenCategoryBucket; dominantModel: string }> {
+    const empty = { assistantBucket: emptyBucket(), dominantModel: '' };
+    if (!this.timelineService) return empty;
     const { events } = await this.timelineService.getTimeline(agentKey);
-    let total = 0;
+    const bucket = emptyBucket();
+    const modelCounts = new Map<string, number>();
     for (const evt of events) {
       if (evt.type !== 'assistant') continue;
-      total += evt.message.usage.output_tokens ?? 0;
+      const model = evt.message.model;
+      if (model) modelCounts.set(model, (modelCounts.get(model) ?? 0) + 1);
+      const hasToolUse = evt.message.content.some((c) => c.type === 'tool_use');
+      if (hasToolUse) continue;
+      const usage = evt.message.usage;
+      bucket.input += usage.input_tokens ?? 0;
+      bucket.output += usage.output_tokens ?? 0;
+      bucket.cacheCreation += usage.cache_creation_input_tokens ?? 0;
+      bucket.cacheRead += usage.cache_read_input_tokens ?? 0;
     }
-    return total;
+    // Strict `>` means ties go to the chronologically-first model — JS Map
+    // iteration is insertion-order, and assistant events feed in transcript
+    // order. Stable + predictable; sufficient since the price brackets
+    // (Sonnet/Opus/Haiku) only matter at the model boundary, not within ties.
+    let dominantModel = '';
+    let bestCount = 0;
+    for (const [model, count] of modelCounts) {
+      if (count > bestCount) {
+        bestCount = count;
+        dominantModel = model;
+      }
+    }
+    return { assistantBucket: bucket, dominantModel };
   }
 
   /**
@@ -483,6 +533,10 @@ interface DeriveStateInput {
    * the agent is past its merged-PR state. Drives CREW-116 acceptance.
    */
   finishCompletedOk: boolean;
+}
+
+function emptyBucket(): TokenCategoryBucket {
+  return { input: 0, output: 0, cacheCreation: 0, cacheRead: 0 };
 }
 
 function deriveState(input: DeriveStateInput): AgentState {

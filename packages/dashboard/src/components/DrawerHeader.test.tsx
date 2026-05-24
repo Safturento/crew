@@ -16,6 +16,7 @@ function makeDetail(overrides: Partial<AgentDetail> = {}): AgentDetail {
     app_url: 'http://localhost:7421',
     jira_url: 'https://safturento.atlassian.net/browse/KAN-23',
     tokens_by_tool: [],
+    model: '',
     runs: [
       {
         id: 'r1',

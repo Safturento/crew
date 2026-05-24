@@ -22,6 +22,18 @@ Organization: Active is grouped by topic (not chronology) since the dominant acc
 
 ### Figma & Crew DS
 
+#### 2026-05-23 — TokensByTool Figma component lacks the Cost column shipped in CREW-195
+
+**Ticket:** [CREW-189](https://safturento.atlassian.net/browse/CREW-189) — Epic exception. Tracked under the drawer-polish Epic; reconcile when the Epic transitions to Done.
+
+**What:** CREW-195 added a Cost column + grand-total cost cell to `TokensByTool`. The Figma reference at node `577:643` (Composites → TokensByTool) is still the 4-column pre-CREW-195 design (Tool / Tokens / Bar / Share). Renders match Figma on every existing element, but the new column has no Figma counterpart. `visual-fidelity-check` flagged this as a verification gap, not a regression.
+
+**Why noticed:** Visual fidelity gate during CREW-195 implementation (`docs/visual-fidelity-reports/CREW-195.md`). Figma snapshot was last captured 2026-05-22; the CREW-195 code change post-dates it.
+
+**Anchors:** `.crew/figma-snapshot/composites/577-643.{json,png}`, `packages/dashboard/src/components/TokensByTool.tsx`, `packages/dashboard/src/components/TokenBarRow.tsx`, `docs/visual-fidelity-reports/CREW-195.md`. Re-capture via `crew figma-snapshot` after Figma is updated.
+
+**Shape of work:** ~10 min in Figma — extend the TokensByTool component master to a 5-column grid (add `Cost` header + per-row cost cell + footer total), match the slate-tones and tabular-nums used elsewhere; rerun `crew figma-snapshot`; spot-check the rendered drawer against the refreshed snapshot.
+
 #### 2026-05-12 — Move figma-snapshot PAGE_DIR_MAP into project config
 
 **What:** `emit.ts` hardcodes `Composites → composites/` and `Dashboard Screens → screens/` in a module-level map. Any other page name falls through to a sanitized slug. This is crew-dashboard-specific knowledge living in a generic CLI helper — violates AGENTS.md's "Don't hardcode project-specific knowledge" rule.

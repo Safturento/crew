@@ -48,10 +48,17 @@ const AgentDetailTokensSchema = z.object({
   cache_creation: z.number(),
 });
 
+const TokenCategoryBucketSchema = z.object({
+  input: z.number().int().nonnegative(),
+  output: z.number().int().nonnegative(),
+  cacheCreation: z.number().int().nonnegative(),
+  cacheRead: z.number().int().nonnegative(),
+});
+
 const AgentDetailTokensByToolSchema = z.object({
   tool: z.string(),
-  tokens: z.number().int().nonnegative(),
-  percent: z.number().min(0).max(100),
+  tokens: TokenCategoryBucketSchema,
+  totalTokens: z.number().int().nonnegative(),
 });
 
 const AgentDetailSchema = z.object({
@@ -65,6 +72,8 @@ const AgentDetailSchema = z.object({
   app_url: z.string().nullable(),
   jira_url: z.string().nullable(),
   tokens_by_tool: z.array(AgentDetailTokensByToolSchema),
+  /** Dominant transcript model — empty string when unknown. */
+  model: z.string(),
   runs: z.array(AgentDetailRunSchema),
   tokens: AgentDetailTokensSchema,
   tool_call_count: z.number(),

@@ -142,9 +142,21 @@ const openFilters = async (): Promise<void> => {
 };
 
 const sampleTokensByTool: AgentDetailTokensByTool[] = [
-  { tool: 'Bash', tokens: 10_000, percent: 60 },
-  { tool: 'Read', tokens: 4_000, percent: 25 },
-  { tool: 'mcp__atlassian__jira_get_issue', tokens: 1_000, percent: 6 },
+  {
+    tool: 'Bash',
+    tokens: { input: 0, output: 10_000, cacheCreation: 0, cacheRead: 0 },
+    totalTokens: 10_000,
+  },
+  {
+    tool: 'Read',
+    tokens: { input: 0, output: 4_000, cacheCreation: 0, cacheRead: 0 },
+    totalTokens: 4_000,
+  },
+  {
+    tool: 'mcp__atlassian__jira_get_issue',
+    tokens: { input: 0, output: 1_000, cacheCreation: 0, cacheRead: 0 },
+    totalTokens: 1_000,
+  },
 ];
 
 describe('Timeline', () => {

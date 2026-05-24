@@ -31,10 +31,23 @@ async function mockAgentDetail(page: Page, agentKey: string): Promise<void> {
         app_url: 'http://localhost:7421',
         jira_url: 'https://safturento.atlassian.net/browse/CREW-101',
         tokens_by_tool: [
-          { tool: 'Bash', tokens: 18_400, percent: 38.4 },
-          { tool: 'Read', tokens: 12_100, percent: 25.2 },
-          { tool: 'Edit', tokens: 9_600, percent: 20.1 },
+          {
+            tool: 'Bash',
+            tokens: { input: 0, output: 18_400, cacheCreation: 0, cacheRead: 0 },
+            totalTokens: 18_400,
+          },
+          {
+            tool: 'Read',
+            tokens: { input: 0, output: 12_100, cacheCreation: 0, cacheRead: 0 },
+            totalTokens: 12_100,
+          },
+          {
+            tool: 'Edit',
+            tokens: { input: 0, output: 9_600, cacheCreation: 0, cacheRead: 0 },
+            totalTokens: 9_600,
+          },
         ],
+        model: 'claude-sonnet-4-6',
         runs: [
           {
             id: 'r1',
@@ -113,16 +126,12 @@ test.describe('Agent drawer — 2026-05-22 redesign', () => {
     await mockStateHistory(page, SEEDED_AGENT_KEY);
   });
 
-  test('DrawerHeader renders the three meta-row pills (app, jira, worktree)', async ({
-    page,
-  }) => {
+  test('DrawerHeader renders the three meta-row pills (app, jira, worktree)', async ({ page }) => {
     await page.goto(`/#/agent/${SEEDED_AGENT_KEY}`);
     const drawer = page.getByRole('dialog', { name: 'Agent detail' });
 
     await expect(drawer.getByRole('link', { name: /localhost:7421/ })).toBeVisible();
-    await expect(
-      drawer.locator('a[href*="atlassian.net/browse/CREW-101"]'),
-    ).toBeVisible();
+    await expect(drawer.locator('a[href*="atlassian.net/browse/CREW-101"]')).toBeVisible();
     await expect(drawer.getByText(/\.worktrees\/CREW-101/)).toBeVisible();
   });
 
@@ -137,12 +146,35 @@ test.describe('Agent drawer — 2026-05-22 redesign', () => {
     await expect(region.getByTestId('tokens-by-tool-footer')).toContainText('Total');
   });
 
+  // CREW-195: each row carries a cost cell weighted by the agent's model;
+  // the panel footer surfaces the grand total. Bash row = 18.4k output on
+  // claude-sonnet-4-6 → 18.4k × ($15 / 1M) = $0.276, formatted as "$0.28".
+  test('TokensByTool surfaces per-row cost + grand total weighted by model', async ({ page }) => {
+    await page.goto(`/#/agent/${SEEDED_AGENT_KEY}`);
+    const region = page.getByRole('region', { name: 'Tokens by tool' });
+
+    const rowCosts = region.getByTestId('tokens-by-tool-row-cost');
+    await expect(rowCosts).toHaveCount(3);
+    await expect(rowCosts.nth(0)).toHaveText('$0.28');
+    // Grand total = (18.4 + 12.1 + 9.6)k × $15/M ≈ $0.6015, formatted as "$0.60".
+    await expect(region.getByTestId('tokens-by-tool-grand-cost')).toHaveText('$0.60');
+    // Tooltip exposes the per-category breakdown without dedicated UI.
+    await expect(rowCosts.nth(0)).toHaveAttribute(
+      'title',
+      /input.*output.*cache-write.*cache-read/i,
+    );
+  });
+
   test('Timeline renders one section per state transition', async ({ page }) => {
     await page.goto(`/#/agent/${SEEDED_AGENT_KEY}`);
     const sections = page.getByTestId('timeline-section');
     await expect(sections).toHaveCount(2);
-    await expect(page.locator('[data-testid="timeline-section"][data-state="initializing"]')).toHaveCount(1);
-    await expect(page.locator('[data-testid="timeline-section"][data-state="running"]')).toHaveCount(1);
+    await expect(
+      page.locator('[data-testid="timeline-section"][data-state="initializing"]'),
+    ).toHaveCount(1);
+    await expect(
+      page.locator('[data-testid="timeline-section"][data-state="running"]'),
+    ).toHaveCount(1);
   });
 
   test('Collapse-all hides every section body in one click', async ({ page }) => {

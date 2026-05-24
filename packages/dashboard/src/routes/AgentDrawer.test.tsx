@@ -18,6 +18,7 @@ const SAMPLE_DETAIL: AgentDetail = {
   app_url: null,
   jira_url: null,
   tokens_by_tool: [],
+  model: '',
   runs: [
     {
       id: '1',
