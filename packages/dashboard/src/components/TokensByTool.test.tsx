@@ -57,10 +57,7 @@ describe('TokensByTool', () => {
 
   it('recomputes percent client-side against the aliased-row total', () => {
     render(
-      <TokensByTool
-        tokensByTool={[row('Bash', 60_000), row('Edit', 40_000)]}
-        total={500_000}
-      />,
+      <TokensByTool tokensByTool={[row('Bash', 60_000), row('Edit', 40_000)]} total={500_000} />,
     );
     const fills = screen.getAllByTestId('token-bar-fill');
     expect(fills[0]).toHaveStyle({ width: '60%' });
@@ -198,7 +195,7 @@ describe('TokensByTool', () => {
       expect(within(footer).getByTestId('tokens-by-tool-grand-cost')).toHaveTextContent('$22.50');
     });
 
-    it("cost cell title exposes per-category breakdown for hover", () => {
+    it('cost cell title exposes per-category breakdown for hover', () => {
       render(
         <TokensByTool
           tokensByTool={[

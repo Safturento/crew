@@ -29,8 +29,7 @@ interface TokenBarRowProps {
   costTitle?: string;
 }
 
-const TOKEN_BAR_ROW_GRID =
-  'grid grid-cols-[1fr_auto_3fr_auto_auto] items-center gap-4 px-3.5 py-2';
+const TOKEN_BAR_ROW_GRID = 'grid grid-cols-[1fr_auto_3fr_auto_auto] items-center gap-4 px-3.5 py-2';
 
 export function TokenBarRow({
   tool,

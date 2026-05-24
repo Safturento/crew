@@ -36,7 +36,6 @@ export function ratesForModel(model: string | undefined): ModelRates {
   }
   if (!warnedModels.has(model)) {
     warnedModels.add(model);
-    // eslint-disable-next-line no-console
     console.warn(
       `[pricing] Unknown model "${model}" — falling back to ${DEFAULT_FALLBACK_MODEL} pricing.`,
     );

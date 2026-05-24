@@ -95,10 +95,7 @@ export function TokensByTool({ tokensByTool, total, model }: TokensByToolProps) 
     [tokensByTool, model],
   );
 
-  const grandCost = useMemo(
-    () => aliasRows.reduce((acc, row) => acc + row.cost, 0),
-    [aliasRows],
-  );
+  const grandCost = useMemo(() => aliasRows.reduce((acc, row) => acc + row.cost, 0), [aliasRows]);
 
   return (
     <section

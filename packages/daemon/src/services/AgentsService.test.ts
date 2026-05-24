@@ -841,7 +841,7 @@ describe('AgentsService.getByKey', () => {
   // dashboard. The Assistant row also tracks input + cache fields, and
   // AgentDetail surfaces the dominant model so the dashboard can pick rates.
   describe('cost-weighting foundation (CREW-195)', () => {
-    it("Assistant bucket includes input + cache fields from text-only turns", async () => {
+    it('Assistant bucket includes input + cache fields from text-only turns', async () => {
       const db = await freshDb();
       try {
         await makeAgent(db, 'KAN-CW-1');

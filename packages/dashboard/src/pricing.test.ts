@@ -1,11 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import {
-  MODEL_PRICING,
-  ratesForModel,
-  weightedTokenCost,
-  formatCost,
-} from './pricing.js';
+import { MODEL_PRICING, ratesForModel, weightedTokenCost, formatCost } from './pricing.js';
 
 describe('MODEL_PRICING', () => {
   it('contains the three current Anthropic models', () => {
