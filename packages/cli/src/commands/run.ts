@@ -327,12 +327,17 @@ export async function runRun(key: string, opts: RunOptions): Promise<never> {
             ? `materialized .env from env.toml${r.base.APP_URL ? ` (APP_URL=${r.base.APP_URL})` : ''}`
             : `wrote ${r.legacy.envPath} (legacy)`,
       },
-      () =>
-        bringUpWorktreeEnv({
+      () => {
+        // TS doesn't narrow `config.docker` across the closure boundary
+        // even though the surrounding `if (config.docker)` is in scope.
+        const dockerCfg = config.docker;
+        if (!dockerCfg) throw new Error('unreachable: config.docker checked above');
+        return bringUpWorktreeEnv({
           worktree,
-          canonicalWorktreeName: config.docker!.canonical_worktree,
+          canonicalWorktreeName: dockerCfg.canonical_worktree,
           projectName: config.name,
-        }),
+        });
+      },
     );
     if (result.kind === 'legacy') {
       const env = result.legacy;
@@ -626,11 +631,8 @@ export async function runRun(key: string, opts: RunOptions): Promise<never> {
   // Best-effort Jira title for the dashboard's agent rows. Returns '' on any
   // failure (missing creds, network, malformed payload); the daemon upserts
   // with COALESCE so an empty value preserves any title already on the row.
-  const ticketTitle = await fetchTicketSummaryFromEnv(
-    key,
-    config.jira.site,
-    process.env,
-    (msg) => console.log(pc.yellow('!'), msg),
+  const ticketTitle = await fetchTicketSummaryFromEnv(key, config.jira.site, process.env, (msg) =>
+    console.log(pc.yellow('!'), msg),
   );
   const registration = await daemonClient.registerRun({
     key,

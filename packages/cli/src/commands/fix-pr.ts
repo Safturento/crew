@@ -295,11 +295,7 @@ async function runFixPr(key: string, flags: FixPrFlags): Promise<void> {
   if (projectConfig) {
     // Best-effort Jira title — registerRun COALESCEs '' against the existing
     // value so missing creds / network errors never clobber a known title.
-    const ticketTitle = await fetchTicketSummaryFromEnv(
-      key,
-      projectConfig.jira.site,
-      process.env,
-    );
+    const ticketTitle = await fetchTicketSummaryFromEnv(key, projectConfig.jira.site, process.env);
     const registration = await daemonClient.registerRun({
       key,
       projectName: projectConfig.name,

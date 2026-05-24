@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { systemStartupPhaseRowSchema } from '../transcripts/schemas.js';
+import type { systemStartupPhaseRowSchema } from '../transcripts/schemas.js';
 
 /**
  * The seven CLI startup phases captured by `crew run` / `crew fix-pr`.

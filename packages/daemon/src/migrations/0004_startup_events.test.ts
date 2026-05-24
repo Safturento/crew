@@ -92,16 +92,12 @@ describe('migration 0004 — startup_events', () => {
       await db
         .insertInto('startup_events')
         .values(value)
-        .onConflict((oc) =>
-          oc.columns(['agent_key', 'subtype', 'status', 'ts']).doNothing(),
-        )
+        .onConflict((oc) => oc.columns(['agent_key', 'subtype', 'status', 'ts']).doNothing())
         .execute();
       await db
         .insertInto('startup_events')
         .values(value)
-        .onConflict((oc) =>
-          oc.columns(['agent_key', 'subtype', 'status', 'ts']).doNothing(),
-        )
+        .onConflict((oc) => oc.columns(['agent_key', 'subtype', 'status', 'ts']).doNothing())
         .execute();
       const count = await db
         .selectFrom('startup_events')

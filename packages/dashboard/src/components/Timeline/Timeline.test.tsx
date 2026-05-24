@@ -206,6 +206,31 @@ describe('Timeline', () => {
     expect(screen.getByTestId('timeline-empty')).toBeInTheDocument();
   });
 
+  it('CREW-201 startup phase rows are visible by default even though System filter is off', () => {
+    const startupRow = {
+      type: 'system',
+      subtype: 'crew_startup_npm_install',
+      startedAt: '2026-04-29T12:00:00.000Z',
+      completedAt: '2026-04-29T12:00:01.000Z',
+      status: 'completed',
+      summary: 'installed 152 packages',
+      durationMs: 1000,
+      logPath: null,
+    } as unknown as TranscriptEvent;
+    mockUseTimeline.mockReturnValue(
+      timelineResult({
+        data: { events: [startupRow, evt(1)] },
+        isSuccess: true,
+        status: 'success',
+      }),
+    );
+    render(<Timeline agentKey="KAN-1" />);
+    // Both render: the assistant text row and the startup phase row.
+    expect(screen.getAllByTestId('transcript-row')).toHaveLength(2);
+    const tags = screen.getAllByTestId('transcript-row-tag').map((n) => n.textContent);
+    expect(tags).toContain('npm install');
+  });
+
   it('drops bookkeeping events (DROPPED_TYPES) before classification', () => {
     const droppable = {
       type: 'queue-operation',

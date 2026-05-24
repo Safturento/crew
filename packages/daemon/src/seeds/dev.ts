@@ -6,6 +6,7 @@ import type {
   AgentsTable,
   DaemonDatabase,
   RunsTable,
+  StartupEventsTable,
   StateTransitionsTable,
   ToolCallsTable,
 } from '../db.js';
@@ -427,6 +428,143 @@ export async function seedStateTransitionFixtures(db: Kysely<DaemonDatabase>): P
       .execute();
     if (existing.length > 0) continue;
     await db.insertInto('state_transitions').values(rows).execute();
+  }
+}
+
+/**
+ * CREW-201: seed `startup_events` for one demo agent so the drawer
+ * Timeline's Starting section renders the new per-phase rows in
+ * fixture mode. Mirrors the gate pattern from
+ * `seedStateTransitionFixtures`: per-agent_key idempotent so a daemon
+ * reload picks up the new content without a DB wipe.
+ *
+ * Fixture covers the three statuses the merge can produce
+ * (completed / in_flight / failed) on representative phases so a
+ * visual review touches every tone branch.
+ */
+const FIXTURE_STARTUP_EVENTS: Insertable<StartupEventsTable>[] = [
+  // CREW-102: full happy-path sequence of completed phases, then a
+  // failed npm_install at the end so the dashboard's red error row is
+  // visible alongside the green completed rows.
+  {
+    agent_key: 'CREW-102',
+    subtype: 'crew_startup_preflight',
+    status: 'started',
+    ts: Date.parse('2026-05-04T11:30:00Z'),
+    summary: 'discovering project config + checking tools',
+    duration_ms: null,
+    log_path: null,
+  },
+  {
+    agent_key: 'CREW-102',
+    subtype: 'crew_startup_preflight',
+    status: 'completed',
+    ts: Date.parse('2026-05-04T11:30:01Z'),
+    summary: 'project=crew; tools ok; gh token present',
+    duration_ms: 1100,
+    log_path: null,
+  },
+  {
+    agent_key: 'CREW-102',
+    subtype: 'crew_startup_worktree',
+    status: 'started',
+    ts: Date.parse('2026-05-04T11:30:02Z'),
+    summary: 'creating worktree at /home/dev/Repos/crew-CREW-102',
+    duration_ms: null,
+    log_path: null,
+  },
+  {
+    agent_key: 'CREW-102',
+    subtype: 'crew_startup_worktree',
+    status: 'completed',
+    ts: Date.parse('2026-05-04T11:30:05Z'),
+    summary: 'worktree at /home/dev/Repos/crew-CREW-102 (branch CREW-102)',
+    duration_ms: 2900,
+    log_path: null,
+  },
+  {
+    agent_key: 'CREW-102',
+    subtype: 'crew_startup_docker',
+    status: 'started',
+    ts: Date.parse('2026-05-04T11:30:06Z'),
+    summary: 'docker compose up --build --wait',
+    duration_ms: null,
+    log_path: '/tmp/crew-docker-CREW-102.log',
+  },
+  {
+    agent_key: 'CREW-102',
+    subtype: 'crew_startup_docker',
+    status: 'completed',
+    ts: Date.parse('2026-05-04T11:30:42Z'),
+    summary: 'docker stack healthy',
+    duration_ms: 36_000,
+    log_path: '/tmp/crew-docker-CREW-102.log',
+  },
+  {
+    agent_key: 'CREW-102',
+    subtype: 'crew_startup_npm_install',
+    status: 'started',
+    ts: Date.parse('2026-05-04T11:30:43Z'),
+    summary: 'npm ci in worktree',
+    duration_ms: null,
+    log_path: '/tmp/crew-npm-install-CREW-102.log',
+  },
+  {
+    agent_key: 'CREW-102',
+    subtype: 'crew_startup_npm_install',
+    status: 'failed',
+    ts: Date.parse('2026-05-04T11:30:55Z'),
+    summary: 'npm ERR! 404 Not Found - GET https://registry.npmjs.org/some-pkg',
+    duration_ms: 12_000,
+    log_path: '/tmp/crew-npm-install-CREW-102.log',
+  },
+  // CREW-101: phase still in flight — shows the in_flight tone for the
+  // Docker row while no terminal event has landed yet.
+  {
+    agent_key: 'CREW-101',
+    subtype: 'crew_startup_preflight',
+    status: 'started',
+    ts: Date.parse('2026-05-04T12:00:00Z'),
+    summary: 'discovering project config + checking tools',
+    duration_ms: null,
+    log_path: null,
+  },
+  {
+    agent_key: 'CREW-101',
+    subtype: 'crew_startup_preflight',
+    status: 'completed',
+    ts: Date.parse('2026-05-04T12:00:01Z'),
+    summary: 'project=crew; tools ok; gh token present',
+    duration_ms: 1100,
+    log_path: null,
+  },
+  {
+    agent_key: 'CREW-101',
+    subtype: 'crew_startup_docker',
+    status: 'started',
+    ts: Date.parse('2026-05-04T12:00:05Z'),
+    summary: 'docker compose up --build --wait',
+    duration_ms: null,
+    log_path: '/tmp/crew-docker-CREW-101.log',
+  },
+];
+
+export async function seedStartupEventsFixtures(db: Kysely<DaemonDatabase>): Promise<void> {
+  const byAgent = new Map<string, Insertable<StartupEventsTable>[]>();
+  for (const row of FIXTURE_STARTUP_EVENTS) {
+    const list = byAgent.get(row.agent_key) ?? [];
+    list.push(row);
+    byAgent.set(row.agent_key, list);
+  }
+  for (const [agentKey, rows] of byAgent) {
+    const existing = await db
+      .selectFrom('startup_events')
+      .select('id')
+      .where('agent_key', '=', agentKey)
+      .limit(1)
+      .execute();
+    if (existing.length > 0) continue;
+    await db.insertInto('startup_events').values(rows).execute();
   }
 }
 

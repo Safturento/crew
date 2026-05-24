@@ -421,7 +421,7 @@ describe('IngestService.processEventForTest — fix-pr cycle (CREW-198)', () => 
           ts: '2026-04-29T12:00:00Z',
         }),
       });
-      expect((await getLatestState(db, agentKey))).toBe('pr_open');
+      expect(await getLatestState(db, agentKey)).toBe('pr_open');
 
       // Fix-pr dispatch creates a new run. First tool_call from the new run → pr_open → running.
       const fixPrRunId = await insertRun(db, agentKey, 'fix-pr', 'session-fix-pr-1');

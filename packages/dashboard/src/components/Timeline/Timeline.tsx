@@ -42,8 +42,7 @@ const isLiveByDefault = (state?: AgentState): boolean => state !== 'finished' &&
 
 // Index-prefixed so the leading initial-state section can't collide with the
 // post-transition section when both share state + startedAt (zero-width case).
-const sectionKey = (s: TimelineSectionData, i: number): string =>
-  `${i}:${s.state}:${s.startedAt}`;
+const sectionKey = (s: TimelineSectionData, i: number): string => `${i}:${s.state}:${s.startedAt}`;
 
 function eventTokens(e: TranscriptEvent): number {
   if (e.type !== 'assistant') return 0;
@@ -356,15 +355,24 @@ function matchesFilters(
   state: TimelineFilterState,
   needle: string,
 ): boolean {
-  const cats = eventCategories(event);
-  let categoryMatch = false;
-  for (const c of cats) {
-    if (state.categories.has(c)) {
-      categoryMatch = true;
-      break;
+  // CREW-201: startup phase rows bypass the category filter. They land
+  // in the System category structurally but are high-signal + low-count
+  // (max ~7 per run), so hiding them behind the default-off System
+  // checkbox would defeat the entire feature. The search-needle filter
+  // below still applies.
+  const subtype = (event as { subtype?: string }).subtype;
+  const isStartupRow = typeof subtype === 'string' && subtype.startsWith('crew_startup_');
+  if (!isStartupRow) {
+    const cats = eventCategories(event);
+    let categoryMatch = false;
+    for (const c of cats) {
+      if (state.categories.has(c)) {
+        categoryMatch = true;
+        break;
+      }
     }
+    if (!categoryMatch) return false;
   }
-  if (!categoryMatch) return false;
 
   // Tools section uses inverted-checkbox semantics: an alias in
   // `excludedTools` means the user unchecked it. Event passes iff it has

@@ -191,8 +191,9 @@ export class IngestService {
     // chokidar resolves the watcher asynchronously; in tests we want to
     // await the initial scan so a writeFileSync-just-after-await isn't
     // racing against the watcher attaching.
+    const watcher = this.startupWatcher;
     await new Promise<void>((resolve) => {
-      this.startupWatcher!.once('ready', () => resolve());
+      watcher.once('ready', () => resolve());
     });
   }
 
@@ -225,9 +226,7 @@ export class IngestService {
         duration_ms: event.durationMs ?? null,
         log_path: event.logPath ?? null,
       })
-      .onConflict((oc) =>
-        oc.columns(['agent_key', 'subtype', 'status', 'ts']).doNothing(),
-      )
+      .onConflict((oc) => oc.columns(['agent_key', 'subtype', 'status', 'ts']).doNothing())
       .execute();
 
     this.eventBus.publish({
@@ -236,7 +235,7 @@ export class IngestService {
     });
 
     if (event.status === 'failed') {
-      await this.recordError(agentKey, ts, event.summary);
+      await this.recordError(agentKey, ts);
     }
   }
 
@@ -248,7 +247,7 @@ export class IngestService {
    * the state_transitions row so the dashboard's list view turns red
    * immediately.
    */
-  async recordError(agentKey: string, ts: number, _summary: string): Promise<void> {
+  async recordError(agentKey: string, ts: number): Promise<void> {
     const previous = await this.getCachedAgentState(agentKey);
     if (previous === 'error' || previous === 'finished') return;
 
@@ -355,11 +354,7 @@ export class IngestService {
    * reached on its own. Called from the runs/:runId/complete route alongside
    * `recordFinishCompleted`.
    */
-  async recordRunCompleted(
-    agentKey: string,
-    runId: number,
-    completedAtIso: string,
-  ): Promise<void> {
+  async recordRunCompleted(agentKey: string, runId: number, completedAtIso: string): Promise<void> {
     const previous = await this.getCachedAgentState(agentKey);
     if (previous !== 'running') return;
 
