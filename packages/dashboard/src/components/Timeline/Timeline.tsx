@@ -126,7 +126,10 @@ export function Timeline({ agentKey, agentState, tokensByTool = [] }: TimelinePr
   const [stripeHeight, setStripeHeight] = useState(0);
 
   // Observe the scroll viewport's clientHeight so the stripe matches it.
+  // Depends on `isLoading` so we re-attach once the loading branch unmounts
+  // and the real scroll viewport (with `scrollRef`) appears in the DOM.
   useEffect(() => {
+    if (isLoading) return;
     const el = scrollRef.current;
     if (!el || typeof ResizeObserver === 'undefined') return;
     const ro = new ResizeObserver(([entry]) => {
@@ -134,7 +137,7 @@ export function Timeline({ agentKey, agentState, tokensByTool = [] }: TimelinePr
     });
     ro.observe(el);
     return () => ro.disconnect();
-  }, []);
+  }, [isLoading]);
 
   const minimapSections = useMemo(
     () =>
