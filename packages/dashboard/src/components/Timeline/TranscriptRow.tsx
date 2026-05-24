@@ -16,7 +16,10 @@ import type {
 
 import { cn } from '../../lib/utils.js';
 import type { PillColor } from '../../lib/pill-variants.js';
+import type { ToolColorKey } from '../../data/tool-colors.js';
+import { toolAlias } from '../../format/tool-alias.js';
 import { Tag } from '../ui/tag.js';
+import { colorForTool } from './event-palette.js';
 import { labelForAttachment, labelForSystem } from './event-labels.js';
 
 const LINE_ONE_MAX = 80;
@@ -27,6 +30,7 @@ interface RowSpec {
   category: 'conversation' | 'tools' | 'thinking' | 'hooks-and-skills' | 'system';
   tone: Tone;
   tagLabel: string;
+  toolColor?: ToolColorKey;
   oneLiner: string;
   timestamp?: string;
   tokens?: number;
@@ -57,7 +61,12 @@ export function TranscriptRow({ event }: TranscriptRowProps) {
 
 function Row({ spec }: { spec: RowSpec }) {
   const [open, setOpen] = useState(false);
-  const color = spec.tone === 'error' ? 'error' : CATEGORY_COLOR[spec.category];
+  const tagColorProps: { color?: PillColor; toolColor?: ToolColorKey } =
+    spec.tone === 'error'
+      ? { color: 'error' }
+      : spec.toolColor
+        ? { toolColor: spec.toolColor }
+        : { color: CATEGORY_COLOR[spec.category] };
   const meta = formatMeta(spec.timestamp, spec.tokens);
   const ariaLabel = `${spec.tagLabel} · ${spec.oneLiner}`.trim();
 
@@ -77,7 +86,7 @@ function Row({ spec }: { spec: RowSpec }) {
         onClick={() => setOpen((v) => !v)}
         className="flex w-full items-center gap-2 px-2.5 py-1.5 text-left"
       >
-        <Tag color={color} intensity="mid" data-testid="transcript-row-tag">
+        <Tag {...tagColorProps} intensity="mid" data-testid="transcript-row-tag">
           {spec.tagLabel}
         </Tag>
         <span
@@ -138,12 +147,14 @@ function specsForAssistant(event: AssistantEvent): RowSpec[] {
 function specForAssistantBlock(event: AssistantEvent, block: AssistantContent): RowSpec {
   const tokens = event.message.usage?.output_tokens;
   if (isToolUse(block)) {
+    const alias = toolAlias(block.name);
     const summary = summarizeToolInput(block.input);
     return {
       blockType: 'tool_use',
       category: 'tools',
       tone: 'default',
-      tagLabel: block.name,
+      tagLabel: alias,
+      toolColor: colorForTool(alias),
       oneLiner: truncate(summary),
       timestamp: event.timestamp,
       tokens,
