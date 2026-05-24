@@ -42,6 +42,27 @@ tests {
       expect(res.headers["x-crew-warning"]).to.equal("transcript-missing");
     }
   });
+
+  test("CREW-201 startup phase rows are collapsed to one per subtype", () => {
+    // The daemon merges paired started/completed events per phase before
+    // serving them, so two events with the same `crew_startup_*` subtype
+    // in the response would indicate the merge regressed.
+    const startupRows = res.body.events.filter(
+      (e) => typeof e.subtype === "string" && e.subtype.indexOf("crew_startup_") === 0,
+    );
+    const subtypes = startupRows.map((r) => r.subtype);
+    expect(new Set(subtypes).size).to.equal(subtypes.length);
+  });
+
+  test("CREW-201 each startup phase row carries the merged shape", () => {
+    for (const e of res.body.events) {
+      if (typeof e.subtype !== "string" || e.subtype.indexOf("crew_startup_") !== 0) continue;
+      expect(e.type).to.equal("system");
+      expect(e.startedAt).to.be.a("string");
+      expect(["in_flight", "completed", "failed"]).to.include(e.status);
+      expect(e.summary).to.be.a("string");
+    }
+  });
 }
 
 docs {
