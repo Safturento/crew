@@ -1,4 +1,5 @@
 import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 
 import { MinimapStripe, MIN_SEG_PX, STRIPE_WIDTH } from './MinimapStripe.js';
@@ -64,5 +65,35 @@ describe('MinimapStripe', () => {
   it('renders nothing when sections is empty', () => {
     const { container } = render(<MinimapStripe {...baseProps} sections={[]} />);
     expect(container.firstChild).toBeNull();
+  });
+
+  it('shows a tooltip on hover with the section label, timestamp, and event count', async () => {
+    const user = userEvent.setup();
+    render(<MinimapStripe {...baseProps} />);
+    const segments = screen.getAllByTestId('minimap-segment');
+    await user.hover(segments[1]);
+    const tooltip = await screen.findByTestId('minimap-tooltip');
+    expect(tooltip).toHaveTextContent(/Waiting/);
+    expect(tooltip).toHaveTextContent(/14:42:00/);
+    expect(tooltip).toHaveTextContent(/2 events/);
+  });
+
+  it('hides the tooltip when the pointer leaves the segment', async () => {
+    const user = userEvent.setup();
+    render(<MinimapStripe {...baseProps} />);
+    const segments = screen.getAllByTestId('minimap-segment');
+    await user.hover(segments[0]);
+    expect(screen.queryByTestId('minimap-tooltip')).toBeInTheDocument();
+    await user.unhover(segments[0]);
+    expect(screen.queryByTestId('minimap-tooltip')).not.toBeInTheDocument();
+  });
+
+  it('pluralizes "1 event" / "N events" correctly', async () => {
+    const user = userEvent.setup();
+    render(<MinimapStripe {...baseProps} />);
+    const segments = screen.getAllByTestId('minimap-segment');
+    await user.hover(segments[2]);
+    const tooltip = await screen.findByTestId('minimap-tooltip');
+    expect(tooltip).toHaveTextContent(/1 event(?!s)/);
   });
 });

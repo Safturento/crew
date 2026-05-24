@@ -1,4 +1,6 @@
-import { STATE_CLASSES } from '../../data/state-meta.js';
+import { useState } from 'react';
+
+import { STATE_CLASSES, STATE_META } from '../../data/state-meta.js';
 import type { AgentState } from '../../data/types.js';
 import { cn } from '../../lib/utils.js';
 
@@ -29,9 +31,19 @@ interface MinimapStripeProps {
  * `stripeHeight`. No viewport indicator — the native scrollbar thumb (just to
  * the right of the stripe) handles "you are here".
  */
-export function MinimapStripe({ sections, stripeHeight, onSectionJump: _onSectionJump }: MinimapStripeProps) {
+export function MinimapStripe({
+  sections,
+  stripeHeight,
+  onSectionJump: _onSectionJump,
+}: MinimapStripeProps) {
+  const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
   if (sections.length === 0) return null;
   const segments = computeSegmentHeights(sections, stripeHeight);
+  const tooltipTop =
+    hoveredIdx === null
+      ? 0
+      : segments.slice(0, hoveredIdx).reduce((sum, h) => sum + h, 0) +
+        segments[hoveredIdx] / 2;
   return (
     <div
       data-testid="minimap-stripe"
@@ -45,8 +57,35 @@ export function MinimapStripe({ sections, stripeHeight, onSectionJump: _onSectio
           data-state={sec.state}
           className={cn('w-full', STATE_CLASSES[sec.state].solidBg)}
           style={{ height: `${segments[i]}px` }}
+          onMouseEnter={() => setHoveredIdx(i)}
+          onMouseLeave={() => setHoveredIdx(null)}
         />
       ))}
+      {hoveredIdx !== null && (
+        <MinimapTooltip section={sections[hoveredIdx]} top={tooltipTop} />
+      )}
+    </div>
+  );
+}
+
+function MinimapTooltip({ section, top }: { section: MinimapSection; top: number }) {
+  const label = STATE_META[section.state].label;
+  const time = new Date(section.startedAt).toISOString().slice(11, 19);
+  const count = section.eventCount;
+  return (
+    <div
+      data-testid="minimap-tooltip"
+      role="tooltip"
+      className="pointer-events-none absolute right-full mr-2 flex items-center gap-2 whitespace-nowrap rounded border border-border bg-popover px-2 py-1 font-mono text-xs text-foreground shadow-md"
+      style={{ top: `${top}px`, transform: 'translateY(-50%)' }}
+    >
+      <span>{label}</span>
+      <span className="text-muted-foreground">·</span>
+      <span className="tabular-nums">{time}</span>
+      <span className="text-muted-foreground">·</span>
+      <span className="tabular-nums">
+        {count} event{count === 1 ? '' : 's'}
+      </span>
     </div>
   );
 }
