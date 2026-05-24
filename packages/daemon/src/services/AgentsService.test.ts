@@ -201,12 +201,22 @@ site = "https://safturento.atlassian.net"
 repo = "safturento/kanban-api"
 `;
 
+type AnyTransitionState =
+  | 'init'
+  | 'running'
+  | 'pr_open'
+  | 'pr_merged'
+  | 'error'
+  | 'finished'
+  | 'idle'
+  | 'waiting';
+
 async function makeStateTransition(
   db: Kysely<DaemonDatabase>,
   agentKey: string,
-  to: 'init' | 'running' | 'pr_open' | 'error' | 'finished' | 'idle' | 'waiting',
+  to: AnyTransitionState,
   ts: number,
-  from: 'init' | 'running' | 'pr_open' | 'error' | 'finished' | 'idle' | 'waiting' | null = null,
+  from: AnyTransitionState | null = null,
 ): Promise<void> {
   await db
     .insertInto('state_transitions')
@@ -351,6 +361,59 @@ describe('AgentsService.list', () => {
       });
       const agents = await new AgentsService({ db }).list();
       expect(agents[0]).toMatchObject({ key: 'KAN-7', state: 'finished' });
+    } finally {
+      await db.destroy();
+    }
+  });
+
+  // CREW-202: pr_merged is sourced from state_transitions (the PrPoller
+  // writes it). list() must surface it even though hasPrCreate is still
+  // true on the underlying tool_calls.
+  it('returns pr_merged when latest state_transitions row is pr_merged', async () => {
+    const db = await freshDb();
+    try {
+      await makeAgent(db, 'KAN-PM-1', { prUrl: 'https://github.com/x/y/pull/1' });
+      const r1 = await makeRun(db, 'KAN-PM-1', 's-pm-1', {
+        completedAt: '2026-04-29T13:00:00Z',
+        exitCode: 0,
+      });
+      await makeToolCall(db, r1, {
+        tool: 'Bash',
+        summary: 'gh pr create --title hi',
+        tokens: 1,
+      });
+      await makeStateTransition(db, 'KAN-PM-1', 'pr_open', 1000, 'running');
+      await makeStateTransition(db, 'KAN-PM-1', 'pr_merged', 2000, 'pr_open');
+      const agents = await new AgentsService({ db }).list();
+      expect(agents[0]).toMatchObject({ key: 'KAN-PM-1', state: 'pr_merged' });
+    } finally {
+      await db.destroy();
+    }
+  });
+
+  // finishCompletedOk still wins over pr_merged — once finish has completed
+  // cleanly the agent is done, regardless of any earlier pr_merged transition.
+  it('returns finished when finish run completed even if pr_merged transition exists', async () => {
+    const db = await freshDb();
+    try {
+      await makeAgent(db, 'KAN-PM-2', { prUrl: 'https://github.com/x/y/pull/2' });
+      const r1 = await makeRun(db, 'KAN-PM-2', 's-pm-2', {
+        completedAt: '2026-04-29T13:00:00Z',
+        exitCode: 0,
+      });
+      await makeToolCall(db, r1, {
+        tool: 'Bash',
+        summary: 'gh pr create --title hi',
+        tokens: 1,
+      });
+      await makeStateTransition(db, 'KAN-PM-2', 'pr_merged', 2000, 'pr_open');
+      await makeRun(db, 'KAN-PM-2', `finish-KAN-PM-2-${'c'.repeat(8)}`, {
+        command: 'finish',
+        completedAt: '2026-04-29T14:00:00Z',
+        exitCode: 0,
+      });
+      const agents = await new AgentsService({ db }).list();
+      expect(agents[0]).toMatchObject({ key: 'KAN-PM-2', state: 'finished' });
     } finally {
       await db.destroy();
     }
@@ -903,6 +966,55 @@ describe('AgentsService.getByKey', () => {
         await db.destroy();
       }
     });
+  });
+});
+
+describe('AgentsService.getByKey pr_merged (CREW-202)', () => {
+  it('returns pr_merged when latest state_transitions row is pr_merged', async () => {
+    const db = await freshDb();
+    try {
+      await makeAgent(db, 'KAN-PM-G', { prUrl: 'https://github.com/x/y/pull/1' });
+      const r1 = await makeRun(db, 'KAN-PM-G', 's-pm-g', {
+        completedAt: '2026-04-29T13:00:00Z',
+        exitCode: 0,
+      });
+      await makeToolCall(db, r1, {
+        tool: 'Bash',
+        summary: 'gh pr create --title hi',
+        tokens: 1,
+      });
+      await makeStateTransition(db, 'KAN-PM-G', 'pr_merged', 2000, 'pr_open');
+      const detail = await new AgentsService({ db }).getByKey('KAN-PM-G');
+      expect(detail?.state).toBe('pr_merged');
+    } finally {
+      await db.destroy();
+    }
+  });
+
+  it('returns finished over pr_merged when a finish run has completed', async () => {
+    const db = await freshDb();
+    try {
+      await makeAgent(db, 'KAN-PM-GF', { prUrl: 'https://github.com/x/y/pull/2' });
+      const r1 = await makeRun(db, 'KAN-PM-GF', 's-pm-gf', {
+        completedAt: '2026-04-29T13:00:00Z',
+        exitCode: 0,
+      });
+      await makeToolCall(db, r1, {
+        tool: 'Bash',
+        summary: 'gh pr create --title hi',
+        tokens: 1,
+      });
+      await makeStateTransition(db, 'KAN-PM-GF', 'pr_merged', 2000, 'pr_open');
+      await makeRun(db, 'KAN-PM-GF', `finish-KAN-PM-GF-${'d'.repeat(8)}`, {
+        command: 'finish',
+        completedAt: '2026-04-29T14:00:00Z',
+        exitCode: 0,
+      });
+      const detail = await new AgentsService({ db }).getByKey('KAN-PM-GF');
+      expect(detail?.state).toBe('finished');
+    } finally {
+      await db.destroy();
+    }
   });
 });
 

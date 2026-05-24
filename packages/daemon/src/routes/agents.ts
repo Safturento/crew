@@ -2,12 +2,20 @@ import { z } from 'zod';
 import type { DaemonApp } from '../app.js';
 import { NotFoundError } from '../errors.js';
 
-const AgentStateEnum = z.enum(['initializing', 'running', 'pr_open', 'error', 'finished']);
+const AgentStateEnum = z.enum([
+  'initializing',
+  'running',
+  'pr_open',
+  'pr_merged',
+  'error',
+  'finished',
+]);
 
 const TransitionStateEnum = z.enum([
   'init',
   'running',
   'pr_open',
+  'pr_merged',
   'error',
   'finished',
   'idle',
