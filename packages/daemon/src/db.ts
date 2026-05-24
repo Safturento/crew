@@ -54,8 +54,25 @@ export interface ToolCallsTable {
 export interface StateTransitionsTable {
   id: Generated<number>;
   agent_key: string;
-  from_state: 'init' | 'running' | 'pr_open' | 'error' | 'finished' | 'idle' | 'waiting' | null;
-  to_state: 'init' | 'running' | 'pr_open' | 'error' | 'finished' | 'idle' | 'waiting';
+  from_state:
+    | 'init'
+    | 'running'
+    | 'pr_open'
+    | 'pr_merged'
+    | 'error'
+    | 'finished'
+    | 'idle'
+    | 'waiting'
+    | null;
+  to_state:
+    | 'init'
+    | 'running'
+    | 'pr_open'
+    | 'pr_merged'
+    | 'error'
+    | 'finished'
+    | 'idle'
+    | 'waiting';
   ts: number;
 }
 
