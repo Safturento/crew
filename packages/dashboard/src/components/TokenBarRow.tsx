@@ -1,3 +1,5 @@
+import type { ReactNode } from 'react';
+
 import { formatTokens } from '../format/tokens.js';
 
 interface TokenBarRowProps {
@@ -11,15 +13,24 @@ interface TokenBarRowProps {
    * "MCP:Jira (jira_get_issue, jira_transition_issue)").
    */
   title?: string;
+  /**
+   * Optional leading icon, rendered before the tool label. Used by
+   * TokensByTool to mark the synthetic "Assistant" row with a sparkles
+   * glyph (CREW-191) — tool rows pass nothing.
+   */
+  icon?: ReactNode;
 }
 
 const TOKEN_BAR_ROW_GRID = 'grid grid-cols-[1fr_auto_3fr_auto] items-center gap-4 px-3.5 py-2';
 
-export function TokenBarRow({ tool, tokens, percent, title }: TokenBarRowProps) {
+export function TokenBarRow({ tool, tokens, percent, title, icon }: TokenBarRowProps) {
   const clamped = Math.max(0, Math.min(100, percent));
   return (
     <div className={`${TOKEN_BAR_ROW_GRID} border-t border-border text-sm`} title={title}>
-      <span className="font-mono text-foreground">{tool}</span>
+      <span className="flex items-center gap-1.5 font-mono text-foreground">
+        {icon ? <span aria-hidden>{icon}</span> : null}
+        <span>{tool}</span>
+      </span>
       <span className="text-right font-mono tabular-nums text-foreground">
         {formatTokens(tokens)}
       </span>
