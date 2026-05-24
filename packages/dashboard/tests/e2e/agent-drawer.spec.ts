@@ -100,7 +100,9 @@ test.describe('Agent drawer', () => {
     await expect(page.getByTestId('transcript-row').first()).toBeVisible();
   });
 
-  test('Filters popover toggle changes the rendered transcript-row count in DOM', async ({ page }) => {
+  test('Filters popover toggle changes the rendered transcript-row count in DOM', async ({
+    page,
+  }) => {
     await mockTimeline(page, SEEDED_AGENT_KEY, TWO_GROUP_EVENTS);
     await page.goto(`/#/agent/${SEEDED_AGENT_KEY}`);
 

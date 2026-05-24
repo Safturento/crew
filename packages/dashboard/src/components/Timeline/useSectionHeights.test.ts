@@ -10,14 +10,11 @@ class FakeResizeObserver {
     this.callback = cb;
     FakeResizeObserver.instances.push(this);
   }
-  observe(_el: Element): void {}
-  unobserve(_el: Element): void {}
+  observe(): void {}
+  unobserve(): void {}
   disconnect(): void {}
   fire(entries: Array<{ target: Element; contentRect: { height: number } }>): void {
-    this.callback(
-      entries as unknown as ResizeObserverEntry[],
-      this as unknown as ResizeObserver,
-    );
+    this.callback(entries as unknown as ResizeObserverEntry[], this as unknown as ResizeObserver);
   }
 }
 

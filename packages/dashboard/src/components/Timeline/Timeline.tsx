@@ -154,9 +154,7 @@ export function Timeline({ agentKey, agentState, tokensByTool = [] }: TimelinePr
     (idx: number) => {
       const viewport = scrollRef.current;
       if (!viewport) return;
-      const sectionEls = viewport.querySelectorAll<HTMLElement>(
-        '[data-testid="timeline-section"]',
-      );
+      const sectionEls = viewport.querySelectorAll<HTMLElement>('[data-testid="timeline-section"]');
       const target = sectionEls[idx];
       if (!target) return;
       const toolbar = viewport.querySelector<HTMLElement>('[data-testid="timeline-toolbar"]');

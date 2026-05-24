@@ -31,11 +31,7 @@ interface MinimapStripeProps {
  * `stripeHeight`. No viewport indicator — the native scrollbar thumb (just to
  * the right of the stripe) handles "you are here".
  */
-export function MinimapStripe({
-  sections,
-  stripeHeight,
-  onSectionJump,
-}: MinimapStripeProps) {
+export function MinimapStripe({ sections, stripeHeight, onSectionJump }: MinimapStripeProps) {
   const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
   const [activeIdx, setActiveIdx] = useState<number>(-1);
   if (sections.length === 0) return null;
@@ -43,8 +39,7 @@ export function MinimapStripe({
   const tooltipTop =
     hoveredIdx === null
       ? 0
-      : segments.slice(0, hoveredIdx).reduce((sum, h) => sum + h, 0) +
-        segments[hoveredIdx] / 2;
+      : segments.slice(0, hoveredIdx).reduce((sum, h) => sum + h, 0) + segments[hoveredIdx] / 2;
 
   const jumpTo = (idx: number) => {
     setActiveIdx(idx);
@@ -53,7 +48,7 @@ export function MinimapStripe({
 
   const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
     const last = sections.length - 1;
-    let nextIdx = activeIdx;
+    let nextIdx: number;
     if (e.key === 'ArrowDown') nextIdx = Math.min(activeIdx + 1, last);
     else if (e.key === 'ArrowUp') nextIdx = Math.max(activeIdx - 1, 0);
     else if (e.key === 'Home') nextIdx = 0;
@@ -89,9 +84,7 @@ export function MinimapStripe({
           onClick={() => jumpTo(i)}
         />
       ))}
-      {hoveredIdx !== null && (
-        <MinimapTooltip section={sections[hoveredIdx]} top={tooltipTop} />
-      )}
+      {hoveredIdx !== null && <MinimapTooltip section={sections[hoveredIdx]} top={tooltipTop} />}
     </div>
   );
 }
@@ -143,10 +136,7 @@ export function computeSegmentHeights(
 
   // Apply min-clamp: any segment below MIN_SEG_PX is bumped up.
   const clampedFlags = raw.map((h) => h < MIN_SEG_PX);
-  const clampedSum = clampedFlags.reduce(
-    (sum, isClamped) => sum + (isClamped ? MIN_SEG_PX : 0),
-    0,
-  );
+  const clampedSum = clampedFlags.reduce((sum, isClamped) => sum + (isClamped ? MIN_SEG_PX : 0), 0);
   const unclampedSum = raw.reduce((sum, h, i) => sum + (clampedFlags[i] ? 0 : h), 0);
   const remainingForUnclamped = Math.max(0, stripeHeight - clampedSum);
   const unclampedScale = unclampedSum > 0 ? remainingForUnclamped / unclampedSum : 0;
