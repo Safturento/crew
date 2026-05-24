@@ -7,7 +7,6 @@ import { cn } from '../../lib/utils.js';
 export const MIN_SEG_PX = 16;
 export const STRIPE_WIDTH = 8;
 export const SCROLLBAR_GUTTER = 14;
-export const JUMP_DURATION_MS = 250;
 
 export interface MinimapSection {
   state: AgentState;
@@ -49,8 +48,8 @@ export function MinimapStripe({ sections, stripeHeight, onSectionJump }: Minimap
   const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
     const last = sections.length - 1;
     let nextIdx: number;
-    if (e.key === 'ArrowDown') nextIdx = Math.min(activeIdx + 1, last);
-    else if (e.key === 'ArrowUp') nextIdx = Math.max(activeIdx - 1, 0);
+    if (e.key === 'ArrowDown') nextIdx = activeIdx < 0 ? 0 : Math.min(activeIdx + 1, last);
+    else if (e.key === 'ArrowUp') nextIdx = activeIdx < 0 ? last : Math.max(activeIdx - 1, 0);
     else if (e.key === 'Home') nextIdx = 0;
     else if (e.key === 'End') nextIdx = last;
     else return;
@@ -61,7 +60,7 @@ export function MinimapStripe({ sections, stripeHeight, onSectionJump }: Minimap
   return (
     <div
       data-testid="minimap-stripe"
-      role="listbox"
+      role="group"
       aria-label="Timeline minimap — click a section or use arrow keys to navigate"
       tabIndex={0}
       onKeyDown={onKeyDown}
@@ -70,7 +69,7 @@ export function MinimapStripe({ sections, stripeHeight, onSectionJump }: Minimap
     >
       {sections.map((sec, i) => (
         <button
-          key={i}
+          key={`${sec.state}:${sec.startedAt}`}
           type="button"
           data-testid="minimap-segment"
           data-state={sec.state}

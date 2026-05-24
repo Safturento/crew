@@ -243,7 +243,7 @@ export function Timeline({ agentKey, agentState, tokensByTool = [] }: TimelinePr
           </div>
         )}
       </div>
-      {events.length > 0 && filteredEvents.length > 0 && sections.length > 0 && (
+      {filteredEvents.length > 0 && sections.length > 0 && (
         <MinimapStripe
           sections={minimapSections}
           stripeHeight={stripeHeight}

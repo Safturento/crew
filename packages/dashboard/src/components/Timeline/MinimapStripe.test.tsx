@@ -127,6 +127,16 @@ describe('MinimapStripe', () => {
     expect(onSectionJump).toHaveBeenLastCalledWith(1);
   });
 
+  it('first ArrowUp from initial state jumps to the last section (listbox convention)', async () => {
+    const user = userEvent.setup();
+    const onSectionJump = vi.fn();
+    render(<MinimapStripe {...baseProps} onSectionJump={onSectionJump} />);
+    const stripe = screen.getByTestId('minimap-stripe');
+    stripe.focus();
+    await user.keyboard('{ArrowUp}');
+    expect(onSectionJump).toHaveBeenLastCalledWith(2);
+  });
+
   it('Home/End jump to first/last section', async () => {
     const user = userEvent.setup();
     const onSectionJump = vi.fn();
@@ -142,7 +152,9 @@ describe('MinimapStripe', () => {
   it('exposes accessible role + label for assistive tech', () => {
     render(<MinimapStripe {...baseProps} />);
     const stripe = screen.getByTestId('minimap-stripe');
-    expect(stripe).toHaveAttribute('role', 'listbox');
+    // role=group fits a tabbable container of related <button> controls
+    // (listbox would expect role=option children, not buttons).
+    expect(stripe).toHaveAttribute('role', 'group');
     expect(stripe).toHaveAccessibleName(/timeline minimap/i);
   });
 });

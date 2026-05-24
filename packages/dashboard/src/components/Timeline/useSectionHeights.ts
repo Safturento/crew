@@ -66,6 +66,7 @@ export function useSectionHeights(sectionCount: number): UseSectionHeightsResult
       if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
       rafRef.current = null;
       elementsRef.current.clear();
+      pendingRef.current.clear();
     };
   }, []);
 
