@@ -128,14 +128,20 @@ function makeAssistantEventLine(opts: AssistantEventInput): string {
   const content: Array<Record<string, unknown>> = [];
   if (opts.text) content.push({ type: 'text', text: opts.text });
   for (const tu of opts.toolUses ?? []) {
-    content.push({ type: 'tool_use', id: `t_${assistantEventCounter}`, name: tu.name, input: tu.input ?? {} });
+    content.push({
+      type: 'tool_use',
+      id: `t_${assistantEventCounter}`,
+      name: tu.name,
+      input: tu.input ?? {},
+    });
   }
   if (content.length === 0) content.push({ type: 'text', text: 'assistant body' });
   const usage: Record<string, number> = {};
   if (opts.outputTokens !== undefined) usage.output_tokens = opts.outputTokens;
   return JSON.stringify({
     type: 'assistant',
-    timestamp: opts.timestamp ?? `2026-05-23T12:00:${String(assistantEventCounter).padStart(2, '0')}Z`,
+    timestamp:
+      opts.timestamp ?? `2026-05-23T12:00:${String(assistantEventCounter).padStart(2, '0')}Z`,
     message: {
       role: 'assistant',
       content,
@@ -578,7 +584,7 @@ describe('AgentsService.getByKey', () => {
     }
   });
 
-  it('aggregates tokens_by_tool across all of the agent\'s runs, ordered by tokens desc', async () => {
+  it("aggregates tokens_by_tool across all of the agent's runs, ordered by tokens desc", async () => {
     const db = await freshDb();
     try {
       await makeAgent(db, 'KAN-23', { projectName: 'kanban-api' });
@@ -656,9 +662,7 @@ describe('AgentsService.getByKey', () => {
       });
       const projectsDir = makeProjectsDir({ 'kanban-api': KANBAN_TOML });
       const detail = await new AgentsService({ db, projectsDir }).getByKey('KAN-23');
-      expect(detail?.tokens_by_tool).toEqual([
-        { tool: 'Bash', tokens: 200, percent: 100 },
-      ]);
+      expect(detail?.tokens_by_tool).toEqual([{ tool: 'Bash', tokens: 200, percent: 100 }]);
     } finally {
       await db.destroy();
     }
