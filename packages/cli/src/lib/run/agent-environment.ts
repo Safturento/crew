@@ -13,6 +13,8 @@ import { runPreflight } from '../preflight/index.js';
 import { buildPreflightChecks } from '../preflight/build-checks.js';
 import { agentNeedsAppRunning } from './app-lifecycle.js';
 import { installNodeModules } from './install-node-modules.js';
+import { bracketStartupPhase } from '../startup-events/index.js';
+import { dockerLogPathFor, npmInstallLogPathFor } from './paths.js';
 
 export interface AgentEnvironmentOptions {
   config: ProjectConfig;
@@ -62,32 +64,71 @@ export async function prepareAgentEnvironment(
       env,
     });
     if (proc) {
-      console.log(pc.dim('→ awaiting docker bringup…'));
-      const finished = await proc;
-      if (finished.exitCode !== 0) {
-        throw new Error(
-          `docker bringup failed (rc=${finished.exitCode}). Check /tmp/crew-docker-${key}.log`,
-        );
-      }
+      await bracketStartupPhase(
+        key,
+        {
+          subtype: 'crew_startup_docker',
+          startedSummary: 'docker compose up --build --wait',
+          completedSummary: () => 'docker stack healthy',
+          completedLogPath: dockerLogPathFor(key),
+          failedLogPath: dockerLogPathFor(key),
+        },
+        async () => {
+          console.log(pc.dim('→ awaiting docker bringup…'));
+          const finished = await proc;
+          if (finished.exitCode !== 0) {
+            throw new Error(
+              `docker bringup failed (rc=${finished.exitCode}). Check /tmp/crew-docker-${key}.log`,
+            );
+          }
+        },
+      );
       result.dockerProcess = proc;
     }
   } else if (!skipDocker && agentNeedsAppRunning(config) && config.docker) {
-    console.log(pc.dim('→ ensuring docker stack is running…'));
-    const ensure = await ensureStackRunning({ worktree, key, env });
-    if (ensure.rc !== 0) {
-      throw new Error(`docker stack failed to come up (rc=${ensure.rc}). Log: ${ensure.logPath}`);
-    }
-    console.log(pc.dim(`    log: ${ensure.logPath}`));
+    await bracketStartupPhase(
+      key,
+      {
+        subtype: 'crew_startup_docker',
+        startedSummary: 'ensuring docker stack is running',
+        completedSummary: () => 'docker stack ready (resume)',
+        completedLogPath: dockerLogPathFor(key),
+        failedLogPath: dockerLogPathFor(key),
+      },
+      async () => {
+        console.log(pc.dim('→ ensuring docker stack is running…'));
+        const ensure = await ensureStackRunning({ worktree, key, env });
+        if (ensure.rc !== 0) {
+          throw new Error(
+            `docker stack failed to come up (rc=${ensure.rc}). Log: ${ensure.logPath}`,
+          );
+        }
+        console.log(pc.dim(`    log: ${ensure.logPath}`));
+      },
+    );
   }
 
   if (playwrightEnabled(config)) {
-    console.log(pc.dim('→ installing worktree node_modules…'));
-    const npmInstall = await installNodeModules({ worktree, key, env });
+    const npmInstall = await bracketStartupPhase(
+      key,
+      {
+        subtype: 'crew_startup_npm_install',
+        startedSummary: 'npm ci in worktree',
+        completedSummary: () => 'npm ci completed',
+        completedLogPath: npmInstallLogPathFor(key),
+        failedLogPath: npmInstallLogPathFor(key),
+      },
+      async () => {
+        console.log(pc.dim('→ installing worktree node_modules…'));
+        const r = await installNodeModules({ worktree, key, env });
+        if (r.rc !== 0) {
+          throw new Error(`npm install failed (rc=${r.rc}). Log: ${r.logPath}`);
+        }
+        console.log(pc.dim(`    log: ${r.logPath}`));
+        return r;
+      },
+    );
     result.npmInstallLogPath = npmInstall.logPath;
-    if (npmInstall.rc !== 0) {
-      throw new Error(`npm install failed (rc=${npmInstall.rc}). Log: ${npmInstall.logPath}`);
-    }
-    console.log(pc.dim(`    log: ${npmInstall.logPath}`));
 
     console.log(pc.dim('→ ensuring Chromium is installed for Playwright…'));
     const install = await installPlaywrightBrowsers({ worktree, key, env });

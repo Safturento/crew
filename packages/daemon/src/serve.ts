@@ -70,6 +70,9 @@ export async function serve(env: NodeJS.ProcessEnv = process.env) {
     if (typeof devMod.seedStateTransitionFixtures === 'function') {
       await devMod.seedStateTransitionFixtures(db);
     }
+    if (typeof devMod.seedStartupEventsFixtures === 'function') {
+      await devMod.seedStartupEventsFixtures(db);
+    }
     if (typeof devMod.seedTranscriptFixtures === 'function') {
       config.transcriptsHome = fixtureTranscriptsHome(config.dbFile);
       mkdirSync(config.transcriptsHome, { recursive: true });

@@ -23,6 +23,10 @@ services:
       # that need both the canonical DB (crew-state volume) and host transcripts.
       # Daemon image itself doesn't ship these; bind keeps them outside the build.
       - ./scripts:/app/scripts:ro
+      # Read-only: CLI startup-phase JSONL events (CREW-201). The CLI writes
+      # ~/.crew/startup/<key>.jsonl from the host on dispatch; the daemon's
+      # chokidar watcher ingests them into startup_events.
+      - ${HOME}/.crew/startup:/root/.crew/startup:ro
     environment:
       - CREW_DB_FILE=/state/state.db
       - CREW_HOST=0.0.0.0

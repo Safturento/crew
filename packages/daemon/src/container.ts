@@ -94,6 +94,9 @@ export function buildContainer(deps: BuildContainerDeps): AwilixContainer<Daemon
           resolveJsonlPath: (agentKey) =>
             resolveJsonlPathForAgent(db, agentKey, config.transcriptsHome),
           logger,
+          // CREW-201: lets getTimeline merge startup_events rows alongside
+          // the transcript so the drawer Timeline shows phase rows.
+          db,
         }),
     ).scoped(),
   });

@@ -1,11 +1,12 @@
 ---
 name: dispatch
 description: crew run prompt-build, skills injection, verification gates
-last_updated: 2026-05-22
+last_updated: 2026-05-24
 covers:
   - 'packages/cli/src/lib/run/**'
   - 'packages/cli/src/lib/prompts/**'
   - 'packages/cli/src/lib/mcp-config/**'
+  - 'packages/cli/src/lib/startup-events/**'
   - '.claude/skills/**'
   - 'packages/cli/src/lib/preflight/**'
   - 'packages/cli/src/lib/figma-snapshot/**'
@@ -135,8 +136,17 @@ Skip rules (in `computeGateSkip`): `verify_after_run=false`, `--skip-docker`, do
 | `/tmp/crew-playwright-<KEY>.log`  | `installPlaywrightBrowsers`   | Chromium install output                                                                                                                                                                                              |
 | `/tmp/crew-verify-gate-<KEY>.log` | `runVerifyGate` resume        | Output of each gate-driven agent resume                                                                                                                                                                              |
 | `/tmp/crew-mcp-<KEY>.log`         | `writeMcpDiagnosticLog`       | Resolved MCP wiring — chrome MCP server path, playwright chromium path, plugin warnings, and the `.mcp.json` it produced. Inspect when the agent reports `mcp__chrome__use_browser` missing from its tool inventory. |
+| `~/.crew/startup/<KEY>.jsonl`     | `emitStartupEvent`            | CREW-201 per-phase startup events (`started` + `completed`/`failed` per phase). Daemon's chokidar watcher (mounted into the container as `/root/.crew/startup`) ingests into `startup_events` and surfaces the merged `StartupPhaseRow`s on the timeline endpoint. |
 
 All paths constructed by helpers in `lib/run/paths.ts` — use those rather than rebuilding the strings.
+
+## Startup event capture (CREW-201)
+
+Every step in the **End-to-end flow** above is bracketed with `emitStartupEvent` calls so the dashboard's drawer Timeline shows the dispatch's pre-agent phases in real time. The phases — `crew_startup_preflight`, `crew_startup_worktree`, `crew_startup_env_spec`, `crew_startup_npm_install`, `crew_startup_docker`, `crew_startup_mcp`, `crew_startup_claude_spawn` — map 1:1 onto the orchestrator steps. `crew fix-pr` emits just the two phases it actually runs (preflight + claude_spawn); the rest stay silent because their code paths don't execute.
+
+The helper that wraps each phase is `bracketStartupPhase` in `lib/startup-events/`. It writes a `started` event before the work, a `completed` event after success, and a `failed` event in the catch block before re-throwing — failure semantics for callers are unchanged. The preflight phase uses a sync `failStartupPhase` helper instead, because its early-exit paths call `process.exit()` (async appends would never flush before teardown).
+
+The daemon side lives in `IngestService.watchStartupEvents` (chokidar) + `mergeStartedAndCompleted` (per-phase merge into one `StartupPhaseRow`). Failed events also call `IngestService.recordError`, flipping the agent's derived state to `error` so the dashboard list view turns red immediately.
 
 ## Failure modes worth knowing
 

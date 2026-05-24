@@ -252,6 +252,82 @@ describe('TranscriptRow', () => {
       expect(row).toHaveAttribute('data-category', 'system');
       expect(screen.getByTestId('transcript-row-tag')).toHaveTextContent('Turn');
     });
+
+    describe('CREW-201 startup phase rows', () => {
+      function makeStartupPhaseRow(over: Partial<Record<string, unknown>> = {}) {
+        return {
+          type: 'system',
+          subtype: 'crew_startup_npm_install',
+          startedAt: '2026-05-23T10:00:00.000Z',
+          completedAt: '2026-05-23T10:00:01.000Z',
+          status: 'completed',
+          summary: 'installed 152 packages',
+          durationMs: 1000,
+          logPath: null,
+          ...over,
+        } as unknown as SystemEvent;
+      }
+
+      it('renders the human-readable label for each of the 7 subtypes', () => {
+        const cases: Array<[string, string]> = [
+          ['crew_startup_preflight', 'Preflight'],
+          ['crew_startup_worktree', 'Worktree'],
+          ['crew_startup_env_spec', 'Env spec'],
+          ['crew_startup_npm_install', 'npm install'],
+          ['crew_startup_docker', 'Docker'],
+          ['crew_startup_mcp', 'MCP'],
+          ['crew_startup_claude_spawn', 'Claude spawn'],
+        ];
+        for (const [subtype, label] of cases) {
+          const { unmount } = render(<TranscriptRow event={makeStartupPhaseRow({ subtype })} />);
+          expect(screen.getByTestId('transcript-row-tag')).toHaveTextContent(label);
+          unmount();
+        }
+      });
+
+      it('failed status renders the row with error tone (red)', () => {
+        const event = makeStartupPhaseRow({
+          status: 'failed',
+          summary: 'exit 1: cannot resolve foo',
+        });
+        render(<TranscriptRow event={event} />);
+        expect(screen.getByTestId('transcript-row')).toHaveAttribute('data-tone', 'error');
+        expect(screen.getByTestId('transcript-row-text').className).toContain('text-red-400');
+      });
+
+      it('in_flight status keeps the default tone and shows the started summary', () => {
+        const event = makeStartupPhaseRow({
+          status: 'in_flight',
+          completedAt: null,
+          summary: 'npm ci begun',
+          durationMs: null,
+        });
+        render(<TranscriptRow event={event} />);
+        expect(screen.getByTestId('transcript-row')).toHaveAttribute('data-tone', 'default');
+        expect(screen.getByTestId('transcript-row-text')).toHaveTextContent('npm ci begun');
+      });
+
+      it('completed status uses startedAt as the displayed timestamp', () => {
+        const event = makeStartupPhaseRow({
+          startedAt: '2026-05-23T14:32:17.000Z',
+        });
+        render(<TranscriptRow event={event} />);
+        // formatHHMMSS uses UTC; matches the existing tools-category test pattern.
+        expect(screen.getByTestId('transcript-row-meta')).toHaveTextContent('14:32:17');
+      });
+
+      it('expanded view includes the logPath when present', () => {
+        const event = makeStartupPhaseRow({
+          status: 'failed',
+          logPath: '/tmp/crew-npm-install-CREW-201.log',
+        });
+        render(<TranscriptRow event={event} />);
+        fireEvent.click(screen.getByTestId('transcript-row-trigger'));
+        expect(screen.getByTestId('transcript-row-expanded')).toHaveTextContent(
+          '/tmp/crew-npm-install-CREW-201.log',
+        );
+      });
+    });
   });
 
   describe('multi-block events', () => {

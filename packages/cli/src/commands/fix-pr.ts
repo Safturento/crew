@@ -26,6 +26,7 @@ import {
 } from '../lib/run/index.js';
 import { runResumePreflight } from '../lib/preflight/index.js';
 import { playwrightEnabled, resolveAppUrl, type DockerPorts } from '../lib/mcp-config/index.js';
+import { emitStartupEvent } from '../lib/startup-events/index.js';
 
 export type FeedbackMode =
   | { kind: 'pr' }
@@ -199,7 +200,39 @@ async function runFixPr(key: string, flags: FixPrFlags): Promise<void> {
     if (pwEnabled && projectConfig.playwright) {
       resolvedAppUrl = resolveAppUrl(projectConfig.playwright.app_url, dockerPorts, envVars).raw;
     }
-    await runResumePreflight({ config: projectConfig, worktree });
+    // CREW-201: preflight phase is the only pre-spawn work fix-pr does
+    // (worktree, env, npm, docker, mcp are all reused from the prior
+    // `crew run`). Bracket it so the dashboard's drawer Timeline shows
+    // a Preflight row before the claude spawn lands.
+    const preflightStartedAt = Date.now();
+    await emitStartupEvent(key, {
+      type: 'system',
+      subtype: 'crew_startup_preflight',
+      status: 'started',
+      timestamp: new Date().toISOString(),
+      summary: 'resume preflight begun',
+    });
+    try {
+      await runResumePreflight({ config: projectConfig, worktree });
+      await emitStartupEvent(key, {
+        type: 'system',
+        subtype: 'crew_startup_preflight',
+        status: 'completed',
+        timestamp: new Date().toISOString(),
+        summary: 'resume preflight ok',
+        durationMs: Date.now() - preflightStartedAt,
+      });
+    } catch (err) {
+      await emitStartupEvent(key, {
+        type: 'system',
+        subtype: 'crew_startup_preflight',
+        status: 'failed',
+        timestamp: new Date().toISOString(),
+        summary: err instanceof Error ? err.message : String(err),
+        durationMs: Date.now() - preflightStartedAt,
+      });
+      throw err;
+    }
   }
 
   const prompt = buildFixPrPrompt({
@@ -227,6 +260,14 @@ async function runFixPr(key: string, flags: FixPrFlags): Promise<void> {
   // advisory should be printed.
   const headBefore = await getHeadSha(worktree);
 
+  const claudeSpawnStartedAt = Date.now();
+  await emitStartupEvent(key, {
+    type: 'system',
+    subtype: 'crew_startup_claude_spawn',
+    status: 'started',
+    timestamp: new Date().toISOString(),
+    summary: 'spawning claude --resume',
+  });
   const sub = spawnClaudeResume({
     sessionId: session.sessionId,
     prompt,
@@ -235,6 +276,15 @@ async function runFixPr(key: string, flags: FixPrFlags): Promise<void> {
     env: resolvedAppUrl
       ? { CREW_APP_URL: resolvedAppUrl, PLAYWRIGHT_BASE_URL: resolvedAppUrl }
       : undefined,
+  });
+  await emitStartupEvent(key, {
+    type: 'system',
+    subtype: 'crew_startup_claude_spawn',
+    status: 'completed',
+    timestamp: new Date().toISOString(),
+    summary: `claude resume pid=${sub.pid ?? '?'}`,
+    durationMs: Date.now() - claudeSpawnStartedAt,
+    logPath: logFile,
   });
 
   // Register the run with the daemon. Skipped when no project config is in
@@ -245,11 +295,7 @@ async function runFixPr(key: string, flags: FixPrFlags): Promise<void> {
   if (projectConfig) {
     // Best-effort Jira title — registerRun COALESCEs '' against the existing
     // value so missing creds / network errors never clobber a known title.
-    const ticketTitle = await fetchTicketSummaryFromEnv(
-      key,
-      projectConfig.jira.site,
-      process.env,
-    );
+    const ticketTitle = await fetchTicketSummaryFromEnv(key, projectConfig.jira.site, process.env);
     const registration = await daemonClient.registerRun({
       key,
       projectName: projectConfig.name,

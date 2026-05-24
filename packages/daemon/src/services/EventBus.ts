@@ -18,6 +18,7 @@ export type SsePayload =
       data: { key: string; from: string | null; to: string; ts: number };
     }
   | { type: 'tool_calls.changed'; data: { key: string } }
+  | { type: 'startup_events.changed'; data: { key: string } }
   | { type: 'run.completed'; data: { key: string; ts: number } }
   | { type: 'cache.miss'; data: Record<string, never> };
 

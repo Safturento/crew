@@ -38,6 +38,11 @@ import {
   writeMcpFile,
 } from '../lib/mcp-config/index.js';
 import {
+  bracketStartupPhase,
+  emitStartupEvent,
+  emitStartupEventSync,
+} from '../lib/startup-events/index.js';
+import {
   resolveBrunoEnvName,
   writeEnvFile as writeBrunoEnvFile,
 } from '../lib/bruno-smoke/index.js';
@@ -132,9 +137,28 @@ export async function runRun(key: string, opts: RunOptions): Promise<never> {
   if (opts.message !== undefined && opts.message.trim().length === 0) {
     fail('empty message provided to -m');
   }
+
+  // Preflight phase (CREW-201): emit `started` immediately so the
+  // dashboard's drawer Timeline shows "Preflight in flight" while the
+  // CLI walks the precondition checks below. `failPreflight()` (used
+  // by every early-exit path in this block) emits the failed event
+  // synchronously before calling `fail()`, so the dashboard sees the
+  // failed phase row before the process tears down.
+  await emitStartupEvent(key, {
+    type: 'system',
+    subtype: 'crew_startup_preflight',
+    status: 'started',
+    timestamp: new Date().toISOString(),
+    summary: 'discovering project config + checking tools',
+  });
+  const preflightStartedAt = Date.now();
+
   const config = await discoverProjectConfig(process.cwd());
   if (!config) {
-    fail(
+    failStartupPhase(
+      key,
+      'crew_startup_preflight',
+      preflightStartedAt,
       'no crew project config matches this repository — configure ~/.config/crew/projects/<name>.toml',
     );
   }
@@ -202,66 +226,119 @@ export async function runRun(key: string, opts: RunOptions): Promise<never> {
   const required = ['claude', 'gh', 'jq', 'bwrap'];
   const missing = preflightTools(required, childPath);
   if (missing.length > 0) {
-    fail(`missing required tool(s) on PATH: ${missing.join(', ')}`);
+    failStartupPhase(
+      key,
+      'crew_startup_preflight',
+      preflightStartedAt,
+      `missing required tool(s) on PATH: ${missing.join(', ')}`,
+    );
   }
 
   const ghTokenSource = join(config.repo_path, '.claude', 'secrets', 'gh-token');
   try {
     requireGhToken(ghTokenSource);
   } catch (err) {
-    fail(err instanceof Error ? err.message : String(err));
+    failStartupPhase(
+      key,
+      'crew_startup_preflight',
+      preflightStartedAt,
+      err instanceof Error ? err.message : String(err),
+    );
   }
 
   const worktree = worktreePathFor(config.repo_path, key);
   try {
     requireWorktreeAvailable(worktree);
   } catch (err) {
-    fail(err instanceof Error ? err.message : String(err));
+    failStartupPhase(
+      key,
+      'crew_startup_preflight',
+      preflightStartedAt,
+      err instanceof Error ? err.message : String(err),
+    );
   }
+
+  await emitStartupEvent(key, {
+    type: 'system',
+    subtype: 'crew_startup_preflight',
+    status: 'completed',
+    timestamp: new Date().toISOString(),
+    summary: `project=${config.name}; tools ok; gh token present`,
+    durationMs: Date.now() - preflightStartedAt,
+  });
 
   const childEnv = { ...process.env, PATH: childPath };
 
-  console.log(pc.dim(`→ fetching origin/${config.default_branch}…`));
-  await execa('git', ['-C', config.repo_path, 'fetch', 'origin', config.default_branch], {
-    stdout: 'inherit',
-    stderr: 'inherit',
-    env: childEnv,
-  });
+  await bracketStartupPhase(
+    key,
+    {
+      subtype: 'crew_startup_worktree',
+      startedSummary: `creating worktree at ${worktree}`,
+      completedSummary: () => `worktree at ${worktree} (branch ${key})`,
+    },
+    async () => {
+      console.log(pc.dim(`→ fetching origin/${config.default_branch}…`));
+      await execa('git', ['-C', config.repo_path, 'fetch', 'origin', config.default_branch], {
+        stdout: 'inherit',
+        stderr: 'inherit',
+        env: childEnv,
+      });
 
-  console.log(
-    pc.dim(
-      `→ creating worktree at ${worktree} on branch ${key} (from origin/${config.default_branch})…`,
-    ),
-  );
-  await execa(
-    'git',
-    [
-      '-C',
-      config.repo_path,
-      'worktree',
-      'add',
-      '-b',
-      key,
-      worktree,
-      `origin/${config.default_branch}`,
-    ],
-    { stdout: 'inherit', stderr: 'inherit', env: childEnv },
+      console.log(
+        pc.dim(
+          `→ creating worktree at ${worktree} on branch ${key} (from origin/${config.default_branch})…`,
+        ),
+      );
+      await execa(
+        'git',
+        [
+          '-C',
+          config.repo_path,
+          'worktree',
+          'add',
+          '-b',
+          key,
+          worktree,
+          `origin/${config.default_branch}`,
+        ],
+        { stdout: 'inherit', stderr: 'inherit', env: childEnv },
+      );
+
+      const secretsDir = join(worktree, '.claude', 'secrets');
+      mkdirSync(secretsDir, { recursive: true });
+      const ghTokenDest = join(secretsDir, 'gh-token');
+      copyFileSync(ghTokenSource, ghTokenDest);
+      chmodSync(ghTokenDest, 0o600);
+    },
   );
 
-  const secretsDir = join(worktree, '.claude', 'secrets');
-  mkdirSync(secretsDir, { recursive: true });
-  const ghTokenDest = join(secretsDir, 'gh-token');
-  copyFileSync(ghTokenSource, ghTokenDest);
-  chmodSync(ghTokenDest, 0o600);
+  const ghTokenDest = join(worktree, '.claude', 'secrets', 'gh-token');
 
   let dockerPorts: { httpPort: number; httpsPort: number; postgresPort: number } | undefined;
   let envVars: Record<string, string> | undefined;
   if (config.docker) {
-    const result = await bringUpWorktreeEnv({
-      worktree,
-      canonicalWorktreeName: config.docker.canonical_worktree,
-      projectName: config.name,
-    });
+    const result = await bracketStartupPhase(
+      key,
+      {
+        subtype: 'crew_startup_env_spec',
+        startedSummary: 'materializing env.toml for worktree',
+        completedSummary: (r: BringUpWorktreeEnvResult) =>
+          r.kind === 'env-spec'
+            ? `materialized .env from env.toml${r.base.APP_URL ? ` (APP_URL=${r.base.APP_URL})` : ''}`
+            : `wrote ${r.legacy.envPath} (legacy)`,
+      },
+      () => {
+        // TS doesn't narrow `config.docker` across the closure boundary
+        // even though the surrounding `if (config.docker)` is in scope.
+        const dockerCfg = config.docker;
+        if (!dockerCfg) throw new Error('unreachable: config.docker checked above');
+        return bringUpWorktreeEnv({
+          worktree,
+          canonicalWorktreeName: dockerCfg.canonical_worktree,
+          projectName: config.name,
+        });
+      },
+    );
     if (result.kind === 'legacy') {
       const env = result.legacy;
       dockerPorts = {
@@ -331,59 +408,76 @@ export async function runRun(key: string, opts: RunOptions): Promise<never> {
     playwrightEnabled(config) && config.playwright != null && smokeEnabled(config);
   const wantsChrome = Boolean(config.visual_fidelity);
   if (wantsPlaywright || wantsChrome) {
-    const playwrightOpts =
-      wantsPlaywright && config.playwright
-        ? {
-            appUrl: resolveAppUrl(config.playwright.app_url, dockerPorts, envVars).raw,
-            resolverCwd: config.repo_path,
-          }
-        : undefined;
-    const mcpWarnings: string[] = [];
-    const writeResult = await writeMcpFile(worktree, {
-      playwright: playwrightOpts,
-      chrome: wantsChrome ? {} : undefined,
-      warn: (msg) => {
-        mcpWarnings.push(msg);
-        console.warn(pc.yellow(`  ! ${msg}`));
+    await bracketStartupPhase(
+      key,
+      {
+        subtype: 'crew_startup_mcp',
+        startedSummary: 'writing .mcp.json',
+        completedSummary: (parts: string[]) =>
+          parts.length > 0 ? `wrote .mcp.json (${parts.join(', ')})` : 'wrote .mcp.json',
+        completedLogPath: mcpLogPathFor(key),
+        failedLogPath: mcpLogPathFor(key),
       },
-    });
-    console.log(pc.dim(`→ wrote ${join(worktree, '.mcp.json')}`));
-    if (playwrightOpts) {
-      console.log(pc.dim(`    CREW_APP_URL=${playwrightOpts.appUrl}`));
-      console.log(
-        pc.dim(
-          writeResult.chromiumPath
-            ? `    chromium: ${writeResult.chromiumPath}`
-            : `    chromium: <unresolved> — MCP will fall back to system chrome channel`,
-        ),
-      );
-    }
-    if (wantsChrome) {
-      console.log(
-        pc.dim(
-          writeResult.chromeMcpPath
-            ? `    chrome MCP: ${writeResult.chromeMcpPath}`
-            : `    chrome MCP: <unresolved> — superpowers-chrome not installed`,
-        ),
-      );
-    }
-    if (writeResult.existed) {
-      console.warn(pc.yellow('  ! .mcp.json already existed in worktree — overwritten'));
-    }
-    // Diagnostic log of resolved MCP wiring + warnings. Lets a debugger
-    // working from the host explain "chrome MCP tool was missing from the
-    // agent's session" without re-running the dispatch. CREW-184.
-    const mcpLogPath = mcpLogPathFor(key);
-    writeMcpDiagnosticLog({
-      logPath: mcpLogPath,
-      mcpJsonPath: join(worktree, '.mcp.json'),
-      chromiumPath: writeResult.chromiumPath,
-      chromeMcpPath: writeResult.chromeMcpPath,
-      wantsPlaywright,
-      wantsChrome,
-      warnings: mcpWarnings,
-    });
-    console.log(pc.dim(`    mcp log: ${mcpLogPath}`));
+      async () => {
+        const playwrightOpts =
+          wantsPlaywright && config.playwright
+            ? {
+                appUrl: resolveAppUrl(config.playwright.app_url, dockerPorts, envVars).raw,
+                resolverCwd: config.repo_path,
+              }
+            : undefined;
+        const mcpWarnings: string[] = [];
+        const writeResult = await writeMcpFile(worktree, {
+          playwright: playwrightOpts,
+          chrome: wantsChrome ? {} : undefined,
+          warn: (msg) => {
+            mcpWarnings.push(msg);
+            console.warn(pc.yellow(`  ! ${msg}`));
+          },
+        });
+        console.log(pc.dim(`→ wrote ${join(worktree, '.mcp.json')}`));
+        if (playwrightOpts) {
+          console.log(pc.dim(`    CREW_APP_URL=${playwrightOpts.appUrl}`));
+          console.log(
+            pc.dim(
+              writeResult.chromiumPath
+                ? `    chromium: ${writeResult.chromiumPath}`
+                : `    chromium: <unresolved> — MCP will fall back to system chrome channel`,
+            ),
+          );
+        }
+        if (wantsChrome) {
+          console.log(
+            pc.dim(
+              writeResult.chromeMcpPath
+                ? `    chrome MCP: ${writeResult.chromeMcpPath}`
+                : `    chrome MCP: <unresolved> — superpowers-chrome not installed`,
+            ),
+          );
+        }
+        if (writeResult.existed) {
+          console.warn(pc.yellow('  ! .mcp.json already existed in worktree — overwritten'));
+        }
+        // Diagnostic log of resolved MCP wiring + warnings. Lets a debugger
+        // working from the host explain "chrome MCP tool was missing from the
+        // agent's session" without re-running the dispatch. CREW-184.
+        const mcpLogPath = mcpLogPathFor(key);
+        writeMcpDiagnosticLog({
+          logPath: mcpLogPath,
+          mcpJsonPath: join(worktree, '.mcp.json'),
+          chromiumPath: writeResult.chromiumPath,
+          chromeMcpPath: writeResult.chromeMcpPath,
+          wantsPlaywright,
+          wantsChrome,
+          warnings: mcpWarnings,
+        });
+        console.log(pc.dim(`    mcp log: ${mcpLogPath}`));
+        const parts: string[] = [];
+        if (wantsPlaywright) parts.push('playwright');
+        if (wantsChrome) parts.push('chrome');
+        return parts;
+      },
+    );
   }
 
   console.log(pc.dim('→ injecting dispatcher-managed skills into the worktree…'));
@@ -455,6 +549,14 @@ export async function runRun(key: string, opts: RunOptions): Promise<never> {
   // stdio directly: execa v9 rejects WriteStream objects whose fd hasn't
   // been assigned yet (createWriteStream returns synchronously but opens
   // the file on the next tick), causing an immediate ERR_INVALID_ARG_VALUE.
+  const claudeSpawnStartedAt = Date.now();
+  await emitStartupEvent(key, {
+    type: 'system',
+    subtype: 'crew_startup_claude_spawn',
+    status: 'started',
+    timestamp: new Date().toISOString(),
+    summary: 'spawning claude --dangerously-skip-permissions',
+  });
   const claudeProcess = execa('claude', ['--dangerously-skip-permissions', '-p', prompt], {
     cwd: worktree,
     stdin: 'ignore',
@@ -471,6 +573,15 @@ export async function runRun(key: string, opts: RunOptions): Promise<never> {
   });
   claudeProcess.stdout?.pipe(logStream);
   claudeProcess.stderr?.pipe(logStream);
+  await emitStartupEvent(key, {
+    type: 'system',
+    subtype: 'crew_startup_claude_spawn',
+    status: 'completed',
+    timestamp: new Date().toISOString(),
+    summary: `claude pid=${claudeProcess.pid ?? '?'}`,
+    durationMs: Date.now() - claudeSpawnStartedAt,
+    logPath,
+  });
 
   // When claude exits, give the tail one more poll cycle to drain any
   // trailing events, then abort.
@@ -520,11 +631,8 @@ export async function runRun(key: string, opts: RunOptions): Promise<never> {
   // Best-effort Jira title for the dashboard's agent rows. Returns '' on any
   // failure (missing creds, network, malformed payload); the daemon upserts
   // with COALESCE so an empty value preserves any title already on the row.
-  const ticketTitle = await fetchTicketSummaryFromEnv(
-    key,
-    config.jira.site,
-    process.env,
-    (msg) => console.log(pc.yellow('!'), msg),
+  const ticketTitle = await fetchTicketSummaryFromEnv(key, config.jira.site, process.env, (msg) =>
+    console.log(pc.yellow('!'), msg),
   );
   const registration = await daemonClient.registerRun({
     key,
@@ -618,6 +726,36 @@ export function resolveExitCode(result: ExecResult, signaled: boolean): number {
 function fail(message: string): never {
   console.error(pc.red(`error: ${message}`));
   process.exit(1);
+}
+
+/**
+ * Emit a `failed` startup phase event synchronously, then call `fail()`.
+ * Sync so callers retain `fail()`'s control-flow narrowing — `await`ing
+ * an async helper that returns `Promise<never>` does not narrow `null`
+ * checks in TypeScript.
+ */
+function failStartupPhase(
+  key: string,
+  subtype:
+    | 'crew_startup_preflight'
+    | 'crew_startup_worktree'
+    | 'crew_startup_env_spec'
+    | 'crew_startup_npm_install'
+    | 'crew_startup_docker'
+    | 'crew_startup_mcp'
+    | 'crew_startup_claude_spawn',
+  startedAt: number,
+  message: string,
+): never {
+  emitStartupEventSync(key, {
+    type: 'system',
+    subtype,
+    status: 'failed',
+    timestamp: new Date().toISOString(),
+    summary: message,
+    durationMs: Date.now() - startedAt,
+  });
+  fail(message);
 }
 
 /**
