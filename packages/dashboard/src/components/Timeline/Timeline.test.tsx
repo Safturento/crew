@@ -493,6 +493,75 @@ describe('Timeline', () => {
     }
   });
 
+  it('renders the toolbar inside the scroll region as sticky', () => {
+    mockUseTimeline.mockReturnValue(
+      timelineResult({
+        data: { events: [evt(1)] },
+        isSuccess: true,
+        status: 'success',
+      }),
+    );
+    render(<Timeline agentKey="KAN-1" agentState="running" />);
+    const toolbar = screen.getByTestId('timeline-toolbar');
+    expect(toolbar.className).toMatch(/\bsticky\b/);
+    expect(toolbar.className).toMatch(/\btop-0\b/);
+  });
+
+  it('mounts the toolbar inside the single scroll viewport (no second scroll container)', () => {
+    mockUseTimeline.mockReturnValue(
+      timelineResult({
+        data: { events: [evt(1), evt(2)] },
+        isSuccess: true,
+        status: 'success',
+      }),
+    );
+    const { container } = render(<Timeline agentKey="KAN-1" agentState="running" />);
+    const scrollables = container.querySelectorAll('[class*="overflow-y-auto"]');
+    expect(scrollables.length).toBe(1);
+    // Toolbar lives inside that one viewport, not outside it.
+    expect(scrollables[0].contains(screen.getByTestId('timeline-toolbar'))).toBe(true);
+  });
+
+  it('mounts MinimapStripe alongside the scroll viewport when there are sections', () => {
+    mockUseTimeline.mockReturnValue(
+      timelineResult({
+        data: { events: [evt(1), evt(2)] },
+        isSuccess: true,
+        status: 'success',
+      }),
+    );
+    render(<Timeline agentKey="KAN-1" agentState="running" />);
+    expect(screen.queryByTestId('minimap-stripe')).toBeInTheDocument();
+  });
+
+  it('does not mount MinimapStripe when there are no events', () => {
+    mockUseTimeline.mockReturnValue(
+      timelineResult({
+        data: { events: [] },
+        isSuccess: true,
+        status: 'success',
+      }),
+    );
+    render(<Timeline agentKey="KAN-1" agentState="running" />);
+    expect(screen.queryByTestId('minimap-stripe')).not.toBeInTheDocument();
+  });
+
+  it('breaks live mode when a minimap segment is clicked', async () => {
+    mockUseTimeline.mockReturnValue(
+      timelineResult({
+        data: { events: [evt(1), evt(2)] },
+        isSuccess: true,
+        status: 'success',
+      }),
+    );
+    render(<Timeline agentKey="KAN-1" agentState="running" />);
+    const liveToggle = screen.getByRole('switch', { name: /live/i });
+    expect(liveToggle).toHaveAttribute('aria-checked', 'true');
+    const segment = screen.getAllByTestId('minimap-segment')[0];
+    await userEvent.click(segment);
+    expect(liveToggle).toHaveAttribute('aria-checked', 'false');
+  });
+
   it('toggling a single section is independent of the others', async () => {
     const transitions: StateTransition[] = [
       { from: null, to: 'init', ts: Date.parse('2026-04-29T11:59:50Z') },

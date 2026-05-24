@@ -100,7 +100,9 @@ test.describe('Agent drawer', () => {
     await expect(page.getByTestId('transcript-row').first()).toBeVisible();
   });
 
-  test('Filters popover toggle changes the rendered transcript-row count in DOM', async ({ page }) => {
+  test('Filters popover toggle changes the rendered transcript-row count in DOM', async ({
+    page,
+  }) => {
     await mockTimeline(page, SEEDED_AGENT_KEY, TWO_GROUP_EVENTS);
     await page.goto(`/#/agent/${SEEDED_AGENT_KEY}`);
 
@@ -147,6 +149,69 @@ test.describe('Agent drawer', () => {
     await expect(page.getByTestId('transcript-row').first()).toBeVisible();
     await expect(page.getByTestId('drawer-backdrop')).toHaveCount(0);
     await expect(page.getByRole('button', { name: /close drawer/i })).toHaveCount(0);
+  });
+
+  test('long section is fully scrollable inside the Timeline body (no clip)', async ({ page }) => {
+    const manyEvents = Array.from({ length: 40 }, (_, i) => ({
+      type: 'assistant',
+      uuid: `evt-long-${i}`,
+      timestamp: new Date(Date.parse('2026-05-04T10:00:00Z') + i * 1000).toISOString(),
+      message: {
+        role: 'assistant',
+        content: [{ type: 'text', text: `Long-section event ${i + 1}` }],
+      },
+    }));
+    await mockTimeline(page, SEEDED_AGENT_KEY, manyEvents);
+    await page.goto(`/#/agent/${SEEDED_AGENT_KEY}`);
+
+    await expect(page.getByTestId('drawer-header')).toBeVisible();
+    const firstRow = page.getByTestId('transcript-row').first();
+    await expect(firstRow).toBeVisible();
+    const lastRow = page.getByTestId('transcript-row').last();
+    await lastRow.scrollIntoViewIfNeeded();
+    await expect(lastRow).toBeVisible();
+  });
+
+  test('timeline toolbar stays in view while scrolling the body', async ({ page }) => {
+    const manyEvents = Array.from({ length: 40 }, (_, i) => ({
+      type: 'assistant',
+      uuid: `evt-sticky-${i}`,
+      timestamp: new Date(Date.parse('2026-05-04T10:00:00Z') + i * 1000).toISOString(),
+      message: {
+        role: 'assistant',
+        content: [{ type: 'text', text: `Sticky-toolbar event ${i + 1}` }],
+      },
+    }));
+    await mockTimeline(page, SEEDED_AGENT_KEY, manyEvents);
+    await page.goto(`/#/agent/${SEEDED_AGENT_KEY}`);
+
+    const toolbar = page.getByTestId('timeline-toolbar');
+    await expect(toolbar).toBeInViewport();
+    await page.getByTestId('transcript-row').last().scrollIntoViewIfNeeded();
+    await expect(toolbar).toBeInViewport();
+  });
+
+  test('clicking a minimap segment smooth-scrolls the Timeline body', async ({ page }) => {
+    const manyEvents = Array.from({ length: 40 }, (_, i) => ({
+      type: 'assistant',
+      uuid: `evt-jump-${i}`,
+      timestamp: new Date(Date.parse('2026-05-04T10:00:00Z') + i * 1000).toISOString(),
+      message: {
+        role: 'assistant',
+        content: [{ type: 'text', text: `Minimap-jump event ${i + 1}` }],
+      },
+    }));
+    await mockTimeline(page, SEEDED_AGENT_KEY, manyEvents);
+    await page.goto(`/#/agent/${SEEDED_AGENT_KEY}`);
+
+    const segments = page.getByTestId('minimap-segment');
+    await expect(segments.first()).toBeVisible();
+    // First scroll to bottom so the segment-click actually has to move us.
+    await page.getByTestId('transcript-row').last().scrollIntoViewIfNeeded();
+    await segments.first().click();
+    // Wait past JUMP_DURATION_MS (250) for smooth scroll to settle.
+    await page.waitForTimeout(450);
+    await expect(page.getByTestId('transcript-row').first()).toBeInViewport();
   });
 
   test('state badge flips on synthetic SSE event without page reload', async ({ page }) => {

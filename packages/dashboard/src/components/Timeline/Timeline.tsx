@@ -1,12 +1,14 @@
 import { ListCollapse } from 'lucide-react';
-import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 
 import { useStateHistory, useTimeline } from '../../data/queries.js';
 import type { AgentDetailTokensByTool, AgentState, TranscriptEvent } from '../../data/types.js';
 import { toolAlias } from '../../format/tool-alias.js';
+import { cn } from '../../lib/utils.js';
 import { Button } from '../ui/button.js';
 import { Filters, defaultTimelineFilterState, type TimelineFilterState } from './Filters.js';
 import { LiveModeToggle, NewEventsPill } from './LiveModeToggle.js';
+import { MinimapStripe } from './MinimapStripe.js';
 import { SearchBar } from './SearchBar.js';
 import {
   eventCategories,
@@ -17,6 +19,7 @@ import {
 import { groupEventsByState, type TimelineSectionData } from './groupEventsByState.js';
 import { TimelineSection } from './TimelineSection.js';
 import { TranscriptRow } from './TranscriptRow.js';
+import { useSectionHeights } from './useSectionHeights.js';
 
 interface TimelineProps {
   agentKey: string;
@@ -119,6 +122,54 @@ export function Timeline({ agentKey, agentState, tokensByTool = [] }: TimelinePr
     lastSeenVisibleLengthRef.current = next;
   }, [filteredEvents.length, liveMode]);
 
+  const { heights: sectionHeights, refFor: sectionRefFor } = useSectionHeights(sections.length);
+  const [stripeHeight, setStripeHeight] = useState(0);
+
+  // Observe the scroll viewport's clientHeight so the stripe matches it.
+  // Depends on `isLoading` so we re-attach once the loading branch unmounts
+  // and the real scroll viewport (with `scrollRef`) appears in the DOM.
+  useEffect(() => {
+    if (isLoading) return;
+    const el = scrollRef.current;
+    if (!el || typeof ResizeObserver === 'undefined') return;
+    const ro = new ResizeObserver(([entry]) => {
+      setStripeHeight(entry.contentRect.height);
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [isLoading]);
+
+  const minimapSections = useMemo(
+    () =>
+      sections.map((s, i) => ({
+        state: s.state,
+        startedAt: s.startedAt,
+        eventCount: s.events.length,
+        height: sectionHeights[i] ?? 0,
+      })),
+    [sections, sectionHeights],
+  );
+
+  const onSectionJump = useCallback(
+    (idx: number) => {
+      const viewport = scrollRef.current;
+      if (!viewport) return;
+      const sectionEls = viewport.querySelectorAll<HTMLElement>('[data-testid="timeline-section"]');
+      const target = sectionEls[idx];
+      if (!target) return;
+      const toolbar = viewport.querySelector<HTMLElement>('[data-testid="timeline-toolbar"]');
+      const toolbarHeight = toolbar?.clientHeight ?? 0;
+      const top = target.offsetTop - toolbarHeight;
+      if (typeof viewport.scrollTo === 'function') {
+        viewport.scrollTo({ top, behavior: 'smooth' });
+      } else {
+        viewport.scrollTop = top;
+      }
+      if (liveMode) setLiveMode(false);
+    },
+    [liveMode],
+  );
+
   if (isLoading) {
     return (
       <div
@@ -137,54 +188,67 @@ export function Timeline({ agentKey, agentState, tokensByTool = [] }: TimelinePr
 
   return (
     <div className="relative flex h-full min-h-0 flex-col">
-      <TimelineToolbar
-        filterState={filterState}
-        onFilterStateChange={setFilterState}
-        tokensByTool={tokensByTool}
-        searchValue={searchInput}
-        onSearchChange={setSearchInput}
-        liveMode={liveMode}
-        onLiveModeChange={setLiveMode}
-        onCollapseAll={collapseAll}
-        canCollapseAll={sections.length > 0}
-      />
-      {events.length === 0 ? (
-        <div
-          data-testid="timeline-empty"
-          className="flex flex-1 items-center justify-center p-6 text-sm text-muted-foreground"
-        >
-          No timeline events yet.
-        </div>
-      ) : filteredEvents.length === 0 ? (
-        <FilterEmptyState onShowAll={resetFilters} />
-      ) : (
-        <div
-          ref={scrollRef}
-          className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto px-1 py-1"
-        >
-          {sections.map((s) => {
-            const key = sectionKey(s);
-            const isOpen = !collapsed[key];
-            const elapsedMs = (s.endedAt ?? now) - s.startedAt;
-            const tokenSum = s.events.reduce((sum, e) => sum + eventTokens(e), 0);
-            return (
-              <TimelineSection
-                key={key}
-                state={s.state}
-                startedAt={s.startedAt}
-                elapsedMs={elapsedMs}
-                eventCount={s.events.length}
-                tokenSum={tokenSum}
-                isOpen={isOpen}
-                onToggle={() => toggleSection(key)}
-              >
-                {s.events.map((event) => (
-                  <TranscriptRow key={eventKey(event)} event={event} />
-                ))}
-              </TimelineSection>
-            );
-          })}
-        </div>
+      <div
+        ref={scrollRef}
+        className="relative flex min-h-0 flex-1 flex-col overflow-y-auto"
+        style={{ scrollbarGutter: 'stable' }}
+      >
+        <TimelineToolbar
+          data-testid="timeline-toolbar"
+          className="sticky top-0 z-10 bg-card"
+          filterState={filterState}
+          onFilterStateChange={setFilterState}
+          tokensByTool={tokensByTool}
+          searchValue={searchInput}
+          onSearchChange={setSearchInput}
+          liveMode={liveMode}
+          onLiveModeChange={setLiveMode}
+          onCollapseAll={collapseAll}
+          canCollapseAll={sections.length > 0}
+        />
+        {events.length === 0 ? (
+          <div
+            data-testid="timeline-empty"
+            className="flex flex-1 items-center justify-center p-6 text-sm text-muted-foreground"
+          >
+            No timeline events yet.
+          </div>
+        ) : filteredEvents.length === 0 ? (
+          <FilterEmptyState onShowAll={resetFilters} />
+        ) : (
+          <div className="flex flex-col gap-2 px-1 py-1">
+            {sections.map((s, i) => {
+              const key = sectionKey(s);
+              const isOpen = !collapsed[key];
+              const elapsedMs = (s.endedAt ?? now) - s.startedAt;
+              const tokenSum = s.events.reduce((sum, e) => sum + eventTokens(e), 0);
+              return (
+                <div key={key} ref={sectionRefFor(i)}>
+                  <TimelineSection
+                    state={s.state}
+                    startedAt={s.startedAt}
+                    elapsedMs={elapsedMs}
+                    eventCount={s.events.length}
+                    tokenSum={tokenSum}
+                    isOpen={isOpen}
+                    onToggle={() => toggleSection(key)}
+                  >
+                    {s.events.map((event) => (
+                      <TranscriptRow key={eventKey(event)} event={event} />
+                    ))}
+                  </TimelineSection>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+      {filteredEvents.length > 0 && sections.length > 0 && (
+        <MinimapStripe
+          sections={minimapSections}
+          stripeHeight={stripeHeight}
+          onSectionJump={onSectionJump}
+        />
       )}
       {!liveMode && pendingNewCount > 0 && (
         <div className="pointer-events-none absolute right-3 bottom-3">
@@ -237,6 +301,8 @@ interface TimelineToolbarProps {
   onLiveModeChange: (next: boolean) => void;
   onCollapseAll: () => void;
   canCollapseAll: boolean;
+  className?: string;
+  'data-testid'?: string;
 }
 
 function TimelineToolbar({
@@ -249,9 +315,17 @@ function TimelineToolbar({
   onLiveModeChange,
   onCollapseAll,
   canCollapseAll,
+  className,
+  'data-testid': testId,
 }: TimelineToolbarProps) {
   return (
-    <div className="flex items-center gap-2 border-b border-white/10 px-3 py-2 text-xs text-muted-foreground">
+    <div
+      data-testid={testId}
+      className={cn(
+        'flex items-center gap-2 border-b border-white/10 px-3 py-2 text-xs text-muted-foreground',
+        className,
+      )}
+    >
       <Filters state={filterState} onChange={onFilterStateChange} tokensByTool={tokensByTool} />
       <SearchBar value={searchValue} onChange={onSearchChange} />
       <Button

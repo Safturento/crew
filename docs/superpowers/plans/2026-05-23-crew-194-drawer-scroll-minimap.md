@@ -373,6 +373,8 @@ export function useSectionHeights(sectionCount: number): UseSectionHeightsResult
   const observerRef = useRef<ResizeObserver | null>(null);
   const rafRef = useRef<number | null>(null);
   const pendingRef = useRef<Map<number, number>>(new Map());
+  // See refFor cache below — load-bearing for avoiding a re-observe loop.
+  const refCacheRef = useRef<Map<number, (el: HTMLElement | null) => void>>(new Map());
 
   // Resize the heights array if sectionCount changes (preserve existing where possible).
   useEffect(() => {
@@ -396,14 +398,23 @@ export function useSectionHeights(sectionCount: number): UseSectionHeightsResult
       rafRef.current = requestAnimationFrame(() => {
         rafRef.current = null;
         if (pendingRef.current.size === 0) return;
-        setHeights((prev) => {
-          const next = prev.slice();
-          for (const [idx, h] of pendingRef.current) {
-            if (idx < next.length) next[idx] = h;
-          }
-          return next;
-        });
+        // Suspenders to the cached-ref belt: return SAME array when no
+        // height actually changed so React skips the re-render. Without
+        // this, a re-observe of an unchanged section still allocates a
+        // new array → re-render → re-observe → loop.
+        const snapshot = new Map(pendingRef.current);
         pendingRef.current.clear();
+        setHeights((prev) => {
+          let changed = false;
+          const next = prev.slice();
+          for (const [idx, h] of snapshot) {
+            if (idx < next.length && next[idx] !== h) {
+              next[idx] = h;
+              changed = true;
+            }
+          }
+          return changed ? next : prev;
+        });
       });
     });
     observerRef.current = observer;
@@ -412,11 +423,22 @@ export function useSectionHeights(sectionCount: number): UseSectionHeightsResult
       observerRef.current = null;
       if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
       rafRef.current = null;
+      elementsRef.current.clear();
+      pendingRef.current.clear();
+      refCacheRef.current.clear();
     };
   }, []);
 
+  // CRITICAL: cache the callback per index. A fresh inner arrow every
+  // call would make React detach + reattach every section's ref each
+  // render → ResizeObserver re-fires initial-size → setHeights → render
+  // → fresh refs → infinite loop. PR #275's first iteration shipped
+  // without this and produced an unreliable section-collapse regression.
+  // Also clear `refCacheRef.current.clear()` in the observer-effect cleanup.
   const refFor = useCallback((index: number) => {
-    return (el: HTMLElement | null) => {
+    const cached = refCacheRef.current.get(index);
+    if (cached) return cached;
+    const cb = (el: HTMLElement | null) => {
       const observer = observerRef.current;
       if (!observer) return;
       // Unregister any element previously held at this index
@@ -431,6 +453,8 @@ export function useSectionHeights(sectionCount: number): UseSectionHeightsResult
         observer.observe(el);
       }
     };
+    refCacheRef.current.set(index, cb);
+    return cb;
   }, []);
 
   return useMemo(() => ({ heights, refFor }), [heights, refFor]);
