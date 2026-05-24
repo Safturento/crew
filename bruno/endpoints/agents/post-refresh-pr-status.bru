@@ -1,0 +1,65 @@
+meta {
+  name: POST /api/agents/:key/refresh-pr-status
+  type: http
+  seq: 11
+}
+
+post {
+  url: {{baseUrl}}/api/agents/{{agentKey}}/refresh-pr-status
+  body: none
+}
+
+script:pre-request {
+  // Fallback for standalone runs. In the smoke chain, post-register-run.bru
+  // sets `agentKey` via `vars:post-response`; this only fires when the chain
+  // has not already populated it.
+  if (!bru.getVar("agentKey")) {
+    bru.setVar("agentKey", "BRUNO-1");
+  }
+}
+
+assert {
+  res.status: eq 200
+  res.body.stateChanged: isBoolean
+}
+
+tests {
+  test("response shape — stateChanged + optional newState", () => {
+    expect(res.body.stateChanged).to.be.a("boolean");
+    const allowedStates = [
+      "initializing",
+      "running",
+      "pr_open",
+      "pr_merged",
+      "error",
+      "finished",
+    ];
+    if (res.body.stateChanged) {
+      expect(allowedStates).to.include(res.body.newState);
+    } else {
+      expect(res.body.newState === undefined).to.equal(true);
+    }
+  });
+
+  test("BRUNO-1 has no pr_url so the request is a clean no-op", () => {
+    // The registered fixture agent has no PR URL, so PrPoller.checkAgent
+    // short-circuits before reaching gh. State must not change.
+    expect(res.body.stateChanged).to.equal(false);
+  });
+}
+
+docs {
+  Manual on-demand PR-state refresh (CREW-202). The drawer's "Refresh PR"
+  button calls this when an agent is in pr_open. The daemon delegates to
+  PrPoller.checkAgent, which:
+    1. 404s if the agent key is unknown.
+    2. No-ops (stateChanged: false) when the agent has no pr_url OR is
+       not in pr_open (manual Refresh from a non-pr_open state is silent).
+    3. Otherwise calls `gh pr view <url> --json state` and, when the PR is
+       MERGED or CLOSED, writes a pr_open → pr_merged transition and
+       publishes `agent.state_changed`.
+
+  BRUNO-1 (the smoke fixture) has no pr_url, so this card exercises the
+  no-op path. Smoke that exercises the merge path requires a live PR — out
+  of scope for the deterministic suite.
+}
