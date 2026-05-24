@@ -22,6 +22,18 @@ Organization: Active is grouped by topic (not chronology) since the dominant acc
 
 ### Figma & Crew DS
 
+#### 2026-05-24 — Publish `state/pr-merged` variable in Crew DS Figma
+
+**What:** CREW-202 added a `pr_merged` agent state in dashboard code (emerald-500 family, same shade as `finished`). The dashboard binds the new state via direct Tailwind classes (`text-emerald-500`, `bg-emerald-1050`, etc.) in `STATE_CLASSES.pr_merged`. The corresponding Crew DS Figma variable (`state/pr-merged → tw/colors/emerald/500`) was not added in the same pass, so the Figma DS state-token table is one row behind the code.
+
+**Why noticed:** `agents-doc-parity-check` during CREW-202 implementation flagged `.agents/design-system.md`'s state-tokens table as a covered file. The doc was updated to call out the divergence; this followup ensures the Figma side catches up.
+
+**Anchors:** `.agents/design-system.md` § "State tokens"; `packages/dashboard/src/data/state-meta.ts` (`STATE_CLASSES.pr_merged`); Crew DS file `DsA7QuEa2WthDATkksd1Bq` → `Semantic Colors` collection (where the 7 existing `state/*` variables live).
+
+**What's been considered:** Reusing `state/finished` instead of adding a new variable was tempting (both are emerald-500) but conflates two semantically-distinct states — `finished` means "Finish ran cleanly," `pr_merged` means "PR closed, Finish is next." Keeping them as separate aliases (even when they resolve to the same shade today) preserves the option to differentiate later (e.g. swap pr_merged to `emerald/400` for slight contrast against `finished`'s `emerald/500`).
+
+**Shape of work:** ~5 min in Figma — add `state/pr-merged` to `Crew / Semantic Colors` aliasing `Core / tw/colors / emerald/500`. Rebind StateBadge/Pill component instances for the new state if the design language warrants a distinct visual treatment from `finished`. Re-run `crew figma-snapshot` and confirm `visual-fidelity-check` still passes against the dashboard.
+
 #### 2026-05-23 — TokensByTool Figma component lacks the Cost column shipped in CREW-195
 
 **Ticket:** [CREW-189](https://safturento.atlassian.net/browse/CREW-189) — Epic exception. Tracked under the drawer-polish Epic; reconcile when the Epic transitions to Done.

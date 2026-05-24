@@ -1,7 +1,7 @@
 ---
 name: design-system
 description: Crew Figma DS + token bindings + Pill primitive contract
-last_updated: 2026-05-23
+last_updated: 2026-05-24
 covers:
   - 'packages/dashboard/src/components/**'
   - '*.figma.tsx'
@@ -67,6 +67,16 @@ State tokens (8 total — 7 states + foreground):
 | `state/error`        | `red/400`            |
 | `state/finished`     | `emerald/500`        |
 | `state/foreground`   | `slate/950`          |
+
+**CREW-202 — `pr_merged` state ships in dashboard code only.**
+Code (`packages/dashboard/src/data/state-meta.ts`) carries a new `pr_merged`
+entry in `STATE_META` + `STATE_CLASSES`, using the emerald-500 family — same
+shade as `finished` — to signal "PR done, Finish is the next user action."
+AgentRow + DrawerHeader bind directly to `text-emerald-500` / `bg-emerald-1050`
+in code; no `state/pr-merged` variable was added to Crew DS Figma yet. Followup
+tracked at `docs/followups.md` ("CREW-202 — publish state/pr-merged in Crew DS
+Figma") so a future Figma pass can rebind the consumer components without
+code churn.
 
 `border` and `input` alias to `white` (RGB only) — consumer fills carry the alpha (screens-file fills use opacity 0.04 / 0.06 / 0.07 / 0.12 for the white-overlay pattern). Required because Figma variable aliases don't have alpha overlay built-in.
 
