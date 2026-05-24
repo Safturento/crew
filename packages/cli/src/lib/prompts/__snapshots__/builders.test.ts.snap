@@ -99,9 +99,32 @@ A failed \`npm run test:e2e\` that produced \`ECONNREFUSED\` while the same flow
 - Update implementation and tests to address each point.
 - After each meaningful unit of work, \`git add\` and commit with a clear message referencing KAN-23.
 - Run \`npm run lint\`, \`npm run format\`, \`npm run typecheck\`, and \`npm run test:run\` — all must pass before pushing.
-- Push with \`git push --force-with-lease origin KAN-23\` to extend the existing PR (unless Step 0 produced rebase-resolution commits — see the preamble's "do not push" override). Do NOT open a new PR. Plain \`--force\` is never allowed.
 - If a piece of feedback is wrong or you disagree with it, write your reasoning back instead of blindly applying it.
 - Do NOT resolve review threads on GitHub yourself.
+
+## Closing your session
+
+When you've finished addressing the review feedback, deliver the result back to the PR branch before exiting:
+
+1. Check what you have to push:
+
+   \`\`\`
+   git log @{upstream}..HEAD --oneline
+   \`\`\`
+
+2. If commits exist, push them:
+
+   \`\`\`
+   git push --force-with-lease origin KAN-23
+   \`\`\`
+
+   \`--force-with-lease\` is required because fix-pr sessions frequently rebase or amend commits; plain \`--force\` is never allowed because it would clobber concurrent pushes the user may have made manually. \`--force-with-lease\` refuses the push in that case so nothing gets overwritten.
+
+3. If there are no commits to push (you decided no changes were needed, or you're aborting), don't push — just exit. You may optionally add a brief comment to the PR explaining your reasoning, but do NOT resolve review threads yourself.
+
+Do not skip the push on a successful session — the user is relying on you to deliver the result back to the PR branch. If \`--force-with-lease\` is refused (e.g. branch-protection rules, concurrent upstream commits), surface that as the final error and exit; the user will resolve it manually.
+
+**Step 0 override:** if Step 0 produced rebase-resolution commits, DO NOT push at the end even if everything passes — follow the preamble's \`Rebase resolution + feedback ready for inspection\` exit path instead.
 
 ## Final report
 
@@ -214,9 +237,32 @@ A failed \`npm run test:e2e\` that produced \`ECONNREFUSED\` while the same flow
 - Update implementation and tests to address each point.
 - After each meaningful unit of work, \`git add\` and commit with a clear message referencing KAN-23.
 - Run \`npm run lint\`, \`npm run format\`, \`npm run typecheck\`, and \`npm run test:run\` — all must pass before pushing.
-- Push with \`git push --force-with-lease origin KAN-23\` to extend the existing PR (unless Step 0 produced rebase-resolution commits — see the preamble's "do not push" override). Do NOT open a new PR. Plain \`--force\` is never allowed.
 - If a piece of feedback is wrong or you disagree with it, write your reasoning back instead of blindly applying it.
 - Do NOT resolve review threads on GitHub yourself.
+
+## Closing your session
+
+When you've finished addressing the review feedback, deliver the result back to the PR branch before exiting:
+
+1. Check what you have to push:
+
+   \`\`\`
+   git log @{upstream}..HEAD --oneline
+   \`\`\`
+
+2. If commits exist, push them:
+
+   \`\`\`
+   git push --force-with-lease origin KAN-23
+   \`\`\`
+
+   \`--force-with-lease\` is required because fix-pr sessions frequently rebase or amend commits; plain \`--force\` is never allowed because it would clobber concurrent pushes the user may have made manually. \`--force-with-lease\` refuses the push in that case so nothing gets overwritten.
+
+3. If there are no commits to push (you decided no changes were needed, or you're aborting), don't push — just exit. You may optionally add a brief comment to the PR explaining your reasoning, but do NOT resolve review threads yourself.
+
+Do not skip the push on a successful session — the user is relying on you to deliver the result back to the PR branch. If \`--force-with-lease\` is refused (e.g. branch-protection rules, concurrent upstream commits), surface that as the final error and exit; the user will resolve it manually.
+
+**Step 0 override:** if Step 0 produced rebase-resolution commits, DO NOT push at the end even if everything passes — follow the preamble's \`Rebase resolution + feedback ready for inspection\` exit path instead.
 
 ## Final report
 
@@ -313,9 +359,32 @@ If \`npm run test:e2e\` (or the project's equivalent) reports missing browsers, 
 - Update implementation and tests to address each point.
 - After each meaningful unit of work, \`git add\` and commit with a clear message referencing KAN-23.
 - Run \`npm run lint\`, \`npm run format\`, \`npm run typecheck\`, and \`npm run test:run\` — all must pass before pushing.
-- Push with \`git push --force-with-lease origin KAN-23\` to extend the existing PR (unless Step 0 produced rebase-resolution commits — see the preamble's "do not push" override). Do NOT open a new PR. Plain \`--force\` is never allowed.
 - If a piece of feedback is wrong or you disagree with it, write your reasoning back instead of blindly applying it.
 - Do NOT resolve review threads on GitHub yourself.
+
+## Closing your session
+
+When you've finished addressing the review feedback, deliver the result back to the PR branch before exiting:
+
+1. Check what you have to push:
+
+   \`\`\`
+   git log @{upstream}..HEAD --oneline
+   \`\`\`
+
+2. If commits exist, push them:
+
+   \`\`\`
+   git push --force-with-lease origin KAN-23
+   \`\`\`
+
+   \`--force-with-lease\` is required because fix-pr sessions frequently rebase or amend commits; plain \`--force\` is never allowed because it would clobber concurrent pushes the user may have made manually. \`--force-with-lease\` refuses the push in that case so nothing gets overwritten.
+
+3. If there are no commits to push (you decided no changes were needed, or you're aborting), don't push — just exit. You may optionally add a brief comment to the PR explaining your reasoning, but do NOT resolve review threads yourself.
+
+Do not skip the push on a successful session — the user is relying on you to deliver the result back to the PR branch. If \`--force-with-lease\` is refused (e.g. branch-protection rules, concurrent upstream commits), surface that as the final error and exit; the user will resolve it manually.
+
+**Step 0 override:** if Step 0 produced rebase-resolution commits, DO NOT push at the end even if everything passes — follow the preamble's \`Rebase resolution + feedback ready for inspection\` exit path instead.
 
 ## Final report
 

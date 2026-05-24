@@ -740,6 +740,71 @@ describe('buildFixPrPrompt', () => {
     const finalReportIdx = prompt.indexOf('Final report');
     expect(finalReportIdx).toBeGreaterThan(fixesIdx);
   });
+
+  describe('closing-step push block (CREW-199)', () => {
+    it('renders a Closing your session section', () => {
+      const prompt = buildFixPrPrompt({
+        key: 'KAN-23',
+        feedback: '...',
+        feedbackSource: 'stdin',
+      });
+      expect(prompt).toContain('Closing your session');
+    });
+
+    it('instructs the agent to check for commits ahead of upstream', () => {
+      const prompt = buildFixPrPrompt({
+        key: 'KAN-23',
+        feedback: '...',
+        feedbackSource: 'stdin',
+      });
+      expect(prompt).toContain('git log @{upstream}..HEAD');
+    });
+
+    it('instructs the agent to push with --force-with-lease', () => {
+      const prompt = buildFixPrPrompt({
+        key: 'KAN-23',
+        feedback: '...',
+        feedbackSource: 'stdin',
+      });
+      expect(prompt).toContain('git push --force-with-lease');
+    });
+
+    it('explains why --force-with-lease rather than plain -f (concurrent pushes)', () => {
+      const prompt = buildFixPrPrompt({
+        key: 'KAN-23',
+        feedback: '...',
+        feedbackSource: 'stdin',
+      });
+      const closingIdx = prompt.indexOf('Closing your session');
+      const closingSection = prompt.slice(closingIdx);
+      expect(closingSection).toMatch(/force-with-lease/);
+      expect(closingSection).toMatch(/concurrent/i);
+    });
+
+    it('tells the agent NOT to push when no commits exist', () => {
+      const prompt = buildFixPrPrompt({
+        key: 'KAN-23',
+        feedback: '...',
+        feedbackSource: 'stdin',
+      });
+      const closingIdx = prompt.indexOf('Closing your session');
+      const closingSection = prompt.slice(closingIdx);
+      expect(closingSection).toMatch(/no commits.*don't push|nothing to push.*don't push/is);
+    });
+
+    it('places the closing-step block between Apply the fixes and Final report', () => {
+      const prompt = buildFixPrPrompt({
+        key: 'KAN-23',
+        feedback: '...',
+        feedbackSource: 'stdin',
+      });
+      const fixesIdx = prompt.indexOf('Apply the fixes');
+      const closingIdx = prompt.indexOf('Closing your session');
+      const finalReportIdx = prompt.indexOf('Final report');
+      expect(closingIdx).toBeGreaterThan(fixesIdx);
+      expect(finalReportIdx).toBeGreaterThan(closingIdx);
+    });
+  });
 });
 
 describe('buildResumePrompt — sandbox-network-note', () => {
