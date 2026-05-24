@@ -1068,6 +1068,18 @@ Auto-detect is most user-friendly; the flag is the cheapest first step.
 
 ### Architecture & Config
 
+#### 2026-05-24 — `CREW_STARTUP_EVENTS_DIR` bypasses `DaemonConfig` and reads `process.env` directly inside `app.ts`
+
+**What:** The onReady hook in `packages/daemon/src/app.ts:112` reads `process.env.CREW_STARTUP_EVENTS_DIR ?? join(homedir(), '.crew', 'startup')` directly, instead of going through `parseDaemonConfig` like `CREW_CONFIG_DIR` and `CREW_DB_FILE` do. Every test that builds the app via `buildApp` has to either (a) accept that the chokidar watcher will scan the developer's real `~/.crew/startup` and replay historical startup events into the EventBus, or (b) set the env var manually around its `setupApp`. The route-level `events.test.ts` was hit by (a) until 2026-05-24 — a fresh subscriber received a leaked startup event instead of the one the test had just published (UUID mismatch). Worked around in-test; the architectural fix is to fold `startupEventsDir` into `DaemonConfig` so `parseDaemonConfig({ CREW_STARTUP_EVENTS_DIR: ... })` is the single source of truth and tests just override it the way they already override config/db paths.
+
+**Why noticed:** Debugging the pre-existing `events.test.ts > streams a published event with correct id/event/data framing` failure during a "address the test failures agents keep mentioning in PRs" sweep. Conversation 2026-05-24; the test fix landed in `fix/daemon-events-test-isolation`, but the root cause is that one env var escaped the config layer.
+
+**Anchors:** `packages/daemon/src/app.ts:105-118` (onReady hook), `packages/daemon/src/config.ts` (`parseDaemonConfig` — needs the new field), `packages/daemon/src/services/IngestService.ts` (`watchStartupEvents` consumer), `packages/daemon/src/routes/events.test.ts` (current workaround at `setupApp`).
+
+**Shape of work:** Small. Add `startupEventsDir: string` to `DaemonConfig` (with default `join(homedir(), '.crew', 'startup')`), read it from `parseDaemonConfig`'s env input, plumb through `BuildAppOptions` so the onReady hook reads `config.startupEventsDir` instead of `process.env`. Tests then pass the path through their existing `parseDaemonConfig({...})` call site and the manual env-var dance in `events.test.ts` goes away.
+
+**Open questions:** None — pattern already established by the other two config vars.
+
 #### 2026-04-30 — Crew owns `.claude/settings.json` per worktree (gated on empirical bwrap/socat validation)
 
 **What:** Today the project's `.claude/settings.json` (committed in-tree) and the crew TOML's `[sandbox]` block (per-project crew config) are two hand-maintained sources for the same truth — sandbox allowlist, allowWrite paths, etc. They drift. A spec should decide whether crew writes a generated `.claude/settings.json` per worktree using the "tag header + refuse to clobber" pattern from `docker-env.sh`.
