@@ -30,6 +30,14 @@ export const SYSTEM_LABELS: Record<string, string> = {
   stop_hook_summary: 'Stop hook',
   turn_duration: 'Turn',
   api_error: 'API error',
+  // CREW-201 — CLI dispatch startup phases captured in ~/.crew/startup/<key>.jsonl
+  crew_startup_preflight: 'Preflight',
+  crew_startup_worktree: 'Worktree',
+  crew_startup_env_spec: 'Env spec',
+  crew_startup_npm_install: 'npm install',
+  crew_startup_docker: 'Docker',
+  crew_startup_mcp: 'MCP',
+  crew_startup_claude_spawn: 'Claude spawn',
 };
 
 export function labelForAttachment(type: string): string {

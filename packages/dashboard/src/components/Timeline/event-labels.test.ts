@@ -69,4 +69,13 @@ describe('labelForSystem', () => {
   it('SYSTEM_LABELS is non-empty', () => {
     expect(Object.keys(SYSTEM_LABELS).length).toBeGreaterThan(0);
   });
+  it('CREW-201 startup phase subtypes have human-readable labels', () => {
+    expect(labelForSystem('crew_startup_preflight')).toBe('Preflight');
+    expect(labelForSystem('crew_startup_worktree')).toBe('Worktree');
+    expect(labelForSystem('crew_startup_env_spec')).toBe('Env spec');
+    expect(labelForSystem('crew_startup_npm_install')).toBe('npm install');
+    expect(labelForSystem('crew_startup_docker')).toBe('Docker');
+    expect(labelForSystem('crew_startup_mcp')).toBe('MCP');
+    expect(labelForSystem('crew_startup_claude_spawn')).toBe('Claude spawn');
+  });
 });

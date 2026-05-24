@@ -283,8 +283,30 @@ function specForUserBlock(event: UserEvent, block: UserContent): RowSpec {
 }
 
 function specForSystem(event: SystemEvent): RowSpec {
-  const summary = summarizeSystem(event);
   const subtype = (event as { subtype?: string }).subtype ?? 'system';
+
+  // CREW-201: StartupPhaseRow variants carry `status` + `startedAt`
+  // instead of the regular system event's `timestamp`. The merge happens
+  // in the daemon; the frontend only branches on the shape it receives.
+  if (subtype.startsWith('crew_startup_')) {
+    const phase = event as unknown as {
+      subtype: string;
+      status: 'in_flight' | 'completed' | 'failed';
+      summary: string;
+      startedAt: string;
+    };
+    return {
+      blockType: 'system',
+      category: 'system',
+      tone: phase.status === 'failed' ? 'error' : 'default',
+      tagLabel: labelForSystem(phase.subtype),
+      oneLiner: truncate(phase.summary ?? ''),
+      timestamp: phase.startedAt,
+      expanded: prettyJson(event),
+    };
+  }
+
+  const summary = summarizeSystem(event);
   return {
     blockType: 'system',
     category: 'system',
