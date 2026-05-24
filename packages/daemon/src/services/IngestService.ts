@@ -89,6 +89,11 @@ export class IngestService {
   /** runId → agent_key resolution cache so the per-event hot path doesn't
    *  re-SELECT from `runs`. Populated lazily (or by `attach`). */
   private readonly runToAgent = new Map<number, string>();
+  /** Per-agent the `run_id` of the most-recently-ingested tool_call. Drives
+   *  the `pr_open → running` re-cycle when a `crew fix-pr` (or any future
+   *  re-dispatch) starts a structurally-new run on an agent already in
+   *  `pr_open`. CREW-198. */
+  private readonly lastRunIdCache = new Map<string, number>();
 
   constructor(deps: IngestServiceDeps) {
     this.db = deps.db;
@@ -241,6 +246,7 @@ export class IngestService {
 
     await this.applyStateTransition({
       agentKey,
+      runId,
       toolName: toolUse.name,
       summary,
       tsIso: event.timestamp,
@@ -288,12 +294,20 @@ export class IngestService {
 
   private async applyStateTransition(input: {
     agentKey: string;
+    runId: number;
     toolName: string;
     summary: string;
     tsIso: string;
   }): Promise<void> {
     const previous = await this.getCachedAgentState(input.agentKey);
-    const next = computeNextState(previous, input.toolName, input.summary);
+    const lastSeenRunId = this.lastRunIdCache.get(input.agentKey);
+    const next = computeNextState(previous, input.toolName, input.summary, {
+      currentRunId: input.runId,
+      lastSeenRunId,
+    });
+    // Track the latest ingested run regardless of whether a transition fired;
+    // subsequent same-run calls must not re-trigger the cycle.
+    this.lastRunIdCache.set(input.agentKey, input.runId);
     if (next === previous) return;
 
     const ts = Date.parse(input.tsIso);
@@ -378,6 +392,15 @@ function resolveAttachPath(input: AttachInput): string {
   );
 }
 
+interface ComputeContext {
+  /** The run_id of the tool_call currently being ingested. */
+  currentRunId: number;
+  /** The run_id of the most recently-ingested tool_call for this agent.
+   *  Undefined when no tool_call has yet been ingested for this agent in
+   *  the daemon's lifetime (cold start, pre-priming). */
+  lastSeenRunId: number | undefined;
+}
+
 /**
  * Forward-walk one step in the live state machine. The slice 1b helper
  * `deriveStateFromToolCalls` re-derives state from a *full* tool-call slice;
@@ -386,6 +409,8 @@ function resolveAttachPath(input: AttachInput): string {
  *
  *   - any Bash `gh pr create …` → `pr_open` (and stays)
  *   - else, any tool_call once we were `init` → `running`
+ *   - CREW-198: when in `pr_open` and the tool_call belongs to a NEW run
+ *     (different `run_id` than the last-seen one), cycle back to `running`.
  *   - else, no flip
  *
  * The standalone helper stays the canonical re-derivation for the migration
@@ -396,8 +421,19 @@ function computeNextState(
   previous: TransitionState,
   toolName: string,
   summary: string,
+  ctx: ComputeContext,
 ): TransitionState {
   if (previous === 'finished') return 'finished';
+  // CREW-198: a new run starting on a pr_open agent (e.g. crew fix-pr) cycles
+  // state back to running. The `lastSeenRunId !== undefined` guard prevents
+  // the first-ever tool_call from spuriously firing this transition.
+  if (
+    previous === 'pr_open' &&
+    ctx.lastSeenRunId !== undefined &&
+    ctx.currentRunId !== ctx.lastSeenRunId
+  ) {
+    return 'running';
+  }
   if (previous === 'pr_open') return 'pr_open';
   if (toolName === 'Bash' && summary.startsWith('gh pr create')) return 'pr_open';
   return 'running';

@@ -405,6 +405,130 @@ describe('IngestService.processEventForTest — state_transitions + agent.state_
   });
 });
 
+describe('IngestService.processEventForTest — fix-pr cycle (CREW-198)', () => {
+  it('fires pr_open → running when a new run starts producing tool_calls', async () => {
+    const { db, runId: firstRunId, agentKey } = await setup();
+    try {
+      const svc = new IngestService({ db, logger: silentLogger, eventBus: new EventBus() });
+
+      // Original run: ends with gh pr create → pr_open.
+      await svc.processEventForTest({
+        runId: firstRunId,
+        agentKey,
+        event: makeBashToolUse({
+          id: 'tu_pr',
+          command: 'gh pr create --title hi',
+          ts: '2026-04-29T12:00:00Z',
+        }),
+      });
+      expect((await getLatestState(db, agentKey))).toBe('pr_open');
+
+      // Fix-pr dispatch creates a new run. First tool_call from the new run → pr_open → running.
+      const fixPrRunId = await insertRun(db, agentKey, 'fix-pr', 'session-fix-pr-1');
+      await svc.processEventForTest({
+        runId: fixPrRunId,
+        agentKey,
+        event: makeBashToolUse({
+          id: 'tu_fp_1',
+          command: 'ls',
+          ts: '2026-04-29T12:01:00Z',
+        }),
+      });
+      expect(await getLatestState(db, agentKey)).toBe('running');
+
+      const rows = await db
+        .selectFrom('state_transitions')
+        .selectAll()
+        .orderBy('id', 'asc')
+        .execute();
+      expect(rows.map((r) => `${r.from_state}->${r.to_state}`)).toEqual([
+        'init->pr_open',
+        'pr_open->running',
+      ]);
+    } finally {
+      await db.destroy();
+    }
+  });
+
+  it('does NOT transition pr_open → running on continued activity within the same run', async () => {
+    const { db, runId, agentKey } = await setup();
+    try {
+      const svc = new IngestService({ db, logger: silentLogger, eventBus: new EventBus() });
+
+      await svc.processEventForTest({
+        runId,
+        agentKey,
+        event: makeBashToolUse({
+          id: 'tu_pr',
+          command: 'gh pr create --title hi',
+          ts: '2026-04-29T12:00:00Z',
+        }),
+      });
+      // Within the same run, after pr_open, additional tool_calls don't transition.
+      await svc.processEventForTest({
+        runId,
+        agentKey,
+        event: makeBashToolUse({ id: 'tu_2', command: 'ls', ts: '2026-04-29T12:00:01Z' }),
+      });
+      expect(await getLatestState(db, agentKey)).toBe('pr_open');
+    } finally {
+      await db.destroy();
+    }
+  });
+
+  it('does NOT spuriously transition on the first-ever tool_call (empty lastRunIdCache)', async () => {
+    // Fresh agent never observed before — first tool_call from the only-ever
+    // run should fall through the running-state logic, not falsely trigger
+    // pr_open → running.
+    const { db, runId, agentKey } = await setup();
+    try {
+      const svc = new IngestService({ db, logger: silentLogger, eventBus: new EventBus() });
+      await svc.processEventForTest({
+        runId,
+        agentKey,
+        event: makeBashToolUse({ id: 'tu_1', command: 'ls', ts: '2026-04-29T12:00:00Z' }),
+      });
+      expect(await getLatestState(db, agentKey)).toBe('running');
+    } finally {
+      await db.destroy();
+    }
+  });
+});
+
+async function getLatestState(
+  db: Kysely<DaemonDatabase>,
+  agentKey: string,
+): Promise<string | null> {
+  const row = await db
+    .selectFrom('state_transitions')
+    .select('to_state')
+    .where('agent_key', '=', agentKey)
+    .orderBy('id', 'desc')
+    .executeTakeFirst();
+  return row?.to_state ?? null;
+}
+
+async function insertRun(
+  db: Kysely<DaemonDatabase>,
+  agentKey: string,
+  command: 'run' | 'fix-pr' | 'finish',
+  sessionId: string,
+): Promise<number> {
+  const inserted = await db
+    .insertInto('runs')
+    .values({
+      agent_key: agentKey,
+      command,
+      session_id: sessionId,
+      started_at: new Date().toISOString(),
+      completed_at: null,
+      exit_code: null,
+    })
+    .returning('id')
+    .executeTakeFirstOrThrow();
+  return inserted.id;
+}
+
 describe('IngestService.processEventForTest — tool_calls.changed pings', () => {
   it('publishes tool_calls.changed after each tool_calls insert', async () => {
     const { db, runId, agentKey } = await setup();
