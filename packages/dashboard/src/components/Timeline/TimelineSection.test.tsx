@@ -73,4 +73,14 @@ describe('TimelineSection', () => {
     );
     expect(screen.getByTestId('timeline-section')).toHaveAttribute('data-state', 'waiting');
   });
+
+  it('does not clip its children with overflow-hidden (scroll lives on the Timeline body now)', () => {
+    render(
+      <TimelineSection {...baseProps}>
+        <div data-testid="body" />
+      </TimelineSection>,
+    );
+    const section = screen.getByTestId('timeline-section');
+    expect(section.className).not.toMatch(/\boverflow-hidden\b/);
+  });
 });

@@ -37,7 +37,7 @@ export function TimelineSection({
     <section
       data-testid="timeline-section"
       data-state={state}
-      className={`overflow-hidden border-l-2 ${STATE_CLASSES[state].solidBorder}`}
+      className={`border-l-2 ${STATE_CLASSES[state].solidBorder}`}
     >
       <button
         type="button"
