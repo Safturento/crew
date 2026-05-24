@@ -1,8 +1,52 @@
-import { describe, it, expect, vi } from 'vitest';
+import { afterEach, beforeEach, describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import type { ReactNode } from 'react';
 
 import { DrawerHeader } from './DrawerHeader.js';
 import type { AgentDetail, AgentState } from '../data/types.js';
+
+vi.mock('../data/queries.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../data/queries.js')>();
+  return {
+    ...actual,
+    useRefreshPrStatus: vi.fn(),
+  };
+});
+import { useRefreshPrStatus } from '../data/queries.js';
+const mockedUseRefreshPrStatus = vi.mocked(useRefreshPrStatus);
+
+function makeMutation(overrides: Partial<{ isPending: boolean; mutate: () => void }> = {}) {
+  return {
+    mutate: vi.fn(),
+    mutateAsync: vi.fn(),
+    isPending: false,
+    isError: false,
+    isSuccess: false,
+    isIdle: true,
+    data: undefined,
+    error: null,
+    reset: vi.fn(),
+    variables: undefined,
+    failureCount: 0,
+    failureReason: null,
+    isPaused: false,
+    status: 'idle',
+    submittedAt: 0,
+    context: undefined,
+    ...overrides,
+  } as never;
+}
+
+afterEach(() => {
+  mockedUseRefreshPrStatus.mockReset();
+});
+
+function wrap(ui: ReactNode): ReactNode {
+  const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return <QueryClientProvider client={qc}>{ui}</QueryClientProvider>;
+}
 
 function makeDetail(overrides: Partial<AgentDetail> = {}): AgentDetail {
   return {
@@ -42,6 +86,10 @@ function makeDetail(overrides: Partial<AgentDetail> = {}): AgentDetail {
 }
 
 describe('DrawerHeader', () => {
+  beforeEach(() => {
+    mockedUseRefreshPrStatus.mockReturnValue(makeMutation());
+  });
+
   it('renders project + ticket key + state badge in the breadcrumb', () => {
     render(<DrawerHeader detail={makeDetail()} showCloseButton showOpenAsPage />);
     expect(screen.getByText('kanban-api')).toBeInTheDocument();
@@ -144,5 +192,97 @@ describe('DrawerHeader', () => {
 
     rerender(<DrawerHeader detail={makeDetail()} showCloseButton={false} showOpenAsPage={false} />);
     expect(screen.queryByRole('link', { name: /open as page/i })).not.toBeInTheDocument();
+  });
+});
+
+describe('DrawerHeader — Refresh PR + Merged PR (CREW-202)', () => {
+  beforeEach(() => {
+    mockedUseRefreshPrStatus.mockReturnValue(makeMutation());
+  });
+
+  it('shows a Refresh PR button when state is pr_open and pr_url is set', () => {
+    render(
+      wrap(
+        <DrawerHeader
+          detail={makeDetail({ state: 'pr_open', pr_url: 'https://example.com/pr/1' })}
+          showCloseButton={false}
+          showOpenAsPage={false}
+        />,
+      ),
+    );
+    expect(screen.getByRole('button', { name: /refresh pr/i })).toBeInTheDocument();
+  });
+
+  it('hides Refresh PR button when state is pr_merged', () => {
+    render(
+      wrap(
+        <DrawerHeader
+          detail={makeDetail({ state: 'pr_merged', pr_url: 'https://example.com/pr/2' })}
+          showCloseButton={false}
+          showOpenAsPage={false}
+        />,
+      ),
+    );
+    expect(screen.queryByRole('button', { name: /refresh pr/i })).not.toBeInTheDocument();
+  });
+
+  it('hides Refresh PR button when pr_url is null (no PR to refresh)', () => {
+    render(
+      wrap(
+        <DrawerHeader
+          detail={makeDetail({ state: 'pr_open', pr_url: null })}
+          showCloseButton={false}
+          showOpenAsPage={false}
+        />,
+      ),
+    );
+    expect(screen.queryByRole('button', { name: /refresh pr/i })).not.toBeInTheDocument();
+  });
+
+  it('shows "View merged PR" pill (lucide/git-merge) when state is pr_merged', () => {
+    render(
+      wrap(
+        <DrawerHeader
+          detail={makeDetail({ state: 'pr_merged', pr_url: 'https://example.com/pr/9' })}
+          showCloseButton={false}
+          showOpenAsPage={false}
+        />,
+      ),
+    );
+    const link = screen.getByRole('link', { name: /view merged pr/i });
+    expect(link).toHaveAttribute('href', 'https://example.com/pr/9');
+    expect(link.querySelector('svg')?.classList.toString()).toMatch(/lucide-git-merge/);
+  });
+
+  it('clicking Refresh PR fires the mutation', async () => {
+    const user = userEvent.setup();
+    const mutate = vi.fn();
+    mockedUseRefreshPrStatus.mockReturnValue(makeMutation({ mutate }));
+
+    render(
+      wrap(
+        <DrawerHeader
+          detail={makeDetail({ state: 'pr_open', pr_url: 'https://example.com/pr/1' })}
+          showCloseButton={false}
+          showOpenAsPage={false}
+        />,
+      ),
+    );
+    await user.click(screen.getByRole('button', { name: /refresh pr/i }));
+    expect(mutate).toHaveBeenCalled();
+  });
+
+  it('disables Refresh PR while the mutation is in flight', () => {
+    mockedUseRefreshPrStatus.mockReturnValue(makeMutation({ isPending: true }));
+    render(
+      wrap(
+        <DrawerHeader
+          detail={makeDetail({ state: 'pr_open', pr_url: 'https://example.com/pr/1' })}
+          showCloseButton={false}
+          showOpenAsPage={false}
+        />,
+      ),
+    );
+    expect(screen.getByRole('button', { name: /refresh pr/i })).toBeDisabled();
   });
 });

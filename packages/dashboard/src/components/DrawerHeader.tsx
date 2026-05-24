@@ -1,10 +1,19 @@
 import { useEffect, useState } from 'react';
-import { ArrowUpRight, Container, FolderGit, SquareArrowOutUpRight, X } from 'lucide-react';
+import {
+  ArrowUpRight,
+  Container,
+  FolderGit,
+  GitMerge,
+  RefreshCw,
+  SquareArrowOutUpRight,
+  X,
+} from 'lucide-react';
 
 import { formatDuration } from '../format/duration.js';
 import { formatTokens } from '../format/tokens.js';
 import type { AgentDetail, AgentState } from '../data/types.js';
 import { STATE_META } from '../data/state-meta.js';
+import { useRefreshPrStatus } from '../data/queries.js';
 import { Badge } from './ui/badge.js';
 import { Button } from './ui/button.js';
 import { MetaList } from './ui/meta-list.js';
@@ -30,6 +39,12 @@ export function DrawerHeader({
   const runtime = useLiveRuntime(startedAt, live);
   const meta = STATE_META[detail.state];
   const isWaiting = detail.state === 'waiting';
+  // CREW-202: Refresh PR button shows in the top-right action cluster only
+  // when the agent has an open PR. The mutation hook is always called (Rules
+  // of Hooks); its result is just gated by the rendering.
+  const refreshPr = useRefreshPrStatus(detail.key);
+  const showRefreshPr = detail.state === 'pr_open' && Boolean(detail.pr_url);
+  const showMergedPrPill = detail.state === 'pr_merged' && Boolean(detail.pr_url);
 
   return (
     <header
@@ -58,6 +73,24 @@ export function DrawerHeader({
           {isWaiting && (
             <Button color="waiting" intensity="loud" size="sm">
               Provide input
+            </Button>
+          )}
+          {showRefreshPr && (
+            <Button
+              color="idle"
+              intensity="ghost"
+              size="sm"
+              icon={
+                <RefreshCw
+                  aria-hidden
+                  className={refreshPr.isPending ? 'animate-spin' : undefined}
+                />
+              }
+              onClick={() => refreshPr.mutate()}
+              disabled={refreshPr.isPending}
+              aria-label="Refresh PR status"
+            >
+              Refresh PR
             </Button>
           )}
           {showCloseButton && (
@@ -118,6 +151,19 @@ export function DrawerHeader({
           >
             <a href={detail.jira_url} target="_blank" rel="noreferrer">
               {detail.ticket_key}
+            </a>
+          </Button>
+        )}
+        {showMergedPrPill && (
+          <Button
+            color="idle"
+            intensity="mid"
+            size="md"
+            icon={<GitMerge aria-hidden />}
+            asChild
+          >
+            <a href={detail.pr_url ?? '#'} target="_blank" rel="noreferrer">
+              View merged PR
             </a>
           </Button>
         )}
