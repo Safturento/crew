@@ -1,4 +1,5 @@
 import { STATE_CLASSES } from '@/data/state-meta';
+import { TOOL_COLOR_CLASSES, type ToolColorKey } from '@/data/tool-colors';
 import type { AgentState } from '@/data/types';
 
 export type PillColor = AgentState | 'white';
@@ -47,8 +48,28 @@ const PILL_TOKENS: Record<PillColor, PillTokens> = {
   },
 };
 
-export function pillSurfaceClasses(color: PillColor, intensity: PillIntensity): string {
-  const t = PILL_TOKENS[color];
+const TOOL_PILL_TOKENS = Object.fromEntries(
+  (Object.entries(TOOL_COLOR_CLASSES) as [ToolColorKey, (typeof TOOL_COLOR_CLASSES)[ToolColorKey]][]).map(
+    ([key, c]) => [
+      key,
+      {
+        text: c.text,
+        textOnSolid: 'text-slate-950',
+        bg: c.bg,
+        border: c.border,
+        solidBg: c.solidBg,
+        solidBorder: c.solidBorder,
+      },
+    ],
+  ),
+) as Record<ToolColorKey, PillTokens>;
+
+export function pillSurfaceClasses(
+  color: PillColor,
+  intensity: PillIntensity,
+  toolColor?: ToolColorKey,
+): string {
+  const t = toolColor ? TOOL_PILL_TOKENS[toolColor] : PILL_TOKENS[color];
   switch (intensity) {
     case 'ghost':
       return `${t.text} bg-transparent`;
