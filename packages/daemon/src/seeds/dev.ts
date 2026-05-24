@@ -112,6 +112,18 @@ const FIXTURE_AGENTS: Omit<Insertable<AgentsTable>, 'created_at'>[] = [
     branch: 'KAN-204',
     pr_url: null,
   },
+  // CREW-104 → pr_merged (CREW-202). Same tool-call shape as CREW-102
+  // (gh pr create run) plus a `pr_merged` state_transitions row below
+  // — exercises the new emerald StateBadge, "View merged PR" pill, and
+  // proves the deriveState pr_merged override end-to-end.
+  {
+    key: 'CREW-104',
+    project_name: 'crew',
+    ticket_title: 'Daemon: cache parsed CLAUDE.md',
+    worktree_path: '/home/dev/Repos/crew-CREW-104',
+    branch: 'CREW-104',
+    pr_url: 'https://github.com/Safturento/crew/pull/1235',
+  },
 ];
 
 const FIXTURE_RUNS: Insertable<RunsTable>[] = [
@@ -184,6 +196,16 @@ const FIXTURE_RUNS: Insertable<RunsTable>[] = [
     started_at: '2026-05-07T10:00:00Z',
     completed_at: '2026-05-07T10:08:00Z',
     exit_code: 1,
+  },
+  // CREW-104 → pr_merged demo: completed `run` with a `gh pr create` tool
+  // call below + a pr_merged state_transitions row in FIXTURE_STATE_TRANSITIONS.
+  {
+    agent_key: 'CREW-104',
+    command: 'run',
+    session_id: 'sess-c104-a',
+    started_at: '2026-05-08T09:00:00Z',
+    completed_at: '2026-05-08T09:20:00Z',
+    exit_code: 0,
   },
 ];
 
@@ -325,6 +347,18 @@ const FIXTURE_TOOL_CALLS: FixtureToolCall[] = [
     cache_creation_tokens: 0,
     occurred_at: '2026-05-06T08:24:00Z',
   },
+  // CREW-104 — minimal tool-call set with a `gh pr create` so hasPrCreate is
+  // true; PrPoller (via FIXTURE_STATE_TRANSITIONS) then escalates to pr_merged.
+  {
+    agent_key: 'CREW-104',
+    tool_name: 'Bash',
+    input_summary: 'gh pr create --title "feat: cache CLAUDE.md" --body ...',
+    output_tokens: 460,
+    input_tokens: 195,
+    cache_read_tokens: 800,
+    cache_creation_tokens: 0,
+    occurred_at: '2026-05-08T09:18:00Z',
+  },
 ];
 
 // CREW-186: explicit state_transitions for the agent we materialise a
@@ -350,6 +384,22 @@ const FIXTURE_STATE_TRANSITIONS: Insertable<StateTransitionsTable>[] = [
     from_state: 'running',
     to_state: 'pr_open',
     ts: Date.parse('2026-05-04T11:54:00Z'),
+  },
+  // CREW-104 (CREW-202): pr_open → pr_merged path. Final to_state is what
+  // AgentsService.list/getByKey reads through its state_transitions join,
+  // so the dashboard surfaces this agent in pr_merged with the new
+  // emerald StateBadge + "View merged PR" pill.
+  {
+    agent_key: 'CREW-104',
+    from_state: null,
+    to_state: 'pr_open',
+    ts: Date.parse('2026-05-08T09:18:00Z'),
+  },
+  {
+    agent_key: 'CREW-104',
+    from_state: 'pr_open',
+    to_state: 'pr_merged',
+    ts: Date.parse('2026-05-08T10:30:00Z'),
   },
 ];
 
