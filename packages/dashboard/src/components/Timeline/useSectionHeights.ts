@@ -35,6 +35,7 @@ export function useSectionHeights(sectionCount: number): UseSectionHeightsResult
 
   // Create the observer once.
   useEffect(() => {
+    if (typeof ResizeObserver === 'undefined') return;
     const observer = new ResizeObserver((entries) => {
       for (const entry of entries) {
         const idx = elementsRef.current.get(entry.target as HTMLElement);

@@ -29,3 +29,16 @@ if (typeof globalThis.EventSource === 'undefined') {
   (globalThis as unknown as { EventSource: typeof EventSource }).EventSource =
     NoopEventSource as unknown as typeof EventSource;
 }
+
+// jsdom doesn't ship ResizeObserver. Components that observe layout
+// (e.g. Timeline's MinimapStripe via useSectionHeights) need it to be
+// callable; tests that drive resize behaviour install their own.
+if (typeof globalThis.ResizeObserver === 'undefined') {
+  class NoopResizeObserver {
+    observe(): void {}
+    unobserve(): void {}
+    disconnect(): void {}
+  }
+  (globalThis as unknown as { ResizeObserver: typeof ResizeObserver }).ResizeObserver =
+    NoopResizeObserver as unknown as typeof ResizeObserver;
+}
