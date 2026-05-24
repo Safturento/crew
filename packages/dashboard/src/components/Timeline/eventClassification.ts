@@ -1,11 +1,24 @@
 import type { TranscriptEvent } from '../../data/types.js';
+import { toolAlias } from '../../format/tool-alias.js';
 
 /**
- * Slim 5 event categories used by the Filters dropdown. Identifiers are
+ * Slim 7 event categories used by the Filters popover. Identifiers are
  * kebab-case so they survive URL/query-string serialization later if we
  * want shareable filter state.
+ *
+ * Split from the older Slim 5: `hooks-and-skills` divided along its natural
+ * attachment-subtype partition into `hooks` (the six hook_* / async_hook_response
+ * subtypes) and `skills` (skill_listing / invoked_skills). `startup` carved
+ * out of `system` so the CREW-201 crew_startup_* phases don't get buried.
  */
-export type CategoryId = 'conversation' | 'tools' | 'thinking' | 'hooks-and-skills' | 'system';
+export type CategoryId =
+  | 'conversation'
+  | 'tools'
+  | 'thinking'
+  | 'hooks'
+  | 'skills'
+  | 'system'
+  | 'startup';
 
 export interface CategoryMeta {
   id: CategoryId;
@@ -17,8 +30,10 @@ export const CATEGORIES: readonly CategoryMeta[] = [
   { id: 'conversation', label: 'Conversation', defaultVisible: true },
   { id: 'tools', label: 'Tools', defaultVisible: true },
   { id: 'thinking', label: 'Thinking', defaultVisible: false },
-  { id: 'hooks-and-skills', label: 'Hooks & skills', defaultVisible: false },
+  { id: 'hooks', label: 'Hooks', defaultVisible: false },
+  { id: 'skills', label: 'Skills', defaultVisible: false },
   { id: 'system', label: 'System', defaultVisible: false },
+  { id: 'startup', label: 'Startup', defaultVisible: true },
 ] as const;
 
 export const defaultVisibleCategorySet: ReadonlySet<CategoryId> = new Set(
@@ -45,36 +60,22 @@ const DROPPED_TOP_LEVEL_TYPES: ReadonlySet<string> = new Set([
 /** Attachment subtypes filtered at the data layer before classification. */
 const DROPPED_ATTACHMENT_SUBTYPES: ReadonlySet<string> = new Set(['queued_command']);
 
-const HOOKS_AND_SKILLS_ATTACHMENTS: ReadonlySet<string> = new Set([
+const HOOK_ATTACHMENTS: ReadonlySet<string> = new Set([
   'hook_success',
   'hook_additional_context',
   'hook_system_message',
   'hook_non_blocking_error',
   'hook_cancelled',
   'async_hook_response',
-  'skill_listing',
-  'invoked_skills',
-  'command_permissions',
-  'deferred_tools_delta',
-  'mcp_instructions_delta',
-  'task_reminder',
-  'todo_reminder',
-  'nested_memory',
-  'plan_mode',
-  'plan_mode_exit',
-  'plan_mode_reentry',
-  'ultrathink_effort',
-  'date_change',
-  'edited_text_file',
-  'opened_file_in_ide',
-  'file',
-  'compact_file_reference',
 ]);
+
+const SKILL_ATTACHMENTS: ReadonlySet<string> = new Set(['skill_listing', 'invoked_skills']);
 
 interface ContentBlock {
   type?: string;
   text?: string;
   thinking?: string;
+  id?: string;
   name?: string;
   input?: Record<string, unknown>;
   tool_use_id?: string;
@@ -109,7 +110,7 @@ export function isDroppedEvent(event: TranscriptEvent): boolean {
 }
 
 /**
- * Returns the set of Slim 5 categories an event belongs to. Assistant /
+ * Returns the set of Slim 7 categories an event belongs to. Assistant /
  * user events with mixed content (text + tool_use + thinking) classify
  * into every category their content blocks would.
  */
@@ -145,13 +146,18 @@ export function eventCategories(event: TranscriptEvent): Set<CategoryId> {
       if (categories.size === 0) categories.add('system');
       return categories;
     }
-    case 'system':
-      categories.add('system');
+    case 'system': {
+      const subtype = (event as { subtype?: string }).subtype ?? '';
+      if (subtype.startsWith('crew_startup_')) categories.add('startup');
+      else categories.add('system');
       return categories;
+    }
     case 'attachment': {
       const attachmentType = (event as AttachmentShape).attachment?.type;
-      if (attachmentType && HOOKS_AND_SKILLS_ATTACHMENTS.has(attachmentType)) {
-        categories.add('hooks-and-skills');
+      if (attachmentType && HOOK_ATTACHMENTS.has(attachmentType)) {
+        categories.add('hooks');
+      } else if (attachmentType && SKILL_ATTACHMENTS.has(attachmentType)) {
+        categories.add('skills');
       } else {
         categories.add('system');
       }
@@ -164,23 +170,67 @@ export function eventCategories(event: TranscriptEvent): Set<CategoryId> {
 }
 
 /**
- * Returns every tool_use name carried by an event (assistant.tool_use
- * blocks only). user.tool_result blocks carry only the linked
- * `tool_use_id` — resolving that to a name would require cross-event
- * lookup; callers that need to filter by tool against a tool_result
- * should reconstruct the name→id map themselves.
+ * Walk every assistant.tool_use block across an events array and return a
+ * `tool_use_id → tool name` map. Memoize at the call site (typically
+ * `useMemo` over the events array in Timeline.tsx) — rebuild per change is
+ * cheap because it's O(events × tool_use blocks).
  */
-export function eventToolNames(event: TranscriptEvent): string[] {
-  if (event.type !== 'assistant') return [];
-  const content = (event as AssistantOrUserShape).message?.content;
-  if (!Array.isArray(content)) return [];
-  const names: string[] = [];
-  for (const block of content) {
-    if (block.type === 'tool_use' && typeof block.name === 'string') {
-      names.push(block.name);
+export function buildToolNameMap(events: readonly TranscriptEvent[]): Map<string, string> {
+  const map = new Map<string, string>();
+  for (const e of events) {
+    if (e.type !== 'assistant') continue;
+    const content = (e as AssistantOrUserShape).message?.content;
+    if (!Array.isArray(content)) continue;
+    for (const block of content) {
+      if (
+        block.type === 'tool_use' &&
+        typeof block.name === 'string' &&
+        typeof block.id === 'string'
+      ) {
+        map.set(block.id, block.name);
+      }
     }
   }
-  return names;
+  return map;
+}
+
+/**
+ * Returns every tool alias an event carries — drawn from BOTH
+ * `assistant.tool_use` blocks (resolved via `block.name`) AND
+ * `user.tool_result` blocks (resolved via `block.tool_use_id` against
+ * `toolNameById`). Aliases are normalized via `toolAlias()` so MCP variants
+ * collapse to one entry.
+ *
+ * Returns `[]` when the event has no tool linkage, or when a tool_result's
+ * id is unresolvable — treated as "we don't know" so callers don't
+ * accidentally hide events they can't classify.
+ */
+export function eventToolAliases(
+  event: TranscriptEvent,
+  toolNameById: ReadonlyMap<string, string>,
+): string[] {
+  const aliases: string[] = [];
+  if (event.type === 'assistant') {
+    const content = (event as AssistantOrUserShape).message?.content;
+    if (Array.isArray(content)) {
+      for (const block of content) {
+        if (block.type === 'tool_use' && typeof block.name === 'string') {
+          aliases.push(toolAlias(block.name));
+        }
+      }
+    }
+  } else if (event.type === 'user') {
+    const content = (event as AssistantOrUserShape).message?.content;
+    if (Array.isArray(content)) {
+      for (const block of content) {
+        if (block.type === 'tool_result' && typeof block.tool_use_id === 'string') {
+          const name = toolNameById.get(block.tool_use_id);
+          if (name) aliases.push(toolAlias(name));
+        }
+      }
+    }
+  }
+  return aliases;
 }
 
 /**

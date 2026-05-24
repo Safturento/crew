@@ -375,7 +375,7 @@ describe('Timeline', () => {
     );
     render(<Timeline agentKey="KAN-1" />);
     await openFilters();
-    for (const label of ['Conversation', 'Tools', 'Thinking', 'Hooks & skills', 'System']) {
+    for (const label of ['Conversation', 'Tools', 'Thinking', 'Hooks', 'Skills', 'System', 'Startup']) {
       const cb = screen.getByLabelText(label) as HTMLInputElement;
       if (cb.checked) await userEvent.click(cb);
     }
