@@ -493,6 +493,83 @@ describe('IngestService.processEventForTest — fix-pr cycle (CREW-198)', () => 
       await db.destroy();
     }
   });
+
+  it('recordRunCompleted fires running → pr_open + publishes for fix-pr runs', async () => {
+    const { db, runId: originalRunId, agentKey } = await setup();
+    try {
+      const bus = new EventBus({ bufferSize: 10 });
+      const seen: SseEvent[] = [];
+      bus.subscribe({ onEvent: (e) => seen.push(e) });
+      const svc = new IngestService({ db, logger: silentLogger, eventBus: bus });
+
+      // Bring the agent up to pr_open from the original run, then trigger the
+      // fix-pr cycle's first half (pr_open → running).
+      await svc.processEventForTest({
+        runId: originalRunId,
+        agentKey,
+        event: makeBashToolUse({
+          id: 'tu_pr',
+          command: 'gh pr create --title hi',
+          ts: '2026-04-29T12:00:00Z',
+        }),
+      });
+      const fixPrRunId = await insertRun(db, agentKey, 'fix-pr', 'session-fix-pr-2');
+      await svc.processEventForTest({
+        runId: fixPrRunId,
+        agentKey,
+        event: makeBashToolUse({ id: 'tu_fp', command: 'ls', ts: '2026-04-29T12:01:00Z' }),
+      });
+      expect(await getLatestState(db, agentKey)).toBe('running');
+
+      seen.length = 0;
+      await svc.recordRunCompleted(agentKey, fixPrRunId, '2026-04-29T12:02:00Z');
+
+      expect(await getLatestState(db, agentKey)).toBe('pr_open');
+      const transitions = seen.filter((e) => e.type === 'agent.state_changed');
+      expect(transitions).toHaveLength(1);
+      expect(transitions[0]).toMatchObject({
+        type: 'agent.state_changed',
+        data: { key: agentKey, from: 'running', to: 'pr_open' },
+      });
+    } finally {
+      await db.destroy();
+    }
+  });
+
+  it('recordRunCompleted is a no-op for non-fix-pr runs', async () => {
+    // A regular `run` command completing shouldn't push a `running` agent to
+    // pr_open — only fix-pr runs trigger the cycle-back transition.
+    const { db, runId, agentKey } = await setup();
+    try {
+      const svc = new IngestService({ db, logger: silentLogger, eventBus: new EventBus() });
+      await svc.processEventForTest({
+        runId,
+        agentKey,
+        event: makeBashToolUse({ id: 'tu_1', command: 'ls', ts: '2026-04-29T12:00:00Z' }),
+      });
+      expect(await getLatestState(db, agentKey)).toBe('running');
+
+      await svc.recordRunCompleted(agentKey, runId, '2026-04-29T12:01:00Z');
+      // Still running — the `run` command's completion does not cycle.
+      expect(await getLatestState(db, agentKey)).toBe('running');
+    } finally {
+      await db.destroy();
+    }
+  });
+
+  it('recordRunCompleted is a no-op when previous state is not running', async () => {
+    const { db, agentKey } = await setup();
+    try {
+      const svc = new IngestService({ db, logger: silentLogger, eventBus: new EventBus() });
+      const fixPrRunId = await insertRun(db, agentKey, 'fix-pr', 'session-fix-pr-noop');
+      // Agent state is `init` (never ingested anything). Completion shouldn't
+      // transition.
+      await svc.recordRunCompleted(agentKey, fixPrRunId, '2026-04-29T12:00:00Z');
+      expect(await getLatestState(db, agentKey)).toBeNull();
+    } finally {
+      await db.destroy();
+    }
+  });
 });
 
 async function getLatestState(

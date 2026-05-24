@@ -205,6 +205,14 @@ export async function registerRunsRoutes(app: DaemonApp): Promise<void> {
         await ingest.recordFinishCompleted(run.agent_key, completedAt);
       }
 
+      // CREW-198: a clean `crew fix-pr` completion closes the cycle by
+      // transitioning `running → pr_open`. recordRunCompleted self-guards on
+      // the previous state being `running`, so an aborted/never-ran fix-pr is
+      // a safe no-op.
+      if (run.command === 'fix-pr' && exitCode === 0) {
+        await ingest.recordRunCompleted(run.agent_key, runId, completedAt);
+      }
+
       return reply.code(204).send();
     },
   );

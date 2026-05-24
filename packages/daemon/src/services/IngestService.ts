@@ -183,6 +183,50 @@ export class IngestService {
     });
   }
 
+  /**
+   * Records the `running → pr_open` cycle-back transition that closes the
+   * fix-pr loop (CREW-198). Only fires when (a) the agent is currently
+   * `running`, and (b) the completing run's command is `fix-pr` — a
+   * completing initial `run` doesn't snap an agent into `pr_open` it never
+   * reached on its own. Called from the runs/:runId/complete route alongside
+   * `recordFinishCompleted`.
+   */
+  async recordRunCompleted(
+    agentKey: string,
+    runId: number,
+    completedAtIso: string,
+  ): Promise<void> {
+    const previous = await this.getCachedAgentState(agentKey);
+    if (previous !== 'running') return;
+
+    const run = await this.db
+      .selectFrom('runs')
+      .select('command')
+      .where('id', '=', runId)
+      .executeTakeFirst();
+    if (run?.command !== 'fix-pr') return;
+
+    const ts = Date.parse(completedAtIso);
+    if (!Number.isFinite(ts)) {
+      this.logger.warn(
+        { agentKey, completedAtIso },
+        'unparseable completedAt; skipping fix-pr cycle-back transition',
+      );
+      return;
+    }
+
+    await this.db
+      .insertInto('state_transitions')
+      .values({ agent_key: agentKey, from_state: 'running', to_state: 'pr_open', ts })
+      .execute();
+
+    this.agentStateCache.set(agentKey, 'pr_open');
+    this.eventBus.publish({
+      type: 'agent.state_changed',
+      data: { key: agentKey, from: 'running', to: 'pr_open', ts },
+    });
+  }
+
   async ingestEvent(runId: number, event: TranscriptEvent): Promise<void> {
     const agentKey = await this.resolveAgentKey(runId);
     if (!agentKey) return;
