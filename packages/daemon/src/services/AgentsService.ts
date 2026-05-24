@@ -2,6 +2,10 @@ import type { Kysely } from 'kysely';
 import { sql } from 'kysely';
 import { deriveAppUrl, deriveJiraUrl, loadProjectConfigByName } from 'crew-shared';
 import type { DaemonDatabase } from '../db.js';
+import type { TimelineService } from './TimelineService.js';
+
+/** Synthetic tool-row label for the model's own output tokens (CREW-191). */
+const ASSISTANT_TOOL_LABEL = 'Assistant';
 
 export type AgentState = 'initializing' | 'running' | 'pr_open' | 'error' | 'finished';
 
@@ -90,15 +94,25 @@ export interface AgentsServiceDeps {
    * `loadProjectConfigByName`'s loader-default kicks in when omitted.
    */
   projectsDir?: string;
+  /**
+   * Optional transcript reader. When provided, `getByKey` re-parses the
+   * agent's JSONL and prepends an "Assistant" row to `tokens_by_tool`
+   * summing `usage.output_tokens` across every assistant event (CREW-191).
+   * Omitted in tests that only exercise the DB-backed shape; production
+   * wires the cradle's `timelineService`.
+   */
+  timelineService?: TimelineService;
 }
 
 export class AgentsService {
   private readonly db: Kysely<DaemonDatabase>;
   private readonly projectsDir: string | undefined;
+  private readonly timelineService: TimelineService | undefined;
 
   constructor(deps: AgentsServiceDeps) {
     this.db = deps.db;
     this.projectsDir = deps.projectsDir;
+    this.timelineService = deps.timelineService;
   }
 
   async list(): Promise<AgentSummary[]> {
@@ -319,15 +333,38 @@ export class AgentsService {
       .orderBy('tokens', 'desc')
       .execute();
 
-    const tokensByToolTotal = tokensByToolRows.reduce((s, r) => s + Number(r.tokens), 0);
-    const tokensByTool: AgentDetailTokensByTool[] = tokensByToolRows.map((r) => {
+    const toolRowTotal = tokensByToolRows.reduce((s, r) => s + Number(r.tokens), 0);
+
+    // CREW-191: re-parse the JSONL transcript to surface the model's own
+    // output tokens. Text-only / thinking-only assistant turns never make
+    // it to `tool_calls`, so the SQL aggregate alone understates the panel.
+    // Tool rows are left as-is; F (CREW-195) will introduce per-category
+    // attribution that splits the overlap with `tool_calls.output_tokens`.
+    const assistantTokens = await this.computeAssistantOutputTokens(key);
+
+    const combinedTotal = toolRowTotal + assistantTokens;
+    const toolRows: AgentDetailTokensByTool[] = tokensByToolRows.map((r) => {
       const t = Number(r.tokens);
       return {
         tool: r.tool,
         tokens: t,
-        percent: tokensByToolTotal === 0 ? 0 : Math.round((t / tokensByToolTotal) * 10000) / 100,
+        percent: combinedTotal === 0 ? 0 : Math.round((t / combinedTotal) * 10000) / 100,
       };
     });
+    const tokensByTool: AgentDetailTokensByTool[] =
+      assistantTokens > 0
+        ? [
+            {
+              tool: ASSISTANT_TOOL_LABEL,
+              tokens: assistantTokens,
+              percent:
+                combinedTotal === 0
+                  ? 0
+                  : Math.round((assistantTokens / combinedTotal) * 10000) / 100,
+            },
+            ...toolRows,
+          ]
+        : toolRows;
 
     return {
       key,
@@ -390,6 +427,23 @@ export class AgentsService {
       .where('key', '=', key)
       .executeTakeFirst();
     return Number(result.numUpdatedRows ?? 0) > 0;
+  }
+
+  /**
+   * Sum `usage.output_tokens` across every assistant event in the agent's
+   * JSONL transcript. Returns 0 when no `timelineService` was injected, the
+   * transcript can't be located, or no assistant events carry output tokens.
+   * Backs the "Assistant" row CREW-191 prepends to `tokens_by_tool`.
+   */
+  private async computeAssistantOutputTokens(agentKey: string): Promise<number> {
+    if (!this.timelineService) return 0;
+    const { events } = await this.timelineService.getTimeline(agentKey);
+    let total = 0;
+    for (const evt of events) {
+      if (evt.type !== 'assistant') continue;
+      total += evt.message.usage.output_tokens ?? 0;
+    }
+    return total;
   }
 
   /**
