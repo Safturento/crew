@@ -1,8 +1,7 @@
 import { useMemo } from 'react';
 import { Sparkles } from 'lucide-react';
-import { formatCost, weightedTokenCost, type TokenBucket } from 'crew-shared';
-
 import type { AgentDetailTokensByTool, TokenCategoryBucket } from '../data/types.js';
+import { formatCost, weightedTokenCost, type TokenBucket } from '../pricing.js';
 import { formatTokens } from '../format/tokens.js';
 import { aggregateByAlias } from '../format/tool-alias.js';
 import { TokenBarRow, TOKEN_BAR_ROW_GRID_CLASSES } from './TokenBarRow.js';
