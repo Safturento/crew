@@ -14,7 +14,7 @@
     "crew-daemon": "./bin/crew-daemon"
   },
   "scripts": {
-    "dev": "tsx watch src/bin.ts",
+    "dev": "nodemon",
     "start": "tsx src/bin.ts",
     "typecheck": "tsc -p tsconfig.json",
     "test": "vitest",
@@ -37,6 +37,7 @@
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^25.6.0",
+    "nodemon": "^3.1.10",
     "tsx": "^4.21.0"
   }
 }

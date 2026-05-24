@@ -1,0 +1,12 @@
+{
+  "watch": ["src", "../shared/src"],
+  "ext": "ts,json,toml",
+  "exec": "tsx src/bin.ts",
+  "delay": "100",
+  "ignore": [
+    "**/*.test.ts",
+    "**/*.test.tsx",
+    "**/__tests__/**",
+    "**/dist/**"
+  ]
+}
