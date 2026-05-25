@@ -60,11 +60,7 @@ describe('computeVisibleLeaves / computeTotalLeaves', () => {
 
 describe('selectAll', () => {
   it('puts every category and tools into all-known with empty set', () => {
-    const s: TimelineFilterState = {
-      categories: new Set(['conversation']),
-      tools: { mode: 'explicit', set: new Set(['Bash']) },
-    };
-    const next = selectAll(s);
+    const next = selectAll();
     expect(next.categories.size).toBe(CATEGORIES.length);
     expect(next.tools.mode).toBe('all-known');
     expect(next.tools.set.size).toBe(0);
@@ -73,7 +69,7 @@ describe('selectAll', () => {
 
 describe('clear', () => {
   it('empties categories and puts tools in explicit empty set', () => {
-    const next = clear(defaultTimelineFilterState);
+    const next = clear();
     expect(next.categories.size).toBe(0);
     expect(next.tools.mode).toBe('explicit');
     expect(next.tools.set.size).toBe(0);

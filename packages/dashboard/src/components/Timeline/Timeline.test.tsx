@@ -382,7 +382,15 @@ describe('Timeline', () => {
     );
     render(<Timeline agentKey="KAN-1" />);
     await openFilters();
-    for (const label of ['Conversation', 'Tools', 'Thinking', 'Hooks', 'Skills', 'System', 'Startup']) {
+    for (const label of [
+      'Conversation',
+      'Tools',
+      'Thinking',
+      'Hooks',
+      'Skills',
+      'System',
+      'Startup',
+    ]) {
       if (isCategoryChecked(label)) await userEvent.click(screen.getByLabelText(label));
     }
     expect(screen.getByText(/No events match your filters/i)).toBeInTheDocument();

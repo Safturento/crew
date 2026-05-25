@@ -19,7 +19,15 @@ describe('Filters (inclusion-tree)', () => {
   it('opens the popover and shows the seven categories', async () => {
     render(<Filters state={defaultTimelineFilterState} onChange={() => {}} tokensByTool={rows} />);
     await userEvent.click(screen.getByRole('button', { name: /open timeline filters/i }));
-    for (const label of ['Conversation', 'Tools', 'Thinking', 'Hooks', 'Skills', 'System', 'Startup']) {
+    for (const label of [
+      'Conversation',
+      'Tools',
+      'Thinking',
+      'Hooks',
+      'Skills',
+      'System',
+      'Startup',
+    ]) {
       expect(screen.getByLabelText(label)).toBeInTheDocument();
     }
   });
@@ -45,7 +53,15 @@ describe('Filters (inclusion-tree)', () => {
 
   it('badge hidden when visible === total (everything selected)', () => {
     const everythingState: TimelineFilterState = {
-      categories: new Set(['conversation', 'tools', 'thinking', 'hooks', 'skills', 'system', 'startup']),
+      categories: new Set([
+        'conversation',
+        'tools',
+        'thinking',
+        'hooks',
+        'skills',
+        'system',
+        'startup',
+      ]),
       tools: { mode: 'all-known', set: new Set() },
     };
     render(<Filters state={everythingState} onChange={() => {}} tokensByTool={rows} />);

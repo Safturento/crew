@@ -77,8 +77,8 @@ export function Filters({ state, onChange, tokensByTool }: FiltersProps) {
       <PopoverContent className="w-72 p-0" align="start">
         <div className="flex flex-col">
           <PopoverHeader
-            onSelectAll={() => onChange(selectAll(state))}
-            onClear={() => onChange(clear(state))}
+            onSelectAll={() => onChange(selectAll())}
+            onClear={() => onChange(clear())}
           />
           <div className="border-t border-border" />
           <div className="flex flex-col gap-0.5 p-2">
@@ -194,11 +194,7 @@ function ToolsParentRow({
       data-testid="filter-row-tools"
       className="flex items-center gap-2 rounded-sm px-2 py-1.5 text-sm text-foreground hover:bg-accent"
     >
-      <Checkbox
-        id="filter-cat-tools"
-        checked={checked}
-        onCheckedChange={() => onToggleChecked()}
-      />
+      <Checkbox id="filter-cat-tools" checked={checked} onCheckedChange={() => onToggleChecked()} />
       <label
         htmlFor="filter-cat-tools"
         className="flex-1 cursor-pointer select-none font-mono text-xs"

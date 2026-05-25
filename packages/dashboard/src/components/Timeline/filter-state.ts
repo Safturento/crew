@@ -12,10 +12,7 @@ export const defaultTimelineFilterState: TimelineFilterState = {
   tools: { mode: 'all-known', set: new Set() },
 };
 
-export function isToolVisible(
-  alias: string,
-  t: TimelineFilterState['tools'],
-): boolean {
+export function isToolVisible(alias: string, t: TimelineFilterState['tools']): boolean {
   if (t.mode === 'all-known') return true;
   return t.set.has(alias);
 }
@@ -42,24 +39,21 @@ export function computeVisibleLeaves(
   return visible;
 }
 
-export function selectAll(_state: TimelineFilterState): TimelineFilterState {
+export function selectAll(): TimelineFilterState {
   return {
     categories: new Set(CATEGORIES.map((c) => c.id)),
     tools: { mode: 'all-known', set: new Set() },
   };
 }
 
-export function clear(_state: TimelineFilterState): TimelineFilterState {
+export function clear(): TimelineFilterState {
   return {
     categories: new Set(),
     tools: { mode: 'explicit', set: new Set() },
   };
 }
 
-export function toggleCategory(
-  state: TimelineFilterState,
-  id: CategoryId,
-): TimelineFilterState {
+export function toggleCategory(state: TimelineFilterState, id: CategoryId): TimelineFilterState {
   const next = new Set(state.categories);
   if (next.has(id)) next.delete(id);
   else next.add(id);
