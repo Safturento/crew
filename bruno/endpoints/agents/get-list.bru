@@ -15,7 +15,7 @@ assert {
 
 tests {
   test("each agent has the required summary fields", () => {
-    const allowedStates = ["initializing", "running", "pr_open", "error", "finished"];
+    const allowedStates = ["initializing", "running", "pr_open", "pr_merged", "error", "finished"];
     for (const agent of res.body.agents) {
       expect(agent.key).to.be.a("string");
       expect(agent.projectName).to.be.a("string");

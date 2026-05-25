@@ -111,7 +111,7 @@ test.describe('Agent drawer', () => {
 
     // Open Filters and toggle Tools OFF — only the conversation card should remain.
     await page.getByRole('button', { name: /open timeline filters/i }).click();
-    await page.getByLabel('Tools').click();
+    await page.getByRole('checkbox', { name: 'Tools' }).click();
     await expect(cards).toHaveCount(1);
   });
 
@@ -122,6 +122,9 @@ test.describe('Agent drawer', () => {
     await expect(page.getByTestId('transcript-row').first()).toBeVisible();
 
     // Open Filters and toggle every category checkbox that's currently on.
+    // Radix Checkbox renders as a button[role=checkbox] with aria-checked,
+    // not a native input — use the role selector to disambiguate from the
+    // "Expand tools" disclosure button (which also matches /tools/i).
     await page.getByRole('button', { name: /open timeline filters/i }).click();
     for (const label of [
       'Conversation',
@@ -132,8 +135,8 @@ test.describe('Agent drawer', () => {
       'System',
       'Startup',
     ]) {
-      const cb = page.getByLabel(label);
-      if (await cb.isChecked()) await cb.click();
+      const cb = page.getByRole('checkbox', { name: label });
+      if ((await cb.getAttribute('aria-checked')) === 'true') await cb.click();
     }
     // Close the popover by clicking its trigger again so the empty-state CTA
     // beneath becomes interactive. (Escape would also close the drawer.)

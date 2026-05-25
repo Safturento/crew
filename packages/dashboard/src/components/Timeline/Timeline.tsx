@@ -6,6 +6,7 @@ import type { AgentDetailTokensByTool, AgentState, TranscriptEvent } from '../..
 import { cn } from '../../lib/utils.js';
 import { Button } from '../ui/button.js';
 import { Filters, defaultTimelineFilterState, type TimelineFilterState } from './Filters.js';
+import { isToolVisible } from './filter-state.js';
 import { LiveModeToggle, NewEventsPill } from './LiveModeToggle.js';
 import { MinimapStripe } from './MinimapStripe.js';
 import { SearchBar } from './SearchBar.js';
@@ -370,15 +371,21 @@ function matchesFilters(
   }
   if (!categoryMatch) return false;
 
-  // Tools section uses inverted-checkbox semantics: an alias in
-  // `excludedTools` means the user unchecked it. Event passes iff it has
-  // no tool aliases OR none of them are excluded.
-  if (state.excludedTools.size > 0) {
+  // Per-tool filtering against the inclusion-tree state. CREW-207 will wire
+  // the real toolNameById map so `tool_result` events resolve their parent
+  // tool name (the orphan fix). Until then, `tool_result`s only escape the
+  // empty-map fallback when their tool_use is also unchecked.
+  if (state.categories.has('tools')) {
     const aliases = eventToolAliases(event, EMPTY_TOOL_NAME_MAP);
     if (aliases.length > 0) {
+      let anyVisible = false;
       for (const a of aliases) {
-        if (state.excludedTools.has(a)) return false;
+        if (isToolVisible(a, state.tools)) {
+          anyVisible = true;
+          break;
+        }
       }
+      if (!anyVisible) return false;
     }
   }
 

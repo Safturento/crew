@@ -141,6 +141,13 @@ const openFilters = async (): Promise<void> => {
   await userEvent.click(screen.getByRole('button', { name: /open timeline filters/i }));
 };
 
+const expandTools = async (): Promise<void> => {
+  await userEvent.click(screen.getByTestId('tools-disclosure'));
+};
+
+const isCategoryChecked = (label: string): boolean =>
+  screen.getByLabelText(label).getAttribute('aria-checked') === 'true';
+
 const sampleTokensByTool: AgentDetailTokensByTool[] = [
   {
     tool: 'Bash',
@@ -375,9 +382,16 @@ describe('Timeline', () => {
     );
     render(<Timeline agentKey="KAN-1" />);
     await openFilters();
-    for (const label of ['Conversation', 'Tools', 'Thinking', 'Hooks', 'Skills', 'System', 'Startup']) {
-      const cb = screen.getByLabelText(label) as HTMLInputElement;
-      if (cb.checked) await userEvent.click(cb);
+    for (const label of [
+      'Conversation',
+      'Tools',
+      'Thinking',
+      'Hooks',
+      'Skills',
+      'System',
+      'Startup',
+    ]) {
+      if (isCategoryChecked(label)) await userEvent.click(screen.getByLabelText(label));
     }
     expect(screen.getByText(/No events match your filters/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Show all/i })).toBeInTheDocument();
@@ -399,8 +413,8 @@ describe('Timeline', () => {
     expect(screen.getByText(/No events match your filters/i)).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: /Show all/i }));
     await openFilters();
-    expect((screen.getByLabelText('Conversation') as HTMLInputElement).checked).toBe(true);
-    expect((screen.getByLabelText('Tools') as HTMLInputElement).checked).toBe(true);
+    expect(isCategoryChecked('Conversation')).toBe(true);
+    expect(isCategoryChecked('Tools')).toBe(true);
     expect(screen.getAllByTestId('transcript-row')).toHaveLength(2);
   });
 
@@ -438,9 +452,10 @@ describe('Timeline', () => {
       }),
     );
     render(<Timeline agentKey="KAN-1" tokensByTool={sampleTokensByTool} />);
-    // Default = nothing excluded, all 3 visible.
+    // Default = all-known mode, all 3 visible.
     expect(screen.getAllByTestId('transcript-row')).toHaveLength(3);
     await openFilters();
+    await expandTools();
     // Uncheck Bash — only its event disappears.
     await userEvent.click(screen.getByLabelText('Bash'));
     expect(screen.getAllByTestId('transcript-row')).toHaveLength(2);
@@ -462,6 +477,7 @@ describe('Timeline', () => {
     render(<Timeline agentKey="KAN-1" tokensByTool={sampleTokensByTool} />);
     expect(screen.getAllByTestId('transcript-row')).toHaveLength(2);
     await openFilters();
+    await expandTools();
     // Uncheck every tool the agent used — the conversation event remains.
     for (const alias of ['Bash', 'Read', 'MCP:Jira']) {
       await userEvent.click(screen.getByLabelText(alias));

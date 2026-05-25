@@ -1,9 +1,10 @@
-import { render, screen, within } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
 import type { AgentDetailTokensByTool } from '../../data/types.js';
-import { Filters, defaultTimelineFilterState, type TimelineFilterState } from './Filters.js';
+import { Filters } from './Filters.js';
+import { defaultTimelineFilterState, type TimelineFilterState } from './filter-state.js';
 
 const bucket = (output: number) => ({ input: 0, output, cacheCreation: 0, cacheRead: 0 });
 const rows: AgentDetailTokensByTool[] = [
@@ -14,8 +15,8 @@ const rows: AgentDetailTokensByTool[] = [
   { tool: 'mcp__plugin_figma_figma__use_figma', tokens: bucket(309_000), totalTokens: 309_000 },
 ];
 
-describe('Filters', () => {
-  it('opens the popover and shows the Slim 7 category rows', async () => {
+describe('Filters (inclusion-tree)', () => {
+  it('opens the popover and shows the seven categories', async () => {
     render(<Filters state={defaultTimelineFilterState} onChange={() => {}} tokensByTool={rows} />);
     await userEvent.click(screen.getByRole('button', { name: /open timeline filters/i }));
     for (const label of [
@@ -31,15 +32,100 @@ describe('Filters', () => {
     }
   });
 
+  it('Tools row shows "4 / 4" count and hides the alias subtree by default', async () => {
+    // Five raw tokensByTool rows collapse to four aliases (the two Jira MCP
+    // tools aggregate into a single `MCP:Jira` row).
+    render(<Filters state={defaultTimelineFilterState} onChange={() => {}} tokensByTool={rows} />);
+    await userEvent.click(screen.getByRole('button', { name: /open timeline filters/i }));
+    const toolsRow = screen.getByTestId('filter-row-tools');
+    expect(toolsRow).toHaveTextContent('4 / 4');
+    expect(screen.queryByLabelText('Bash')).toBeNull();
+  });
+
+  it('clicking the Tools chevron expands the alias subtree', async () => {
+    render(<Filters state={defaultTimelineFilterState} onChange={() => {}} tokensByTool={rows} />);
+    await userEvent.click(screen.getByRole('button', { name: /open timeline filters/i }));
+    await userEvent.click(screen.getByTestId('tools-disclosure'));
+    for (const a of ['Bash', 'Edit', 'MCP:Jira', 'MCP:Figma']) {
+      expect(screen.getByLabelText(a)).toBeInTheDocument();
+    }
+  });
+
+  it('badge hidden when visible === total (everything selected)', () => {
+    const everythingState: TimelineFilterState = {
+      categories: new Set([
+        'conversation',
+        'tools',
+        'thinking',
+        'hooks',
+        'skills',
+        'system',
+        'startup',
+      ]),
+      tools: { mode: 'all-known', set: new Set() },
+    };
+    render(<Filters state={everythingState} onChange={() => {}} tokensByTool={rows} />);
+    expect(screen.queryByTestId('filters-badge')).toBeNull();
+  });
+
+  it('badge shows visible/total in default state', () => {
+    render(<Filters state={defaultTimelineFilterState} onChange={() => {}} tokensByTool={rows} />);
+    // Default: conv + tools + startup ON. Visible = 2 non-tools + 4 aliases = 6.
+    // Total = 6 non-tools + 4 aliases = 10.
+    expect(screen.getByTestId('filters-badge')).toHaveTextContent('6 / 10');
+  });
+
+  it('clicking a category leaf calls onChange with toggled state', async () => {
+    const onChange = vi.fn<(s: TimelineFilterState) => void>();
+    render(<Filters state={defaultTimelineFilterState} onChange={onChange} tokensByTool={rows} />);
+    await userEvent.click(screen.getByRole('button', { name: /open timeline filters/i }));
+    await userEvent.click(screen.getByLabelText('Thinking'));
+    expect(onChange).toHaveBeenCalledTimes(1);
+    expect(onChange.mock.calls[0]![0].categories.has('thinking')).toBe(true);
+  });
+
+  it('clicking Select all puts state into the all-checked all-known shape', async () => {
+    const onChange = vi.fn<(s: TimelineFilterState) => void>();
+    render(<Filters state={defaultTimelineFilterState} onChange={onChange} tokensByTool={rows} />);
+    await userEvent.click(screen.getByRole('button', { name: /open timeline filters/i }));
+    await userEvent.click(screen.getByRole('button', { name: /select all/i }));
+    const next = onChange.mock.calls[0]![0];
+    expect(next.categories.size).toBe(7);
+    expect(next.tools.mode).toBe('all-known');
+    expect(next.tools.set.size).toBe(0);
+  });
+
+  it('clicking Clear puts state into empty-categories explicit-empty-tools', async () => {
+    const onChange = vi.fn<(s: TimelineFilterState) => void>();
+    render(<Filters state={defaultTimelineFilterState} onChange={onChange} tokensByTool={rows} />);
+    await userEvent.click(screen.getByRole('button', { name: /open timeline filters/i }));
+    await userEvent.click(screen.getByRole('button', { name: /clear/i }));
+    const next = onChange.mock.calls[0]![0];
+    expect(next.categories.size).toBe(0);
+    expect(next.tools.mode).toBe('explicit');
+  });
+
+  it('clicking a disabled-looking tool child (master off) auto-enables master AND checks child', async () => {
+    const onChange = vi.fn<(s: TimelineFilterState) => void>();
+    const masterOff: TimelineFilterState = {
+      categories: new Set(['conversation']),
+      tools: { mode: 'explicit', set: new Set() },
+    };
+    render(<Filters state={masterOff} onChange={onChange} tokensByTool={rows} />);
+    await userEvent.click(screen.getByRole('button', { name: /open timeline filters/i }));
+    await userEvent.click(screen.getByTestId('tools-disclosure'));
+    await userEvent.click(screen.getByLabelText('Bash'));
+    const next = onChange.mock.calls[0]![0];
+    expect(next.categories.has('tools')).toBe(true);
+    expect(next.tools.set.has('Bash')).toBe(true);
+  });
+
   it('renders alias-aggregated tool rows in descending order', async () => {
     render(<Filters state={defaultTimelineFilterState} onChange={() => {}} tokensByTool={rows} />);
     await userEvent.click(screen.getByRole('button', { name: /open timeline filters/i }));
-    const aliasNames = ['Bash', 'Edit', 'MCP:Jira', 'MCP:Figma'];
-    for (const a of aliasNames) {
-      expect(screen.getByLabelText(a)).toBeInTheDocument();
-    }
-    const toolInputs = document.querySelectorAll('input[id^="filter-tool-"]');
-    expect(Array.from(toolInputs).map((el) => el.id)).toEqual([
+    await userEvent.click(screen.getByTestId('tools-disclosure'));
+    const inputs = document.querySelectorAll('button[id^="filter-tool-"]');
+    expect(Array.from(inputs).map((el) => el.id)).toEqual([
       'filter-tool-Bash',
       'filter-tool-Edit',
       'filter-tool-MCP:Jira',
@@ -47,90 +133,34 @@ describe('Filters', () => {
     ]);
   });
 
-  it('default state renders every tool row already checked (inverted-checkbox semantics)', async () => {
+  it('expanding Tools renders alias rows immediately after the Tools row, before Thinking', async () => {
     render(<Filters state={defaultTimelineFilterState} onChange={() => {}} tokensByTool={rows} />);
     await userEvent.click(screen.getByRole('button', { name: /open timeline filters/i }));
-    for (const a of ['Bash', 'Edit', 'MCP:Jira', 'MCP:Figma']) {
-      expect((screen.getByLabelText(a) as HTMLInputElement).checked).toBe(true);
+    await userEvent.click(screen.getByTestId('tools-disclosure'));
+    // Collect the visible filter rows in DOM order — categories and alias rows
+    // alike are <label htmlFor="filter-(cat|tool)-...">. The alias rows must
+    // appear between the Tools row and the Thinking row.
+    const labels = Array.from(document.querySelectorAll<HTMLLabelElement>('label[for^="filter-"]'));
+    const fors = labels.map((l) => l.getAttribute('for'));
+    const toolsIdx = fors.indexOf('filter-cat-tools');
+    const thinkingIdx = fors.indexOf('filter-cat-thinking');
+    expect(toolsIdx).toBeGreaterThanOrEqual(0);
+    expect(thinkingIdx).toBeGreaterThan(toolsIdx);
+    // Every alias row should sit strictly between Tools and Thinking.
+    const aliasIndices = fors
+      .map((f, i) => (f?.startsWith('filter-tool-') ? i : -1))
+      .filter((i) => i >= 0);
+    expect(aliasIndices.length).toBeGreaterThan(0);
+    for (const i of aliasIndices) {
+      expect(i).toBeGreaterThan(toolsIdx);
+      expect(i).toBeLessThan(thinkingIdx);
     }
   });
 
-  it('hover/title text on each tool row lists the raw contributors', async () => {
-    render(<Filters state={defaultTimelineFilterState} onChange={() => {}} tokensByTool={rows} />);
-    await userEvent.click(screen.getByRole('button', { name: /open timeline filters/i }));
-    const jiraRow = screen.getByLabelText('MCP:Jira').closest('label')!;
-    expect(jiraRow).toHaveAttribute(
-      'title',
-      expect.stringContaining('mcp__atlassian__jira_get_issue'),
-    );
-    expect(jiraRow).toHaveAttribute(
-      'title',
-      expect.stringContaining('mcp__atlassian__jira_transition_issue'),
-    );
-  });
-
-  it('toggling a category fires onChange with the new set', async () => {
-    const onChange = vi.fn<(next: TimelineFilterState) => void>();
-    render(<Filters state={defaultTimelineFilterState} onChange={onChange} tokensByTool={rows} />);
-    await userEvent.click(screen.getByRole('button', { name: /open timeline filters/i }));
-    await userEvent.click(screen.getByLabelText('Thinking'));
-    expect(onChange).toHaveBeenCalledTimes(1);
-    const next = onChange.mock.calls[0]![0];
-    expect(next.categories.has('thinking')).toBe(true);
-    expect(next.categories.has('conversation')).toBe(true);
-    expect(next.excludedTools.size).toBe(0);
-  });
-
-  it('unchecking a tool adds the alias to excludedTools', async () => {
-    const onChange = vi.fn<(next: TimelineFilterState) => void>();
-    render(<Filters state={defaultTimelineFilterState} onChange={onChange} tokensByTool={rows} />);
-    await userEvent.click(screen.getByRole('button', { name: /open timeline filters/i }));
-    await userEvent.click(screen.getByLabelText('MCP:Jira'));
-    const next = onChange.mock.calls[0]![0];
-    expect(next.excludedTools.has('MCP:Jira')).toBe(true);
-    expect(next.excludedTools.size).toBe(1);
-  });
-
-  it('re-checking an excluded tool removes it from excludedTools', async () => {
-    const onChange = vi.fn<(next: TimelineFilterState) => void>();
-    const stateWithExclusion: TimelineFilterState = {
-      categories: new Set(['conversation', 'tools']),
-      excludedTools: new Set(['Bash']),
-    };
-    render(<Filters state={stateWithExclusion} onChange={onChange} tokensByTool={rows} />);
-    await userEvent.click(screen.getByRole('button', { name: /open timeline filters/i }));
-    // Bash row should currently render UNCHECKED.
-    expect((screen.getByLabelText('Bash') as HTMLInputElement).checked).toBe(false);
-    await userEvent.click(screen.getByLabelText('Bash'));
-    expect(onChange).toHaveBeenCalledTimes(1);
-    expect(onChange.mock.calls[0]![0].excludedTools.has('Bash')).toBe(false);
-  });
-
-  it('shows no badge when the current selection equals the default', () => {
-    render(<Filters state={defaultTimelineFilterState} onChange={() => {}} tokensByTool={rows} />);
-    expect(screen.queryByTestId('filters-badge')).toBeNull();
-  });
-
-  it('shows a numeric badge counting category toggles + excluded tools', () => {
-    const diverged: TimelineFilterState = {
-      // Defaults: conversation + tools + startup ON, rest OFF.
-      // Add `thinking` (was OFF) → +1; everything else matches default → +0.
-      categories: new Set(['conversation', 'tools', 'thinking', 'startup']),
-      excludedTools: new Set(['Bash']),
-    };
-    render(<Filters state={diverged} onChange={() => {}} tokensByTool={rows} />);
-    // 1 extra category (thinking) + 1 excluded tool = 2.
-    const badge = screen.getByTestId('filters-badge');
-    expect(badge).toHaveTextContent('2');
-  });
-
-  it('renders an empty-state hint when tokensByTool is empty', async () => {
+  it('empty tokensByTool: subtree expansion shows an empty-state hint', async () => {
     render(<Filters state={defaultTimelineFilterState} onChange={() => {}} tokensByTool={[]} />);
     await userEvent.click(screen.getByRole('button', { name: /open timeline filters/i }));
-    const popover = screen.getByText(/no tool usage yet/i);
-    expect(popover).toBeInTheDocument();
-    const section = popover.closest('section');
-    expect(section).not.toBeNull();
-    expect(within(section as HTMLElement).getByText(/Tools/)).toBeInTheDocument();
+    await userEvent.click(screen.getByTestId('tools-disclosure'));
+    expect(screen.getByText(/no tool usage yet/i)).toBeInTheDocument();
   });
 });
