@@ -689,6 +689,10 @@ function computeNextState(
   ctx: ComputeContext,
 ): TransitionState {
   if (previous === 'finished') return 'finished';
+  // CREW-202: pr_merged is sticky against tool-call-driven transitions.
+  // Only Finish (which writes 'finished') moves the agent out. Spec
+  // marks "polling pr_merged agents to detect re-opens" out of scope.
+  if (previous === 'pr_merged') return 'pr_merged';
   // CREW-198: a new run starting on a pr_open agent (e.g. crew fix-pr) cycles
   // state back to running. The `lastSeenRunId !== undefined` guard prevents
   // the first-ever tool_call from spuriously firing this transition.
@@ -705,7 +709,13 @@ function computeNextState(
 }
 
 function isTransitionState(s: string | null | undefined): s is TransitionState {
-  return s === 'init' || s === 'running' || s === 'pr_open' || s === 'finished';
+  return (
+    s === 'init' ||
+    s === 'running' ||
+    s === 'pr_open' ||
+    s === 'pr_merged' ||
+    s === 'finished'
+  );
 }
 
 function stringifyToolResultContent(content: unknown): string {

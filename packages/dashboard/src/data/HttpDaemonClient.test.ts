@@ -309,3 +309,62 @@ describe('HttpDaemonClient.getTimeline', () => {
     await expect(new HttpDaemonClient().getTimeline('KAN-1')).rejects.toThrow(/500/);
   });
 });
+
+describe('HttpDaemonClient.refreshPrStatus (CREW-202)', () => {
+  it('POSTs to /api/agents/:key/refresh-pr-status and parses the response', async () => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify({ stateChanged: true, newState: 'pr_merged' }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      }),
+    );
+
+    const result = await new HttpDaemonClient().refreshPrStatus('KAN-1');
+
+    expect(result).toEqual({ stateChanged: true, newState: 'pr_merged' });
+    expect(fetchSpy).toHaveBeenCalledWith(
+      '/api/agents/KAN-1/refresh-pr-status',
+      expect.objectContaining({ method: 'POST' }),
+    );
+  });
+
+  it('handles the no-op shape (stateChanged: false, no newState)', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify({ stateChanged: false }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      }),
+    );
+
+    const result = await new HttpDaemonClient().refreshPrStatus('KAN-2');
+    expect(result.stateChanged).toBe(false);
+    expect(result.newState).toBeUndefined();
+  });
+
+  it('encodes the key into the URL', async () => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify({ stateChanged: false }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      }),
+    );
+
+    await new HttpDaemonClient().refreshPrStatus('weird/key');
+    expect(fetchSpy).toHaveBeenCalledWith(
+      '/api/agents/weird%2Fkey/refresh-pr-status',
+      expect.objectContaining({ method: 'POST' }),
+    );
+  });
+
+  it('throws AgentNotFoundError on 404', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('not found', { status: 404 }));
+    await expect(new HttpDaemonClient().refreshPrStatus('NOPE')).rejects.toBeInstanceOf(
+      AgentNotFoundError,
+    );
+  });
+
+  it('throws on other non-2xx', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('boom', { status: 500 }));
+    await expect(new HttpDaemonClient().refreshPrStatus('K')).rejects.toThrow(/500/);
+  });
+});

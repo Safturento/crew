@@ -4,7 +4,14 @@ import { renderHook, waitFor } from '@testing-library/react';
 import type { ReactNode } from 'react';
 
 import { eventStream } from './eventStream.js';
-import { defaultClient, useAgent, useProject, useStateHistory, useTimeline } from './queries.js';
+import {
+  defaultClient,
+  useAgent,
+  useProject,
+  useRefreshPrStatus,
+  useStateHistory,
+  useTimeline,
+} from './queries.js';
 import type {
   AgentDetail,
   ProjectDetailResponse,
@@ -258,5 +265,41 @@ describe('useTimeline', () => {
     fire('tool_calls.changed', { key: 'OTHER-1' });
 
     expect(invalidate).not.toHaveBeenCalled();
+  });
+});
+
+describe('useRefreshPrStatus (CREW-202)', () => {
+  it('mutates via defaultClient.refreshPrStatus(key)', async () => {
+    const spy = vi
+      .spyOn(defaultClient, 'refreshPrStatus')
+      .mockResolvedValue({ stateChanged: true, newState: 'pr_merged' });
+
+    const { result } = renderHook(() => useRefreshPrStatus('KAN-1'), {
+      wrapper: makeWrapper(qc),
+    });
+
+    result.current.mutate();
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(spy).toHaveBeenCalledWith('KAN-1');
+    expect(result.current.data).toEqual({ stateChanged: true, newState: 'pr_merged' });
+  });
+
+  it('invalidates agent + state-history + agents queries on success', async () => {
+    vi.spyOn(defaultClient, 'refreshPrStatus').mockResolvedValue({
+      stateChanged: true,
+      newState: 'pr_merged',
+    });
+    const invalidate = vi.spyOn(qc, 'invalidateQueries');
+
+    const { result } = renderHook(() => useRefreshPrStatus('KAN-1'), {
+      wrapper: makeWrapper(qc),
+    });
+    result.current.mutate();
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    const callKeys = invalidate.mock.calls.map((call) => JSON.stringify(call[0]?.queryKey));
+    expect(callKeys).toContain(JSON.stringify(['agent', 'KAN-1']));
+    expect(callKeys).toContain(JSON.stringify(['agent', 'KAN-1', 'state-history']));
+    expect(callKeys).toContain(JSON.stringify(['agents']));
   });
 });

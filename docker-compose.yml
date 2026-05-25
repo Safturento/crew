@@ -27,6 +27,10 @@ services:
       # ~/.crew/startup/<key>.jsonl from the host on dispatch; the daemon's
       # chokidar watcher ingests them into startup_events.
       - ${HOME}/.crew/startup:/root/.crew/startup:ro
+      # Read-only: host `gh` CLI auth so PrPoller's `gh pr view` calls
+      # (CREW-202) inherit the user's token without an in-container login.
+      # Daemon image installs gh; this mounts the credentials.
+      - ${HOME}/.config/gh:/root/.config/gh:ro
     environment:
       - CREW_DB_FILE=/state/state.db
       - CREW_HOST=0.0.0.0

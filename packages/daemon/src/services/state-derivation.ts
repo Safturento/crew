@@ -6,8 +6,18 @@
  * `finished` is emitted by `IngestService.recordFinishCompleted` when a
  * `crew finish` run completes cleanly (CREW-116) — it is not produced by
  * the tool-call-driven `deriveStateFromToolCalls` helper below.
+ *
+ * `pr_merged` is emitted by `PrPoller.checkAgent` when GitHub reports the
+ * PR is no longer OPEN (CREW-202). Like `finished`, it is not produced by
+ * the tool-call-driven helper.
  */
-export type TransitionState = 'init' | 'running' | 'pr_open' | 'finished' | 'error';
+export type TransitionState =
+  | 'init'
+  | 'running'
+  | 'pr_open'
+  | 'pr_merged'
+  | 'finished'
+  | 'error';
 
 export interface ToolCallSlice {
   tool_name: string;

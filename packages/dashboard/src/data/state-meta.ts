@@ -10,6 +10,10 @@ export const STATE_META: Record<AgentState, StateMetaEntry> = {
   waiting: { label: 'Waiting', attention: true, sortRank: 0 },
   error: { label: 'Error', attention: true, sortRank: 1 },
   pr_open: { label: 'PR open', attention: true, sortRank: 2 },
+  // CREW-202: pr_merged signals "PR closed, ready to finish". Ranked just
+  // after pr_open (still attention-worthy because Finish is the next user
+  // action), before running so it isn't buried.
+  pr_merged: { label: 'PR merged', attention: true, sortRank: 2.5 },
   running: { label: 'Running', attention: false, sortRank: 3 },
   initializing: { label: 'Starting', attention: false, sortRank: 4 },
   idle: { label: 'Idle', attention: false, sortRank: 5 },
@@ -60,6 +64,16 @@ export const STATE_CLASSES: Record<AgentState, StateClassTokens> = {
     solidBg: 'bg-violet-400',
     solidBorder: 'border-violet-400',
   },
+  // CREW-202: pr_merged uses the same emerald success family as `finished`
+  // — the PR work is done, only the local cleanup (Finish) remains. The
+  // green + check icon read instantly as "ready to cleanup."
+  pr_merged: {
+    text: 'text-emerald-500',
+    bg: 'bg-emerald-1050',
+    border: 'border-emerald-600',
+    solidBg: 'bg-emerald-500',
+    solidBorder: 'border-emerald-500',
+  },
   error: {
     text: 'text-red-400',
     bg: 'bg-red-1050',
@@ -80,6 +94,7 @@ const TRANSITION_TO_AGENT_STATE: Record<TransitionState, AgentState> = {
   init: 'initializing',
   running: 'running',
   pr_open: 'pr_open',
+  pr_merged: 'pr_merged',
   error: 'error',
   finished: 'finished',
   idle: 'idle',

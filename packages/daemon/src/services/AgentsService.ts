@@ -7,7 +7,13 @@ import type { TimelineService } from './TimelineService.js';
 /** Synthetic tool-row label for the model's own output tokens (CREW-191). */
 const ASSISTANT_TOOL_LABEL = 'Assistant';
 
-export type AgentState = 'initializing' | 'running' | 'pr_open' | 'error' | 'finished';
+export type AgentState =
+  | 'initializing'
+  | 'running'
+  | 'pr_open'
+  | 'pr_merged'
+  | 'error'
+  | 'finished';
 
 export interface AgentSummary {
   key: string;
@@ -84,6 +90,7 @@ export type StateTransitionState =
   | 'init'
   | 'running'
   | 'pr_open'
+  | 'pr_merged'
   | 'error'
   | 'finished'
   | 'idle'
@@ -189,6 +196,25 @@ export class AgentsService {
           .as('finish_status'),
         (join) => join.onRef('finish_status.agent_key', '=', 'a.key'),
       )
+      // CREW-202: surface PrPoller's `pr_merged` transition. We don't need
+      // the full latest-row machinery — a single MAX flag is sufficient
+      // because pr_merged is monotonic in the current state machine (no
+      // outbound transitions from pr_merged exist in v1; manual Refresh of
+      // a re-opened PR would write a new row but the dashboard's response
+      // is still "merged" until the user acts via Finish).
+      .leftJoin(
+        this.db
+          .selectFrom('state_transitions as st')
+          .select([
+            'st.agent_key as agent_key',
+            sql<number>`MAX(CASE WHEN st.to_state = 'pr_merged' THEN 1 ELSE 0 END)`.as(
+              'pr_merged',
+            ),
+          ])
+          .groupBy('st.agent_key')
+          .as('transition_status'),
+        (join) => join.onRef('transition_status.agent_key', '=', 'a.key'),
+      )
       .select([
         'a.key',
         'a.project_name as projectName',
@@ -201,6 +227,7 @@ export class AgentsService {
         'totals.has_pr_create',
         'totals.latest_has_tool_calls',
         'finish_status.has_finish_completed_ok',
+        'transition_status.pr_merged',
       ])
       .orderBy('a.key', 'asc')
       .execute();
@@ -213,6 +240,7 @@ export class AgentsService {
         latestHasToolCalls: Boolean(row.latest_has_tool_calls),
         hasPrCreate: Boolean(row.has_pr_create),
         finishCompletedOk: Boolean(row.has_finish_completed_ok),
+        prMerged: Boolean(row.pr_merged),
       });
       const summary: AgentSummary = {
         key: row.key,
@@ -307,12 +335,24 @@ export class AgentsService {
       (r) => r.command === 'finish' && r.completed_at !== null && r.exit_code === 0,
     );
 
+    // CREW-202: check for a `pr_merged` transition written by PrPoller.
+    // A single existence check is enough — see list()'s comment for the
+    // monotonicity rationale.
+    const prMergedRow = await this.db
+      .selectFrom('state_transitions')
+      .select(sql<number>`COUNT(*)`.as('n'))
+      .where('agent_key', '=', key)
+      .where('to_state', '=', 'pr_merged')
+      .executeTakeFirst();
+    const prMerged = (prMergedRow?.n ?? 0) > 0;
+
     const state = deriveState({
       completedAt: latest.completed_at,
       exitCode: latest.exit_code,
       latestHasToolCalls: (latestHasToolCalls?.n ?? 0) > 0,
       hasPrCreate,
       finishCompletedOk,
+      prMerged,
     });
 
     // Project config is optional plumbing for the drawer's app + Jira pills.
@@ -533,6 +573,13 @@ interface DeriveStateInput {
    * the agent is past its merged-PR state. Drives CREW-116 acceptance.
    */
   finishCompletedOk: boolean;
+  /**
+   * CREW-202: PrPoller writes a `pr_merged` transition when GitHub reports
+   * the PR is no longer OPEN. Tool-call data alone can't tell us this —
+   * `hasPrCreate` stays true forever once `gh pr create` ran. When this is
+   * true (and finish hasn't completed yet) the agent is `pr_merged`.
+   */
+  prMerged: boolean;
 }
 
 function emptyBucket(): TokenCategoryBucket {
@@ -545,6 +592,10 @@ function deriveState(input: DeriveStateInput): AgentState {
     return input.latestHasToolCalls ? 'running' : 'initializing';
   }
   if (input.exitCode !== null && input.exitCode !== 0) return 'error';
+  // pr_merged supersedes pr_open: PrPoller's transition wins over the
+  // forever-true hasPrCreate signal. Checked before pr_open so a merged
+  // PR doesn't get re-stamped as open by tool-call derivation alone.
+  if (input.prMerged) return 'pr_merged';
   if (input.hasPrCreate) return 'pr_open';
   return 'finished';
 }

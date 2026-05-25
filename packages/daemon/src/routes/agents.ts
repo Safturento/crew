@@ -2,12 +2,20 @@ import { z } from 'zod';
 import type { DaemonApp } from '../app.js';
 import { NotFoundError } from '../errors.js';
 
-const AgentStateEnum = z.enum(['initializing', 'running', 'pr_open', 'error', 'finished']);
+const AgentStateEnum = z.enum([
+  'initializing',
+  'running',
+  'pr_open',
+  'pr_merged',
+  'error',
+  'finished',
+]);
 
 const TransitionStateEnum = z.enum([
   'init',
   'running',
   'pr_open',
+  'pr_merged',
   'error',
   'finished',
   'idle',
@@ -93,6 +101,17 @@ const KeyParamsSchema = z.object({ key: z.string().min(1) });
 
 const UpdateTicketTitleBodySchema = z.object({
   ticketTitle: z.string(),
+});
+
+/**
+ * CREW-202: POST /api/agents/:key/refresh-pr-status response. `newState`
+ * is omitted when `stateChanged: false`, otherwise carries the resulting
+ * AgentState (currently always `pr_merged` per the v1 design — only one
+ * transition exits pr_open via this path).
+ */
+const RefreshPrStatusResponseSchema = z.object({
+  stateChanged: z.boolean(),
+  newState: AgentStateEnum.optional(),
 });
 
 export type Agent = z.infer<typeof AgentSchema>;
@@ -182,6 +201,34 @@ export async function registerAgentsRoutes(app: DaemonApp): Promise<void> {
         throw new NotFoundError('agent_not_found', { resource: 'agent', id: req.params.key });
       }
       reply.code(204).send();
+    },
+  );
+
+  // CREW-202: manual on-demand PR-state check from the drawer's "Refresh PR"
+  // button. 404 when the agent key is unknown; otherwise delegates to
+  // PrPoller.checkAgent, which wraps `gh pr view` errors into a no-op
+  // result. Note that POSTing while the agent is NOT pr_open is also a
+  // clean no-op — the precondition lives in PrPoller, not here.
+  app.post(
+    '/api/agents/:key/refresh-pr-status',
+    {
+      schema: {
+        params: KeyParamsSchema,
+        response: { 200: RefreshPrStatusResponseSchema },
+      },
+    },
+    async (req) => {
+      const db = req.diScope.resolve('db');
+      const exists = await db
+        .selectFrom('agents')
+        .select('key')
+        .where('key', '=', req.params.key)
+        .executeTakeFirst();
+      if (!exists) {
+        throw new NotFoundError('agent_not_found', { resource: 'agent', id: req.params.key });
+      }
+      const poller = req.diScope.resolve('prPoller');
+      return poller.checkAgent(req.params.key);
     },
   );
 
