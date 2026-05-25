@@ -29,8 +29,10 @@ test.describe('dashboard shell', () => {
   test('collapses and expands a project section when its header is clicked', async ({ page }) => {
     // Scope to the first project section so the agent-row visibility check
     // tracks *that* section's collapse state, not whichever section happens
-    // to render an agent row first across the page.
-    const section = page.locator('section').first();
+    // to render an agent row first across the page. `getByTestId` is required
+    // because the MetricsTrendWidget also renders a `<section>` above the
+    // project list — a plain `section.first()` would land there instead.
+    const section = page.getByTestId('project-section').first();
     const toggle = section.getByRole('button', { name: /^Toggle / });
     const firstAgent = section.getByRole('button', { name: /^[A-Z]+-\d+ — / }).first();
 
