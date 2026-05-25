@@ -21,7 +21,10 @@ test.describe('project detail route', () => {
 
   test('keeps the Projects tab active while on a detail page', async ({ page }) => {
     await page.goto('/#/projects/crew');
-    await expect(page.getByRole('link', { name: 'Projects' })).toHaveAttribute(
+    // `exact: true` disambiguates from the page's `← Projects` back link
+    // (substring-match would resolve to two elements and trip Playwright's
+    // strict mode).
+    await expect(page.getByRole('link', { name: 'Projects', exact: true })).toHaveAttribute(
       'aria-current',
       'page',
     );

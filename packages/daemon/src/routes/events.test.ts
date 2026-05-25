@@ -27,6 +27,16 @@ interface Harness {
 
 async function setupApp(): Promise<Harness> {
   const dir = tmp();
+  // The daemon's onReady hook attaches a chokidar watcher for the CLI's
+  // startup-event JSONL stream, defaulting to ~/.crew/startup when the
+  // env var is unset. In tests that would scan the developer's real
+  // directory and replay every historical startup event into the bus,
+  // racing the SSE subscriber and producing a non-empty stream before
+  // the test publishes its own event. Point at a fresh empty dir per
+  // test instead.
+  const startupDir = tmp();
+  const prevStartupDir = process.env.CREW_STARTUP_EVENTS_DIR;
+  process.env.CREW_STARTUP_EVENTS_DIR = startupDir;
   const config = parseDaemonConfig({
     CREW_CONFIG_DIR: dir,
     CREW_DB_FILE: join(dir, 'state.db'),
@@ -49,6 +59,8 @@ async function setupApp(): Promise<Harness> {
     close: async () => {
       await app.close();
       await db.destroy();
+      if (prevStartupDir === undefined) delete process.env.CREW_STARTUP_EVENTS_DIR;
+      else process.env.CREW_STARTUP_EVENTS_DIR = prevStartupDir;
     },
   };
 }

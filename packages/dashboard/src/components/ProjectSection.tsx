@@ -47,11 +47,15 @@ export function ProjectSection({
   );
 
   if (!showHeader) {
-    return <section className="flex flex-col">{body}</section>;
+    return (
+      <section data-testid="project-section" className="flex flex-col">
+        {body}
+      </section>
+    );
   }
 
   return (
-    <section className="flex flex-col">
+    <section data-testid="project-section" className="flex flex-col">
       <div
         role="button"
         tabIndex={0}
