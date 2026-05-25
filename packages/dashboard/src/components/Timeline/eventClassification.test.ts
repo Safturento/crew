@@ -2,10 +2,11 @@ import { describe, expect, it } from 'vitest';
 
 import {
   CATEGORIES,
+  buildToolNameMap,
   defaultVisibleCategorySet,
   eventCategories,
   eventOneLiner,
-  eventToolNames,
+  eventToolAliases,
   isDroppedEvent,
 } from './eventClassification.js';
 import type { TranscriptEvent } from '../../data/types.js';
@@ -26,23 +27,27 @@ const userWith = (content: unknown[]): TranscriptEvent =>
     message: { role: 'user', content },
   }) as unknown as TranscriptEvent;
 
-describe('CATEGORIES + defaultVisibleCategorySet', () => {
-  it('exposes the Slim 5 categories in display order', () => {
+describe('CATEGORIES + defaultVisibleCategorySet (Slim 7)', () => {
+  it('exposes the seven canonical category ids in display order', () => {
     expect(CATEGORIES.map((c) => c.id)).toEqual([
       'conversation',
       'tools',
       'thinking',
-      'hooks-and-skills',
+      'hooks',
+      'skills',
       'system',
+      'startup',
     ]);
   });
 
-  it('enables Conversation + Tools by default; the rest are hidden', () => {
+  it('enables Conversation + Tools + Startup by default; the rest are hidden', () => {
     expect(defaultVisibleCategorySet.has('conversation')).toBe(true);
     expect(defaultVisibleCategorySet.has('tools')).toBe(true);
     expect(defaultVisibleCategorySet.has('thinking')).toBe(false);
-    expect(defaultVisibleCategorySet.has('hooks-and-skills')).toBe(false);
+    expect(defaultVisibleCategorySet.has('hooks')).toBe(false);
+    expect(defaultVisibleCategorySet.has('skills')).toBe(false);
     expect(defaultVisibleCategorySet.has('system')).toBe(false);
+    expect(defaultVisibleCategorySet.has('startup')).toBe(true);
   });
 });
 
@@ -94,7 +99,7 @@ describe('isDroppedEvent', () => {
   });
 });
 
-describe('eventCategories', () => {
+describe('eventCategories (Slim 7)', () => {
   it('classifies assistant text as conversation', () => {
     const event = assistantWith([{ type: 'text', text: 'hello' }]);
     expect([...eventCategories(event)]).toEqual(['conversation']);
@@ -136,7 +141,7 @@ describe('eventCategories', () => {
     expect(cats.has('thinking')).toBe(true);
   });
 
-  it('classifies every hooks-and-skills attachment subtype into hooks-and-skills', () => {
+  it('classifies every hook attachment subtype into hooks', () => {
     const subtypes = [
       'hook_success',
       'hook_additional_context',
@@ -144,8 +149,36 @@ describe('eventCategories', () => {
       'hook_non_blocking_error',
       'hook_cancelled',
       'async_hook_response',
-      'skill_listing',
-      'invoked_skills',
+    ];
+    for (const subtype of subtypes) {
+      const event = {
+        type: 'attachment',
+        timestamp: stamp,
+        attachment: { type: subtype },
+      } as unknown as TranscriptEvent;
+      const cats = eventCategories(event);
+      expect(cats.has('hooks')).toBe(true);
+      expect(cats.has('skills')).toBe(false);
+      expect(cats.has('system')).toBe(false);
+    }
+  });
+
+  it('classifies skill_listing + invoked_skills as skills', () => {
+    for (const subtype of ['skill_listing', 'invoked_skills']) {
+      const event = {
+        type: 'attachment',
+        timestamp: stamp,
+        attachment: { type: subtype },
+      } as unknown as TranscriptEvent;
+      const cats = eventCategories(event);
+      expect(cats.has('skills')).toBe(true);
+      expect(cats.has('hooks')).toBe(false);
+      expect(cats.has('system')).toBe(false);
+    }
+  });
+
+  it('routes remaining attachment subtypes to system', () => {
+    const otherSubtypes = [
       'command_permissions',
       'deferred_tools_delta',
       'mcp_instructions_delta',
@@ -162,23 +195,56 @@ describe('eventCategories', () => {
       'file',
       'compact_file_reference',
     ];
-    for (const subtype of subtypes) {
+    for (const subtype of otherSubtypes) {
       const event = {
         type: 'attachment',
         timestamp: stamp,
         attachment: { type: subtype },
       } as unknown as TranscriptEvent;
-      expect([...eventCategories(event)]).toEqual(['hooks-and-skills']);
+      expect([...eventCategories(event)]).toEqual(['system']);
     }
   });
 
-  it('classifies system events as system (any subtype)', () => {
+  it('classifies non-startup system events as system', () => {
     const event = {
       type: 'system',
       subtype: 'turn_duration',
       timestamp: stamp,
     } as unknown as TranscriptEvent;
-    expect([...eventCategories(event)]).toEqual(['system']);
+    const cats = eventCategories(event);
+    expect(cats.has('system')).toBe(true);
+    expect(cats.has('startup')).toBe(false);
+  });
+
+  it('routes crew_startup_* system subtypes to startup', () => {
+    const event = {
+      type: 'system',
+      subtype: 'crew_startup_npm_install',
+      timestamp: stamp,
+    } as unknown as TranscriptEvent;
+    const cats = eventCategories(event);
+    expect(cats.has('startup')).toBe(true);
+    expect(cats.has('system')).toBe(false);
+  });
+
+  it('routes every crew_startup_* phase to startup', () => {
+    const phases = [
+      'crew_startup_preflight',
+      'crew_startup_git_fetch',
+      'crew_startup_npm_install',
+      'crew_startup_docker_compose',
+      'crew_startup_bruno_env',
+      'crew_startup_playwright_browsers',
+      'crew_startup_claude_spawn',
+    ];
+    for (const subtype of phases) {
+      const event = {
+        type: 'system',
+        subtype,
+        timestamp: stamp,
+      } as unknown as TranscriptEvent;
+      expect(eventCategories(event).has('startup')).toBe(true);
+    }
   });
 
   it('uses system as the catch-all for unrecognised top-types and attachment subtypes', () => {
@@ -198,36 +264,95 @@ describe('eventCategories', () => {
   });
 });
 
-describe('eventToolNames', () => {
-  it('returns the tool_use name for an assistant tool_use block', () => {
-    const event = assistantWith([{ type: 'tool_use', id: 't1', name: 'Bash', input: {} }]);
-    expect(eventToolNames(event)).toEqual(['Bash']);
+describe('buildToolNameMap', () => {
+  it('maps tool_use ids to tool names from assistant events', () => {
+    const events = [
+      assistantWith([
+        { type: 'tool_use', id: 'toolu_abc', name: 'Bash', input: {} },
+        { type: 'tool_use', id: 'toolu_def', name: 'mcp__atlassian__jira_get_issue', input: {} },
+      ]),
+    ];
+    const map = buildToolNameMap(events);
+    expect(map.get('toolu_abc')).toBe('Bash');
+    expect(map.get('toolu_def')).toBe('mcp__atlassian__jira_get_issue');
+    expect(map.size).toBe(2);
   });
 
-  it('joins every tool_use block in mixed content', () => {
+  it('walks every assistant event in the array', () => {
+    const events = [
+      assistantWith([{ type: 'tool_use', id: 't1', name: 'Bash', input: {} }]),
+      assistantWith([{ type: 'tool_use', id: 't2', name: 'Edit', input: {} }]),
+    ];
+    const map = buildToolNameMap(events);
+    expect(map.size).toBe(2);
+    expect(map.get('t1')).toBe('Bash');
+    expect(map.get('t2')).toBe('Edit');
+  });
+
+  it('ignores non-assistant events and non-tool_use blocks', () => {
+    const events = [
+      userWith([{ type: 'text', text: 'hi' }]),
+      assistantWith([{ type: 'text', text: 'hello' }]),
+      {
+        type: 'system',
+        subtype: 'turn_duration',
+        timestamp: stamp,
+      } as unknown as TranscriptEvent,
+    ];
+    expect(buildToolNameMap(events).size).toBe(0);
+  });
+
+  it('returns an empty map for an empty events array', () => {
+    expect(buildToolNameMap([]).size).toBe(0);
+  });
+});
+
+describe('eventToolAliases', () => {
+  const mapWith = (entries: [string, string][]): Map<string, string> => new Map(entries);
+
+  it('returns aliases for assistant.tool_use blocks via toolAlias()', () => {
+    const event = assistantWith([{ type: 'tool_use', id: 't1', name: 'Bash', input: {} }]);
+    expect(eventToolAliases(event, new Map())).toEqual(['Bash']);
+  });
+
+  it('collapses MCP variants to a single MCP:<Service> alias', () => {
+    const event = assistantWith([
+      { type: 'tool_use', id: 't1', name: 'mcp__atlassian__jira_get_issue', input: {} },
+    ]);
+    expect(eventToolAliases(event, new Map())).toEqual(['MCP:Jira']);
+  });
+
+  it('returns every tool_use alias for mixed assistant content', () => {
     const event = assistantWith([
       { type: 'text', text: 'do it' },
       { type: 'tool_use', id: 't1', name: 'Bash', input: {} },
       { type: 'tool_use', id: 't2', name: 'Edit', input: {} },
     ]);
-    expect(eventToolNames(event)).toEqual(['Bash', 'Edit']);
+    expect(eventToolAliases(event, new Map())).toEqual(['Bash', 'Edit']);
   });
 
-  it('returns the tool_use name behind a user.tool_result via the linked id', () => {
-    // We don't resolve cross-event id linking here — a user.tool_result
-    // alone has no tool_name. eventToolNames returns [] for it.
+  it('resolves a user.tool_result via the tool_use_id map and aliases the name', () => {
     const event = userWith([{ type: 'tool_result', tool_use_id: 't1', content: 'ok' }]);
-    expect(eventToolNames(event)).toEqual([]);
+    const map = mapWith([['t1', 'mcp__atlassian__jira_get_issue']]);
+    expect(eventToolAliases(event, map)).toEqual(['MCP:Jira']);
   });
 
-  it('returns [] for non-tool events', () => {
-    expect(eventToolNames(assistantWith([{ type: 'text', text: 'hi' }]))).toEqual([]);
+  it('returns [] for a tool_result whose id is not in the map (do not hide)', () => {
+    const event = userWith([{ type: 'tool_result', tool_use_id: 'orphan', content: 'ok' }]);
+    expect(eventToolAliases(event, new Map())).toEqual([]);
+  });
+
+  it('returns [] for events with no tool linkage at all', () => {
+    expect(eventToolAliases(assistantWith([{ type: 'text', text: 'hi' }]), new Map())).toEqual([]);
     expect(
-      eventToolNames({
-        type: 'system',
-        subtype: 'turn_duration',
-        timestamp: stamp,
-      } as unknown as TranscriptEvent),
+      eventToolAliases(
+        {
+          type: 'system',
+          subtype: 'turn_duration',
+          timestamp: stamp,
+        } as unknown as TranscriptEvent,
+        new Map(),
+      ),
     ).toEqual([]);
   });
 });

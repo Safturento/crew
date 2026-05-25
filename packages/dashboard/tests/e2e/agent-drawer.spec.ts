@@ -123,7 +123,15 @@ test.describe('Agent drawer', () => {
 
     // Open Filters and toggle every category checkbox that's currently on.
     await page.getByRole('button', { name: /open timeline filters/i }).click();
-    for (const label of ['Conversation', 'Tools', 'Thinking', 'Hooks & skills', 'System']) {
+    for (const label of [
+      'Conversation',
+      'Tools',
+      'Thinking',
+      'Hooks',
+      'Skills',
+      'System',
+      'Startup',
+    ]) {
       const cb = page.getByLabel(label);
       if (await cb.isChecked()) await cb.click();
     }

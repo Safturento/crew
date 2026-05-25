@@ -3,7 +3,6 @@ import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } f
 
 import { useStateHistory, useTimeline } from '../../data/queries.js';
 import type { AgentDetailTokensByTool, AgentState, TranscriptEvent } from '../../data/types.js';
-import { toolAlias } from '../../format/tool-alias.js';
 import { cn } from '../../lib/utils.js';
 import { Button } from '../ui/button.js';
 import { Filters, defaultTimelineFilterState, type TimelineFilterState } from './Filters.js';
@@ -13,7 +12,7 @@ import { SearchBar } from './SearchBar.js';
 import {
   eventCategories,
   eventOneLiner,
-  eventToolNames,
+  eventToolAliases,
   isDroppedEvent,
 } from './eventClassification.js';
 import { groupEventsByState, type TimelineSectionData } from './groupEventsByState.js';
@@ -350,36 +349,32 @@ function eventKey(event: TranscriptEvent): string {
   return r.uuid ?? r.timestamp ?? Math.random().toString(36).slice(2);
 }
 
+// Placeholder passed to `eventToolAliases` until CREW-207 wires the real
+// `tool_use_id → name` map memoized off the events array. Result: tool_result
+// events still escape per-tool filtering at this stage (the orphan bug). The
+// helper itself is correct; the call site upgrade lands in ticket D.
+const EMPTY_TOOL_NAME_MAP: ReadonlyMap<string, string> = new Map();
+
 function matchesFilters(
   event: TranscriptEvent,
   state: TimelineFilterState,
   needle: string,
 ): boolean {
-  // CREW-201: startup phase rows bypass the category filter. They land
-  // in the System category structurally but are high-signal + low-count
-  // (max ~7 per run), so hiding them behind the default-off System
-  // checkbox would defeat the entire feature. The search-needle filter
-  // below still applies.
-  const subtype = (event as { subtype?: string }).subtype;
-  const isStartupRow = typeof subtype === 'string' && subtype.startsWith('crew_startup_');
-  if (!isStartupRow) {
-    const cats = eventCategories(event);
-    let categoryMatch = false;
-    for (const c of cats) {
-      if (state.categories.has(c)) {
-        categoryMatch = true;
-        break;
-      }
+  const cats = eventCategories(event);
+  let categoryMatch = false;
+  for (const c of cats) {
+    if (state.categories.has(c)) {
+      categoryMatch = true;
+      break;
     }
-    if (!categoryMatch) return false;
   }
+  if (!categoryMatch) return false;
 
   // Tools section uses inverted-checkbox semantics: an alias in
   // `excludedTools` means the user unchecked it. Event passes iff it has
-  // no tool_use blocks OR every one of its aliased tool_use names is
-  // still checked (not in the exclusion set).
+  // no tool aliases OR none of them are excluded.
   if (state.excludedTools.size > 0) {
-    const aliases = eventToolNames(event).map(toolAlias);
+    const aliases = eventToolAliases(event, EMPTY_TOOL_NAME_MAP);
     if (aliases.length > 0) {
       for (const a of aliases) {
         if (state.excludedTools.has(a)) return false;

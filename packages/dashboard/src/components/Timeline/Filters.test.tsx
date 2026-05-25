@@ -15,10 +15,18 @@ const rows: AgentDetailTokensByTool[] = [
 ];
 
 describe('Filters', () => {
-  it('opens the popover and shows the Slim 5 category rows', async () => {
+  it('opens the popover and shows the Slim 7 category rows', async () => {
     render(<Filters state={defaultTimelineFilterState} onChange={() => {}} tokensByTool={rows} />);
     await userEvent.click(screen.getByRole('button', { name: /open timeline filters/i }));
-    for (const label of ['Conversation', 'Tools', 'Thinking', 'Hooks & skills', 'System']) {
+    for (const label of [
+      'Conversation',
+      'Tools',
+      'Thinking',
+      'Hooks',
+      'Skills',
+      'System',
+      'Startup',
+    ]) {
       expect(screen.getByLabelText(label)).toBeInTheDocument();
     }
   });
@@ -105,7 +113,9 @@ describe('Filters', () => {
 
   it('shows a numeric badge counting category toggles + excluded tools', () => {
     const diverged: TimelineFilterState = {
-      categories: new Set(['conversation', 'tools', 'thinking']),
+      // Defaults: conversation + tools + startup ON, rest OFF.
+      // Add `thinking` (was OFF) → +1; everything else matches default → +0.
+      categories: new Set(['conversation', 'tools', 'thinking', 'startup']),
       excludedTools: new Set(['Bash']),
     };
     render(<Filters state={diverged} onChange={() => {}} tokensByTool={rows} />);
