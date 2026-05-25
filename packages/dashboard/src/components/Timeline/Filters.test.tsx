@@ -133,6 +133,30 @@ describe('Filters (inclusion-tree)', () => {
     ]);
   });
 
+  it('expanding Tools renders alias rows immediately after the Tools row, before Thinking', async () => {
+    render(<Filters state={defaultTimelineFilterState} onChange={() => {}} tokensByTool={rows} />);
+    await userEvent.click(screen.getByRole('button', { name: /open timeline filters/i }));
+    await userEvent.click(screen.getByTestId('tools-disclosure'));
+    // Collect the visible filter rows in DOM order — categories and alias rows
+    // alike are <label htmlFor="filter-(cat|tool)-...">. The alias rows must
+    // appear between the Tools row and the Thinking row.
+    const labels = Array.from(document.querySelectorAll<HTMLLabelElement>('label[for^="filter-"]'));
+    const fors = labels.map((l) => l.getAttribute('for'));
+    const toolsIdx = fors.indexOf('filter-cat-tools');
+    const thinkingIdx = fors.indexOf('filter-cat-thinking');
+    expect(toolsIdx).toBeGreaterThanOrEqual(0);
+    expect(thinkingIdx).toBeGreaterThan(toolsIdx);
+    // Every alias row should sit strictly between Tools and Thinking.
+    const aliasIndices = fors
+      .map((f, i) => (f?.startsWith('filter-tool-') ? i : -1))
+      .filter((i) => i >= 0);
+    expect(aliasIndices.length).toBeGreaterThan(0);
+    for (const i of aliasIndices) {
+      expect(i).toBeGreaterThan(toolsIdx);
+      expect(i).toBeLessThan(thinkingIdx);
+    }
+  });
+
   it('empty tokensByTool: subtree expansion shows an empty-state hint', async () => {
     render(<Filters state={defaultTimelineFilterState} onChange={() => {}} tokensByTool={[]} />);
     await userEvent.click(screen.getByRole('button', { name: /open timeline filters/i }));

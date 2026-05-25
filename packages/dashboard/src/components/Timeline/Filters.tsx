@@ -1,5 +1,5 @@
 import { ChevronDown, ChevronRight, Filter } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { Fragment, useMemo, useState } from 'react';
 
 import type { AgentDetailTokensByTool } from '../../data/types.js';
 import { aggregateByAlias } from '../../format/tool-alias.js';
@@ -64,10 +64,7 @@ export function Filters({ state, onChange, tokensByTool }: FiltersProps) {
         >
           <span>Filters</span>
           {showBadge && (
-            <span
-              data-testid="filters-badge"
-              className="ml-1 inline-flex h-4 items-center justify-center rounded-full bg-foreground/15 px-1.5 font-mono text-[10px] leading-none text-foreground"
-            >
+            <span data-testid="filters-badge" className="ml-1">
               {visible} / {total}
             </span>
           )}
@@ -84,15 +81,25 @@ export function Filters({ state, onChange, tokensByTool }: FiltersProps) {
           <div className="flex flex-col gap-0.5 p-2">
             {CATEGORIES.map((c) =>
               c.id === 'tools' ? (
-                <ToolsParentRow
+                <FilterRow
                   key="tools"
+                  id="filter-cat-tools"
+                  testId="filter-row-tools"
+                  label="Tools"
                   checked={toolsChecked}
+                  onToggle={() => onChange(toggleCategory(state, 'tools'))}
                   expanded={toolsExpanded}
                   onToggleExpanded={() => setToolsExpanded((e) => !e)}
-                  onToggleChecked={() => onChange(toggleCategory(state, 'tools'))}
-                  visibleCount={visibleToolCount}
-                  totalCount={knownAliases.length}
-                />
+                  count={{ visible: visibleToolCount, total: knownAliases.length }}
+                >
+                  <ToolsSubtree
+                    aliasRows={aliasRows}
+                    state={state}
+                    knownAliases={knownAliases}
+                    onChange={onChange}
+                    masterOn={toolsChecked}
+                  />
+                </FilterRow>
               ) : (
                 <FilterRow
                   key={c.id}
@@ -102,15 +109,6 @@ export function Filters({ state, onChange, tokensByTool }: FiltersProps) {
                   onToggle={() => onChange(toggleCategory(state, c.id))}
                 />
               ),
-            )}
-            {toolsExpanded && (
-              <ToolsSubtree
-                aliasRows={aliasRows}
-                state={state}
-                knownAliases={knownAliases}
-                onChange={onChange}
-                masterOn={toolsChecked}
-              />
             )}
           </div>
         </div>
@@ -147,77 +145,81 @@ interface FilterRowProps {
   disabled?: boolean;
   onToggle: () => void;
   indent?: boolean;
+  testId?: string;
+  /** Visible/total count rendered before the disclosure chevron. */
+  count?: { visible: number; total: number };
+  /** When set, the row carries a disclosure chevron toggling this callback. */
+  onToggleExpanded?: () => void;
+  /** Current disclosure state — drives the chevron glyph + aria-label. */
+  expanded?: boolean;
+  /** Subtree rendered after the row when `expanded` is true. */
+  children?: React.ReactNode;
 }
-function FilterRow({ id, label, title, checked, disabled, onToggle, indent }: FilterRowProps) {
+function FilterRow({
+  id,
+  label,
+  title,
+  checked,
+  disabled,
+  onToggle,
+  indent,
+  testId,
+  count,
+  onToggleExpanded,
+  expanded,
+  children,
+}: FilterRowProps) {
   // Note on `disabled`: in the Tools subtree, master-off children render
   // visually disabled but stay clickable so toggleTool's auto-enable branch
   // can fire on a single click. We can't use Radix Checkbox's `disabled` prop
   // for that because it blocks the click entirely. The `opacity-35` class
   // mirrors the disabled-state visual from the Checkbox primitive itself.
+  //
+  // The <label> only wraps the Checkbox + label text so that the row's
+  // accessible name resolves cleanly to `label` (testing-library queries +
+  // SR readout). The optional count + disclosure chevron live as siblings
+  // inside the row container, not inside the label.
   return (
-    <label
-      htmlFor={id}
-      title={title}
-      className={`flex cursor-pointer select-none items-center gap-2 rounded-sm py-1.5 text-sm text-foreground hover:bg-accent ${
-        indent ? 'pl-7 pr-2' : 'px-2'
-      } ${disabled ? 'opacity-35' : ''}`}
-    >
-      <Checkbox
-        id={id}
-        checked={checked}
-        aria-disabled={disabled || undefined}
-        onCheckedChange={() => onToggle()}
-      />
-      <span className="font-mono text-xs">{label}</span>
-    </label>
-  );
-}
-
-interface ToolsParentRowProps {
-  checked: boolean;
-  expanded: boolean;
-  onToggleExpanded: () => void;
-  onToggleChecked: () => void;
-  visibleCount: number;
-  totalCount: number;
-}
-function ToolsParentRow({
-  checked,
-  expanded,
-  onToggleExpanded,
-  onToggleChecked,
-  visibleCount,
-  totalCount,
-}: ToolsParentRowProps) {
-  return (
-    <div
-      data-testid="filter-row-tools"
-      className="flex items-center gap-2 rounded-sm px-2 py-1.5 text-sm text-foreground hover:bg-accent"
-    >
-      <Checkbox id="filter-cat-tools" checked={checked} onCheckedChange={() => onToggleChecked()} />
-      <label
-        htmlFor="filter-cat-tools"
-        className="flex-1 cursor-pointer select-none font-mono text-xs"
+    <Fragment>
+      <div
+        data-testid={testId}
+        title={title}
+        className={`flex items-center gap-2 rounded-sm py-1.5 text-sm text-foreground hover:bg-accent ${
+          indent ? 'pl-7 pr-2' : 'px-2'
+        } ${disabled ? 'opacity-35' : ''}`}
       >
-        Tools
-      </label>
-      <span className="font-mono text-[10px] text-muted-foreground">
-        {visibleCount} / {totalCount}
-      </span>
-      <button
-        type="button"
-        data-testid="tools-disclosure"
-        aria-label={expanded ? 'Collapse tools' : 'Expand tools'}
-        onClick={onToggleExpanded}
-        className="grid size-4 place-items-center text-muted-foreground hover:text-foreground"
-      >
-        {expanded ? (
-          <ChevronDown className="size-3" aria-hidden />
-        ) : (
-          <ChevronRight className="size-3" aria-hidden />
+        <Checkbox
+          id={id}
+          checked={checked}
+          aria-disabled={disabled || undefined}
+          onCheckedChange={() => onToggle()}
+        />
+        <label htmlFor={id} className="flex-1 cursor-pointer select-none font-mono text-xs">
+          {label}
+        </label>
+        {count && (
+          <span className="font-mono text-[10px] text-muted-foreground">
+            {count.visible} / {count.total}
+          </span>
         )}
-      </button>
-    </div>
+        {onToggleExpanded && (
+          <button
+            type="button"
+            data-testid={id === 'filter-cat-tools' ? 'tools-disclosure' : undefined}
+            aria-label={expanded ? 'Collapse' : 'Expand'}
+            onClick={onToggleExpanded}
+            className="grid size-4 place-items-center text-muted-foreground hover:text-foreground"
+          >
+            {expanded ? (
+              <ChevronDown className="size-3" aria-hidden />
+            ) : (
+              <ChevronRight className="size-3" aria-hidden />
+            )}
+          </button>
+        )}
+      </div>
+      {expanded && children}
+    </Fragment>
   );
 }
 
