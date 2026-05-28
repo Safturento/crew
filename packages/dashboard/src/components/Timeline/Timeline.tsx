@@ -11,6 +11,7 @@ import { LiveModeToggle, NewEventsPill } from './LiveModeToggle.js';
 import { MinimapStripe } from './MinimapStripe.js';
 import { SearchBar } from './SearchBar.js';
 import {
+  buildToolNameMap,
   eventCategories,
   eventOneLiner,
   eventToolAliases,
@@ -71,10 +72,15 @@ export function Timeline({ agentKey, agentState, tokensByTool = [] }: TimelinePr
   const transitions = historyData?.transitions ?? [];
   const fallbackState: AgentState = agentState ?? 'running';
 
+  // Resolve `user.tool_result` blocks back to their tool name via the
+  // `tool_use_id` map. Rebuild only when the events array changes — cheap
+  // because we walk assistant.tool_use blocks once per change.
+  const toolNameById = useMemo(() => buildToolNameMap(events), [events]);
+
   const filteredEvents = useMemo(() => {
     const needle = deferredSearch.trim().toLowerCase();
-    return events.filter((evt) => matchesFilters(evt, filterState, needle));
-  }, [events, filterState, deferredSearch]);
+    return events.filter((evt) => matchesFilters(evt, filterState, toolNameById, needle));
+  }, [events, filterState, toolNameById, deferredSearch]);
 
   const sections = useMemo(
     () => groupEventsByState(filteredEvents, transitions, fallbackState),
@@ -350,15 +356,10 @@ function eventKey(event: TranscriptEvent): string {
   return r.uuid ?? r.timestamp ?? Math.random().toString(36).slice(2);
 }
 
-// Placeholder passed to `eventToolAliases` until CREW-207 wires the real
-// `tool_use_id → name` map memoized off the events array. Result: tool_result
-// events still escape per-tool filtering at this stage (the orphan bug). The
-// helper itself is correct; the call site upgrade lands in ticket D.
-const EMPTY_TOOL_NAME_MAP: ReadonlyMap<string, string> = new Map();
-
 function matchesFilters(
   event: TranscriptEvent,
   state: TimelineFilterState,
+  toolNameById: ReadonlyMap<string, string>,
   needle: string,
 ): boolean {
   const cats = eventCategories(event);
@@ -371,12 +372,8 @@ function matchesFilters(
   }
   if (!categoryMatch) return false;
 
-  // Per-tool filtering against the inclusion-tree state. CREW-207 will wire
-  // the real toolNameById map so `tool_result` events resolve their parent
-  // tool name (the orphan fix). Until then, `tool_result`s only escape the
-  // empty-map fallback when their tool_use is also unchecked.
   if (state.categories.has('tools')) {
-    const aliases = eventToolAliases(event, EMPTY_TOOL_NAME_MAP);
+    const aliases = eventToolAliases(event, toolNameById);
     if (aliases.length > 0) {
       let anyVisible = false;
       for (const a of aliases) {
