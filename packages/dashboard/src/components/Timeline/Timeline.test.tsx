@@ -137,6 +137,17 @@ const assistantThinking = (i: number, text: string): TranscriptEvent =>
     },
   }) as unknown as TranscriptEvent;
 
+const userToolResult = (i: number, toolUseId: string, text: string): TranscriptEvent =>
+  ({
+    type: 'user',
+    uuid: `uuid-${i}`,
+    timestamp: `2026-04-29T12:00:0${i}Z`,
+    message: {
+      role: 'user',
+      content: [{ type: 'tool_result', tool_use_id: toolUseId, content: text }],
+    },
+  }) as unknown as TranscriptEvent;
+
 const openFilters = async (): Promise<void> => {
   await userEvent.click(screen.getByRole('button', { name: /open timeline filters/i }));
 };
@@ -461,6 +472,34 @@ describe('Timeline', () => {
     expect(screen.getAllByTestId('transcript-row')).toHaveLength(2);
     // Uncheck MCP:Jira too — only the Read event remains.
     await userEvent.click(screen.getByLabelText('MCP:Jira'));
+    expect(screen.getAllByTestId('transcript-row')).toHaveLength(1);
+  });
+
+  it('regression: tool_result events filter out alongside their tool_use', async () => {
+    // The bug: tool_result events were classified into the `tools` category
+    // but their parent tool name was unresolvable, so they slipped past
+    // per-tool filtering. After wiring `buildToolNameMap`, the tool_result
+    // resolves to the same alias as its tool_use and disappears together.
+    mockUseTimeline.mockReturnValue(
+      timelineResult({
+        data: {
+          events: [
+            assistantToolUse(1, 'mcp__atlassian__jira_get_issue'),
+            userToolResult(2, 't1', 'CREW-207 details ...'),
+            evt(3),
+          ],
+        },
+        isSuccess: true,
+        status: 'success',
+      }),
+    );
+    render(<Timeline agentKey="KAN-1" tokensByTool={sampleTokensByTool} />);
+    expect(screen.getAllByTestId('transcript-row')).toHaveLength(3);
+    await openFilters();
+    await expandTools();
+    await userEvent.click(screen.getByLabelText('MCP:Jira'));
+    // Both the assistant tool_use AND the matching user tool_result row are
+    // hidden; only the conversation event remains.
     expect(screen.getAllByTestId('transcript-row')).toHaveLength(1);
   });
 

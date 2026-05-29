@@ -225,6 +225,156 @@ test.describe('Agent drawer', () => {
     await expect(page.getByTestId('transcript-row').first()).toBeInViewport();
   });
 
+  test.describe('Timeline filters — inclusion tree (CREW-207)', () => {
+    // Five distinct tool aliases so the badge math lands at 7 / 11
+    // (NON_TOOLS_CATEGORIES count = 6 + 5 tool aliases = 11 total leaves;
+    // default visible = conversation + startup + 5 tools = 7).
+    const FIVE_ALIAS_TOKENS = [
+      {
+        tool: 'Bash',
+        tokens: { input: 0, output: 200, cacheCreation: 0, cacheRead: 0 },
+        totalTokens: 200,
+      },
+      {
+        tool: 'Read',
+        tokens: { input: 0, output: 150, cacheCreation: 0, cacheRead: 0 },
+        totalTokens: 150,
+      },
+      {
+        tool: 'Edit',
+        tokens: { input: 0, output: 120, cacheCreation: 0, cacheRead: 0 },
+        totalTokens: 120,
+      },
+      {
+        tool: 'Grep',
+        tokens: { input: 0, output: 80, cacheCreation: 0, cacheRead: 0 },
+        totalTokens: 80,
+      },
+      {
+        tool: 'mcp__atlassian__jira_get_issue',
+        tokens: { input: 0, output: 60, cacheCreation: 0, cacheRead: 0 },
+        totalTokens: 60,
+      },
+    ];
+
+    const JIRA_TOOL_USE = {
+      type: 'assistant',
+      uuid: 'evt-jira-use',
+      timestamp: '2026-05-04T10:07:00Z',
+      message: {
+        role: 'assistant',
+        content: [
+          {
+            type: 'tool_use',
+            id: 'toolu_jira_1',
+            name: 'mcp__atlassian__jira_get_issue',
+            input: { issueIdOrKey: 'CREW-207' },
+          },
+        ],
+      },
+    };
+    const JIRA_TOOL_RESULT = {
+      type: 'user',
+      uuid: 'evt-jira-result',
+      timestamp: '2026-05-04T10:07:01Z',
+      message: {
+        role: 'user',
+        content: [
+          { type: 'tool_result', tool_use_id: 'toolu_jira_1', content: 'CREW-207 details ...' },
+        ],
+      },
+    };
+
+    /**
+     * Mocks both the agent-detail endpoint (so `tokens_by_tool` carries five
+     * distinct aliases including MCP:Jira) and the timeline endpoint (so a
+     * matched `tool_use` + `tool_result` pair for MCP:Jira renders). Keeps
+     * the spec deterministic regardless of seed data — the orphan regression
+     * is the focus, not the dev fixture mix.
+     */
+    async function mockJiraAgent(page: Page): Promise<void> {
+      await page.route(`**/api/agents/${SEEDED_AGENT_KEY}`, async (route) => {
+        const detail = {
+          key: SEEDED_AGENT_KEY,
+          project: 'crew',
+          ticket_key: SEEDED_AGENT_KEY,
+          ticket_title: 'Filter inclusion tree',
+          state: 'running',
+          worktree_path: '/home/dev/Repos/crew',
+          pr_url: null,
+          app_url: null,
+          jira_url: null,
+          tokens_by_tool: FIVE_ALIAS_TOKENS,
+          model: 'claude-sonnet-4-6',
+          runs: [],
+          tokens: {
+            total: 610,
+            input: 0,
+            output: 610,
+            cache_read: 0,
+            cache_creation: 0,
+          },
+          tool_call_count: 4,
+        };
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify(detail),
+        });
+      });
+      await mockTimeline(page, SEEDED_AGENT_KEY, [
+        TOOL_USE_EVENT,
+        ASSISTANT_TEXT_EVENT,
+        JIRA_TOOL_USE,
+        JIRA_TOOL_RESULT,
+      ]);
+    }
+
+    test('default state renders 7/11 badge and Tools row shows 5/5', async ({ page }) => {
+      await mockJiraAgent(page);
+      await page.goto(`/#/agent/${SEEDED_AGENT_KEY}`);
+      await page.getByRole('button', { name: /open timeline filters/i }).click();
+      await expect(page.getByTestId('filters-badge')).toHaveText('7 / 11');
+      await expect(page.getByTestId('filter-row-tools')).toContainText('5 / 5');
+    });
+
+    test('expanding Tools reveals all five alias children', async ({ page }) => {
+      await mockJiraAgent(page);
+      await page.goto(`/#/agent/${SEEDED_AGENT_KEY}`);
+      await page.getByRole('button', { name: /open timeline filters/i }).click();
+      await page.getByTestId('tools-disclosure').click();
+      for (const alias of ['Bash', 'Read', 'Edit', 'Grep', 'MCP:Jira']) {
+        await expect(page.getByRole('checkbox', { name: alias })).toBeVisible();
+      }
+    });
+
+    test('unchecking MCP:Jira drops both tool_use AND tool_result rows', async ({ page }) => {
+      await mockJiraAgent(page);
+      await page.goto(`/#/agent/${SEEDED_AGENT_KEY}`);
+      const rows = page.getByTestId('transcript-row');
+      await expect(rows).toHaveCount(4);
+
+      await page.getByRole('button', { name: /open timeline filters/i }).click();
+      await page.getByTestId('tools-disclosure').click();
+      await page.getByRole('checkbox', { name: 'MCP:Jira' }).click();
+      // Two rows hidden: the assistant.tool_use AND its user.tool_result.
+      // Tool_result orphan regression — pre-fix the count would only drop to 3.
+      await expect(rows).toHaveCount(2);
+    });
+
+    test('Tools master OFF disables alias children', async ({ page }) => {
+      await mockJiraAgent(page);
+      await page.goto(`/#/agent/${SEEDED_AGENT_KEY}`);
+      await page.getByRole('button', { name: /open timeline filters/i }).click();
+      await page.getByTestId('tools-disclosure').click();
+      await page.getByRole('checkbox', { name: 'Tools' }).click();
+      // Children stay clickable so the "auto-enable master" branch can fire,
+      // but they advertise their disabled state via aria-disabled.
+      const bash = page.getByRole('checkbox', { name: 'Bash' });
+      await expect(bash).toHaveAttribute('aria-disabled', 'true');
+    });
+  });
+
   test('state badge flips on synthetic SSE event without page reload', async ({ page }) => {
     await mockTimeline(page, SEEDED_AGENT_KEY, []);
     await page.goto(`/#/agent/${SEEDED_AGENT_KEY}`);
