@@ -20,6 +20,10 @@
       "percent#555:2": {
         "type": "TEXT",
         "defaultValue": "38.4%"
+      },
+      "cost#679:0": {
+        "type": "TEXT",
+        "defaultValue": "$0.02"
       }
     },
     "boundVariables": {
@@ -102,7 +106,7 @@
   },
   "enrichment": {
     "source": "plugin-api",
-    "capturedAt": "2026-05-22T15:38:53.839Z",
+    "capturedAt": "2026-06-02T01:19:12.453Z",
     "componentProperties": null,
     "mainComponent": null,
     "boundVariables": [
