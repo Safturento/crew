@@ -108,8 +108,25 @@ Reviews of completed work are different — the user asks explicitly when those 
 
 For work whose deliverable lives under `~/.claude/**` (user-level skills, global CLAUDE.md edits, settings), skip ticketing entirely and author in-session — the dispatch flow can't write there. See user-level CLAUDE.md "Don't ticket — handle manually".
 
+## 10. Parking planning intentions in Jira (not session memory)
+
+Crew's instance of the user-level "Park planning intentions in Jira, not memory" rule. When we decide something is worth planning — a followup graduating, a fresh scope — create the CREW artifact immediately rather than caching the intention in a session memory or leaving it only in `docs/followups.md`.
+
+- **Create as** an Epic (large effort), a child of an existing Epic, or a standalone Task — sized to the work.
+- **Planning state = Jira status** (both statuses already exist in the CREW workflow — no admin edit needed):
+  - **`To Do`** — parked, **not yet planned**. The backlog of things to plan.
+  - **`Ready for Development`** — brainstorm + spec + plan done, on the board, awaiting `crew run <KEY>`.
+  - then `In Progress` → `In Review` → `Done`.
+  - A freshly-created ticket may default into `Ready for Development`; if it hasn't actually been planned, move it to `To Do` (transition id `11`).
+- **Stamp the followup** with its `**Ticket:**` line when it graduates (per user-level `~/.claude/CLAUDE.md` "Ticketing a followup").
+- **Answering "what's queued for planning?"** — query Jira first, never session memory or `followups.md` alone:
+  ```
+  project = CREW AND status = "To Do" ORDER BY updated DESC
+  ```
+  Also scan In-Progress Epics for unplanned children. Reconcile each candidate against the code (a ticket can be stale-open while the work already shipped under another Epic) before reporting it as queued.
+
 ## See also
 
-- User-level `~/.claude/CLAUDE.md` — "Planning workflow", "Followup detection", "Branching", "Secrets".
+- User-level `~/.claude/CLAUDE.md` — "Planning workflow", "Park planning intentions in Jira, not memory", "Followup detection", "Branching", "Secrets".
 - User-level `~/.claude/conventions/documentation.md` — generic plan/spec/ticket structure, Jira description authoring conventions.
 - `.agents/dispatch.md` — what `crew run` actually does once the user triggers it.
