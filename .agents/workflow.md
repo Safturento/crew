@@ -108,8 +108,26 @@ Reviews of completed work are different — the user asks explicitly when those 
 
 For work whose deliverable lives under `~/.claude/**` (user-level skills, global CLAUDE.md edits, settings), skip ticketing entirely and author in-session — the dispatch flow can't write there. See user-level CLAUDE.md "Don't ticket — handle manually".
 
+## 10. Parking planning intentions in Jira (not session memory)
+
+Crew's instance of the user-level "Park planning intentions in Jira, not memory" rule. When we decide something is worth planning — a followup graduating, a fresh scope — create the CREW artifact immediately rather than caching the intention in a session memory or leaving it only in `docs/followups.md`.
+
+- **Create as** an Epic (large effort), a child of an existing Epic, or a standalone Task — sized to the work.
+- **Planning state = Jira status:**
+  - **`Backlog`** — parked, **not yet planned**. The queue of things to plan. (Custom status added to the CREW workflow on 2026-06-01 specifically for this — the workflow's only other To-Do-category status, `Ready for Development`, means "planned and ready," so a distinct backlog status was needed.)
+  - **`Ready for Development`** — brainstorm + spec + plan done, on the board, awaiting `crew run <KEY>`.
+  - then `In Progress` → `In Review` → `Done`.
+  - New tickets should land in `Backlog` by default; promote to `Ready for Development` only once a spec + plan exist. (Get the live transition id from `jira_get_transitions` — do not hard-code it; and verify the move actually took, the "To Do" transition in this workflow is a no-op that leaves the ticket in `Ready for Development`.)
+- **Stamp the followup** with its `**Ticket:**` line when it graduates (per user-level `~/.claude/CLAUDE.md` "Ticketing a followup").
+- **Keep the followup and its ticket in sync.** A stamped followup and its ticket are two copies of the same pre-planning intent. If you revise one — the followup body, or the ticket description — mirror the change into the other in the same pass, so their contexts never drift. (This is the recurring drift risk the parking convention introduces; CREW-211 tracks whether tooling beyond this convention is warranted.)
+- **Answering "what's queued for planning?"** — query Jira first, never session memory or `followups.md` alone:
+  ```
+  project = CREW AND status = "Backlog" ORDER BY updated DESC
+  ```
+  Also scan In-Progress Epics for unplanned children. Reconcile each candidate against the code (a ticket can be stale-open while the work already shipped under another Epic) before reporting it as queued.
+
 ## See also
 
-- User-level `~/.claude/CLAUDE.md` — "Planning workflow", "Followup detection", "Branching", "Secrets".
+- User-level `~/.claude/CLAUDE.md` — "Planning workflow", "Park planning intentions in Jira, not memory", "Followup detection", "Branching", "Secrets".
 - User-level `~/.claude/conventions/documentation.md` — generic plan/spec/ticket structure, Jira description authoring conventions.
 - `.agents/dispatch.md` — what `crew run` actually does once the user triggers it.
