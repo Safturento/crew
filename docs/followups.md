@@ -10,13 +10,85 @@ Organization: Active is grouped by topic (not chronology) since the dominant acc
 
 - [Active](#active)
   - [Figma & Crew DS](#figma--crew-ds)
+    - [2026-05-24 — Publish `state/pr-merged` variable in Crew DS Figma](#2026-05-24--publish-statepr-merged-variable-in-crew-ds-figma)
+    - [2026-05-12 — Move figma-snapshot PAGE_DIR_MAP into project config](#2026-05-12--move-figma-snapshot-page_dir_map-into-project-config)
+    - [2026-05-12 — Pill trailing-icon support + CodeChip mono-font composite](#2026-05-12--pill-trailing-icon-support--codechip-mono-font-composite)
+    - [2026-05-12 — Explore intensity-axis for Button (parallels StateBadge muted/mid/loud)](#2026-05-12--explore-intensity-axis-for-button-parallels-statebadge-mutedmidloud)
+    - [2026-05-11 — `idle` and `waiting` agent states not reachable from daemon fixtures](#2026-05-11--idle-and-waiting-agent-states-not-reachable-from-daemon-fixtures)
+    - [2026-05-09 — Crew Dashboard Screens: 3 remaining ad-hoc modal frames need DS Modal swap + semantic-token bindings](#2026-05-09--crew-dashboard-screens-3-remaining-ad-hoc-modal-frames-need-ds-modal-swap--semantic-token-bindings)
   - [Visual Fidelity Tooling](#visual-fidelity-tooling)
+    - [2026-05-19 — `crew figma-snapshot` has no per-node refresh](#2026-05-19--crew-figma-snapshot-has-no-per-node-refresh)
+    - [2026-05-18 — visual-fidelity-check: per-fixture snapshot copy vs committed artifact + Step 4 path-vocab drift](#2026-05-18--visual-fidelity-check-per-fixture-snapshot-copy-vs-committed-artifact--step-4-path-vocab-drift)
+    - [2026-05-18 — `.agents/design-system.md` frontmatter URLs stale after Crew DS consolidation](#2026-05-18--agentsdesign-systemmd-frontmatter-urls-stale-after-crew-ds-consolidation)
+    - [2026-05-18 — `index.css` falls outside every `.agents/*.md` `covers` glob](#2026-05-18--indexcss-falls-outside-every-agentsmd-covers-glob)
+    - [2026-05-17 — figma-snapshot `index.json` `screenshotPath` can point at PNG that was never written](#2026-05-17--figma-snapshot-indexjson-screenshotpath-can-point-at-png-that-was-never-written)
+    - [2026-05-16 — figma-snapshot `resolvedStylesFor` text-color heuristic picks the first TEXT descendant](#2026-05-16--figma-snapshot-resolvedstylesfor-text-color-heuristic-picks-the-first-text-descendant)
+    - [2026-05-15 — `crew fix-pr` does not refresh `.mcp.json` — chrome wiring goes stale on resume](#2026-05-15--crew-fix-pr-does-not-refresh-mcpjson--chrome-wiring-goes-stale-on-resume)
+    - [2026-05-13 — visual-fidelity-check accuracy: snapshot lacks `componentProperties` (REST API limit) + calibration pattern≠specific finding pattern](#2026-05-13--visual-fidelity-check-accuracy-snapshot-lacks-componentproperties-rest-api-limit--calibration-patternspecific-finding-pattern)
   - [Dashboard UI](#dashboard-ui)
+    - [2026-05-22 — `${APP_URL}` template literal in DrawerHeader docker pill (backend bug)](#2026-05-22--app_url-template-literal-in-drawerheader-docker-pill-backend-bug)
+    - [2026-05-22 — Layer-1 RunMetrics widget loses its drawer home in the redesign — find it a new one](#2026-05-22--layer-1-runmetrics-widget-loses-its-drawer-home-in-the-redesign--find-it-a-new-one)
+    - [2026-05-13 — TopNav BrandMark renders a different glyph than the Figma "crew" mark](#2026-05-13--topnav-brandmark-renders-a-different-glyph-than-the-figma-crew-mark)
+    - [2026-05-13 — "Hide finished" toggle on Agents List has no Figma reference (scope drift either way — reconcile)](#2026-05-13--hide-finished-toggle-on-agents-list-has-no-figma-reference-scope-drift-either-way--reconcile)
+    - [2026-05-10 — Wire dashboard QuickAction buttons (Resume / Finish / Inspect / Provide input) to daemon endpoints](#2026-05-10--wire-dashboard-quickaction-buttons-resume--finish--inspect--provide-input-to-daemon-endpoints)
+    - [2026-05-10 — Polish the CREW-119/CREW-117 Crew DS composites (skeleton-fidelity → pixel-fidelity)](#2026-05-10--polish-the-crew-119crew-117-crew-ds-composites-skeleton-fidelity--pixel-fidelity)
+    - [2026-05-08 — Tool-name filtering in the timeline Filters dropdown](#2026-05-08--tool-name-filtering-in-the-timeline-filters-dropdown)
+    - [2026-05-08 — Surface `crew finish` step results in the dashboard](#2026-05-08--surface-crew-finish-step-results-in-the-dashboard)
+    - [2026-05-05 — Dashboard silently drops agents whose project isn't in `/api/projects`](#2026-05-05--dashboard-silently-drops-agents-whose-project-isnt-in-apiprojects)
+    - [2026-04-29 — Slice 1c agents continuation work](#2026-04-29--slice-1c-agents-continuation-work)
+    - [2026-04-29 — CREW-25 cva-refactor cleanup leftovers](#2026-04-29--crew-25-cva-refactor-cleanup-leftovers)
+    - [2026-04-28 — Dashboard write/action endpoint surfaces](#2026-04-28--dashboard-writeaction-endpoint-surfaces)
+    - [2026-04-28 — Dashboard agent detail drawer + full-page route](#2026-04-28--dashboard-agent-detail-drawer--full-page-route)
+    - [2026-04-28 — Dashboard New Run modal + projects route view](#2026-04-28--dashboard-new-run-modal--projects-route-view)
+    - [2026-04-28 — `useAttention.clear()` snapshot semantic isn't directly tested](#2026-04-28--useattentionclear-snapshot-semantic-isnt-directly-tested)
   - [Daemon, CLI & Dispatch](#daemon-cli--dispatch)
+    - [2026-05-23 — GitHub webhook as a future PR-status detection mechanism (parking-lot)](#2026-05-23--github-webhook-as-a-future-pr-status-detection-mechanism-parking-lot)
+    - [2026-05-22 — CREW-183's `installNodeModules` fix doesn't extend to `crew fix-pr`](#2026-05-22--crew-183s-installnodemodules-fix-doesnt-extend-to-crew-fix-pr)
+    - [2026-05-18 — Daemon has no reaper for orphaned runs stuck in `running`](#2026-05-18--daemon-has-no-reaper-for-orphaned-runs-stuck-in-running)
+    - [2026-05-15 — `parity_violations` metric is recorded end-to-end but never computed (always null)](#2026-05-15--parity_violations-metric-is-recorded-end-to-end-but-never-computed-always-null)
+    - [2026-05-14 — Per-turn metric series so cache size can be graphed over a run](#2026-05-14--per-turn-metric-series-so-cache-size-can-be-graphed-over-a-run)
+    - [2026-05-07 — Port allocator detects collisions only at `docker compose up` time](#2026-05-07--port-allocator-detects-collisions-only-at-docker-compose-up-time)
+    - [2026-05-05 — Per-ticket model selection (use Sonnet for trivial work)](#2026-05-05--per-ticket-model-selection-use-sonnet-for-trivial-work)
+    - [2026-05-05 — Daemon container's `~/.claude/projects` mount is broader than crew's transcript ingest needs](#2026-05-05--daemon-containers-claudeprojects-mount-is-broader-than-crews-transcript-ingest-needs)
+    - [2026-05-04 — Generalize the hardcoded `db-clone-from-main.sh` post-bringup hook into a configurable TOML-registered startup script](#2026-05-04--generalize-the-hardcoded-db-clone-from-mainsh-post-bringup-hook-into-a-configurable-toml-registered-startup-script)
+    - [2026-05-03 — `crew run` post-stream "waiting up to 120s for docker bringup" log is misleading after CREW-83](#2026-05-03--crew-run-post-stream-waiting-up-to-120s-for-docker-bringup-log-is-misleading-after-crew-83)
+    - [2026-05-03 — `chokidar` dep added to daemon but no code imports it](#2026-05-03--chokidar-dep-added-to-daemon-but-no-code-imports-it)
+    - [2026-05-03 — `crew run` swallows background-task failures into `/tmp` logs](#2026-05-03--crew-run-swallows-background-task-failures-into-tmp-logs)
+    - [2026-05-03 — Transcript line printer truncates tool-call inputs mid-string](#2026-05-03--transcript-line-printer-truncates-tool-call-inputs-mid-string)
+    - [2026-05-02 — `crew restart --hard` should not silently bail when a PR exists](#2026-05-02--crew-restart---hard-should-not-silently-bail-when-a-pr-exists)
+    - [2026-05-02 — `crew fix-pr` skips env materialization and full verification](#2026-05-02--crew-fix-pr-skips-env-materialization-and-full-verification)
+    - [2026-05-01 — Structured final-report contract for agent dispatches (dashboard prerequisite)](#2026-05-01--structured-final-report-contract-for-agent-dispatches-dashboard-prerequisite)
+    - [2026-05-01 — Render assistant.text preamble alongside same-event tool calls](#2026-05-01--render-assistanttext-preamble-alongside-same-event-tool-calls)
+    - [2026-05-01 — Crew owns DB replication end-to-end (off per-project shim scripts)](#2026-05-01--crew-owns-db-replication-end-to-end-off-per-project-shim-scripts)
+    - [2026-05-01 — Generic `--git-common-dir` helper in `crew-shared` (third-caller trigger)](#2026-05-01--generic---git-common-dir-helper-in-crew-shared-third-caller-trigger)
+    - [2026-05-01 — `crew run`/`resume`/`restart` against an already-shipped ticket has no safety net](#2026-05-01--crew-runresumerestart-against-an-already-shipped-ticket-has-no-safety-net)
+    - [2026-05-01 — Playwright integration self-review cleanups](#2026-05-01--playwright-integration-self-review-cleanups)
+    - [2026-04-30 — Surface subagent activity in transcript outputs](#2026-04-30--surface-subagent-activity-in-transcript-outputs)
+    - [2026-04-30 — `crew resume` deferred follow-ups](#2026-04-30--crew-resume-deferred-follow-ups)
+    - [2026-04-29 — Promote `resolveAppUrl` to shared `lib/url-substitution/`](#2026-04-29--promote-resolveappurl-to-shared-liburl-substitution)
   - [Architecture & Config](#architecture--config)
+    - [2026-05-24 — `CREW_STARTUP_EVENTS_DIR` bypasses `DaemonConfig` and reads `process.env` directly inside `app.ts`](#2026-05-24--crew_startup_events_dir-bypasses-daemonconfig-and-reads-processenv-directly-inside-appts)
+    - [2026-04-30 — Crew owns `.claude/settings.json` per worktree (gated on empirical bwrap/socat validation)](#2026-04-30--crew-owns-claudesettingsjson-per-worktree-gated-on-empirical-bwrapsocat-validation)
+    - [2026-04-30 — Project config rationalization](#2026-04-30--project-config-rationalization)
+    - [2026-04-30 — Unified `crew init` / `crew doctor` onboarding helper](#2026-04-30--unified-crew-init--crew-doctor-onboarding-helper)
+    - [2026-04-30 — Per-config-block reference docs](#2026-04-30--per-config-block-reference-docs)
+    - [2026-04-30 — CI integration of authored Playwright runs](#2026-04-30--ci-integration-of-authored-playwright-runs)
+    - [2026-04-28 — Flesh out the project-resolution design](#2026-04-28--flesh-out-the-project-resolution-design)
+    - [2026-04-26 — Architecture doc open questions still unresolved](#2026-04-26--architecture-doc-open-questions-still-unresolved)
   - [Process & Conventions](#process--conventions)
+    - [2026-05-15 — `.agents/` topic-doc system vs native `.claude/rules/` and agents.md alignment](#2026-05-15--agents-topic-doc-system-vs-native-clauderules-and-agentsmd-alignment)
+    - [2026-05-12 — Rethink followup-tracking system (priority tier + Jira backlog sync)](#2026-05-12--rethink-followup-tracking-system-priority-tier--jira-backlog-sync)
 - [Resolved](#resolved)
+  - [2026-05-11 — Crew DS is partial vs Dashboard Screens; Timeline container + Bash event tags missing](#2026-05-11--crew-ds-is-partial-vs-dashboard-screens-timeline-container--bash-event-tags-missing)
+  - [2026-05-23 — TokensByTool Figma component lacks the Cost column shipped in CREW-195](#2026-05-23--tokensbytool-figma-component-lacks-the-cost-column-shipped-in-crew-195)
+  - [2026-05-23 — Drawer Timeline still rendering EventCard, not Figma-spec TranscriptRow](#2026-05-23--drawer-timeline-still-rendering-eventcard-not-figma-spec-transcriptrow)
+  - [2026-05-13 — Agent drawer / agent page search input missing leading magnifying-glass icon](#2026-05-13--agent-drawer--agent-page-search-input-missing-leading-magnifying-glass-icon)
+  - [2026-05-13 — Agent drawer Close button uses Unicode "✕" glyph instead of `lucide/x` SVG](#2026-05-13--agent-drawer-close-button-uses-unicode--glyph-instead-of-lucidex-svg)
+  - [2026-05-08 — Wire `StateHistoryBar`, `TokenTable`, and Token-usage section into `AgentBody`](#2026-05-08--wire-statehistorybar-tokentable-and-token-usage-section-into-agentbody)
 - [Abandoned](#abandoned)
+  - [2026-05-12 — Re-link 8 detached AgentRow tiles in modal-overlay screen backgrounds](#2026-05-12--re-link-8-detached-agentrow-tiles-in-modal-overlay-screen-backgrounds)
+  - [2026-05-09 — Manual rename of Figma screens file to "Crew Dashboard Screens"](#2026-05-09--manual-rename-of-figma-screens-file-to-crew-dashboard-screens)
+  - [2026-04-27 — Dashboard mobile responsive layout polish](#2026-04-27--dashboard-mobile-responsive-layout-polish)
 
 ## Active
 
@@ -90,32 +162,6 @@ Organization: Active is grouped by topic (not chronology) since the dominant acc
 - [ ] If pairs: which colors need siblings? (`warning` for sure; `secondary`/`ghost` don't seem to need it; `default` is already neutral.)
 - [ ] Naming convention for siblings if going pairs-based.
 - [ ] Whether to backport to the existing `destructive` ↔ `danger`. Probably not worth the rename churn but worth flagging.
-
-#### 2026-05-11 — Crew DS is partial vs Dashboard Screens; Timeline container + Bash event tags missing
-
-**Epic-bound piece resolved 2026-06-01:** The per-tool color question — the only part of this followup ever gated on Epic **[CREW-189](https://safturento.atlassian.net/browse/CREW-189)** — was answered and shipped by child **[CREW-192](https://safturento.atlassian.net/browse/CREW-192)** (per-tool color palette inside the Tools category), and CREW-189 is now closed. The remaining scope below — building the Timeline-container composite plus `EventCard` / `FilterChips` / `LiveModeToggle` / `SearchBar` and their `.figma.tsx` files, then migrating Screens compositions to instances — is a standing Crew DS initiative, **no longer bound to any ticket**. Re-scope into its own Epic when prioritised.
-
-**Re-audited 2026-05-13 (CREW-147):** Confirmed via figma metadata + search_design_system against `9FeJPriqdsdA4n9R5Xsrr8` that the Composites page (the only page in the file today) still has no `Timeline`, `EventCard`, `FilterChips`, `LiveModeToggle`, or `SearchBar` component. The CREW-147 spec's `.figma.tsx` gap-fills on these five cannot be authored against a non-existent counterpart.
-
-**2026-05-16 (visual-fidelity close-out):** CREW-147 closed; its Timeline `.figma.tsx` criterion was retired as a false premise. When this followup's design work builds the Timeline composites, it must also author the `.figma.tsx` Code Connect files for each — that authoring is part of _this_ followup's scope, not a separate ticket. Until then, `visual-fidelity-check` correctly degrades to "no Code Connect mapping" for Timeline components, which does not block the visual-fidelity workstream.
-
-**Partially resolved 2026-05-12:** The **leaf event-tag pills** are now real components — the `TimelineTag` COMPONENT_SET (7 tool variants) was built in the Composites page of the consolidated Crew file and all 22 detached timeline pills swapped to instances. The **timeline container itself** (collapsible state-header + list-of-events composition) remains a freehand structure on Dashboard Screens with no Crew DS counterpart.
-
-**What:** Crew Dashboard Screens has an "agent activity timeline" composition (collapsible state-header + list of tool-call events) with no counterpart in Crew DS. More broadly, several other Crew DS components are simpler skeletons than the rich equivalents drawn freehand in Screens — agent rows, top-nav, project rows, etc. The DS doesn't reflect what designers actually use on the page.
-
-**Anchors:** Consolidated Crew file `9FeJPriqdsdA4n9R5Xsrr8` Composites page (DS) + Dashboard Screens page; freehand timeline at `1:964`; event-tag rects at `1:982/1:983`, `1:996/1:997`; freehand AgentRow / TopNav / ProjectRow / AgentBody / ProjectHeader compositions across agents + projects frames.
-
-**What's been considered:** Two paths for partials catch-up: (a) DS as source of truth — upgrade each partial DS component to match the rich Screens version, then replace Screens hand-built compositions with instances. User picked this in 2026-05-11. (b) Per-slice migration — leave Screens freehand, convert specific compositions when about to ship.
-
-For Timeline specifically: leaf tag is already real (`263:134`). Container composition + `.figma.tsx` Code Connect files for the new components (Timeline, EventCard, FilterChips, LiveModeToggle, SearchBar) remain.
-
-**Shape of work:** Design pass on timeline composition + remaining partial composites → add to Crew DS → author `.figma.tsx` for each → migrate Screens content to instances. Likely 4–6 separate component passes plus Timeline-container-specific work.
-
-**Open questions:**
-
-- Is the TimelineTag color tied to "tool category" (Bash = warning amber, Read = neutral, Edit = info)?
-- Does the timeline container have intensity tiers (e.g. compact vs expanded)?
-- Variant axes that don't yet exist in DS (e.g. AgentRow expanded vs collapsed) — decide as we encounter them.
 
 #### 2026-05-11 — `idle` and `waiting` agent states not reachable from daemon fixtures
 
@@ -319,6 +365,8 @@ The first two examples resolve once the structural fix lands. The third is a ski
 
 #### 2026-05-22 — Layer-1 RunMetrics widget loses its drawer home in the redesign — find it a new one
 
+**Ticket:** [CREW-209](https://safturento.atlassian.net/browse/CREW-209) — parked in Backlog (needs planning); folds in the `parity_violations` efficacy check.
+
 **What:** The 2026-05-21 drawer redesign (Figma `9FeJPriqdsdA4n9R5Xsrr8`, AgentBody `220:246`) does not include `RunMetrics` anywhere. The widget renders Layer-1 cohort metrics (`docLoadCoveragePct`, `cleanlinessPass`, `prClaimInputTokens`, `parityViolations`) and currently sits between AgentHeader and Timeline in `AgentBody.tsx:45`. The drawer code-migration plan (this session, 2026-05-22) drops it from drawer + AgentPage entirely. The component itself stays — `RunMetrics.tsx` is solid — but with no caller it'll be dead code until placed somewhere.
 
 **Why noticed:** Drawer code-migration brainstorm 2026-05-22. The Figma redesign is intentionally focused on per-agent run state (DrawerHeader + TokensByTool + TimelineSection); cohort metrics are an orthogonal concern. Drop-and-revisit was the right call mid-brainstorm, but the widget shouldn't just evaporate — Layer-1 is the whole point of CREW-164.
@@ -385,6 +433,8 @@ The first two examples resolve once the structural fix lands. The third is a ski
 **Open questions:** Which way does the user want to reconcile?
 
 #### 2026-05-10 — Wire dashboard QuickAction buttons (Resume / Finish / Inspect / Provide input) to daemon endpoints
+
+**Ticket:** [CREW-208](https://safturento.atlassian.net/browse/CREW-208) (Epic) — parked in Backlog; resolution gated on Epic completion (Epic exception).
 
 **What:** CREW-119 landed the v2 quick-action buttons in the agents list (`Resume + Finish` for `idle`, `Provide input` for `waiting`, `View PR + Finish` for `pr_open`, `Inspect` for `error`). The buttons fire an `onAction(kind, agent)` callback up through `AgentRow → ProjectSection → AgentsList`, but `App.tsx` currently does **not** mount a handler — clicks no-op. The visual contract is shipped; the functional contract is not. Each action needs a daemon endpoint and a mutation hook that the App-level handler dispatches.
 
@@ -459,6 +509,8 @@ Lean toward search-inside-popover when this iteration ships.
 - Count next to each tool name live-updating or fixed at popover-open time? Fixed is much cheaper.
 
 #### 2026-05-08 — Surface `crew finish` step results in the dashboard
+
+**Ticket:** [CREW-208](https://safturento.atlassian.net/browse/CREW-208) (Epic) — parked in Backlog; resolution gated on Epic completion (Epic exception).
 
 **What:** `crew finish` from the CLI prints a structured checklist as it runs — `step()` (`packages/cli/src/commands/finish.ts:120-132`) wraps each cleanup operation and emits a green ✓ on success or yellow ! on skip/warn. None of this flows to the daemon. Once finish lands, the dashboard's only signal is the agent's terminal state — there's no record of which steps succeeded, which were skipped, or what failed and why. The drawer should expose a per-step checklist with the same success/skip/error semantics.
 
@@ -1223,6 +1275,8 @@ The other two open questions (sandbox config drift, Phase 2 + Phase 3 separation
 
 #### 2026-05-15 — `.agents/` topic-doc system vs native `.claude/rules/` and agents.md alignment
 
+**Ticket:** [CREW-210](https://safturento.atlassian.net/browse/CREW-210) — parked in Backlog (needs planning).
+
 **What:** crew's `.agents/<topic>.md` system — per-topic docs with `covers:` path globs, indexed from `AGENTS.md`'s "When you need it" table — is a hand-rolled equivalent of Claude Code's native `.claude/rules/` feature: topic `.md` files with `paths:` frontmatter that lazy-load when Claude touches matching files. Decide whether to migrate `.agents/` onto `.claude/rules/`, keep `.agents/` as-is (now that its load path is fixed), or run both.
 
 **Why noticed:** While brainstorming the skill-storage consolidation spec + the `AGENTS.md` auto-load fix, empirical testing showed Claude Code does **not** auto-load `AGENTS.md` — only `CLAUDE.md`. The CREW-153 spec's risk table had dismissed this exact risk with a fabricated "Verified by research: Claude Code reads AGENTS.md natively." Reading the official memory docs surfaced `.claude/rules/`, which delivers path-scoped lazy topic docs natively — crew built a custom version of a native feature, and the custom version's load mechanism never worked.
@@ -1236,6 +1290,8 @@ The other two open questions (sandbox config drift, Phase 2 + Phase 3 separation
 **Open questions:** Once a `CLAUDE.md` → `@AGENTS.md` shim exists, what does `.agents/` + `covers:` buy over `.claude/rules/` + `paths:` for the Claude-Code case? Which non-Claude agents are actually in scope (Codex, Cursor, Gemini, …), and do they read nested/topic-scoped docs at all? Does the agents.md spec even define a topic-doc/lazy-load layer, or is that purely a crew invention layered on a flat `AGENTS.md`?
 
 #### 2026-05-12 — Rethink followup-tracking system (priority tier + Jira backlog sync)
+
+**Ticket:** [CREW-211](https://safturento.atlassian.net/browse/CREW-211) — parked in Backlog; discuss separately before planning.
 
 **What:** The current `docs/followups.md` convention captures items well at the "noticed it" moment but has two gaps. (a) **No priority tier** — entries within Active have no signal for what's near-term vs long-tail. (b) **Single surface** — followups live in a versioned markdown file, but Jira is where the rest of the user's work is prioritized, tracked, and resolved.
 
@@ -1270,6 +1326,12 @@ The other two open questions (sandbox config drift, Phase 2 + Phase 3 separation
 - Should priority on the markdown side map directly to Jira priority, or stay a separate signal?
 
 ## Resolved
+
+### 2026-05-11 — Crew DS is partial vs Dashboard Screens; Timeline container + Bash event tags missing
+
+**Resolved 2026-06-01:** Verified shipped. The Timeline-container composites this entry's open scope called for now exist in both Figma and code — `TimelineSection`, `TranscriptRow`, `TokenBarRow`, `TokensByTool`, and `DrawerHeader` (built in the 2026-05-21 drawer redesign) all have `.figma.tsx` Code Connect files, and the Screens drawer (`1:378`) + AgentPage (`1:1900`) were migrated to `AgentBody` instances under Epic **[CREW-177](https://safturento.atlassian.net/browse/CREW-177)**. The components this entry named were superseded by that redesign: `EventCard` → `TranscriptRow`, `FilterChips` → the Filters dropdown ([CREW-187](https://safturento.atlassian.net/browse/CREW-187) / [CREW-203](https://safturento.atlassian.net/browse/CREW-203)). The broader "Crew DS components are skeletons vs Screens" concern is likewise closed — `AgentRow` ([CREW-176](https://safturento.atlassian.net/browse/CREW-176)), `TopNav`, `ProjectRow`, `ProjectSection`, `ProjectHeader`, and `AgentBody` all now have real composites + `.figma.tsx`. The per-tool-color piece shipped earlier via CREW-192 (closed Epic CREW-189). Only sliver left — no standalone `.figma.tsx` for the `TimelineToolbar` sub-parts (Search / Live toggle / Filters) — is trivial Code-Connect housekeeping, not Epic-worthy.
+
+**Original context:** Crew Dashboard Screens had an "agent activity timeline" composition (collapsible state-header + list of tool-call events) with no Crew DS counterpart; more broadly, several Crew DS components were simpler skeletons than the rich Screens equivalents (agent rows, top-nav, project rows). The leaf event-tag pills (`TimelineTag`, 7 tool variants) were realized 2026-05-12, before the 2026-05-21 redesign delivered the container composites.
 
 ### 2026-05-23 — TokensByTool Figma component lacks the Cost column shipped in CREW-195
 
