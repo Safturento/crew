@@ -12,6 +12,10 @@
       "total#577:0": {
         "type": "TEXT",
         "defaultValue": "48k"
+      },
+      "totalCost#681:0": {
+        "type": "TEXT",
+        "defaultValue": "$0.06"
       }
     },
     "boundVariables": {
@@ -123,7 +127,7 @@
   },
   "enrichment": {
     "source": "plugin-api",
-    "capturedAt": "2026-05-22T15:36:46.874Z",
+    "capturedAt": "2026-06-02T01:19:12.517Z",
     "componentProperties": null,
     "mainComponent": null,
     "boundVariables": [
@@ -161,6 +165,7 @@
         "variantOverrides": null,
         "componentPropertyOverrides": {
           "percent": "38.4%",
+          "cost": "$0.024",
           "tokens": "18.4k",
           "tool": "Bash"
         },
@@ -190,6 +195,7 @@
         "variantOverrides": null,
         "componentPropertyOverrides": {
           "percent": "25.2%",
+          "cost": "$0.016",
           "tokens": "12.1k",
           "tool": "Read"
         },
@@ -219,6 +225,7 @@
         "variantOverrides": null,
         "componentPropertyOverrides": {
           "percent": "20.1%",
+          "cost": "$0.013",
           "tokens": "9.6k",
           "tool": "Edit"
         },
@@ -248,6 +255,7 @@
         "variantOverrides": null,
         "componentPropertyOverrides": {
           "percent": "8.8%",
+          "cost": "$0.0055",
           "tokens": "4.2k",
           "tool": "Grep"
         },
@@ -277,6 +285,7 @@
         "variantOverrides": null,
         "componentPropertyOverrides": {
           "percent": "3.8%",
+          "cost": "$0.0024",
           "tokens": "1.8k",
           "tool": "Glob"
         },
@@ -306,6 +315,7 @@
         "variantOverrides": null,
         "componentPropertyOverrides": {
           "percent": "2.6%",
+          "cost": "$0.0016",
           "tokens": "1.2k",
           "tool": "Question"
         },
@@ -335,6 +345,7 @@
         "variantOverrides": null,
         "componentPropertyOverrides": {
           "percent": "1.1%",
+          "cost": "$0.0007",
           "tokens": "510",
           "tool": "Write"
         },

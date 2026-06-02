@@ -34,18 +34,6 @@ Organization: Active is grouped by topic (not chronology) since the dominant acc
 
 **Shape of work:** ~5 min in Figma — add `state/pr-merged` to `Crew / Semantic Colors` aliasing `Core / tw/colors / emerald/500`. Rebind StateBadge/Pill component instances for the new state if the design language warrants a distinct visual treatment from `finished`. Re-run `crew figma-snapshot` and confirm `visual-fidelity-check` still passes against the dashboard.
 
-#### 2026-05-23 — TokensByTool Figma component lacks the Cost column shipped in CREW-195
-
-**Ticket:** [CREW-189](https://safturento.atlassian.net/browse/CREW-189) — Epic exception. Tracked under the drawer-polish Epic; reconcile when the Epic transitions to Done.
-
-**What:** CREW-195 added a Cost column + grand-total cost cell to `TokensByTool`. The Figma reference at node `577:643` (Composites → TokensByTool) is still the 4-column pre-CREW-195 design (Tool / Tokens / Bar / Share). Renders match Figma on every existing element, but the new column has no Figma counterpart. `visual-fidelity-check` flagged this as a verification gap, not a regression.
-
-**Why noticed:** Visual fidelity gate during CREW-195 implementation (`docs/visual-fidelity-reports/CREW-195.md`). Figma snapshot was last captured 2026-05-22; the CREW-195 code change post-dates it.
-
-**Anchors:** `.crew/figma-snapshot/composites/577-643.{json,png}`, `packages/dashboard/src/components/TokensByTool.tsx`, `packages/dashboard/src/components/TokenBarRow.tsx`, `docs/visual-fidelity-reports/CREW-195.md`. Re-capture via `crew figma-snapshot` after Figma is updated.
-
-**Shape of work:** ~10 min in Figma — extend the TokensByTool component master to a 5-column grid (add `Cost` header + per-row cost cell + footer total), match the slate-tones and tabular-nums used elsewhere; rerun `crew figma-snapshot`; spot-check the rendered drawer against the refreshed snapshot.
-
 #### 2026-05-12 — Move figma-snapshot PAGE_DIR_MAP into project config
 
 **What:** `emit.ts` hardcodes `Composites → composites/` and `Dashboard Screens → screens/` in a module-level map. Any other page name falls through to a sanitized slug. This is crew-dashboard-specific knowledge living in a generic CLI helper — violates AGENTS.md's "Don't hardcode project-specific knowledge" rule.
@@ -105,7 +93,7 @@ Organization: Active is grouped by topic (not chronology) since the dominant acc
 
 #### 2026-05-11 — Crew DS is partial vs Dashboard Screens; Timeline container + Bash event tags missing
 
-**Ticket:** [CREW-189](https://safturento.atlassian.net/browse/CREW-189) (Epic) — *the per-tool color question is answered by child **[CREW-192](https://safturento.atlassian.net/browse/CREW-192)**; resolution of this followup is gated on the Epic's full close (per Epic exception in the followup convention).*
+**Epic-bound piece resolved 2026-06-01:** The per-tool color question — the only part of this followup ever gated on Epic **[CREW-189](https://safturento.atlassian.net/browse/CREW-189)** — was answered and shipped by child **[CREW-192](https://safturento.atlassian.net/browse/CREW-192)** (per-tool color palette inside the Tools category), and CREW-189 is now closed. The remaining scope below — building the Timeline-container composite plus `EventCard` / `FilterChips` / `LiveModeToggle` / `SearchBar` and their `.figma.tsx` files, then migrating Screens compositions to instances — is a standing Crew DS initiative, **no longer bound to any ticket**. Re-scope into its own Epic when prioritised.
 
 **Re-audited 2026-05-13 (CREW-147):** Confirmed via figma metadata + search_design_system against `9FeJPriqdsdA4n9R5Xsrr8` that the Composites page (the only page in the file today) still has no `Timeline`, `EventCard`, `FilterChips`, `LiveModeToggle`, or `SearchBar` component. The CREW-147 spec's `.figma.tsx` gap-fills on these five cannot be authored against a non-existent counterpart.
 
@@ -1282,6 +1270,14 @@ The other two open questions (sandbox config drift, Phase 2 + Phase 3 separation
 - Should priority on the markdown side map directly to Jira priority, or stay a separate signal?
 
 ## Resolved
+
+### 2026-05-23 — TokensByTool Figma component lacks the Cost column shipped in CREW-195
+
+**Resolved 2026-06-01:** Added the Cost column to the Crew DS `TokensByTool` component (`577:643`) and its `TokenBarRow` child (`555:449`) in Figma file `9FeJPriqdsdA4n9R5Xsrr8` — a new `cost` TEXT property + right-aligned per-row cost cell (Fira Code, foreground token), a `COST` header label, and a `totalCost` grand-total cell in the footer. The reference is now the 5-column layout matching CREW-195's shipped code (Tool / Tokens / Bar / Share / Cost). Committed snapshot `.crew/figma-snapshot/composites/577-643.{json,png}` + `555-449.{json,png}` refreshed in the same PR. Done in-session as part of the CREW-189 Epic close-out.
+
+**What:** CREW-195 added a Cost column + grand-total cost cell to `TokensByTool`; the Figma reference at node `577:643` was still the 4-column pre-CREW-195 design (Tool / Tokens / Bar / Share), flagged by `visual-fidelity-check` as a verification gap (not a regression).
+
+**Anchors:** `.crew/figma-snapshot/composites/577-643.{json,png}`, `packages/dashboard/src/components/TokensByTool.tsx`, `packages/dashboard/src/components/TokenBarRow.tsx`, `docs/visual-fidelity-reports/CREW-195.md`.
 
 ### 2026-05-23 — Drawer Timeline still rendering EventCard, not Figma-spec TranscriptRow
 
