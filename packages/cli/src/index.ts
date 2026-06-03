@@ -13,6 +13,7 @@ import { dbCloneCommand } from './commands/db-clone.js';
 import { daemonCommand } from './commands/daemon.js';
 import { figmaSnapshotCommand } from './commands/figma-snapshot.js';
 import { backfillTitlesCommand } from './commands/backfill-titles.js';
+import { normalizeLineEndingsCommand } from './commands/normalize-line-endings.js';
 
 const program = new Command();
 
@@ -35,5 +36,6 @@ program.addCommand(dbCloneCommand);
 program.addCommand(daemonCommand);
 program.addCommand(figmaSnapshotCommand);
 program.addCommand(backfillTitlesCommand);
+program.addCommand(normalizeLineEndingsCommand);
 
 program.parse(process.argv);
