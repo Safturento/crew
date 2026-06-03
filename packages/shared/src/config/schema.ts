@@ -61,6 +61,8 @@ export const projectConfigSchema = z
         http_port_base: z.number().default(8000),
         https_port_base: z.number().default(8400),
         postgres_port_base: z.number().default(15400),
+        caddy_service: z.string().default('caddy'),
+        postgres_service: z.string().default('postgres'),
       })
       .optional(),
     sandbox: z
