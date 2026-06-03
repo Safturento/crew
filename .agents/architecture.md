@@ -1,7 +1,7 @@
 ---
 name: architecture
 description: 4-package layering rules + dependency direction
-last_updated: 2026-05-24
+last_updated: 2026-06-03
 covers:
   - 'packages/*/src/**/*.ts'
   - 'package.json'
@@ -61,7 +61,7 @@ For the _why_ behind these picks — and what was considered and ruled out — s
 
 Per-project TOML at `~/.config/crew/projects/<name>.toml`. Auto-discovered when `crew` is invoked from inside a registered repo's tree. **Nothing project-specific is hardcoded in code** — all customization flows through the loaded project config.
 
-The config encodes: repo path, default branch, Jira project key + site, GitHub repo, docker port bases + canonical worktree, Playwright app URL, sandbox allowed domains.
+The config encodes: repo path, default branch, Jira project key + site, GitHub repo, docker port bases + canonical worktree + service names (caddy/postgres), Playwright app URL, sandbox allowed domains.
 
 ## State store
 

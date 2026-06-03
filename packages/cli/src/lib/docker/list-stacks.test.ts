@@ -140,7 +140,9 @@ describe('collectDockerStacks', () => {
 
   it('sorts stacks lexicographically by project name (matching `sort -u`)', async () => {
     const projects = ['recipes-app-kan-23', 'recipes-app', 'recipes-app-kan-9'];
-    const containers = Object.fromEntries(projects.map((p) => [p, { caddy: null, postgres: null }]));
+    const containers = Object.fromEntries(
+      projects.map((p) => [p, { caddy: null, postgres: null }]),
+    );
     const rows = await collectDockerStacks(
       { caddy: 'caddy', postgres: 'postgres' },
       makeDeps(projects, containers, {}),
