@@ -4,7 +4,6 @@ import pc from 'picocolors';
 import {
   collectDockerStacks,
   discoverProjectConfig,
-  loadProjectConfigByName,
   type DockerStackRow,
   type StackServiceNames,
 } from '../lib/index.js';
@@ -68,11 +67,8 @@ export async function runDockerList(deps: DockerListDeps): Promise<DockerListRes
 
 export const dockerListCommand = new Command('docker-list')
   .description('list running docker compose stacks with their host port bindings')
-  .option('--project <name>', 'use a specific project config instead of auto-discovering')
-  .action(async (options: { project?: string }) => {
-    const config = options.project
-      ? loadProjectConfigByName(options.project)
-      : await discoverProjectConfig(process.cwd());
+  .action(async () => {
+    const config = await discoverProjectConfig(process.cwd());
 
     // A project config is optional here — docker-list inspects every running
     // stack regardless of project. When present, it supplies service-name
