@@ -17,14 +17,12 @@ Organization: Active is grouped by topic (not chronology) since the dominant acc
     - [2026-05-11 — `idle` and `waiting` agent states not reachable from daemon fixtures](#2026-05-11--idle-and-waiting-agent-states-not-reachable-from-daemon-fixtures)
     - [2026-05-09 — Crew Dashboard Screens: 3 remaining ad-hoc modal frames need DS Modal swap + semantic-token bindings](#2026-05-09--crew-dashboard-screens-3-remaining-ad-hoc-modal-frames-need-ds-modal-swap--semantic-token-bindings)
   - [Visual Fidelity Tooling](#visual-fidelity-tooling)
-    - [2026-05-19 — `crew figma-snapshot` has no per-node refresh](#2026-05-19--crew-figma-snapshot-has-no-per-node-refresh)
     - [2026-05-18 — visual-fidelity-check: per-fixture snapshot copy vs committed artifact + Step 4 path-vocab drift](#2026-05-18--visual-fidelity-check-per-fixture-snapshot-copy-vs-committed-artifact--step-4-path-vocab-drift)
     - [2026-05-18 — `.agents/design-system.md` frontmatter URLs stale after Crew DS consolidation](#2026-05-18--agentsdesign-systemmd-frontmatter-urls-stale-after-crew-ds-consolidation)
     - [2026-05-18 — `index.css` falls outside every `.agents/*.md` `covers` glob](#2026-05-18--indexcss-falls-outside-every-agentsmd-covers-glob)
     - [2026-05-17 — figma-snapshot `index.json` `screenshotPath` can point at PNG that was never written](#2026-05-17--figma-snapshot-indexjson-screenshotpath-can-point-at-png-that-was-never-written)
     - [2026-05-16 — figma-snapshot `resolvedStylesFor` text-color heuristic picks the first TEXT descendant](#2026-05-16--figma-snapshot-resolvedstylesfor-text-color-heuristic-picks-the-first-text-descendant)
     - [2026-05-15 — `crew fix-pr` does not refresh `.mcp.json` — chrome wiring goes stale on resume](#2026-05-15--crew-fix-pr-does-not-refresh-mcpjson--chrome-wiring-goes-stale-on-resume)
-    - [2026-05-13 — visual-fidelity-check accuracy: snapshot lacks `componentProperties` (REST API limit) + calibration pattern≠specific finding pattern](#2026-05-13--visual-fidelity-check-accuracy-snapshot-lacks-componentproperties-rest-api-limit--calibration-patternspecific-finding-pattern)
   - [Dashboard UI](#dashboard-ui)
     - [2026-05-22 — `${APP_URL}` template literal in DrawerHeader docker pill (backend bug)](#2026-05-22--app_url-template-literal-in-drawerheader-docker-pill-backend-bug)
     - [2026-05-22 — Layer-1 RunMetrics widget loses its drawer home in the redesign — find it a new one](#2026-05-22--layer-1-runmetrics-widget-loses-its-drawer-home-in-the-redesign--find-it-a-new-one)
@@ -79,6 +77,8 @@ Organization: Active is grouped by topic (not chronology) since the dominant acc
     - [2026-05-15 — `.agents/` topic-doc system vs native `.claude/rules/` and agents.md alignment](#2026-05-15--agents-topic-doc-system-vs-native-clauderules-and-agentsmd-alignment)
     - [2026-05-12 — Rethink followup-tracking system (priority tier + Jira backlog sync)](#2026-05-12--rethink-followup-tracking-system-priority-tier--jira-backlog-sync)
 - [Resolved](#resolved)
+  - [2026-05-19 — `crew figma-snapshot` has no per-node refresh](#2026-05-19--crew-figma-snapshot-has-no-per-node-refresh)
+  - [2026-05-13 — visual-fidelity-check accuracy: snapshot lacks `componentProperties` (REST API limit) + calibration pattern≠specific finding pattern](#2026-05-13--visual-fidelity-check-accuracy-snapshot-lacks-componentproperties-rest-api-limit--calibration-patternspecific-finding-pattern)
   - [2026-05-11 — Crew DS is partial vs Dashboard Screens; Timeline container + Bash event tags missing](#2026-05-11--crew-ds-is-partial-vs-dashboard-screens-timeline-container--bash-event-tags-missing)
   - [2026-05-23 — TokensByTool Figma component lacks the Cost column shipped in CREW-195](#2026-05-23--tokensbytool-figma-component-lacks-the-cost-column-shipped-in-crew-195)
   - [2026-05-23 — Drawer Timeline still rendering EventCard, not Figma-spec TranscriptRow](#2026-05-23--drawer-timeline-still-rendering-eventcard-not-figma-spec-transcriptrow)
@@ -196,22 +196,6 @@ Organization: Active is grouped by topic (not chronology) since the dominant acc
 
 ### Visual Fidelity Tooling
 
-#### 2026-05-19 — `crew figma-snapshot` has no per-node refresh
-
-**In-session blocker:** scoped for in-session brainstorm + implementation immediately after the AgentRow card-redesign spec lands. Hard prereq before the AgentRow `crew run` dispatches.
-
-**What:** `crew figma-snapshot` only supports `--check` (boolean staleness) and a full page-walk export. A one-component Figma edit invalidates the committed snapshot in exactly one place but forces a full export + per-node enrichment-batch dance through `figma-use` to re-land it. Most refreshes in practice are single-node touch-ups; the full-document cost is disproportionate.
-
-**Why noticed:** Mid-session, refreshing the committed snapshot after a small AgentRow Figma edit. Paused from AgentRow card-redesign brainstorming to handle the refresh and noticed the lack of selective export. Tooling cost compounds as the DS grows.
-
-**Anchors:** `packages/cli/src/commands/figma-snapshot.ts` (CLI flag handling — only `--check` today); `packages/cli/src/lib/figma-snapshot/emit.ts` (page-level walk in `emitSnapshot`); `.claude/skills/figma-snapshot-refresh/` (skill procedure that batches `use_figma` enrichment).
-
-**What's been considered:** Two flag shapes. (a) `--node-id <id>[,<id>...]` — explicit per-node refresh; caller has to know what changed but it's mechanical. (b) `--changed-since` — compares live Figma file's per-node `lastModified` against committed `meta.json` and re-exports only nodes that moved; auto-detecting. Both touch the same code paths.
-
-**Shape of work:** Single ticket. CLI flag plumbing + emit-side node filter + skill-procedure update + at least one test fixture for the partial-refresh case. Probably half a day.
-
-**Open questions:** Does the Figma REST API surface per-node `lastModified` reliably for every node type? If not, `--changed-since` degrades into a manifest-diff approach.
-
 #### 2026-05-18 — visual-fidelity-check: per-fixture snapshot copy vs committed artifact + Step 4 path-vocab drift
 
 **What:** Two coupled gaps in the `visual-fidelity-check` skill-fixture model, surfaced while reconciling render-frame Phase 4 against CREW-173.
@@ -294,45 +278,6 @@ Organization: Active is grouped by topic (not chronology) since the dominant acc
 **Shape of work:** Small — one write-gate block plus possibly one `runSkillInjection` call in `fix-pr.ts`, mirroring `resume.ts`; or a doc-only spec reconciliation. Fold in a command-layer test asserting a `[visual_fidelity]` `fix-pr` produces the `chrome` entry.
 
 **Open questions:** Does `fix-pr` resume into a worktree fresh enough that re-asserting `.mcp.json` is always safe? Should `browsing` skill re-injection ride along?
-
-#### 2026-05-13 — visual-fidelity-check accuracy: snapshot lacks `componentProperties` (REST API limit) + calibration pattern≠specific finding pattern
-
-**Ticket:** [CREW-148](https://safturento.atlassian.net/browse/CREW-148) — resolution gated on Epic CREW-148 completion.
-
-**What:** Two coupled gaps in the `visual-fidelity-check` workflow, both Epic CREW-148-tracked.
-
-1. **Structural data gap.** The REST `/v1/files/{key}` endpoint returns the node tree but **does not expose `componentProperties` on `INSTANCE` nodes** (the props that tell you which variant the instance is using — e.g. `intensity: "mid"` on a Pill instance, `color: "waiting"`). Variable bindings on paint properties are similarly absent. That data is only available via the Figma Plugin API. The per-screen `<id>.json` emitted by the snapshot tells you "there's a Pill instance here" but not "it's the `mid/waiting` variant" — the caller-check step has to fall back to text-narrative inference instead of mechanical comparison.
-2. **Calibration finding.** Two calibration runs of the skill against the CREW-135 fixture revealed a consistent pattern: the skill catches the _type_ of every visual regression but produces _specifically wrong_ fixes when the snapshot lacks per-instance `componentProperties`. Examples: skill recommended `lucide/arrow-up-right` for View PR (real Figma instance was `lucide/git-pull-request`); flagged New Run button as helper-level "wrong shade" when real bug was caller-side wrong color enum; twice downgraded a CSS-span-vs-lucide-circle mismatch to a "judgment call" despite iterated "icon findings are NEVER judgment calls" rule.
-
-The first two examples resolve once the structural fix lands. The third is a skill-prompt + visual-diff capability question — even with perfect snapshot data, an LLM reading "code uses CSS span, Figma uses lucide/circle" without seeing the rendered result will likely keep hedging.
-
-**Why noticed:** First calibration of the `visual-fidelity-check` skill against the CREW-135 fixture (run: `docs/superpowers/skill-fixtures/visual-fidelity-check/crew-135/runs/2026-05-12-run-01.md`) — verification gap surfaced. After CREW-139 merged with REST-based JSON emission, the JSON exists but lacks the field that would close the gap. Subsequent run-02/run-03 + user-in-the-loop review confirmed the pattern: type-correct findings, specifically-wrong fixes.
-
-**Anchors:**
-
-- `packages/cli/src/lib/figma-snapshot/emit.ts` — REST-based emitter
-- `packages/cli/src/lib/figma-snapshot/client.ts` — REST client (file + images endpoints only)
-- `~/.claude/skills/visual-fidelity-check/{SKILL.md,workflow.md,examples/}`
-- `docs/superpowers/skill-fixtures/visual-fidelity-check/crew-135/` — fixture with corrected ground truth
-- [PR #180](https://github.com/Safturento/crew/pull/180) — CREW-139 merge
-- `docs/superpowers/specs/2026-05-12-agent-visual-verification-design.md` — "Dependency on Figma access" section
-- Figma REST API docs: [files endpoint](https://www.figma.com/developers/api#get-files-endpoint) — `componentProperties` documented as Plugin-API-only
-
-**What's been considered:**
-
-- **Plugin-API-based emitter via Claude Code MCP bridge.** Shell out from `crew figma-snapshot` to a one-shot `claude` invocation that runs the Figma Plugin API. Adds process-orchestration but gives full data fidelity — `componentProperties`, `boundVariables`, computed paint resolution.
-- **Hybrid: REST for screenshots + simple data, Plugin API for instance-level enrichment.** Two-stage. Smaller blast radius, more code paths.
-- **Re-iterate the skill once Plugin-API snapshot lands.** Re-run calibration against the CREW-135 fixture (updated with ground truth). Verify specifics now resolve correctly.
-- **Screenshot-vs-Figma ultimate test.** Calibration where the skill receives multiple screenshots of the CREW-135 rendered dashboard + the corresponding Figma references and enumerates **every** visible difference. Exercises Step 5 (visual check). Sharpening the visual-check section to a rigorous enumeration with vision-LLM-style observation listing. May surface gaps the structural+caller checks can't catch.
-
-**Shape of work:** Three threads — (1) Plugin-API snapshot implementation (~1-day, decide full-replacement vs hybrid). (2) Re-iterate the skill once Plugin-API snapshot lands. (3) Author the screenshot-vs-Figma ultimate-test calibration once (1) lands. Update per-component JSON shape: add `instanceProperties` to instance nodes, add `tokenAlias` to paint entries.
-
-**Open questions:**
-
-- How aggressive should the LLM-hedge counter be in the skill prompt? May need automated visual-diff backing rather than prompt-only enforcement.
-- Should the ultimate test fixture include rendered HTML/CSS in addition to screenshots, so structural assertions can be machine-verified alongside the visual enumeration?
-- Is the Plugin-API path reliable enough to make default, or should it remain opt-in?
-- Could we cache Plugin-API enrichment data (file-version keyed) to avoid the Claude shell-out on every dispatch?
 
 ### Dashboard UI
 
@@ -1326,6 +1271,63 @@ The other two open questions (sandbox config drift, Phase 2 + Phase 3 separation
 - Should priority on the markdown side map directly to Jira priority, or stay a separate signal?
 
 ## Resolved
+
+### 2026-05-19 — `crew figma-snapshot` has no per-node refresh
+
+**Resolved 2026-06-03:** Shipped. `crew figma-snapshot` now has a `--node-id <id>[,<id>...]` flag for selective per-node refresh (option (a) from "What's been considered") — see `packages/cli/src/commands/figma-snapshot.ts` (the `--node-id` option, mutually exclusive with `--check`). The auto-detecting `--changed-since` variant (option (b)) was not built; the related "`--check` reports false STALE on whole-file churn" concern is now tracked separately by [CREW-174](https://safturento.atlassian.net/browse/CREW-174) (content-scoped freshness). The disproportionate full-export cost for the common single-node case is resolved.
+
+**In-session blocker:** scoped for in-session brainstorm + implementation immediately after the AgentRow card-redesign spec lands. Hard prereq before the AgentRow `crew run` dispatches.
+
+**What:** `crew figma-snapshot` only supports `--check` (boolean staleness) and a full page-walk export. A one-component Figma edit invalidates the committed snapshot in exactly one place but forces a full export + per-node enrichment-batch dance through `figma-use` to re-land it. Most refreshes in practice are single-node touch-ups; the full-document cost is disproportionate.
+
+**Why noticed:** Mid-session, refreshing the committed snapshot after a small AgentRow Figma edit. Paused from AgentRow card-redesign brainstorming to handle the refresh and noticed the lack of selective export. Tooling cost compounds as the DS grows.
+
+**Anchors:** `packages/cli/src/commands/figma-snapshot.ts` (CLI flag handling — only `--check` today); `packages/cli/src/lib/figma-snapshot/emit.ts` (page-level walk in `emitSnapshot`); `.claude/skills/figma-snapshot-refresh/` (skill procedure that batches `use_figma` enrichment).
+
+**What's been considered:** Two flag shapes. (a) `--node-id <id>[,<id>...]` — explicit per-node refresh; caller has to know what changed but it's mechanical. (b) `--changed-since` — compares live Figma file's per-node `lastModified` against committed `meta.json` and re-exports only nodes that moved; auto-detecting. Both touch the same code paths.
+
+**Shape of work:** Single ticket. CLI flag plumbing + emit-side node filter + skill-procedure update + at least one test fixture for the partial-refresh case. Probably half a day.
+
+**Open questions:** Does the Figma REST API surface per-node `lastModified` reliably for every node type? If not, `--changed-since` degrades into a manifest-diff approach.
+
+### 2026-05-13 — visual-fidelity-check accuracy: snapshot lacks `componentProperties` (REST API limit) + calibration pattern≠specific finding pattern
+
+**Resolved 2026-06-03:** Epic [CREW-148](https://safturento.atlassian.net/browse/CREW-148) (render-frame-as-canonical-truth) shipped Done — children CREW-149 (skill moved to `.claude/skills/`), CREW-150 (enrichment captures nested-instance overrides incl. `componentProperties`/variant data), CREW-151 (skill content: render-frame Step 4 + live-DOM Step 5), CREW-152 (DS fixture refresh + gate validation vs PR #193). The structural data gap is closed by the enrichment pass; the LLM-hedge / specifically-wrong-fix pattern is addressed by the render-frame canonical-truth model + the chrome live-DOM Step 5 (CREW-146 / CREW-184). Both calibration findings resolved.
+
+**What:** Two coupled gaps in the `visual-fidelity-check` workflow, both Epic CREW-148-tracked.
+
+1. **Structural data gap.** The REST `/v1/files/{key}` endpoint returns the node tree but **does not expose `componentProperties` on `INSTANCE` nodes** (the props that tell you which variant the instance is using — e.g. `intensity: "mid"` on a Pill instance, `color: "waiting"`). Variable bindings on paint properties are similarly absent. That data is only available via the Figma Plugin API. The per-screen `<id>.json` emitted by the snapshot tells you "there's a Pill instance here" but not "it's the `mid/waiting` variant" — the caller-check step has to fall back to text-narrative inference instead of mechanical comparison.
+2. **Calibration finding.** Two calibration runs of the skill against the CREW-135 fixture revealed a consistent pattern: the skill catches the _type_ of every visual regression but produces _specifically wrong_ fixes when the snapshot lacks per-instance `componentProperties`. Examples: skill recommended `lucide/arrow-up-right` for View PR (real Figma instance was `lucide/git-pull-request`); flagged New Run button as helper-level "wrong shade" when real bug was caller-side wrong color enum; twice downgraded a CSS-span-vs-lucide-circle mismatch to a "judgment call" despite iterated "icon findings are NEVER judgment calls" rule.
+
+The first two examples resolve once the structural fix lands. The third is a skill-prompt + visual-diff capability question — even with perfect snapshot data, an LLM reading "code uses CSS span, Figma uses lucide/circle" without seeing the rendered result will likely keep hedging.
+
+**Why noticed:** First calibration of the `visual-fidelity-check` skill against the CREW-135 fixture (run: `docs/superpowers/skill-fixtures/visual-fidelity-check/crew-135/runs/2026-05-12-run-01.md`) — verification gap surfaced. After CREW-139 merged with REST-based JSON emission, the JSON exists but lacks the field that would close the gap. Subsequent run-02/run-03 + user-in-the-loop review confirmed the pattern: type-correct findings, specifically-wrong fixes.
+
+**Anchors:**
+
+- `packages/cli/src/lib/figma-snapshot/emit.ts` — REST-based emitter
+- `packages/cli/src/lib/figma-snapshot/client.ts` — REST client (file + images endpoints only)
+- `~/.claude/skills/visual-fidelity-check/{SKILL.md,workflow.md,examples/}`
+- `docs/superpowers/skill-fixtures/visual-fidelity-check/crew-135/` — fixture with corrected ground truth
+- [PR #180](https://github.com/Safturento/crew/pull/180) — CREW-139 merge
+- `docs/superpowers/specs/2026-05-12-agent-visual-verification-design.md` — "Dependency on Figma access" section
+- Figma REST API docs: [files endpoint](https://www.figma.com/developers/api#get-files-endpoint) — `componentProperties` documented as Plugin-API-only
+
+**What's been considered:**
+
+- **Plugin-API-based emitter via Claude Code MCP bridge.** Shell out from `crew figma-snapshot` to a one-shot `claude` invocation that runs the Figma Plugin API. Adds process-orchestration but gives full data fidelity — `componentProperties`, `boundVariables`, computed paint resolution.
+- **Hybrid: REST for screenshots + simple data, Plugin API for instance-level enrichment.** Two-stage. Smaller blast radius, more code paths.
+- **Re-iterate the skill once Plugin-API snapshot lands.** Re-run calibration against the CREW-135 fixture (updated with ground truth). Verify specifics now resolve correctly.
+- **Screenshot-vs-Figma ultimate test.** Calibration where the skill receives multiple screenshots of the CREW-135 rendered dashboard + the corresponding Figma references and enumerates **every** visible difference. Exercises Step 5 (visual check). Sharpening the visual-check section to a rigorous enumeration with vision-LLM-style observation listing. May surface gaps the structural+caller checks can't catch.
+
+**Shape of work:** Three threads — (1) Plugin-API snapshot implementation (~1-day, decide full-replacement vs hybrid). (2) Re-iterate the skill once Plugin-API snapshot lands. (3) Author the screenshot-vs-Figma ultimate-test calibration once (1) lands. Update per-component JSON shape: add `instanceProperties` to instance nodes, add `tokenAlias` to paint entries.
+
+**Open questions:**
+
+- How aggressive should the LLM-hedge counter be in the skill prompt? May need automated visual-diff backing rather than prompt-only enforcement.
+- Should the ultimate test fixture include rendered HTML/CSS in addition to screenshots, so structural assertions can be machine-verified alongside the visual enumeration?
+- Is the Plugin-API path reliable enough to make default, or should it remain opt-in?
+- Could we cache Plugin-API enrichment data (file-version keyed) to avoid the Claude shell-out on every dispatch?
 
 ### 2026-05-11 — Crew DS is partial vs Dashboard Screens; Timeline container + Bash event tags missing
 
