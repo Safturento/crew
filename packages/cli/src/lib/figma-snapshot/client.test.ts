@@ -157,19 +157,6 @@ describe('FigmaRestClient', () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
-  it('getFileMeta fetches version via the depth=1 endpoint', async () => {
-    const calls: string[] = [];
-    const fetchFn = async (url: string) => {
-      calls.push(url);
-      return { ok: true, json: async () => ({ document: { id: '0:0' }, version: 'v-9' }) };
-    };
-    const client = new FigmaRestClient({ token: 't', fetch: fetchFn });
-    const meta = await client.getFileMeta('FILEKEY');
-
-    expect(meta.version).toBe('v-9');
-    expect(calls[0]).toContain('/files/FILEKEY?depth=1');
-  });
-
   it('getFileNodes calls /files/{key}/nodes with comma-joined ids and returns the response', async () => {
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,

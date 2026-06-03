@@ -1,6 +1,7 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import type { FigmaNode, FigmaRestClient } from './client.js';
+import { hashNode } from './hash.js';
 
 export interface EmitSnapshotOptions {
   fileKey: string;
@@ -56,19 +57,6 @@ export async function emitSnapshot(opts: EmitSnapshotOptions): Promise<EmitSnaps
 
   await mkdir(opts.outDir, { recursive: true });
 
-  // meta.json sidecar — carries the Figma file version that `crew
-  // figma-snapshot --check` compares against to detect a stale snapshot.
-  // A sidecar, not an index.json field, so index.json's node-id consumers
-  // (visual-fidelity-check iterates its keys) are untouched.
-  await writeFile(
-    join(opts.outDir, 'meta.json'),
-    `${JSON.stringify(
-      { figmaFileVersion: file.version, capturedAt: new Date().toISOString() },
-      null,
-      2,
-    )}\n`,
-  );
-
   const pages = (file.document.children ?? []).filter(
     (c) => c.type === 'CANVAS' && opts.pages.includes(c.name),
   );
@@ -83,6 +71,27 @@ export async function emitSnapshot(opts: EmitSnapshotOptions): Promise<EmitSnaps
       }
     }
   }
+
+  // meta.json sidecar — carries the content-scoped freshness baseline `crew
+  // figma-snapshot --check` compares against. `nodeHashes` hashes each captured
+  // node's *full* tree (the hash is computed before `raw` is slimmed below), so
+  // `--check` is scoped to the captured nodes and ignores out-of-scope file
+  // churn. `figmaFileVersion` is retained as informational only (it is the
+  // whole-file save counter that produced false STALE reports; see CREW-174).
+  // A sidecar, not an index.json field, so index.json's node-id consumers
+  // (visual-fidelity-check iterates its keys) are untouched.
+  const nodeHashes: Record<string, string> = {};
+  for (const t of targets) {
+    nodeHashes[t.node.id] = hashNode(t.node);
+  }
+  await writeFile(
+    join(opts.outDir, 'meta.json'),
+    `${JSON.stringify(
+      { figmaFileVersion: file.version, capturedAt: new Date().toISOString(), nodeHashes },
+      null,
+      2,
+    )}\n`,
+  );
 
   const index: Record<string, IndexEntry> = {};
 

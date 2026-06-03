@@ -4,10 +4,12 @@ import { Command } from 'commander';
 import pc from 'picocolors';
 import {
   FigmaRestClient,
+  checkSnapshotFreshness,
   discoverProjectConfig,
   emitPartialSnapshot,
   emitSnapshot,
   type ProjectConfig,
+  type SnapshotMeta,
 } from '../lib/index.js';
 
 export interface FigmaSnapshotDeps {
@@ -50,6 +52,26 @@ function pageDirFor(name: string): string {
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '');
+}
+
+/**
+ * Best-effort node-id → name map from the committed index.json, used only to
+ * make `--check`'s STALE report human-readable. Returns `{}` if the index is
+ * absent or unparseable — naming is a nicety, never a hard dependency.
+ */
+function readIndexNames(snapshotDir: string): Record<string, string> {
+  const indexPath = join(snapshotDir, 'index.json');
+  if (!existsSync(indexPath)) return {};
+  try {
+    const index = JSON.parse(readFileSync(indexPath, 'utf8')) as Record<string, IndexEntrySummary>;
+    const names: Record<string, string> = {};
+    for (const [id, entry] of Object.entries(index)) {
+      if (entry?.name) names[id] = entry.name;
+    }
+    return names;
+  } catch {
+    return {};
+  }
 }
 
 export async function runFigmaSnapshot(deps: FigmaSnapshotDeps): Promise<FigmaSnapshotResult> {
@@ -200,7 +222,8 @@ export const figmaSnapshotCommand = new Command('figma-snapshot')
         );
         process.exit(1);
       }
-      const metaPath = join(cwd, vf.snapshot_path, 'meta.json');
+      const snapshotDir = join(cwd, vf.snapshot_path);
+      const metaPath = join(snapshotDir, 'meta.json');
       if (!existsSync(metaPath)) {
         console.error(
           pc.red('✗'),
@@ -208,15 +231,47 @@ export const figmaSnapshotCommand = new Command('figma-snapshot')
         );
         process.exit(1);
       }
-      const committed = JSON.parse(readFileSync(metaPath, 'utf8')) as { figmaFileVersion: string };
-      const live = await new FigmaRestClient().getFileMeta(vf.figma_file_key);
-      if (committed.figmaFileVersion === live.version) {
-        console.log(pc.green('✓'), `snapshot is fresh (Figma version ${live.version})`);
+      const meta = JSON.parse(readFileSync(metaPath, 'utf8')) as SnapshotMeta;
+      let result;
+      try {
+        result = await checkSnapshotFreshness({
+          fileKey: vf.figma_file_key,
+          meta,
+          client: new FigmaRestClient(),
+        });
+      } catch (err) {
+        // Missing token, network failure, Figma 5xx — surface cleanly rather
+        // than as an unhandled rejection (matches the export paths' handling).
+        console.error(pc.red('✗'), `figma-snapshot --check failed: ${(err as Error).message}`);
+        process.exit(1);
+      }
+
+      if (result.status === 'no-baseline') {
+        console.error(
+          pc.yellow('!'),
+          'snapshot predates content-scoped freshness (no nodeHashes in meta.json). ' +
+            'Run the figma-snapshot-refresh skill to regenerate the baseline.',
+        );
+        process.exit(1);
+      }
+
+      if (result.status === 'fresh') {
+        const n = Object.keys(meta.nodeHashes ?? {}).length;
+        console.log(pc.green('✓'), `snapshot is fresh (${n} captured node(s) match live Figma)`);
         return;
       }
+
+      // STALE — annotate each drifted node with its name from index.json when available.
+      const names = readIndexNames(snapshotDir);
+      const drifted = result.drifted
+        .map((d) => {
+          const label = names[d.id] ? `${d.id} (${names[d.id]})` : d.id;
+          return d.reason === 'missing' ? `${label} — deleted from Figma` : label;
+        })
+        .join(', ');
       console.error(
         pc.yellow('!'),
-        `snapshot is STALE — committed ${committed.figmaFileVersion}, live ${live.version}. ` +
+        `snapshot is STALE — ${result.drifted.length} captured node(s) drifted: ${drifted}. ` +
           'Run the figma-snapshot-refresh skill.',
       );
       process.exit(1);

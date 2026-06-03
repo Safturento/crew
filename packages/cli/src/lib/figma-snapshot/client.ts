@@ -93,15 +93,6 @@ export class FigmaRestClient {
   }
 
   /**
-   * Fetch only the file's version metadata via the `depth=1` endpoint —
-   * cheap (no full node tree, no image render). Used by `figma-snapshot --check`.
-   */
-  async getFileMeta(fileKey: string): Promise<{ version: string }> {
-    const res = await this.req<FigmaFileResponse>(`/files/${encodeURIComponent(fileKey)}?depth=1`);
-    return { version: res.version };
-  }
-
-  /**
    * Fetch specific nodes by id via `/files/{key}/nodes?ids=...`. Used by the
    * selective-export path (`crew figma-snapshot --node-id ...`) to avoid the
    * full document fetch. Figma returns `null` for ids it can't find — callers
