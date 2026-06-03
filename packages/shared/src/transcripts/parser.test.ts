@@ -10,6 +10,7 @@ import {
   formatToolCall,
   parseAssistantText,
   formatAssistantText,
+  hasPrCreateInvocation,
 } from './index.js';
 import type { TranscriptEvent } from './index.js';
 
@@ -78,6 +79,38 @@ describe('formatToolCall', () => {
     const call = parseToolCall(parseTranscript(readFileSync(FIXTURE, 'utf8'))[0]!);
     expect(formatToolCall(call!)).toContain('Read');
     expect(formatToolCall(call!)).toContain('/home/x/repo/foo.ts');
+  });
+});
+
+describe('hasPrCreateInvocation', () => {
+  it('matches a bare gh pr create command', () => {
+    expect(hasPrCreateInvocation('gh pr create --base main --head KEY')).toBe(true);
+  });
+
+  it('matches gh pr create after a cd prefix in a raw command (newline)', () => {
+    expect(hasPrCreateInvocation('cd /home/me/Repos/crew-KEY\ngh pr create --base main')).toBe(
+      true,
+    );
+  });
+
+  it('matches gh pr create after the ⏎ newline marker in a summary', () => {
+    expect(hasPrCreateInvocation('cd /home/me/Repos/crew-KEY ⏎ gh pr create --base main')).toBe(
+      true,
+    );
+  });
+
+  it('matches gh pr create chained after git push', () => {
+    expect(hasPrCreateInvocation('git push -u origin KEY\ngh pr create --base main')).toBe(true);
+  });
+
+  it('does not match a mid-line mention inside a quoted string', () => {
+    expect(hasPrCreateInvocation('echo "see also: gh pr create"')).toBe(false);
+  });
+
+  it('returns false for null/undefined/empty input', () => {
+    expect(hasPrCreateInvocation(null)).toBe(false);
+    expect(hasPrCreateInvocation(undefined)).toBe(false);
+    expect(hasPrCreateInvocation('')).toBe(false);
   });
 });
 

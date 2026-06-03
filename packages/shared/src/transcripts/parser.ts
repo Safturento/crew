@@ -175,3 +175,21 @@ export function summarizeInput(toolName: string, input: Record<string, unknown>)
       return JSON.stringify(input).slice(0, 120);
   }
 }
+
+/**
+ * True when `text` contains a `gh pr create` invocation at the start of any
+ * line — the signal that drives the `running → pr_open` state transition.
+ *
+ * Accepts either a raw Bash command (newlines as `\n`) or a `summarizeInput`
+ * summary (newlines rendered as ` ⏎ `), so the daemon's ingest path, metrics
+ * path, and state re-derivation can all share one predicate. A plain
+ * substring match is deliberately avoided: agents prefix the PR command with
+ * `cd <worktree>` (or chain `git push && …`) so it is rarely the first token,
+ * yet `echo "… gh pr create …"` must NOT count. Per-line "starts with"
+ * satisfies both. The SQL `has_pr_create` aggregate in the daemon's
+ * AgentsService mirrors this — keep the two in lock-step.
+ */
+export function hasPrCreateInvocation(text: string | null | undefined): boolean {
+  if (!text) return false;
+  return text.split(/\n|⏎/).some((line) => line.trimStart().startsWith('gh pr create'));
+}

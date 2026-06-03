@@ -279,6 +279,29 @@ describe('AgentsService.list', () => {
     }
   });
 
+  it('returns pr_open when gh pr create ran on its own line after a cd prefix', async () => {
+    // Regression: agents cd into the worktree before `gh pr create`, so the
+    // summary is `cd /path ⏎ gh pr create …`. The old `LIKE 'gh pr create%'`
+    // prefix match missed it and the agent slid to `finished`.
+    const db = await freshDb();
+    try {
+      await makeAgent(db, 'KAN-CD');
+      const runId = await makeRun(db, 'KAN-CD', 's-cd', {
+        completedAt: '2026-04-29T13:00:00Z',
+        exitCode: 0,
+      });
+      await makeToolCall(db, runId, {
+        tool: 'Bash',
+        summary: 'cd /home/me/Repos/crew-KAN-CD ⏎ gh pr create --base main --head KAN-CD',
+        tokens: 1,
+      });
+      const svc = new AgentsService({ db });
+      expect((await svc.list())[0]).toMatchObject({ key: 'KAN-CD', state: 'pr_open' });
+    } finally {
+      await db.destroy();
+    }
+  });
+
   it('returns finished when latest run is completed=0 AND no gh pr create ever observed', async () => {
     const db = await freshDb();
     try {

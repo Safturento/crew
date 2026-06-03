@@ -1,4 +1,4 @@
-import { extractBashCommands } from 'crew-shared';
+import { extractBashCommands, hasPrCreateInvocation } from 'crew-shared';
 import type { MetricInputs } from './MetricsService.js';
 
 /**
@@ -83,7 +83,7 @@ function findPrClaimInputTokens(events: readonly MetricEvent[]): number | null {
       (item) =>
         item.type === 'tool_use' &&
         item.name === 'Bash' &&
-        (item.input?.command ?? '').trimStart().startsWith('gh pr create'),
+        hasPrCreateInvocation(item.input?.command),
     );
     if (!prClaim) continue;
     const usage = ev.message?.usage;
