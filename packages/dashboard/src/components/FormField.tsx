@@ -17,7 +17,7 @@ function FormField({ label, className, labelClassName, id, ...inputProps }: Form
   const generatedId = React.useId();
   const fieldId = id ?? generatedId;
   return (
-    <div className={cn('flex flex-col gap-1.5', className)}>
+    <div className={cn('flex flex-col gap-[5px]', className)}>
       <Label
         htmlFor={fieldId}
         className={cn('text-[11px] font-normal text-muted-foreground uppercase', labelClassName)}
