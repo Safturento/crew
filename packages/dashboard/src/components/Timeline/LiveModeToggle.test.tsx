@@ -23,6 +23,11 @@ describe('LiveModeToggle', () => {
     await userEvent.click(screen.getByRole('switch', { name: /live/i }));
     expect(onChange).toHaveBeenCalledWith(false);
   });
+
+  it('is built on the design-system Switch primitive', () => {
+    const { container } = render(<LiveModeToggle active={true} onChange={() => {}} />);
+    expect(container.querySelector('[data-slot="switch"]')).not.toBeNull();
+  });
 });
 
 describe('NewEventsPill', () => {
