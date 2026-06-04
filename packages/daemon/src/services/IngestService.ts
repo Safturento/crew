@@ -5,6 +5,7 @@ import type { Kysely } from 'kysely';
 import type { Logger } from 'pino';
 import {
   claudeProjectDirFor,
+  hasPrCreateInvocation,
   startupEventSchema,
   summarizeInput,
   tailTranscript,
@@ -473,7 +474,7 @@ export class IngestService {
     const inserted = (result?.numInsertedOrUpdatedRows ?? 0n) > 0n;
     if (!inserted) return;
 
-    if (toolUse.name === 'Bash' && summary.startsWith('gh pr create')) {
+    if (toolUse.name === 'Bash' && hasPrCreateInvocation(summary)) {
       this.pendingPrCreates.set(toolUse.id, { runId, agentKey });
     }
 
@@ -704,17 +705,13 @@ function computeNextState(
     return 'running';
   }
   if (previous === 'pr_open') return 'pr_open';
-  if (toolName === 'Bash' && summary.startsWith('gh pr create')) return 'pr_open';
+  if (toolName === 'Bash' && hasPrCreateInvocation(summary)) return 'pr_open';
   return 'running';
 }
 
 function isTransitionState(s: string | null | undefined): s is TransitionState {
   return (
-    s === 'init' ||
-    s === 'running' ||
-    s === 'pr_open' ||
-    s === 'pr_merged' ||
-    s === 'finished'
+    s === 'init' || s === 'running' || s === 'pr_open' || s === 'pr_merged' || s === 'finished'
   );
 }
 

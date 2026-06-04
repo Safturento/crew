@@ -24,6 +24,21 @@ describe('deriveStateFromToolCalls', () => {
     ).toBe('pr_open');
   });
 
+  it('returns pr_open when gh pr create runs on its own line after a cd prefix', () => {
+    // Agents routinely cd into the worktree before opening the PR, so the
+    // summarised command is `cd /path ⏎ gh pr create …` rather than starting
+    // with `gh pr create`. CREW status bug: this slid straight to finished.
+    expect(
+      deriveStateFromToolCalls([
+        { tool_name: 'Read', input_summary: '/x' },
+        {
+          tool_name: 'Bash',
+          input_summary: 'cd /home/me/Repos/crew-CREW-31 ⏎ gh pr create --base main --head CREW-31',
+        },
+      ]),
+    ).toBe('pr_open');
+  });
+
   it('does not match Bash calls that merely mention gh pr create later in the line', () => {
     expect(
       deriveStateFromToolCalls([

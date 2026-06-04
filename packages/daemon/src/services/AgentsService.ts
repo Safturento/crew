@@ -172,7 +172,11 @@ export class AgentsService {
             sql<number>`COALESCE(SUM(tc.output_tokens), 0) + COALESCE(SUM(tc.input_tokens), 0) + COALESCE(SUM(tc.cache_read_tokens), 0) + COALESCE(SUM(tc.cache_creation_tokens), 0)`.as(
               'tokens',
             ),
-            sql<number>`MAX(CASE WHEN tc.tool_name = 'Bash' AND tc.input_summary LIKE 'gh pr create%' THEN 1 ELSE 0 END)`.as(
+            // Mirrors crew-shared `hasPrCreateInvocation`: `gh pr create` at the
+            // start of the summary OR after the ` ⏎ ` newline marker (agents cd
+            // into the worktree first, so it is rarely the first token). Keep in
+            // lock-step with that helper.
+            sql<number>`MAX(CASE WHEN tc.tool_name = 'Bash' AND (tc.input_summary LIKE 'gh pr create%' OR tc.input_summary LIKE '%⏎ gh pr create%') THEN 1 ELSE 0 END)`.as(
               'has_pr_create',
             ),
             sql<number>`MAX(CASE WHEN tc.run_id = (SELECT id FROM runs r3 WHERE r3.agent_key = r.agent_key AND r3.command IN ('run', 'fix-pr') ORDER BY r3.id DESC LIMIT 1) THEN 1 ELSE 0 END)`.as(
@@ -207,9 +211,7 @@ export class AgentsService {
           .selectFrom('state_transitions as st')
           .select([
             'st.agent_key as agent_key',
-            sql<number>`MAX(CASE WHEN st.to_state = 'pr_merged' THEN 1 ELSE 0 END)`.as(
-              'pr_merged',
-            ),
+            sql<number>`MAX(CASE WHEN st.to_state = 'pr_merged' THEN 1 ELSE 0 END)`.as('pr_merged'),
           ])
           .groupBy('st.agent_key')
           .as('transition_status'),

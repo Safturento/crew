@@ -11,13 +11,9 @@
  * PR is no longer OPEN (CREW-202). Like `finished`, it is not produced by
  * the tool-call-driven helper.
  */
-export type TransitionState =
-  | 'init'
-  | 'running'
-  | 'pr_open'
-  | 'pr_merged'
-  | 'finished'
-  | 'error';
+import { hasPrCreateInvocation } from 'crew-shared';
+
+export type TransitionState = 'init' | 'running' | 'pr_open' | 'pr_merged' | 'finished' | 'error';
 
 export interface ToolCallSlice {
   tool_name: string;
@@ -36,7 +32,7 @@ export type ToolCallDerivedState = Extract<TransitionState, 'init' | 'running' |
 export function deriveStateFromToolCalls(calls: readonly ToolCallSlice[]): ToolCallDerivedState {
   if (calls.length === 0) return 'init';
   const hasPrCreate = calls.some(
-    (c) => c.tool_name === 'Bash' && (c.input_summary ?? '').startsWith('gh pr create'),
+    (c) => c.tool_name === 'Bash' && hasPrCreateInvocation(c.input_summary),
   );
   return hasPrCreate ? 'pr_open' : 'running';
 }
