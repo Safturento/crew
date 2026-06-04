@@ -3,6 +3,7 @@ import { mkdirSync, mkdtempSync, readFileSync, existsSync, rmSync, writeFileSync
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { emitPartialSnapshot, emitSnapshot } from './emit.js';
+import { hashNode } from './hash.js';
 import type { FigmaFileResponse, FigmaImagesResponse } from './client.js';
 
 const fileResponse: FigmaFileResponse = {
@@ -289,6 +290,31 @@ describe('emitSnapshot', () => {
     expect(meta.figmaFileVersion).toBe('v-test-123');
     expect(typeof meta.capturedAt).toBe('string');
   });
+
+  it('records a content hash per captured node in meta.json (the --check baseline)', async () => {
+    const client = {
+      getFile: vi.fn().mockResolvedValue(fileResponse),
+      getImages: vi.fn().mockResolvedValue(imagesResponse),
+    };
+
+    await emitSnapshot({
+      fileKey: 'FILEKEY',
+      pages: ['Composites', 'Dashboard Screens'],
+      outDir,
+      client: client as never,
+      fetchImage: async () => Buffer.from('x'),
+    });
+
+    const meta = JSON.parse(readFileSync(join(outDir, 'meta.json'), 'utf8'));
+    // One hash per captured node — keyed by the same node ids as index.json.
+    expect(Object.keys(meta.nodeHashes).sort()).toEqual(['1:756', '272:120', '300:1']);
+    // Each baseline hash is the hash of that node's full captured tree, so a
+    // freshly fetched identical tree reports fresh.
+    const pillNode = fileResponse.document.children![0].children![0];
+    expect(meta.nodeHashes['272:120']).toBe(hashNode(pillNode));
+    // Out-of-scope pages contribute no baseline.
+    expect(meta.nodeHashes['999:1']).toBeUndefined();
+  });
 });
 
 describe('emitPartialSnapshot', () => {
@@ -436,10 +462,7 @@ describe('emitPartialSnapshot', () => {
   it('fails closed when Figma returns null for any requested ID — no disk writes, no index mutation', async () => {
     seedSnapshot();
     const indexBefore = readFileSync(join(outDir, 'index.json'), 'utf8');
-    const componentJsonBefore = readFileSync(
-      join(outDir, 'composites/272-120.json'),
-      'utf8',
-    );
+    const componentJsonBefore = readFileSync(join(outDir, 'composites/272-120.json'), 'utf8');
     const client = {
       getFile: vi.fn(),
       getImages: vi.fn(),
