@@ -81,7 +81,7 @@ New table `action_requests` (numbered migration in `packages/daemon/src/migratio
 Routes (thin; an `ActionService` owns logic; Bruno endpoint per route):
 
 - `POST /api/actions` — dashboard enqueues. Validates `kind` is in the verb set and `ticket_key`/`project` are registered (rejects unknown). Returns the new `id`.
-- `GET /api/actions/pending` — runner long-polls; atomically claims one pending row (`pending` → `claimed`) and returns it. Returns 204/empty when idle.
+- `GET /api/actions/pending` — runner **long-polls**: the daemon holds the request until a pending row appears (or a timeout), then atomically claims one (`pending` → `claimed`) and returns it. Returns empty on timeout, and the runner immediately re-polls.
 - `POST /api/actions/:id/result` — runner reports `launching` → `launched` | `failed` (+ `error`).
 - `POST /api/runner/heartbeat` — runner pings every N seconds; daemon stores `last_seen`.
 - `GET /api/runner/logs` — returns the tail of the runner log; an SSE variant live-tails.
@@ -121,7 +121,9 @@ On a `pr_open` agent, a "Fix PR" action opens a small modal with a comment texta
 
 ### Finish
 
-The Finish QuickAction is **disabled until the agent is `pr_merged`** (state from CREW-202); once merged it enqueues a `finish` action → `crew finish <KEY>`. Separately (CREW-208 Scope 2), the CLI `step()` helper in `packages/cli/src/commands/finish.ts` emits a **finish-step event** (new type in `crew-shared`) for each step; the daemon publishes it via the EventBus; the drawer renders a per-step checklist with ok/skip/error states.
+The Finish QuickAction is **disabled until the agent is `pr_merged`** (state from CREW-202); once merged it enqueues a `finish` action → `crew finish <KEY>`. Separately (CREW-208 Scope 2), the CLI `step()` helper in `packages/cli/src/commands/finish.ts` reports each step to the daemon over **HTTP** — a new `reportFinishStep` method on the existing `daemon-client` (the same client that already POSTs `registerRun`/`completeRun`) hitting `POST /api/agents/:key/finish-step` with a finish-step event (new type in `crew-shared`). The daemon stores it and republishes via the existing `EventBus` → SSE; the drawer renders a per-step checklist (ok/skip/error).
+
+> **Transport decision (resolved):** the daemon HTTP path is chosen over the startup-event JSONL bridge. `crew finish` already holds a `daemonClient`, the per-step POSTs are synchronous + ordered + acked, and the path avoids the JSONL bridge's partial-line read races, mount-presence requirements (worktree compose overrides mounts), and file cleanup/rotation ambiguity. Lower bug surface for equivalent behavior.
 
 ## Runner lifecycle
 
@@ -177,7 +179,7 @@ Dependency shape: `a` → (`b`, `c`) → (`d`, `e`) for the host path; the dashb
 - **Separate host executor HTTP service** the dashboard calls directly — a clunkier variant of the runner (second service, second port, its own auth) with no upside over the daemon-owned queue. Rejected.
 - **Shared-volume action queue** (daemon writes request files to a host-mounted dir, runner watches) — viable and symmetric with the startup-JSONL bridge, but requires a writable host bind-mount and a second status path. The HTTP queue keeps the daemon the single owner and reuses SSE for status. Preferred.
 
-## Open questions
+## Resolved decisions
 
-- **Finish-step transport** — reuse the existing startup-event JSONL bridge (`~/.crew/<...>`) for finish steps, or add a dedicated event path? Decide during the plan; the JSONL bridge is the lower-novelty option.
-- **Long-poll vs short-poll** for `GET /api/actions/pending` — long-poll is snappier; a short interval is simpler. Minor; decide in the runner ticket.
+- **Finish-step transport:** daemon HTTP path — CLI `daemon-client.reportFinishStep` → `POST /api/agents/:key/finish-step` → store + `EventBus` → SSE → drawer checklist. Chosen over the startup-JSONL bridge for fewer moving parts and less ambiguity (reuses the already-wired client + EventBus; synchronous, ordered, acked; no file-watcher footguns). See the Finish section's transport note.
+- **Runner poll style:** long-poll on `GET /api/actions/pending` — the daemon holds the request until an action appears or a timeout, then the runner re-polls.
