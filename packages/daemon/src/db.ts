@@ -91,12 +91,27 @@ export interface StartupEventsTable {
   log_path: string | null;
 }
 
+/** CREW-215: one row per `crew finish` step, fed by
+ *  POST /api/agents/:key/finish-step and read back as an ordered checklist
+ *  by the dashboard drawer. `idx` is the step ordinal (wire field `index`);
+ *  `ts` is epoch-ms. */
+export interface FinishStepsTable {
+  id: Generated<number>;
+  agent_key: string;
+  idx: number;
+  label: string;
+  status: 'ok' | 'skip' | 'error';
+  detail: string | null;
+  ts: number;
+}
+
 export interface DaemonDatabase {
   agents: AgentsTable;
   runs: RunsTable;
   tool_calls: ToolCallsTable;
   state_transitions: StateTransitionsTable;
   startup_events: StartupEventsTable;
+  finish_steps: FinishStepsTable;
 }
 
 /**

@@ -25,6 +25,7 @@ async function buildTestApp(opts: { dashboardDistDir?: string } = {}) {
       pidFile: '/tmp/daemon.pid',
       logFile: '/tmp/daemon.log',
       transcriptsHome: undefined,
+      runnerLogDir: '/tmp/does-not-matter/runner',
     },
     logger: createLogger(),
     db,

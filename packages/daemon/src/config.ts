@@ -21,6 +21,11 @@ const daemonConfigSchema = z.object({
   // Fixture mode (CREW_SEED_FIXTURES=1) redirects to a writable sibling
   // of CREW_DB_FILE since the host's `~/.claude/projects` mount is RO.
   CREW_TRANSCRIPTS_HOME: z.string().default(''),
+  // CREW-215: directory holding the host runner's `runner.log`, tailed by
+  // GET /api/runner/logs. Defaults to `~/.crew/runner`; docker-compose
+  // mounts ${HOME}/.crew/runner into the container at /root/.crew/runner:ro,
+  // so os.homedir() == /root inside the daemon resolves to the same place.
+  CREW_RUNNER_LOG_DIR: z.string().default(() => join(homedir(), '.crew', 'runner')),
 });
 
 export interface DaemonConfig {
@@ -32,6 +37,8 @@ export interface DaemonConfig {
   logFile: string;
   /** When set, replaces `homedir()` in transcript path resolution. */
   transcriptsHome: string | undefined;
+  /** Directory holding the runner's `runner.log` (GET /api/runner/logs). */
+  runnerLogDir: string;
 }
 
 /**
@@ -51,5 +58,6 @@ export function parseDaemonConfig(
     pidFile: parsed.CREW_PID_FILE,
     logFile: parsed.CREW_LOG_FILE,
     transcriptsHome: parsed.CREW_TRANSCRIPTS_HOME === '' ? undefined : parsed.CREW_TRANSCRIPTS_HOME,
+    runnerLogDir: parsed.CREW_RUNNER_LOG_DIR,
   };
 }
