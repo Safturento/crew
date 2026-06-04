@@ -1,0 +1,32 @@
+meta {
+  name: GET /api/agents/:key/finish-steps
+  type: http
+  seq: 13
+}
+
+get {
+  url: {{baseUrl}}/api/agents/{{agentKey}}/finish-steps
+}
+
+assert {
+  res.status: eq 200
+  res.body.steps: isArray
+}
+
+tests {
+  test("finish-steps returns the step posted by post-finish-step", () => {
+    expect(res.body.steps).to.be.an("array");
+    expect(res.body.steps.length).to.be.greaterThan(0);
+    const first = res.body.steps[0];
+    expect(first.key).to.equal(bru.getVar("agentKey"));
+    expect(first.label).to.equal("lint");
+    expect(first.status).to.equal("ok");
+    expect(first.detail).to.equal(null);
+  });
+}
+
+docs {
+  The ordered finish-step checklist for an agent (emission order). Always
+  200; unknown keys yield `{ steps: [] }`. Runs after `post-finish-step.bru`
+  in the smoke chain so the list is non-empty.
+}

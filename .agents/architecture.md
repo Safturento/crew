@@ -1,7 +1,7 @@
 ---
 name: architecture
 description: 4-package layering rules + dependency direction
-last_updated: 2026-06-03
+last_updated: 2026-06-04
 covers:
   - 'packages/*/src/**/*.ts'
   - 'package.json'
@@ -67,7 +67,7 @@ The config encodes: repo path, default branch, Jira project key + site, GitHub r
 
 SQLite at `~/.config/crew/state.db`. Schema lives in `packages/daemon/src/db.ts` + numbered migrations in `packages/daemon/src/migrations/`. **Never edit a shipped migration — add a new numbered file instead.**
 
-Tables: `agents`, `runs`, `tool_calls`, `state_transitions`, `startup_events`. The last is fed by a chokidar watcher on `~/.crew/startup/<key>.jsonl` (CREW-201) — see [`dispatch.md`](dispatch.md) for the producer side.
+Tables: `agents`, `runs`, `tool_calls`, `state_transitions`, `startup_events`, `finish_steps`. `startup_events` is fed by a chokidar watcher on `~/.crew/startup/<key>.jsonl` (CREW-201) — see [`dispatch.md`](dispatch.md) for the producer side. `finish_steps` (CREW-215) is written by `POST /api/agents/:key/finish-step` as `crew finish` reports each step, and read back as the drawer's finish checklist.
 
 ## Inherited conventions
 

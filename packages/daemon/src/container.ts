@@ -109,8 +109,7 @@ export function buildContainer(deps: BuildContainerDeps): AwilixContainer<Daemon
     // because `start()` schedules a setInterval the app owns the lifetime
     // of — request-scoped instances would each schedule their own timer.
     prPoller: asFunction(
-      ({ db, eventBus, logger }: DaemonCradle) =>
-        new PrPoller({ db, eventBus, logger }),
+      ({ db, eventBus, logger }: DaemonCradle) => new PrPoller({ db, eventBus, logger }),
     ).singleton(),
     // CREW-215: tracks the host runner's heartbeat → online/offline edges.
     // Singleton because the heartbeat state + falling-edge timer must be

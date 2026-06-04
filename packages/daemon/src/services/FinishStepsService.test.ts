@@ -54,7 +54,13 @@ describe('FinishStepsService', () => {
     const svc = new FinishStepsService({ db, eventBus: new EventBus() });
     try {
       await svc.record('CREW-1', { index: 0, label: 'lint', status: 'ok', ts: 1 });
-      await svc.record('CREW-1', { index: 1, label: 'typecheck', status: 'skip', detail: 'n/a', ts: 2 });
+      await svc.record('CREW-1', {
+        index: 1,
+        label: 'typecheck',
+        status: 'skip',
+        detail: 'n/a',
+        ts: 2,
+      });
       await svc.record('CREW-1', { index: 2, label: 'test', status: 'error', ts: 3 });
       // a different agent's step must not leak into the list
       await svc.record('CREW-2', { index: 0, label: 'lint', status: 'ok', ts: 9 });

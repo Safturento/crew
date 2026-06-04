@@ -1,0 +1,30 @@
+meta {
+  name: GET /api/runner/logs
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{baseUrl}}/api/runner/logs?tail=50
+}
+
+params:query {
+  tail: 50
+}
+
+assert {
+  res.status: eq 200
+  res.body.lines: isArray
+}
+
+tests {
+  test("logs returns a lines array (empty when no runner has written)", () => {
+    expect(res.body.lines).to.be.an("array");
+  });
+}
+
+docs {
+  Tails the mounted `~/.crew/runner/runner.log`. Returns `{ lines: [] }`
+  when the file is absent — the normal state on a worktree stack or before
+  the host runner has ever run.
+}

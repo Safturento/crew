@@ -1,7 +1,7 @@
 ---
 name: local-dev
 description: Docker stack, env.toml, worktree isolation, sandbox baseline
-last_updated: 2026-05-22
+last_updated: 2026-06-04
 covers:
   - 'docker-compose*.yml'
   - 'env.toml'
@@ -42,6 +42,20 @@ The seed runs three independent idempotent steps so a daemon reload picks up new
 - `seedTranscriptFixtures(transcriptsHome)` — gated per-file. Writes JSONL to `<transcriptsHome>/.claude/projects/<encoded-worktree>/<session>.jsonl`. Lives under the same `transcriptsHome` `resolveJsonlPath` reads, redirected by `serve.ts` to a writable sibling of the DB file (the host's `~/.claude/projects` mount is RO).
 
 The seed dir lives under `src/` so the `tsx watch` bind-mount picks up changes without an image rebuild. When you add a fixture, edit `src/seeds/dev.ts` and bump the fixture set together with any test that depends on it. The seed file is `git`-tracked; don't write per-developer fixtures.
+
+## Daemon bind mounts (and the single-compose-file caveat)
+
+The `daemon` service bind-mounts several host paths read-only — registered project
+TOMLs, host transcripts, `gh` auth, the CLI startup-event JSONLs (`~/.crew/startup`),
+and the host runner log (`~/.crew/runner`, CREW-215, tailed by `GET /api/runner/logs`).
+
+There is **one** `docker-compose.yml`; worktree stacks reuse it with hashed ports (see
+below), so there is no per-worktree mount override. All stacks therefore bind the same
+host `${HOME}/.crew/*` paths. That's intentional: there is one host runner and one
+startup-event stream per machine. A worktree daemon mounting `~/.crew/runner` just sees
+an empty/absent log (no runner writes to it from a worktree), which the logs route
+handles by returning `{ lines: [] }`. Docker auto-creates a missing bind-mount source as
+an empty dir, so the mount is safe even before the runner has ever run.
 
 ## `env.toml` is the source of truth for per-worktree env
 
