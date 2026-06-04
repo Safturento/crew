@@ -143,14 +143,20 @@ Figma node IDs below are in the live consolidated file (`9FeJPriqdsdA4n9R5Xsrr8`
 | `TranscriptRow`      | `553:445`                       | `packages/dashboard/src/components/Timeline/TranscriptRow.tsx`   |
 | `MinimapStripe`      | _(no Figma — feature-internal)_ | `packages/dashboard/src/components/Timeline/MinimapStripe.tsx`   |
 | `FormField`          | `337:234`                       | `packages/dashboard/src/components/FormField.tsx`                |
+| `Modal`              | `355:238`                       | `packages/dashboard/src/components/Modal.tsx`                    |
+| `AlertModal`         | `373:413`                       | `packages/dashboard/src/components/AlertModal.tsx`               |
+| `ModalSelectionRow`  | `350:236`                       | `packages/dashboard/src/components/ModalSelectionRow.tsx`        |
+| `Stepper`            | `378:462`                       | `packages/dashboard/src/components/Stepper.tsx`                  |
 
-`TopNav`, `AgentRow`, and `TimelineSection` resolve to component sets in the live file; the rest resolve to single components. `ErrorFallback` is the only un-built composite from the original Phase 4 inventory; it lands alongside the next fidelity ticket that surfaces a need.
+The modal-family composites (`Modal`, `AlertModal`, `ModalSelectionRow`, `Stepper`) landed via CREW-137 (T3 of the DS→code reconciliation). They are **build-only — no caller sites yet**; modal screens get wired in separate slices. `Modal` wraps the `dialog` primitive, `AlertModal` wraps the new `alert-dialog` primitive.
+
+`TopNav`, `AgentRow`, `TimelineSection`, and `Stepper` resolve to component sets in the live file; the rest resolve to single components. `ErrorFallback` is the only un-built composite from the original Phase 4 inventory; it lands alongside the next fidelity ticket that surfaces a need.
 
 > **Figma-side Pill consolidation (2026-05-12) is now reconciled in code (CREW-135).** The Figma DS merged `Button` / `StateBadge` / `CountBadge` / `TimelineTag` into a unified `Pill` component set, and the Crew DS moved into the dashboard file. CREW-135 reconciled the dashboard code: an internal `PillBase` owns the shared anatomy, and `Button` / `Badge` / `Tag` (under `components/ui/`) wrap it. The standalone `StateBadge.tsx` and `CountBadge.tsx` composites are retired — every state pill and count pill is now a `Badge`. See [`docs/rationale/design-system.md`](../docs/rationale/design-system.md#2026-05-12-figma-side-pill-consolidation) for the migration history.
 
 ### `components/ui/` vs `components/<feature>/` split
 
-- `packages/dashboard/src/components/ui/` — **shadcn primitives + DS primitives** (`button`, `badge`, `tag`, `input`, `checkbox`, `switch`, `dialog`, `label`, `separator`, `form`, `popover`, `state-icon`, `meta-list`). One file per primitive plus its `.figma.tsx` mapping. `pill-base.tsx` is the one exception — an internal shared anatomy for `button` / `badge` / `tag`, never exported or imported outside those three; it has no `.figma.tsx`. `popover`, `state-icon`, and `meta-list` are also `.figma.tsx`-less: `popover` wraps `radix-ui`'s Popover for the Filters dropdown (CREW-187), `state-icon` is the canonical filled-disc glyph rendered inside every state Pill (it has no Figma counterpart because Figma's `Pill` set already names `Icon: lucide/circle` directly — the wrapper exists to pin the absolute stroke-width that makes the outline read as a filled disc across AgentRow / DrawerHeader / TimelineSection), and `meta-list` is the inline-metadata-strip primitive that injects `·` separators via CSS `[&>li+li]:before:content-['·']` so the dot can never get out of sync with its items (used by AgentRow, DrawerHeader, TimelineSection — keep new metadata strips going through it instead of inlining `·` in JSX). Don't put crew-specific composites here.
+- `packages/dashboard/src/components/ui/` — **shadcn primitives + DS primitives** (`button`, `badge`, `tag`, `input`, `checkbox`, `switch`, `dialog`, `alert-dialog`, `label`, `separator`, `form`, `popover`, `state-icon`, `meta-list`). One file per primitive plus its `.figma.tsx` mapping. `pill-base.tsx` is the one exception — an internal shared anatomy for `button` / `badge` / `tag`, never exported or imported outside those three; it has no `.figma.tsx`. `alert-dialog` (CREW-137) is also `.figma.tsx`-less: it wraps `radix-ui`'s AlertDialog as plumbing for the `AlertModal` composite, which carries the Code Connect mapping instead (the same reason `dialog` would be figma-less if `Modal` rather than `dialog` were the documented surface — `dialog` keeps its mapping for historical reasons). `popover`, `state-icon`, and `meta-list` are also `.figma.tsx`-less: `popover` wraps `radix-ui`'s Popover for the Filters dropdown (CREW-187), `state-icon` is the canonical filled-disc glyph rendered inside every state Pill (it has no Figma counterpart because Figma's `Pill` set already names `Icon: lucide/circle` directly — the wrapper exists to pin the absolute stroke-width that makes the outline read as a filled disc across AgentRow / DrawerHeader / TimelineSection), and `meta-list` is the inline-metadata-strip primitive that injects `·` separators via CSS `[&>li+li]:before:content-['·']` so the dot can never get out of sync with its items (used by AgentRow, DrawerHeader, TimelineSection — keep new metadata strips going through it instead of inlining `·` in JSX). Don't put crew-specific composites here.
 - `packages/dashboard/src/components/` (top level) — **Crew composites** that compose primitives + crew logic. `AgentRow`, `ProjectSection`, etc.
 
 This is the canonical shadcn convention; the `components.json` `aliases` block maps `ui → @/components/ui`.
@@ -194,19 +200,23 @@ The decision is reversible — the file structure stays compatible with future p
 
 `Button` / `Badge` / `Tag` map to the Crew consolidated file's unified `Pill` set (`272:120` in `9FeJPriqdsdA4n9R5Xsrr8`) — CREW-135. The remaining primitives still target Core's component nodes (file `UkPJj6vd7HMKcey7M0XF4N`), because the screens file instances those shadcn primitives directly from Core via the library link.
 
-| Code component       | Mapping file                                               | Figma component                             | Figma node id |
-| -------------------- | ---------------------------------------------------------- | ------------------------------------------- | ------------- |
-| `Button`             | `packages/dashboard/src/components/ui/button.figma.tsx`    | `Pill` set (Crew file)                      | `272:120`     |
-| `Badge`              | `packages/dashboard/src/components/ui/badge.figma.tsx`     | `Pill` set (Crew file)                      | `272:120`     |
-| `Tag`                | `packages/dashboard/src/components/ui/tag.figma.tsx`       | `Pill` set (Crew file)                      | `272:120`     |
-| `Input`              | `packages/dashboard/src/components/ui/input.figma.tsx`     | `Default` set on Input page (Core)          | `520:3062`    |
-| `Checkbox`           | `packages/dashboard/src/components/ui/checkbox.figma.tsx`  | `Checkbox` composite (Crew file)            | `663:869`     |
-| `Switch`             | `packages/dashboard/src/components/ui/switch.figma.tsx`    | `Switch` set on Composites page (Crew file) | `335:242`     |
-| `FormField`          | `packages/dashboard/src/components/FormField.figma.tsx`    | `FormField` on Composites page (Crew file)  | `337:234`     |
-| `Dialog`             | `packages/dashboard/src/components/ui/dialog.figma.tsx`    | `Dialog` set on Dialog page (Core)          | `594:105`     |
-| `Label`              | `packages/dashboard/src/components/ui/label.figma.tsx`     | `Label` set on Label page (Core)            | `76:8617`     |
-| `Separator`          | `packages/dashboard/src/components/ui/separator.figma.tsx` | `Separator` on Seperator page (Core)        | `76:10202`    |
-| `FormItem` (form.\*) | `packages/dashboard/src/components/ui/form.figma.tsx`      | `Field` component on Field page (Core)      | `1188:5362`   |
+| Code component       | Mapping file                                                    | Figma component                             | Figma node id |
+| -------------------- | --------------------------------------------------------------- | ------------------------------------------- | ------------- |
+| `Button`             | `packages/dashboard/src/components/ui/button.figma.tsx`         | `Pill` set (Crew file)                      | `272:120`     |
+| `Badge`              | `packages/dashboard/src/components/ui/badge.figma.tsx`          | `Pill` set (Crew file)                      | `272:120`     |
+| `Tag`                | `packages/dashboard/src/components/ui/tag.figma.tsx`            | `Pill` set (Crew file)                      | `272:120`     |
+| `Input`              | `packages/dashboard/src/components/ui/input.figma.tsx`          | `Default` set on Input page (Core)          | `520:3062`    |
+| `Checkbox`           | `packages/dashboard/src/components/ui/checkbox.figma.tsx`       | `Checkbox` composite (Crew file)            | `663:869`     |
+| `Switch`             | `packages/dashboard/src/components/ui/switch.figma.tsx`         | `Switch` set on Composites page (Crew file) | `335:242`     |
+| `FormField`          | `packages/dashboard/src/components/FormField.figma.tsx`         | `FormField` on Composites page (Crew file)  | `337:234`     |
+| `Dialog`             | `packages/dashboard/src/components/ui/dialog.figma.tsx`         | `Dialog` set on Dialog page (Core)          | `594:105`     |
+| `Label`              | `packages/dashboard/src/components/ui/label.figma.tsx`          | `Label` set on Label page (Core)            | `76:8617`     |
+| `Separator`          | `packages/dashboard/src/components/ui/separator.figma.tsx`      | `Separator` on Seperator page (Core)        | `76:10202`    |
+| `FormItem` (form.\*) | `packages/dashboard/src/components/ui/form.figma.tsx`           | `Field` component on Field page (Core)      | `1188:5362`   |
+| `Modal`              | `packages/dashboard/src/components/Modal.figma.tsx`             | `Modal` (Crew file)                         | `355:238`     |
+| `AlertModal`         | `packages/dashboard/src/components/AlertModal.figma.tsx`        | `AlertModal` (Crew file)                    | `373:413`     |
+| `ModalSelectionRow`  | `packages/dashboard/src/components/ModalSelectionRow.figma.tsx` | `ModalSelectionRow` (Crew file)             | `350:236`     |
+| `Stepper`            | `packages/dashboard/src/components/Stepper.figma.tsx`           | `Stepper` set (Crew file)                   | `378:462`     |
 
 ### Pill mapping — color × intensity × type
 
