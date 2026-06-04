@@ -106,6 +106,48 @@ repo = "u/r"
       exclude_tables: ['kysely_migration*'],
     });
   });
+
+  it('parses [docker] caddy_service / postgres_service overrides', () => {
+    const raw = `
+name = "x"
+repo_path = "/x"
+
+[jira]
+project_key = "X"
+site = "https://x.atlassian.net"
+
+[github]
+repo = "u/r"
+
+[docker]
+canonical_worktree = "main"
+caddy_service = "proxy"
+postgres_service = "db"
+`;
+    const config = parseProjectConfig(raw);
+    expect(config.docker?.caddy_service).toBe('proxy');
+    expect(config.docker?.postgres_service).toBe('db');
+  });
+
+  it('defaults [docker] service names to caddy / postgres', () => {
+    const raw = `
+name = "x"
+repo_path = "/x"
+
+[jira]
+project_key = "X"
+site = "https://x.atlassian.net"
+
+[github]
+repo = "u/r"
+
+[docker]
+canonical_worktree = "main"
+`;
+    const config = parseProjectConfig(raw);
+    expect(config.docker?.caddy_service).toBe('caddy');
+    expect(config.docker?.postgres_service).toBe('postgres');
+  });
 });
 
 describe('parseProjectConfig — playwright', () => {

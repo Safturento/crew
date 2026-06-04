@@ -41,6 +41,7 @@ Organization: Active is grouped by topic (not chronology) since the dominant acc
     - [2026-04-28 — `useAttention.clear()` snapshot semantic isn't directly tested](#2026-04-28--useattentionclear-snapshot-semantic-isnt-directly-tested)
   - [Daemon, CLI & Dispatch](#daemon-cli--dispatch)
     - [2026-06-03 — `deriveState` falls through to `finished` when PR-create isn't detected](#2026-06-03--derivestate-falls-through-to-finished-when-pr-create-isnt-detected)
+    - [2026-06-03 — `getStackUrl` is orphaned + duplicated by `docker-list`'s port/URL helpers](#2026-06-03--getstackurl-is-orphaned--duplicated-by-docker-lists-porturl-helpers)
     - [2026-05-23 — GitHub webhook as a future PR-status detection mechanism (parking-lot)](#2026-05-23--github-webhook-as-a-future-pr-status-detection-mechanism-parking-lot)
     - [2026-05-22 — CREW-183's `installNodeModules` fix doesn't extend to `crew fix-pr`](#2026-05-22--crew-183s-installnodemodules-fix-doesnt-extend-to-crew-fix-pr)
     - [2026-05-18 — Daemon has no reaper for orphaned runs stuck in `running`](#2026-05-18--daemon-has-no-reaper-for-orphaned-runs-stuck-in-running)
@@ -625,6 +626,18 @@ The "synthetic Unregistered section" feels right — single render path, no extr
 **Shape of work:** small, contained — decide the right terminal state for "completed, PR-create not observed", make `deriveState` + `computeNextState` agree on it, add the `&&`-chained matcher case. One ticket. Needs a design call on the state name before coding.
 
 **Open questions:** Is "completed, no PR detected" really an error, or a legitimate no-op outcome (epic-guard exit, ticket already shipped — the prompt's `→ no-pr:` path)? If legitimate, `finished` may be defensible and the real fix is just surfacing *why* (a distinct label/tooltip) rather than changing the state.
+
+#### 2026-06-03 — `getStackUrl` is orphaned + duplicated by `docker-list`'s port/URL helpers
+
+**What:** `packages/cli/src/lib/docker/compose.ts:52` `getStackUrl(project)` has no production caller — only `compose.test.ts` references it (already true at `origin/main`, predating CREW-31). CREW-31's new `list-stacks.ts` re-implements its two concerns independently: `getHostPort` parses `docker port <id> <spec>` (last-colon segment), and `stackUrl` builds `https://localhost[:port]` with the `443`→no-suffix rule. So the repo now carries two copies of that port-parse + URL-build logic, one of them dead in production.
+
+**Why noticed:** Flagged in the CREW-31 self-review (Senior Code Reviewer subagent). Left out of CREW-31's PR to keep scope tight — `getStackUrl` lives in an unrelated module and deleting/refactoring it would expand the diff into `compose.ts` + `compose.test.ts` for no behavioral gain on the ticket.
+
+**Anchors:** `packages/cli/src/lib/docker/compose.ts:52` (`getStackUrl`), `packages/cli/src/lib/docker/compose.test.ts:44` (its only caller), `packages/cli/src/lib/docker/list-stacks.ts:38,81` (`getHostPort` + `stackUrl`).
+
+**What's been considered:** Two clean resolutions — (a) delete `getStackUrl` + its test outright since it's dead, leaving `list-stacks.ts` as the single home; or (b) if a caller is still expected, have `getStackUrl` delegate to `getHostPort` + a shared URL builder so the parse/format logic lives once. (a) is simplest given there's no caller.
+
+**Shape of work:** Tiny — one deletion (or one delegation refactor) plus test cleanup in the `docker/` lib subdir. Not worth a ticket on its own; fold into the next docker-lib touch.
 
 #### 2026-05-23 — GitHub webhook as a future PR-status detection mechanism (parking-lot)
 

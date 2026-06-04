@@ -201,6 +201,8 @@ describe('brunoSmokeOptionsFor', () => {
       http_port_base: 8000,
       https_port_base: 8400,
       postgres_port_base: 15400,
+      caddy_service: 'caddy',
+      postgres_service: 'postgres',
     };
     cfg.bruno_smoke = {
       enabled: true,
