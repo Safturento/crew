@@ -325,7 +325,7 @@ describe('Timeline', () => {
     expect(screen.getByRole('switch', { name: /live/i })).toHaveAttribute('aria-checked', 'false');
   });
 
-  it('shows a "N new events" pill when live mode is OFF and new events arrive', async () => {
+  it('never shows a new-events pill, even when events arrive while live mode is OFF', () => {
     mockUseTimeline.mockReturnValue(
       timelineResult({
         data: { events: [evt(1), evt(2)] },
@@ -343,43 +343,6 @@ describe('Timeline', () => {
       }),
     );
     rerender(<Timeline agentKey="KAN-1" agentState="finished" />);
-    expect(screen.getByRole('button', { name: /2 new events/i })).toBeInTheDocument();
-    await userEvent.click(screen.getByRole('button', { name: /2 new events/i }));
-    expect(screen.queryByRole('button', { name: /new events/i })).toBeNull();
-  });
-
-  it('does not treat filter toggling as new events (no pill on filter change)', async () => {
-    mockUseTimeline.mockReturnValue(
-      timelineResult({
-        data: { events: [evt(1), assistantThinking(2, 'pondering')] },
-        isSuccess: true,
-        status: 'success',
-      }),
-    );
-    render(<Timeline agentKey="KAN-1" agentState="finished" />);
-    expect(screen.queryByRole('button', { name: /new events/i })).toBeNull();
-    await openFilters();
-    await userEvent.click(screen.getByLabelText('Thinking'));
-    expect(screen.queryByRole('button', { name: /new events/i })).toBeNull();
-  });
-
-  it('does not show the new-events pill when live mode is ON', () => {
-    mockUseTimeline.mockReturnValue(
-      timelineResult({
-        data: { events: [evt(1), evt(2)] },
-        isSuccess: true,
-        status: 'success',
-      }),
-    );
-    const { rerender } = render(<Timeline agentKey="KAN-1" agentState="running" />);
-    mockUseTimeline.mockReturnValue(
-      timelineResult({
-        data: { events: [evt(1), evt(2), evt(3)] },
-        isSuccess: true,
-        status: 'success',
-      }),
-    );
-    rerender(<Timeline agentKey="KAN-1" agentState="running" />);
     expect(screen.queryByRole('button', { name: /new events/i })).toBeNull();
   });
 
@@ -589,7 +552,7 @@ describe('Timeline', () => {
     }
   });
 
-  it('renders the toolbar inside the scroll region as sticky', () => {
+  it('renders the toolbar outside the scroll viewport and not sticky', () => {
     mockUseTimeline.mockReturnValue(
       timelineResult({
         data: { events: [evt(1)] },
@@ -597,13 +560,14 @@ describe('Timeline', () => {
         status: 'success',
       }),
     );
-    render(<Timeline agentKey="KAN-1" agentState="running" />);
+    const { container } = render(<Timeline agentKey="KAN-1" agentState="running" />);
     const toolbar = screen.getByTestId('timeline-toolbar');
-    expect(toolbar.className).toMatch(/\bsticky\b/);
-    expect(toolbar.className).toMatch(/\btop-0\b/);
+    expect(toolbar.className).not.toMatch(/\bsticky\b/);
+    const scroll = container.querySelector('[class*="overflow-y-auto"]');
+    expect(scroll?.contains(toolbar)).toBe(false);
   });
 
-  it('mounts the toolbar inside the single scroll viewport (no second scroll container)', () => {
+  it('keeps exactly one scroll viewport with the toolbar lifted above it', () => {
     mockUseTimeline.mockReturnValue(
       timelineResult({
         data: { events: [evt(1), evt(2)] },
@@ -614,8 +578,8 @@ describe('Timeline', () => {
     const { container } = render(<Timeline agentKey="KAN-1" agentState="running" />);
     const scrollables = container.querySelectorAll('[class*="overflow-y-auto"]');
     expect(scrollables.length).toBe(1);
-    // Toolbar lives inside that one viewport, not outside it.
-    expect(scrollables[0].contains(screen.getByTestId('timeline-toolbar'))).toBe(true);
+    // Toolbar is a sibling above the viewport, not inside it.
+    expect(scrollables[0].contains(screen.getByTestId('timeline-toolbar'))).toBe(false);
   });
 
   it('mounts MinimapStripe alongside the scroll viewport when there are sections', () => {

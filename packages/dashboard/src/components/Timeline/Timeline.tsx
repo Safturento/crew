@@ -7,7 +7,7 @@ import { cn } from '../../lib/utils.js';
 import { Button } from '../ui/button.js';
 import { Filters, defaultTimelineFilterState, type TimelineFilterState } from './Filters.js';
 import { isToolVisible } from './filter-state.js';
-import { LiveModeToggle, NewEventsPill } from './LiveModeToggle.js';
+import { LiveModeToggle } from './LiveModeToggle.js';
 import { MinimapStripe } from './MinimapStripe.js';
 import { SearchBar } from './SearchBar.js';
 import {
@@ -103,22 +103,6 @@ export function Timeline({ agentKey, agentState, tokensByTool = [] }: TimelinePr
     return () => window.clearInterval(id);
   }, [hasActiveSection]);
 
-  // New-events pill is driven by the *unfiltered* server-side length so
-  // toggling a chip never registers as "new events arrived."
-  const lastSeenServerLengthRef = useRef<number>(rawEvents.length);
-  const [pendingNewCount, setPendingNewCount] = useState(0);
-  useEffect(() => {
-    const prev = lastSeenServerLengthRef.current;
-    const next = rawEvents.length;
-    if (next > prev && !liveMode) {
-      setPendingNewCount((c) => c + (next - prev));
-    }
-    lastSeenServerLengthRef.current = next;
-  }, [rawEvents.length, liveMode]);
-  useEffect(() => {
-    if (liveMode) setPendingNewCount(0);
-  }, [liveMode]);
-
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const lastSeenVisibleLengthRef = useRef<number>(filteredEvents.length);
   useEffect(() => {
@@ -165,9 +149,9 @@ export function Timeline({ agentKey, agentState, tokensByTool = [] }: TimelinePr
       const sectionEls = viewport.querySelectorAll<HTMLElement>('[data-testid="timeline-section"]');
       const target = sectionEls[idx];
       if (!target) return;
-      const toolbar = viewport.querySelector<HTMLElement>('[data-testid="timeline-toolbar"]');
-      const toolbarHeight = toolbar?.clientHeight ?? 0;
-      const top = target.offsetTop - toolbarHeight;
+      // The toolbar now lives outside the scroll viewport, so the section's
+      // own offset within the viewport is the scroll target directly.
+      const top = target.offsetTop;
       if (typeof viewport.scrollTo === 'function') {
         viewport.scrollTo({ top, behavior: 'smooth' });
       } else {
@@ -196,83 +180,72 @@ export function Timeline({ agentKey, agentState, tokensByTool = [] }: TimelinePr
 
   return (
     <div className="relative flex h-full min-h-0 flex-col">
-      <div
-        ref={scrollRef}
-        className="relative flex min-h-0 flex-1 flex-col overflow-y-auto"
-        style={{ scrollbarGutter: 'stable' }}
-      >
-        <TimelineToolbar
-          data-testid="timeline-toolbar"
-          className="sticky top-0 z-10 bg-card"
-          filterState={filterState}
-          onFilterStateChange={setFilterState}
-          tokensByTool={tokensByTool}
-          searchValue={searchInput}
-          onSearchChange={setSearchInput}
-          liveMode={liveMode}
-          onLiveModeChange={setLiveMode}
-          onCollapseAll={collapseAll}
-          canCollapseAll={sections.length > 0}
-        />
-        {events.length === 0 ? (
-          <div
-            data-testid="timeline-empty"
-            className="flex flex-1 items-center justify-center p-6 text-sm text-muted-foreground"
-          >
-            No timeline events yet.
-          </div>
-        ) : filteredEvents.length === 0 ? (
-          <FilterEmptyState onShowAll={resetFilters} />
-        ) : (
-          <div className="flex flex-col gap-2 px-1 py-1">
-            {sections.map((s, i) => {
-              const key = sectionKey(s, i);
-              const isOpen = !collapsed[key];
-              const elapsedMs = (s.endedAt ?? now) - s.startedAt;
-              const tokenSum = s.events.reduce((sum, e) => sum + eventTokens(e), 0);
-              return (
-                <div key={key} ref={sectionRefFor(i)}>
-                  <TimelineSection
-                    state={s.state}
-                    startedAt={s.startedAt}
-                    elapsedMs={elapsedMs}
-                    eventCount={s.events.length}
-                    tokenSum={tokenSum}
-                    isOpen={isOpen}
-                    onToggle={() => toggleSection(key)}
-                  >
-                    {s.events.map((event) => (
-                      <TranscriptRow key={eventKey(event)} event={event} />
-                    ))}
-                  </TimelineSection>
-                </div>
-              );
-            })}
-          </div>
+      <TimelineToolbar
+        data-testid="timeline-toolbar"
+        className="shrink-0 bg-card"
+        filterState={filterState}
+        onFilterStateChange={setFilterState}
+        tokensByTool={tokensByTool}
+        searchValue={searchInput}
+        onSearchChange={setSearchInput}
+        liveMode={liveMode}
+        onLiveModeChange={setLiveMode}
+        onCollapseAll={collapseAll}
+        canCollapseAll={sections.length > 0}
+      />
+      <div className="relative flex min-h-0 flex-1 flex-col">
+        <div
+          ref={scrollRef}
+          className="relative flex min-h-0 flex-1 flex-col overflow-y-auto"
+          style={{ scrollbarGutter: 'stable' }}
+        >
+          {events.length === 0 ? (
+            <div
+              data-testid="timeline-empty"
+              className="flex flex-1 items-center justify-center p-6 text-sm text-muted-foreground"
+            >
+              No timeline events yet.
+            </div>
+          ) : filteredEvents.length === 0 ? (
+            <FilterEmptyState onShowAll={resetFilters} />
+          ) : (
+            // pr-6 reserves a gutter so content clears the MinimapStripe
+            // (right: SCROLLBAR_GUTTER 14px + width STRIPE_WIDTH 8px).
+            <div className="flex flex-col gap-2 py-1 pl-1 pr-6">
+              {sections.map((s, i) => {
+                const key = sectionKey(s, i);
+                const isOpen = !collapsed[key];
+                const elapsedMs = (s.endedAt ?? now) - s.startedAt;
+                const tokenSum = s.events.reduce((sum, e) => sum + eventTokens(e), 0);
+                return (
+                  <div key={key} ref={sectionRefFor(i)}>
+                    <TimelineSection
+                      state={s.state}
+                      startedAt={s.startedAt}
+                      elapsedMs={elapsedMs}
+                      eventCount={s.events.length}
+                      tokenSum={tokenSum}
+                      isOpen={isOpen}
+                      onToggle={() => toggleSection(key)}
+                    >
+                      {s.events.map((event) => (
+                        <TranscriptRow key={eventKey(event)} event={event} />
+                      ))}
+                    </TimelineSection>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+        {filteredEvents.length > 0 && sections.length > 0 && (
+          <MinimapStripe
+            sections={minimapSections}
+            stripeHeight={stripeHeight}
+            onSectionJump={onSectionJump}
+          />
         )}
       </div>
-      {filteredEvents.length > 0 && sections.length > 0 && (
-        <MinimapStripe
-          sections={minimapSections}
-          stripeHeight={stripeHeight}
-          onSectionJump={onSectionJump}
-        />
-      )}
-      {!liveMode && pendingNewCount > 0 && (
-        <div className="pointer-events-none absolute right-3 bottom-3">
-          <span className="pointer-events-auto">
-            <NewEventsPill
-              count={pendingNewCount}
-              onClick={() => {
-                if (scrollRef.current) {
-                  scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-                }
-                setPendingNewCount(0);
-              }}
-            />
-          </span>
-        </div>
-      )}
     </div>
   );
 }

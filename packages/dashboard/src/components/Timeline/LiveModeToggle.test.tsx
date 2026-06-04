@@ -2,7 +2,7 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
-import { LiveModeToggle, NewEventsPill } from './LiveModeToggle.js';
+import { LiveModeToggle } from './LiveModeToggle.js';
 
 describe('LiveModeToggle', () => {
   it('renders a switch labelled "Live"', () => {
@@ -23,19 +23,9 @@ describe('LiveModeToggle', () => {
     await userEvent.click(screen.getByRole('switch', { name: /live/i }));
     expect(onChange).toHaveBeenCalledWith(false);
   });
-});
 
-describe('NewEventsPill', () => {
-  it('renders the count and an arrow', () => {
-    render(<NewEventsPill count={5} onClick={() => {}} />);
-    expect(screen.getByRole('button', { name: /5 new events/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /5 new events/i })).toHaveTextContent('↓');
-  });
-
-  it('clicking fires onClick', async () => {
-    const onClick = vi.fn();
-    render(<NewEventsPill count={3} onClick={onClick} />);
-    await userEvent.click(screen.getByRole('button', { name: /3 new events/i }));
-    expect(onClick).toHaveBeenCalledTimes(1);
+  it('is built on the design-system Switch primitive', () => {
+    const { container } = render(<LiveModeToggle active={true} onChange={() => {}} />);
+    expect(container.querySelector('[data-slot="switch"]')).not.toBeNull();
   });
 });

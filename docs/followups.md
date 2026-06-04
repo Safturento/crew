@@ -25,8 +25,6 @@ Organization: Active is grouped by topic (not chronology) since the dominant acc
     - [2026-05-16 — figma-snapshot `resolvedStylesFor` text-color heuristic picks the first TEXT descendant](#2026-05-16--figma-snapshot-resolvedstylesfor-text-color-heuristic-picks-the-first-text-descendant)
     - [2026-05-15 — `crew fix-pr` does not refresh `.mcp.json` — chrome wiring goes stale on resume](#2026-05-15--crew-fix-pr-does-not-refresh-mcpjson--chrome-wiring-goes-stale-on-resume)
   - [Dashboard UI](#dashboard-ui)
-    - [2026-06-03 — Wire CREW-136 `Switch` into the Timeline live toggle](#2026-06-03--wire-crew-136-switch-into-the-timeline-live-toggle)
-    - [2026-06-03 — Sticky Timeline toolbar overlaps the minimap stripe + scrollbar](#2026-06-03--sticky-timeline-toolbar-overlaps-the-minimap-stripe--scrollbar)
     - [2026-06-03 — CREW-137 modal composites unverified until wired into a screen](#2026-06-03--crew-137-modal-composites-unverified-until-wired-into-a-screen)
     - [2026-05-22 — `${APP_URL}` template literal in DrawerHeader docker pill (backend bug)](#2026-05-22--app_url-template-literal-in-drawerheader-docker-pill-backend-bug)
     - [2026-05-22 — Layer-1 RunMetrics widget loses its drawer home in the redesign — find it a new one](#2026-05-22--layer-1-runmetrics-widget-loses-its-drawer-home-in-the-redesign--find-it-a-new-one)
@@ -83,6 +81,8 @@ Organization: Active is grouped by topic (not chronology) since the dominant acc
     - [2026-05-15 — `.agents/` topic-doc system vs native `.claude/rules/` and agents.md alignment](#2026-05-15--agents-topic-doc-system-vs-native-clauderules-and-agentsmd-alignment)
     - [2026-05-12 — Rethink followup-tracking system (priority tier + Jira backlog sync)](#2026-05-12--rethink-followup-tracking-system-priority-tier--jira-backlog-sync)
 - [Resolved](#resolved)
+  - [2026-06-03 — Wire CREW-136 `Switch` into the Timeline live toggle](#2026-06-03--wire-crew-136-switch-into-the-timeline-live-toggle)
+  - [2026-06-03 — Sticky Timeline toolbar overlaps the minimap stripe + scrollbar](#2026-06-03--sticky-timeline-toolbar-overlaps-the-minimap-stripe--scrollbar)
   - [2026-05-19 — `crew figma-snapshot` has no per-node refresh](#2026-05-19--crew-figma-snapshot-has-no-per-node-refresh)
   - [2026-05-13 — visual-fidelity-check accuracy: snapshot lacks `componentProperties` (REST API limit) + calibration pattern≠specific finding pattern](#2026-05-13--visual-fidelity-check-accuracy-snapshot-lacks-componentproperties-rest-api-limit--calibration-patternspecific-finding-pattern)
   - [2026-05-11 — Crew DS is partial vs Dashboard Screens; Timeline container + Bash event tags missing](#2026-05-11--crew-ds-is-partial-vs-dashboard-screens-timeline-container--bash-event-tags-missing)
@@ -300,38 +300,6 @@ Organization: Active is grouped by topic (not chronology) since the dominant acc
 **Open questions:** Does `fix-pr` resume into a worktree fresh enough that re-asserting `.mcp.json` is always safe? Should `browsing` skill re-injection ride along?
 
 ### Dashboard UI
-
-#### 2026-06-03 — Wire CREW-136 `Switch` into the Timeline live toggle
-
-**Ticket:** [CREW-212](https://safturento.atlassian.net/browse/CREW-212) — Timeline toolbar polish (under Tech debt epic [CREW-23](https://safturento.atlassian.net/browse/CREW-23)). Bundled with the sticky-toolbar overlap fix below.
-
-**What:** CREW-136 added a shadcn `Switch` primitive to the dashboard but wired it to no caller. The Timeline's "Live" toggle is the intended consumer — today it's a bespoke `<button role="switch">` in `LiveModeToggle.tsx` with hand-rolled emerald styling + a CSS status dot, predating the Switch component. Replace it with the DS `Switch` so the live toggle stops hand-rolling its own switch UI.
-
-**Why noticed:** Verifying the Batch B PRs before merge. CREW-136's Switch landed (PR #305) with no live caller; the obvious home is the Timeline live toggle, which still rolls its own.
-
-**Anchors:** `packages/dashboard/src/components/Timeline/LiveModeToggle.tsx` (bespoke `role="switch"` button to replace); `packages/dashboard/src/components/ui/switch.tsx` (the CREW-136 Switch, now on main); `Timeline.tsx:349` (`<LiveModeToggle active={liveMode} onChange={onLiveModeChange} />`); CREW-136.
-
-**What's been considered:** The existing control carries a "Live" text label + status dot, not a bare switch. Decide whether to (a) swap the whole control for `<Switch>` + a "Live" label, matching the Figma form-switch, or (b) keep the labelled-pill affordance but build it on the Switch primitive. The emerald active styling is custom — reconcile against the DS Switch on-state colour.
-
-**Shape of work:** Small — one component swap in `LiveModeToggle.tsx` + its test, plus a visual-fidelity pass against the Figma Switch. Likely folds into one "Timeline toolbar polish" ticket with the sticky-overlap fix below.
-
-**Open questions:** Does the Figma DS define a labelled "Live" switch variant, or just the bare Switch? If bare, the "Live" label + dot composition stays a caller-side decision.
-
-#### 2026-06-03 — Sticky Timeline toolbar overlaps the minimap stripe + scrollbar
-
-**Ticket:** [CREW-212](https://safturento.atlassian.net/browse/CREW-212) — Timeline toolbar polish (under Tech debt epic [CREW-23](https://safturento.atlassian.net/browse/CREW-23)). Bundled with the Switch-wiring followup above.
-
-**What:** When the Timeline toolbar was refactored to `sticky top-0` (so it pins while the event list scrolls), it began overlapping two full-height siblings: the `MinimapStripe` (right-edge section-nav stripe) and the scroll container's native scrollbar (gutter `stable`). Both run from y=0 of the scroll area, so their top region renders under the pinned toolbar instead of starting below it.
-
-**Why noticed:** Manual verification of the Batch B Timeline work before merge — the sticky toolbar visibly collides with the minimap stripe + scrollbar at the top of the drawer / agent-page timeline.
-
-**Anchors:** `Timeline.tsx:198-260` — outer `relative flex h-full` wraps the scroll `div` (`ref=scrollRef`, `overflow-y-auto`, `scrollbarGutter: 'stable'`, lines 201-202), the `sticky top-0 z-10` `TimelineToolbar` (lines 204-206), and the `MinimapStripe` sibling (lines 254-260); `packages/dashboard/src/components/Timeline/MinimapStripe.tsx` (`SCROLLBAR_GUTTER = 14`, positioning).
-
-**What's been considered:** Candidate fixes — (a) offset `MinimapStripe`'s top by the toolbar height so it starts below the pinned toolbar; (b) move the toolbar out of the scroll container (sibling above it) so the scrollbar + minimap span only the event list — changes the sticky semantics but is the cleanest structurally; (c) opaque toolbar background masking the overlap (partial — doesn't fix the native scrollbar). Leaning (b).
-
-**Shape of work:** Small-to-medium layout fix in `Timeline.tsx` + `MinimapStripe.tsx`; verify sticky behaviour still works and the minimap still aligns to sections. Pairs with the Switch-wiring followup above as "Timeline toolbar polish."
-
-**Open questions:** Should the toolbar stay inside the scroll container (sticky) or move above it (scroll area then covers only the list)? That decides whether the minimap/scrollbar need a top offset or naturally clear the toolbar.
 
 #### 2026-06-03 — CREW-137 modal composites unverified until wired into a screen
 
@@ -1367,6 +1335,38 @@ The other two open questions (sandbox config drift, Phase 2 + Phase 3 separation
 - Should priority on the markdown side map directly to Jira priority, or stay a separate signal?
 
 ## Resolved
+
+### 2026-06-03 — Wire CREW-136 `Switch` into the Timeline live toggle
+
+**Resolved 2026-06-03:** Shipped under [CREW-212](https://safturento.atlassian.net/browse/CREW-212). `LiveModeToggle.tsx` now renders the DS `Switch` (`ui/switch.tsx`) + a "Live" label associated via `htmlFor`, replacing the bespoke `<button role="switch">` with hand-rolled emerald styling. Behaviour is preserved (Radix `Switch.Root` exposes `role=switch` / `aria-checked`; the existing toggle tests pass) and a new test asserts `[data-slot="switch"]`. The custom emerald active styling was dropped in favour of the DS Switch's on-state colour (option (a) — swap the whole control for `<Switch>` + label).
+
+**What:** CREW-136 added a shadcn `Switch` primitive to the dashboard but wired it to no caller. The Timeline's "Live" toggle is the intended consumer — today it's a bespoke `<button role="switch">` in `LiveModeToggle.tsx` with hand-rolled emerald styling + a CSS status dot, predating the Switch component. Replace it with the DS `Switch` so the live toggle stops hand-rolling its own switch UI.
+
+**Why noticed:** Verifying the Batch B PRs before merge. CREW-136's Switch landed (PR #305) with no live caller; the obvious home is the Timeline live toggle, which still rolls its own.
+
+**Anchors:** `packages/dashboard/src/components/Timeline/LiveModeToggle.tsx` (bespoke `role="switch"` button to replace); `packages/dashboard/src/components/ui/switch.tsx` (the CREW-136 Switch, now on main); `Timeline.tsx:349` (`<LiveModeToggle active={liveMode} onChange={onLiveModeChange} />`); CREW-136.
+
+**What's been considered:** The existing control carries a "Live" text label + status dot, not a bare switch. Decide whether to (a) swap the whole control for `<Switch>` + a "Live" label, matching the Figma form-switch, or (b) keep the labelled-pill affordance but build it on the Switch primitive. The emerald active styling is custom — reconcile against the DS Switch on-state colour.
+
+**Shape of work:** Small — one component swap in `LiveModeToggle.tsx` + its test, plus a visual-fidelity pass against the Figma Switch. Likely folds into one "Timeline toolbar polish" ticket with the sticky-overlap fix below.
+
+**Open questions:** Does the Figma DS define a labelled "Live" switch variant, or just the bare Switch? If bare, the "Live" label + dot composition stays a caller-side decision.
+
+### 2026-06-03 — Sticky Timeline toolbar overlaps the minimap stripe + scrollbar
+
+**Resolved 2026-06-03:** Shipped under [CREW-212](https://safturento.atlassian.net/browse/CREW-212). The toolbar was lifted out of the scroll viewport (option (b)): it now renders as a non-sticky `shrink-0` flex child above the scroll `div`, and the scroll `div` + `MinimapStripe` are wrapped in their own `relative flex min-h-0 flex-1 flex-col` box so the minimap and native scrollbar span only the event list. `onSectionJump` was simplified to `target.offsetTop` now that no sticky header sits inside the viewport. The two `Timeline.test.tsx` toolbar tests were updated to assert the toolbar is outside the (single) `overflow-y-auto` viewport and not sticky.
+
+**What:** When the Timeline toolbar was refactored to `sticky top-0` (so it pins while the event list scrolls), it began overlapping two full-height siblings: the `MinimapStripe` (right-edge section-nav stripe) and the scroll container's native scrollbar (gutter `stable`). Both run from y=0 of the scroll area, so their top region renders under the pinned toolbar instead of starting below it.
+
+**Why noticed:** Manual verification of the Batch B Timeline work before merge — the sticky toolbar visibly collides with the minimap stripe + scrollbar at the top of the drawer / agent-page timeline.
+
+**Anchors:** `Timeline.tsx:198-260` — outer `relative flex h-full` wraps the scroll `div` (`ref=scrollRef`, `overflow-y-auto`, `scrollbarGutter: 'stable'`, lines 201-202), the `sticky top-0 z-10` `TimelineToolbar` (lines 204-206), and the `MinimapStripe` sibling (lines 254-260); `packages/dashboard/src/components/Timeline/MinimapStripe.tsx` (`SCROLLBAR_GUTTER = 14`, positioning).
+
+**What's been considered:** Candidate fixes — (a) offset `MinimapStripe`'s top by the toolbar height so it starts below the pinned toolbar; (b) move the toolbar out of the scroll container (sibling above it) so the scrollbar + minimap span only the event list — changes the sticky semantics but is the cleanest structurally; (c) opaque toolbar background masking the overlap (partial — doesn't fix the native scrollbar). Leaning (b).
+
+**Shape of work:** Small-to-medium layout fix in `Timeline.tsx` + `MinimapStripe.tsx`; verify sticky behaviour still works and the minimap still aligns to sections. Pairs with the Switch-wiring followup above as "Timeline toolbar polish."
+
+**Open questions:** Should the toolbar stay inside the scroll container (sticky) or move above it (scroll area then covers only the list)? That decides whether the minimap/scrollbar need a top offset or naturally clear the toolbar.
 
 ### 2026-05-19 — `crew figma-snapshot` has no per-node refresh
 

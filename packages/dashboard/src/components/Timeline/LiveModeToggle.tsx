@@ -1,49 +1,23 @@
+import { useId } from 'react';
+
+import { Switch } from '../ui/switch.js';
+
 interface LiveModeToggleProps {
   active: boolean;
   onChange: (next: boolean) => void;
 }
 
 export function LiveModeToggle({ active, onChange }: LiveModeToggleProps) {
+  const id = useId();
   return (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={active}
-      aria-label="Live"
-      onClick={() => onChange(!active)}
-      className={[
-        'inline-flex h-6 items-center gap-1.5 rounded-full border px-2 font-mono text-xs leading-none transition-opacity hover:opacity-80',
-        active
-          ? 'border-emerald-400/40 bg-emerald-400/15 text-emerald-100'
-          : 'border-white/10 bg-transparent text-muted-foreground',
-      ].join(' ')}
-    >
-      <span
-        aria-hidden
-        className={[
-          'h-1.5 w-1.5 rounded-full',
-          active ? 'bg-emerald-300' : 'bg-muted-foreground',
-        ].join(' ')}
-      />
-      Live
-    </button>
-  );
-}
-
-interface NewEventsPillProps {
-  count: number;
-  onClick: () => void;
-}
-
-export function NewEventsPill({ count, onClick }: NewEventsPillProps) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="inline-flex h-6 items-center gap-1 rounded-full border border-white/30 bg-white/10 px-3 font-mono text-xs leading-none text-foreground shadow-sm transition-opacity hover:opacity-80"
-    >
-      <span aria-hidden>↓</span>
-      {count} new events
-    </button>
+    <span className="inline-flex items-center gap-1.5">
+      <Switch id={id} aria-label="Live" checked={active} onCheckedChange={onChange} />
+      <label
+        htmlFor={id}
+        className="cursor-pointer select-none font-mono text-xs leading-none text-muted-foreground"
+      >
+        Live
+      </label>
+    </span>
   );
 }
