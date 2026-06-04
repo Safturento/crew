@@ -10,31 +10,31 @@ Both components were checked against the on-disk snapshot (`.crew/figma-snapshot
 
 ## Switch (node 335:242) — structural check: all match
 
-| Property | Code emits | Figma resolves | Result |
-| --- | --- | --- | --- |
-| track size | `h-[14px] w-[26px]` | 26×14 | ✅ |
-| track radius | `rounded-full` | `rounded-[999px]` | ✅ |
-| track ON bg | `bg-blue-1050` → #17253f | `--blue-1050` #17253f | ✅ |
-| track OFF bg | `bg-secondary` → #1e293b (dark) | `--secondary` #1e293b | ✅ |
-| thumb size | `size-3` (12px) | 12px | ✅ |
-| thumb ON bg | `bg-blue-400` → #60a5fa | `--state/initializing` #60a5fa | ✅ |
-| thumb OFF bg | `bg-muted-foreground` → #94a3b8 (dark) | `--muted-foreground` #94a3b8 | ✅ |
-| thumb travel | `translate-x-3` (12px) = 24px inner − 12px thumb | `justify-end` (right edge) | ✅ |
+| Property     | Code emits                                       | Figma resolves                 | Result |
+| ------------ | ------------------------------------------------ | ------------------------------ | ------ |
+| track size   | `h-[14px] w-[26px]`                              | 26×14                          | ✅     |
+| track radius | `rounded-full`                                   | `rounded-[999px]`              | ✅     |
+| track ON bg  | `bg-blue-1050` → #17253f                         | `--blue-1050` #17253f          | ✅     |
+| track OFF bg | `bg-secondary` → #1e293b (dark)                  | `--secondary` #1e293b          | ✅     |
+| thumb size   | `size-3` (12px)                                  | 12px                           | ✅     |
+| thumb ON bg  | `bg-blue-400` → #60a5fa                          | `--state/initializing` #60a5fa | ✅     |
+| thumb OFF bg | `bg-muted-foreground` → #94a3b8 (dark)           | `--muted-foreground` #94a3b8   | ✅     |
+| thumb travel | `translate-x-3` (12px) = 24px inner − 12px thumb | `justify-end` (right edge)     | ✅     |
 
 Code Connect (`switch.figma.tsx`) maps `state` → `checked` and includes the `Label` next to the
 toggle (`gap-1.5` ≈ Figma's 6px), mirroring the sibling `checkbox.figma.tsx` convention.
 
 ## FormField (node 337:234) — structural check
 
-| Property | Code emits | Figma resolves | Result |
-| --- | --- | --- | --- |
-| stack direction | `flex flex-col` | `layoutMode: VERTICAL` | ✅ |
-| stack gap | `gap-[5px]` | `itemSpacing: 5` | ✅ (fixed — was `gap-1.5`/6px) |
-| label size | `text-[11px]` | 11px | ✅ |
-| label weight | `font-normal` | Hanken Grotesk Regular | ✅ |
-| label color | `text-muted-foreground` → #94a3b8 | `--muted-foreground` #94a3b8 | ✅ |
-| label case | `uppercase` (caller passes natural case) | literal "LABEL" | ✅ |
-| input | composes `<Input>` | instance of Input set (318:230) | see note |
+| Property        | Code emits                               | Figma resolves                  | Result                         |
+| --------------- | ---------------------------------------- | ------------------------------- | ------------------------------ |
+| stack direction | `flex flex-col`                          | `layoutMode: VERTICAL`          | ✅                             |
+| stack gap       | `gap-[5px]`                              | `itemSpacing: 5`                | ✅ (fixed — was `gap-1.5`/6px) |
+| label size      | `text-[11px]`                            | 11px                            | ✅                             |
+| label weight    | `font-normal`                            | Hanken Grotesk Regular          | ✅                             |
+| label color     | `text-muted-foreground` → #94a3b8        | `--muted-foreground` #94a3b8    | ✅                             |
+| label case      | `uppercase` (caller passes natural case) | literal "LABEL"                 | ✅                             |
+| input           | composes `<Input>`                       | instance of Input set (318:230) | see note                       |
 
 ### Low-severity finding (fixed in-scope)
 
