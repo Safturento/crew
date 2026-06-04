@@ -3,7 +3,13 @@ import { mkdtempSync, rmSync, mkdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { execa } from 'execa';
-import { hasUncommittedChanges, isMidRebase, getHeadSha, resolveWorktreePath } from './index.js';
+import {
+  hasUncommittedChanges,
+  isMidRebase,
+  getHeadSha,
+  resolveWorktreePath,
+  parseLsFilesEol,
+} from './index.js';
 
 vi.mock('execa', () => ({ execa: vi.fn() }));
 
@@ -77,6 +83,41 @@ describe('getHeadSha', () => {
     ok('abc123\n');
     expect(await getHeadSha('/wt')).toBe('abc123');
     expect(mockedExeca).toHaveBeenCalledWith('git', ['rev-parse', 'HEAD'], { cwd: '/wt' });
+  });
+});
+
+describe('parseLsFilesEol', () => {
+  it('returns only paths whose working-tree representation is CRLF', () => {
+    const output = [
+      'i/lf    w/lf    attr/                 \t.gitattributes',
+      'i/lf    w/crlf  attr/text eol=lf      \tsrc/app.ts',
+      'i/crlf  w/crlf  attr/                 \tscripts/build.sh',
+      'i/-text w/-text attr/                 \tassets/logo.png',
+    ].join('\n');
+    expect(parseLsFilesEol(output)).toEqual(['src/app.ts', 'scripts/build.sh']);
+  });
+
+  it('returns an empty array for all-LF output', () => {
+    const output = [
+      'i/lf    w/lf    attr/                 \tREADME.md',
+      'i/lf    w/lf    attr/text eol=lf      \tsrc/index.ts',
+    ].join('\n');
+    expect(parseLsFilesEol(output)).toEqual([]);
+  });
+
+  it('returns an empty array for empty output', () => {
+    expect(parseLsFilesEol('')).toEqual([]);
+    expect(parseLsFilesEol('\n')).toEqual([]);
+  });
+
+  it('preserves paths that contain spaces', () => {
+    const output = 'i/lf    w/crlf  attr/text eol=lf      \tmy docs/read me.txt';
+    expect(parseLsFilesEol(output)).toEqual(['my docs/read me.txt']);
+  });
+
+  it('does not match w/crlf appearing inside a path', () => {
+    const output = 'i/lf    w/lf    attr/                 \tsrc/w/crlf-notes.md';
+    expect(parseLsFilesEol(output)).toEqual([]);
   });
 });
 

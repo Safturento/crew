@@ -45,6 +45,47 @@ export async function getHeadSha(cwd: string): Promise<string> {
 }
 
 /**
+ * Returns the absolute path to the top of the working tree containing `cwd`.
+ * Wraps `git rev-parse --show-toplevel`.
+ */
+export async function getRepoRoot(cwd: string): Promise<string> {
+  const { stdout } = await execa('git', ['rev-parse', '--show-toplevel'], { cwd });
+  return stdout.trim();
+}
+
+/**
+ * Parse the output of `git ls-files --eol` and return the paths whose
+ * working-tree representation is CRLF.
+ *
+ * Each line looks like:
+ *   `i/<idx-eol>  w/<wt-eol>  attr/<attrs><TAB><path>`
+ * The columns before the tab are space-padded; the path follows the first
+ * tab (and may itself contain spaces). This is the TypeScript equivalent of
+ * the bash `awk -F'\t' '$1 ~ /w\/crlf/ { print $2 }'` one-liner — easier to
+ * unit-test than shelling out to awk.
+ */
+export function parseLsFilesEol(output: string): string[] {
+  const paths: string[] = [];
+  for (const line of output.split('\n')) {
+    const tab = line.indexOf('\t');
+    if (tab === -1) continue;
+    const info = line.slice(0, tab);
+    const path = line.slice(tab + 1);
+    if (/\bw\/crlf\b/.test(info)) paths.push(path);
+  }
+  return paths;
+}
+
+/**
+ * List tracked files in `cwd`'s repo whose working-tree representation is
+ * CRLF, one path per array entry (relative to the repo root).
+ */
+export async function listCrlfWorkingTreeFiles(cwd: string): Promise<string[]> {
+  const { stdout } = await execa('git', ['ls-files', '--eol'], { cwd });
+  return parseLsFilesEol(stdout);
+}
+
+/**
  * Given the path to a project's main repo, derive the conventional sibling
  * worktree path for a ticket: `<repo>-<KEY>`.
  */
