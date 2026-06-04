@@ -37,7 +37,7 @@ function AlertModal({
 }: AlertModalProps) {
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
-      <AlertDialogContent className="w-[440px] gap-2.5 border-border bg-slate-950 p-5.5 shadow-[0_30px_80px_-10px_rgba(0,0,0,0.7)] sm:max-w-[440px]">
+      <AlertDialogContent className="w-[440px] gap-2.5 rounded-[14px] border-border bg-slate-950 p-5.5 shadow-[0_30px_80px_-10px_rgba(0,0,0,0.7)] sm:max-w-[440px]">
         <AlertDialogTitle className="text-base font-semibold text-foreground">
           {title}
         </AlertDialogTitle>

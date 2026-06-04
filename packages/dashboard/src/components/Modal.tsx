@@ -16,7 +16,7 @@ function Modal({ title, open, onOpenChange, showClose = true, children }: ModalP
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className="w-[560px] gap-0 border-border bg-slate-950 p-0 shadow-[0_30px_80px_-10px_rgba(0,0,0,0.7)] sm:max-w-[560px]"
+        className="w-[560px] gap-0 rounded-[14px] border-border bg-slate-950 p-0 shadow-[0_30px_80px_-10px_rgba(0,0,0,0.7)] sm:max-w-[560px]"
         showCloseButton={false}
       >
         <DialogHeader className="flex flex-row items-center justify-between space-y-0 border-b border-border px-3.5 py-3">
