@@ -73,11 +73,11 @@ async function readFrames(
   response: Response,
   count: number,
   timeoutMs = 1000,
-): Promise<SseEvent[]> {
+): Promise<ParsedFrame[]> {
   if (!response.body) throw new Error('response has no body');
   const reader = response.body.getReader();
   const decoder = new TextDecoder();
-  const events: SseEvent[] = [];
+  const events: ParsedFrame[] = [];
   let buf = '';
   const start = Date.now();
   try {
@@ -102,7 +102,19 @@ async function readFrames(
   }
 }
 
-function parseFrame(frame: string): SseEvent {
+/**
+ * A frame reconstructed from the SSE wire text. `type`/`data` can't be
+ * re-correlated from runtime strings, so this is intentionally a flat,
+ * decorrelated shape rather than the correlated `SseEvent` union — callers
+ * narrow `data` with a local cast where they need a specific variant.
+ */
+interface ParsedFrame {
+  id: string;
+  type: SseEvent['type'];
+  data: unknown;
+}
+
+function parseFrame(frame: string): ParsedFrame {
   const out: Record<string, string> = {};
   for (const line of frame.split('\n')) {
     const colon = line.indexOf(':');
@@ -117,7 +129,7 @@ function parseFrame(frame: string): SseEvent {
   return {
     id: out.id,
     type: out.event as SseEvent['type'],
-    data: JSON.parse(out.data) as SseEvent['data'],
+    data: JSON.parse(out.data),
   };
 }
 

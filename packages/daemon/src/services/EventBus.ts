@@ -20,13 +20,25 @@ export type SsePayload =
   | { type: 'tool_calls.changed'; data: { key: string } }
   | { type: 'startup_events.changed'; data: { key: string } }
   | { type: 'run.completed'; data: { key: string; ts: number } }
+  // CREW-215: runner heartbeat edge — `online` flips on the rising/falling
+  // staleness edge; `lastSeen` is the last heartbeat epoch-ms (null before
+  // the first heartbeat). Carries state inline so the dashboard's runner
+  // health chip updates without a refetch.
+  | { type: 'runner.status_changed'; data: { online: boolean; lastSeen: number | null } }
+  // CREW-215: invalidation ping for a `crew finish` step — the dashboard
+  // refetches `GET /api/agents/:key/finish-steps` for the named agent.
+  | { type: 'finish_step.changed'; data: { key: string } }
   | { type: 'cache.miss'; data: Record<string, never> };
 
-export interface SseEvent {
-  id: string;
-  type: SsePayload['type'];
-  data: SsePayload['data'];
-}
+/**
+ * A published event: an `SsePayload` member stamped with an `id`. Defined
+ * as `SsePayload & { id }` (not a flat `{ id; type; data }` interface) so
+ * `type` and `data` stay correlated — narrowing on `event.type` narrows
+ * `event.data` to that variant's shape, which a decorrelated interface
+ * could not (a variant without a `key` would otherwise widen every
+ * `event.data.key` access to an error).
+ */
+export type SseEvent = SsePayload & { id: string };
 
 export interface SubscribeOpts {
   /**
@@ -65,7 +77,9 @@ export class EventBus {
   }
 
   publish(payload: SsePayload): SseEvent {
-    const event: SseEvent = { id: randomUUID(), type: payload.type, data: payload.data };
+    // Spread the payload (rather than copying `type`/`data` field-by-field)
+    // so the correlated union is preserved — a manual copy decorrelates them.
+    const event: SseEvent = { id: randomUUID(), ...payload };
     this.buffer.push(event);
     if (this.buffer.length > this.bufferSize) this.buffer.shift();
     for (const fn of this.subs) fn(event);
