@@ -42,6 +42,7 @@ Organization: Active is grouped by topic (not chronology) since the dominant acc
     - [2026-04-28 — Dashboard New Run modal + projects route view](#2026-04-28--dashboard-new-run-modal--projects-route-view)
     - [2026-04-28 — `useAttention.clear()` snapshot semantic isn't directly tested](#2026-04-28--useattentionclear-snapshot-semantic-isnt-directly-tested)
   - [Daemon, CLI & Dispatch](#daemon-cli--dispatch)
+    - [2026-06-04 — `GET /api/runner/logs` reads the whole log file into memory](#2026-06-04--get-apirunnerlogs-reads-the-whole-log-file-into-memory)
     - [2026-06-03 — `deriveState` falls through to `finished` when PR-create isn't detected](#2026-06-03--derivestate-falls-through-to-finished-when-pr-create-isnt-detected)
     - [2026-06-03 — `getStackUrl` is orphaned + duplicated by `docker-list`'s port/URL helpers](#2026-06-03--getstackurl-is-orphaned--duplicated-by-docker-lists-porturl-helpers)
     - [2026-05-23 — GitHub webhook as a future PR-status detection mechanism (parking-lot)](#2026-05-23--github-webhook-as-a-future-pr-status-detection-mechanism-parking-lot)
@@ -640,6 +641,18 @@ The "synthetic Unregistered section" feels right — single render path, no extr
 **Shape of work:** Tiny cleanup. Add 2–3 RTL test cases. Bundle into the cva-cleanup ticket above or stand alone.
 
 ### Daemon, CLI & Dispatch
+
+#### 2026-06-04 — `GET /api/runner/logs` reads the whole log file into memory
+
+**What:** `tailLog` in `packages/daemon/src/routes/runner.ts` does `readFile(logPath, 'utf8')` then slices the last N lines. The `tail` _count_ is capped (≤2000), which bounds the response, but nothing bounds how much is read off disk — a long-lived host runner with an unrotated `~/.crew/runner/runner.log` makes the route allocate the entire file per request. It's a latent self-DoS on a long-running host once there's a real producer.
+
+**Why noticed:** Code review of CREW-215 (this session) flagged it as the one non-cosmetic finding, but classified it as a followup rather than a blocker: it's inert until T4 (CREW-216, the host runner process) actually writes to that log. No producer exists at merge time.
+
+**Anchors:** `packages/daemon/src/routes/runner.ts` `tailLog()` (the `readFile(... 'utf8')`); the `LogsQuerySchema` `tail` cap. Producer side lands in Task T4 of Epic CREW-208 (`docs/superpowers/plans/2026-06-03-dashboard-agent-actions.md`).
+
+**What's been considered:** bounded trailing read (fs `stat` + a `read` of the last ~256KB, then split) avoids loading the whole file; alternatively, commit to a log-rotation story for `runner.log` and document a max size. The bounded-read is the smaller change and doesn't require a rotation policy.
+
+**Shape of work:** small, contained — swap the full read for a trailing-chunk read in one function; existing route tests still apply. Best folded into T4 (CREW-216) when the producer ships, so the bound and the writer land together.
 
 #### 2026-06-03 — `deriveState` falls through to `finished` when PR-create isn't detected
 

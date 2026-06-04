@@ -41,7 +41,7 @@ export async function registerFinishStepsRoutes(app: DaemonApp): Promise<void> {
     async (req, reply) => {
       const svc = req.diScope.resolve('finishStepsService');
       const step = await svc.record(req.params.key, req.body);
-      return reply.code(201).send({ ...step, detail: step.detail ?? null });
+      return reply.code(201).send(step);
     },
   );
 

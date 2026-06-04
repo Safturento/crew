@@ -33,7 +33,8 @@ export class FinishStepsService {
     this.eventBus = deps.eventBus;
   }
 
-  async record(key: string, input: FinishStepInput): Promise<FinishStepEvent> {
+  async record(key: string, input: FinishStepInput): Promise<StoredFinishStep> {
+    const detail = input.detail ?? null;
     await this.db
       .insertInto('finish_steps')
       .values({
@@ -41,17 +42,19 @@ export class FinishStepsService {
         idx: input.index,
         label: input.label,
         status: input.status,
-        detail: input.detail ?? null,
+        detail,
         ts: input.ts,
       })
       .execute();
     this.eventBus.publish({ type: 'finish_step.changed', data: { key } });
+    // Return the normalized (`detail: string | null`) shape so the wire
+    // format matches `list()` without the route re-coercing undefined→null.
     return {
       key,
       index: input.index,
       label: input.label,
       status: input.status,
-      detail: input.detail,
+      detail,
       ts: input.ts,
     };
   }
