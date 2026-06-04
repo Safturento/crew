@@ -1,7 +1,7 @@
 ---
 name: design-system
 description: Crew Figma DS + token bindings + Pill primitive contract
-last_updated: 2026-05-24
+last_updated: 2026-06-03
 covers:
   - 'packages/dashboard/src/components/**'
   - '*.figma.tsx'
@@ -124,24 +124,25 @@ Each has a `.tsx` implementation in `packages/dashboard/src/components/`, a matc
 Figma node IDs below are in the live consolidated file (`9FeJPriqdsdA4n9R5Xsrr8`,
 `Composites` page) — re-aimed from the archived standalone DS file by CREW-175.
 
-| Composite            | Figma node       | Dashboard counterpart                                      |
-| -------------------- | ---------------- | ---------------------------------------------------------- |
-| `BrandMark`          | `220:211`        | `packages/dashboard/src/components/BrandMark.tsx`          |
-| `TopNav`             | `245:133`        | `packages/dashboard/src/components/TopNav.tsx`             |
-| `AgentRow`           | `212:910`        | `packages/dashboard/src/components/AgentRow.tsx`           |
-| `ProjectSection`     | `220:224`        | `packages/dashboard/src/components/ProjectSection.tsx`     |
-| `AgentsList`         | `220:227`        | `packages/dashboard/src/components/AgentsList.tsx`         |
-| `AgentBody`          | `220:246`        | `packages/dashboard/src/components/AgentBody.tsx`          |
-| `DrawerHeader`       | `594:803`        | `packages/dashboard/src/components/DrawerHeader.tsx`       |
-| `TokenBarRow`        | `555:449`        | `packages/dashboard/src/components/TokenBarRow.tsx`        |
-| `TokensByTool`       | `577:643`        | `packages/dashboard/src/components/TokensByTool.tsx`       |
-| `ViewportFrame`      | `220:292`        | `packages/dashboard/src/components/ViewportFrame.tsx`      |
-| `ProjectRow`         | `220:300`        | `packages/dashboard/src/components/ProjectRow.tsx`         |
-| `ProjectHeader`      | `220:315`        | `packages/dashboard/src/components/ProjectHeader.tsx`      |
-| `ProjectConfigBlock` | `220:318`        | `packages/dashboard/src/components/ProjectConfigBlock.tsx` |
-| `TimelineSection`    | `559:650`        | `packages/dashboard/src/components/Timeline/TimelineSection.tsx` |
-| `TranscriptRow`      | `553:445`        | `packages/dashboard/src/components/Timeline/TranscriptRow.tsx`   |
+| Composite            | Figma node                      | Dashboard counterpart                                            |
+| -------------------- | ------------------------------- | ---------------------------------------------------------------- |
+| `BrandMark`          | `220:211`                       | `packages/dashboard/src/components/BrandMark.tsx`                |
+| `TopNav`             | `245:133`                       | `packages/dashboard/src/components/TopNav.tsx`                   |
+| `AgentRow`           | `212:910`                       | `packages/dashboard/src/components/AgentRow.tsx`                 |
+| `ProjectSection`     | `220:224`                       | `packages/dashboard/src/components/ProjectSection.tsx`           |
+| `AgentsList`         | `220:227`                       | `packages/dashboard/src/components/AgentsList.tsx`               |
+| `AgentBody`          | `220:246`                       | `packages/dashboard/src/components/AgentBody.tsx`                |
+| `DrawerHeader`       | `594:803`                       | `packages/dashboard/src/components/DrawerHeader.tsx`             |
+| `TokenBarRow`        | `555:449`                       | `packages/dashboard/src/components/TokenBarRow.tsx`              |
+| `TokensByTool`       | `577:643`                       | `packages/dashboard/src/components/TokensByTool.tsx`             |
+| `ViewportFrame`      | `220:292`                       | `packages/dashboard/src/components/ViewportFrame.tsx`            |
+| `ProjectRow`         | `220:300`                       | `packages/dashboard/src/components/ProjectRow.tsx`               |
+| `ProjectHeader`      | `220:315`                       | `packages/dashboard/src/components/ProjectHeader.tsx`            |
+| `ProjectConfigBlock` | `220:318`                       | `packages/dashboard/src/components/ProjectConfigBlock.tsx`       |
+| `TimelineSection`    | `559:650`                       | `packages/dashboard/src/components/Timeline/TimelineSection.tsx` |
+| `TranscriptRow`      | `553:445`                       | `packages/dashboard/src/components/Timeline/TranscriptRow.tsx`   |
 | `MinimapStripe`      | _(no Figma — feature-internal)_ | `packages/dashboard/src/components/Timeline/MinimapStripe.tsx`   |
+| `FormField`          | `337:234`                       | `packages/dashboard/src/components/FormField.tsx`                |
 
 `TopNav`, `AgentRow`, and `TimelineSection` resolve to component sets in the live file; the rest resolve to single components. `ErrorFallback` is the only un-built composite from the original Phase 4 inventory; it lands alongside the next fidelity ticket that surfaces a need.
 
@@ -149,21 +150,21 @@ Figma node IDs below are in the live consolidated file (`9FeJPriqdsdA4n9R5Xsrr8`
 
 ### `components/ui/` vs `components/<feature>/` split
 
-- `packages/dashboard/src/components/ui/` — **shadcn primitives + DS primitives** (`button`, `badge`, `tag`, `input`, `checkbox`, `dialog`, `label`, `separator`, `form`, `popover`, `state-icon`, `meta-list`). One file per primitive plus its `.figma.tsx` mapping. `pill-base.tsx` is the one exception — an internal shared anatomy for `button` / `badge` / `tag`, never exported or imported outside those three; it has no `.figma.tsx`. `popover`, `state-icon`, and `meta-list` are also `.figma.tsx`-less: `popover` wraps `radix-ui`'s Popover for the Filters dropdown (CREW-187), `state-icon` is the canonical filled-disc glyph rendered inside every state Pill (it has no Figma counterpart because Figma's `Pill` set already names `Icon: lucide/circle` directly — the wrapper exists to pin the absolute stroke-width that makes the outline read as a filled disc across AgentRow / DrawerHeader / TimelineSection), and `meta-list` is the inline-metadata-strip primitive that injects `·` separators via CSS `[&>li+li]:before:content-['·']` so the dot can never get out of sync with its items (used by AgentRow, DrawerHeader, TimelineSection — keep new metadata strips going through it instead of inlining `·` in JSX). Don't put crew-specific composites here.
+- `packages/dashboard/src/components/ui/` — **shadcn primitives + DS primitives** (`button`, `badge`, `tag`, `input`, `checkbox`, `switch`, `dialog`, `label`, `separator`, `form`, `popover`, `state-icon`, `meta-list`). One file per primitive plus its `.figma.tsx` mapping. `pill-base.tsx` is the one exception — an internal shared anatomy for `button` / `badge` / `tag`, never exported or imported outside those three; it has no `.figma.tsx`. `popover`, `state-icon`, and `meta-list` are also `.figma.tsx`-less: `popover` wraps `radix-ui`'s Popover for the Filters dropdown (CREW-187), `state-icon` is the canonical filled-disc glyph rendered inside every state Pill (it has no Figma counterpart because Figma's `Pill` set already names `Icon: lucide/circle` directly — the wrapper exists to pin the absolute stroke-width that makes the outline read as a filled disc across AgentRow / DrawerHeader / TimelineSection), and `meta-list` is the inline-metadata-strip primitive that injects `·` separators via CSS `[&>li+li]:before:content-['·']` so the dot can never get out of sync with its items (used by AgentRow, DrawerHeader, TimelineSection — keep new metadata strips going through it instead of inlining `·` in JSX). Don't put crew-specific composites here.
 - `packages/dashboard/src/components/` (top level) — **Crew composites** that compose primitives + crew logic. `AgentRow`, `ProjectSection`, etc.
 
 This is the canonical shadcn convention; the `components.json` `aliases` block maps `ui → @/components/ui`.
 
 ## Pill visual pattern
 
-The canonical pill treatment. The Figma `Pill` component set (`272:120`) carries one anatomy across `type` (tag / pill / button-*), `color` (8), and `intensity` (4) axes. In code, the internal `PillBase` owns that anatomy; `Button` / `Badge` / `Tag` wrap it and supply their own static shape.
+The canonical pill treatment. The Figma `Pill` component set (`272:120`) carries one anatomy across `type` (tag / pill / button-\*), `color` (8), and `intensity` (4) axes. In code, the internal `PillBase` owns that anatomy; `Button` / `Badge` / `Tag` wrap it and supply their own static shape.
 
-| Intensity       | Bg fill            | Stroke                  | Text                          |
-| --------------- | ------------------ | ----------------------- | ----------------------------- |
-| `ghost`         | transparent        | none                    | `state/X`                     |
-| `muted`         | `state/X` dark bg  | none                    | `state/X`                     |
-| `mid` (default) | `state/X` dark bg  | `state/X` (1px)         | `state/X`                     |
-| `loud`          | `state/X` solid    | `state/X` (same as bg)  | `state/foreground` (slate/950) |
+| Intensity       | Bg fill           | Stroke                 | Text                           |
+| --------------- | ----------------- | ---------------------- | ------------------------------ |
+| `ghost`         | transparent       | none                   | `state/X`                      |
+| `muted`         | `state/X` dark bg | none                   | `state/X`                      |
+| `mid` (default) | `state/X` dark bg | `state/X` (1px)        | `state/X`                      |
+| `loud`          | `state/X` solid   | `state/X` (same as bg) | `state/foreground` (slate/950) |
 
 **Code-Figma parity contract:** the surface classes come from `pillSurfaceClasses(color, intensity, toolColor?)` in `packages/dashboard/src/lib/pill-variants.ts`, which sources the per-state `text` / `bg` / `border` / `solidBg` / `solidBorder` Tailwind tokens from `STATE_CLASSES` in `packages/dashboard/src/data/state-meta.ts` (plus a `white` color for neutral CTAs). When changing canonical state colors, update both the Figma variants AND `STATE_CLASSES` — same value in both places.
 
@@ -193,17 +194,19 @@ The decision is reversible — the file structure stays compatible with future p
 
 `Button` / `Badge` / `Tag` map to the Crew consolidated file's unified `Pill` set (`272:120` in `9FeJPriqdsdA4n9R5Xsrr8`) — CREW-135. The remaining primitives still target Core's component nodes (file `UkPJj6vd7HMKcey7M0XF4N`), because the screens file instances those shadcn primitives directly from Core via the library link.
 
-| Code component       | Mapping file                                               | Figma component                         | Figma node id |
-| -------------------- | ---------------------------------------------------------- | --------------------------------------- | ------------- |
-| `Button`             | `packages/dashboard/src/components/ui/button.figma.tsx`    | `Pill` set (Crew file)                  | `272:120`     |
-| `Badge`              | `packages/dashboard/src/components/ui/badge.figma.tsx`     | `Pill` set (Crew file)                  | `272:120`     |
-| `Tag`                | `packages/dashboard/src/components/ui/tag.figma.tsx`       | `Pill` set (Crew file)                  | `272:120`     |
-| `Input`              | `packages/dashboard/src/components/ui/input.figma.tsx`     | `Default` set on Input page (Core)      | `520:3062`    |
-| `Checkbox`           | `packages/dashboard/src/components/ui/checkbox.figma.tsx`  | `Checkbox` composite (Crew file)        | `663:869`     |
-| `Dialog`             | `packages/dashboard/src/components/ui/dialog.figma.tsx`    | `Dialog` set on Dialog page (Core)      | `594:105`     |
-| `Label`              | `packages/dashboard/src/components/ui/label.figma.tsx`     | `Label` set on Label page (Core)        | `76:8617`     |
-| `Separator`          | `packages/dashboard/src/components/ui/separator.figma.tsx` | `Separator` on Seperator page (Core)    | `76:10202`    |
-| `FormItem` (form.\*) | `packages/dashboard/src/components/ui/form.figma.tsx`      | `Field` component on Field page (Core)  | `1188:5362`   |
+| Code component       | Mapping file                                               | Figma component                             | Figma node id |
+| -------------------- | ---------------------------------------------------------- | ------------------------------------------- | ------------- |
+| `Button`             | `packages/dashboard/src/components/ui/button.figma.tsx`    | `Pill` set (Crew file)                      | `272:120`     |
+| `Badge`              | `packages/dashboard/src/components/ui/badge.figma.tsx`     | `Pill` set (Crew file)                      | `272:120`     |
+| `Tag`                | `packages/dashboard/src/components/ui/tag.figma.tsx`       | `Pill` set (Crew file)                      | `272:120`     |
+| `Input`              | `packages/dashboard/src/components/ui/input.figma.tsx`     | `Default` set on Input page (Core)          | `520:3062`    |
+| `Checkbox`           | `packages/dashboard/src/components/ui/checkbox.figma.tsx`  | `Checkbox` composite (Crew file)            | `663:869`     |
+| `Switch`             | `packages/dashboard/src/components/ui/switch.figma.tsx`    | `Switch` set on Composites page (Crew file) | `335:242`     |
+| `FormField`          | `packages/dashboard/src/components/FormField.figma.tsx`    | `FormField` on Composites page (Crew file)  | `337:234`     |
+| `Dialog`             | `packages/dashboard/src/components/ui/dialog.figma.tsx`    | `Dialog` set on Dialog page (Core)          | `594:105`     |
+| `Label`              | `packages/dashboard/src/components/ui/label.figma.tsx`     | `Label` set on Label page (Core)            | `76:8617`     |
+| `Separator`          | `packages/dashboard/src/components/ui/separator.figma.tsx` | `Separator` on Seperator page (Core)        | `76:10202`    |
+| `FormItem` (form.\*) | `packages/dashboard/src/components/ui/form.figma.tsx`      | `Field` component on Field page (Core)      | `1188:5362`   |
 
 ### Pill mapping — color × intensity × type
 

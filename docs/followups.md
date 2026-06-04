@@ -17,6 +17,7 @@ Organization: Active is grouped by topic (not chronology) since the dominant acc
     - [2026-05-11 — `idle` and `waiting` agent states not reachable from daemon fixtures](#2026-05-11--idle-and-waiting-agent-states-not-reachable-from-daemon-fixtures)
     - [2026-05-09 — Crew Dashboard Screens: 3 remaining ad-hoc modal frames need DS Modal swap + semantic-token bindings](#2026-05-09--crew-dashboard-screens-3-remaining-ad-hoc-modal-frames-need-ds-modal-swap--semantic-token-bindings)
   - [Visual Fidelity Tooling](#visual-fidelity-tooling)
+    - [2026-06-03 — No live render surface for caller-less DS primitives (visual-fidelity Step 5 gap)](#2026-06-03--no-live-render-surface-for-caller-less-ds-primitives-visual-fidelity-step-5-gap)
     - [2026-05-18 — visual-fidelity-check: per-fixture snapshot copy vs committed artifact + Step 4 path-vocab drift](#2026-05-18--visual-fidelity-check-per-fixture-snapshot-copy-vs-committed-artifact--step-4-path-vocab-drift)
     - [2026-05-18 — `.agents/design-system.md` frontmatter URLs stale after Crew DS consolidation](#2026-05-18--agentsdesign-systemmd-frontmatter-urls-stale-after-crew-ds-consolidation)
     - [2026-05-18 — `index.css` falls outside every `.agents/*.md` `covers` glob](#2026-05-18--indexcss-falls-outside-every-agentsmd-covers-glob)
@@ -197,6 +198,20 @@ Organization: Active is grouped by topic (not chronology) since the dominant acc
 - [ ] Padding/gap/radius FLOAT bindings in the same pass, or deferred?
 
 ### Visual Fidelity Tooling
+
+#### 2026-06-03 — No live render surface for caller-less DS primitives (visual-fidelity Step 5 gap)
+
+**What:** `visual-fidelity-check` Step 5 (live in-browser DOM/screenshot check) cannot run for a new DS component that has no caller site yet. The dashboard mounts components only where a feature uses them and has no component playground/gallery/storybook route, so a freshly-built primitive (built ahead of its consumer, per the DS-reconciliation slicing) renders nowhere in the running app. The gate degrades to structural-only (snapshot + `get_design_context`), which is sound for token/structure parity but skips the rendered-pixel cross-check.
+
+**Why noticed:** Building CREW-136 (Switch + FormField) — both are "components only, no live caller sites yet" by ticket scope. The visual-fidelity gate's Step 5 had no screen to exercise; logged as a verification gap in `docs/visual-fidelity-reports/CREW-136.md`. This recurs for every isolated DS primitive that lands before its consumer (a deliberate pattern in the DS→code reconciliation epic CREW-134).
+
+**Anchors:** `docs/visual-fidelity-reports/CREW-136.md` (verification-gap section); `.claude/skills/visual-fidelity-check/workflow.md` Step 5; `packages/dashboard/src/App.tsx` (hash routing, no gallery route); CREW-134 epic.
+
+**What's been considered:** A dev-only `/__gallery` route (or a Ladle/Storybook-lite harness) that renders every `ui/` primitive + composite in a known state would give Step 5 a deterministic surface and double as a DS smoke page. Tradeoff: another build surface to maintain vs. closing a recurring gate gap. Structural-only verification has been accepted as sufficient for skeleton-fidelity primitives so far, so this is a "nice to have", not blocking.
+
+**Shape of work:** Small dashboard feature — one route + a static list rendering each component across its variant matrix. Could reuse the `.figma.tsx` `example` snippets as the render source. Sits behind a dev/env flag so it doesn't ship to the normal nav.
+
+**Open questions:** Reuse an existing tool (Ladle/Storybook) or hand-roll a single route? Does the visual-fidelity skill need a config key pointing at the gallery URL pattern so Step 5 can auto-navigate per component?
 
 #### 2026-05-18 — visual-fidelity-check: per-fixture snapshot copy vs committed artifact + Step 4 path-vocab drift
 
@@ -611,21 +626,21 @@ The "synthetic Unregistered section" feels right — single render path, no extr
 
 #### 2026-06-03 — `deriveState` falls through to `finished` when PR-create isn't detected
 
-**What:** `AgentsService.deriveState` ends with `return 'finished'` (`packages/daemon/src/services/AgentsService.ts`) as the catch-all after `completedAt != null`, `exitCode == 0`, `!prMerged`, `!hasPrCreate`. So *any* cleanly-completed run whose PR-create signal was missed renders as **finished** — a state that otherwise means "PR merged and cleaned up via `crew finish`". It silently masquerades a detection miss (or a genuinely PR-less run) as a successful close-out, with no visible distinction from a real finish. This is the second half of the 2026-06-03 status bug (CREW-31/32/174 showed `finished` instead of `pr_open`); the immediate fix only hardened the `hasPrCreate` matcher, leaving the fallthrough as a latent footgun for any other reason detection could miss.
+**What:** `AgentsService.deriveState` ends with `return 'finished'` (`packages/daemon/src/services/AgentsService.ts`) as the catch-all after `completedAt != null`, `exitCode == 0`, `!prMerged`, `!hasPrCreate`. So _any_ cleanly-completed run whose PR-create signal was missed renders as **finished** — a state that otherwise means "PR merged and cleaned up via `crew finish`". It silently masquerades a detection miss (or a genuinely PR-less run) as a successful close-out, with no visible distinction from a real finish. This is the second half of the 2026-06-03 status bug (CREW-31/32/174 showed `finished` instead of `pr_open`); the immediate fix only hardened the `hasPrCreate` matcher, leaving the fallthrough as a latent footgun for any other reason detection could miss.
 
 **Why noticed:** Root-cause investigation of "three agents marked finished instead of pr_open" (this session). The matcher fix (broadening prefix-match → per-line "starts with `gh pr create`", shared helper `hasPrCreateInvocation` in crew-shared) addressed the reported incident. When asked whether to also harden the fallthrough, user chose "matcher only" — so this is the explicitly-deferred half.
 
-**Anchors:** `packages/daemon/src/services/AgentsService.ts` `deriveState()` (the `return 'finished'` at the end); `crew-shared` `hasPrCreateInvocation`; the live transition twin in `IngestService.ts` `computeNextState` (where a completed-but-undetected run just stays `running`, *disagreeing* with the list/getByKey display that shows `finished`). Branch `fix/pr-create-detection-cd-prefix`.
+**Anchors:** `packages/daemon/src/services/AgentsService.ts` `deriveState()` (the `return 'finished'` at the end); `crew-shared` `hasPrCreateInvocation`; the live transition twin in `IngestService.ts` `computeNextState` (where a completed-but-undetected run just stays `running`, _disagreeing_ with the list/getByKey display that shows `finished`). Branch `fix/pr-create-detection-cd-prefix`.
 
 **What's been considered:**
 
 - A completed `run`/`fix-pr` with no detected PR and no `finish` run is arguably `error` (it was supposed to open a PR and the signal we have says it didn't), or a distinct "completed, no PR" state — not `finished`.
 - Note the cross-path inconsistency: the SQL-derived display (`AgentsService`) calls it `finished`, while the live tool-call machine (`computeNextState`) leaves it `running`. Whatever the resolution, these two should agree.
-- Residual matcher gap (same area, cheap to fold in): `hasPrCreateInvocation` is per-line/start-anchored, so a *single-line* `git push && gh pr create …` (no newline) still won't match. The dispatch prompt puts them on separate lines, so this isn't the observed failure, but it's the next brittle edge.
+- Residual matcher gap (same area, cheap to fold in): `hasPrCreateInvocation` is per-line/start-anchored, so a _single-line_ `git push && gh pr create …` (no newline) still won't match. The dispatch prompt puts them on separate lines, so this isn't the observed failure, but it's the next brittle edge.
 
 **Shape of work:** small, contained — decide the right terminal state for "completed, PR-create not observed", make `deriveState` + `computeNextState` agree on it, add the `&&`-chained matcher case. One ticket. Needs a design call on the state name before coding.
 
-**Open questions:** Is "completed, no PR detected" really an error, or a legitimate no-op outcome (epic-guard exit, ticket already shipped — the prompt's `→ no-pr:` path)? If legitimate, `finished` may be defensible and the real fix is just surfacing *why* (a distinct label/tooltip) rather than changing the state.
+**Open questions:** Is "completed, no PR detected" really an error, or a legitimate no-op outcome (epic-guard exit, ticket already shipped — the prompt's `→ no-pr:` path)? If legitimate, `finished` may be defensible and the real fix is just surfacing _why_ (a distinct label/tooltip) rather than changing the state.
 
 #### 2026-06-03 — `getStackUrl` is orphaned + duplicated by `docker-list`'s port/URL helpers
 
