@@ -149,9 +149,9 @@ export function Timeline({ agentKey, agentState, tokensByTool = [] }: TimelinePr
       const sectionEls = viewport.querySelectorAll<HTMLElement>('[data-testid="timeline-section"]');
       const target = sectionEls[idx];
       if (!target) return;
-      const toolbar = viewport.querySelector<HTMLElement>('[data-testid="timeline-toolbar"]');
-      const toolbarHeight = toolbar?.clientHeight ?? 0;
-      const top = target.offsetTop - toolbarHeight;
+      // The toolbar now lives outside the scroll viewport, so the section's
+      // own offset within the viewport is the scroll target directly.
+      const top = target.offsetTop;
       if (typeof viewport.scrollTo === 'function') {
         viewport.scrollTo({ top, behavior: 'smooth' });
       } else {
@@ -180,68 +180,70 @@ export function Timeline({ agentKey, agentState, tokensByTool = [] }: TimelinePr
 
   return (
     <div className="relative flex h-full min-h-0 flex-col">
-      <div
-        ref={scrollRef}
-        className="relative flex min-h-0 flex-1 flex-col overflow-y-auto"
-        style={{ scrollbarGutter: 'stable' }}
-      >
-        <TimelineToolbar
-          data-testid="timeline-toolbar"
-          className="sticky top-0 z-10 bg-card"
-          filterState={filterState}
-          onFilterStateChange={setFilterState}
-          tokensByTool={tokensByTool}
-          searchValue={searchInput}
-          onSearchChange={setSearchInput}
-          liveMode={liveMode}
-          onLiveModeChange={setLiveMode}
-          onCollapseAll={collapseAll}
-          canCollapseAll={sections.length > 0}
-        />
-        {events.length === 0 ? (
-          <div
-            data-testid="timeline-empty"
-            className="flex flex-1 items-center justify-center p-6 text-sm text-muted-foreground"
-          >
-            No timeline events yet.
-          </div>
-        ) : filteredEvents.length === 0 ? (
-          <FilterEmptyState onShowAll={resetFilters} />
-        ) : (
-          <div className="flex flex-col gap-2 px-1 py-1">
-            {sections.map((s, i) => {
-              const key = sectionKey(s, i);
-              const isOpen = !collapsed[key];
-              const elapsedMs = (s.endedAt ?? now) - s.startedAt;
-              const tokenSum = s.events.reduce((sum, e) => sum + eventTokens(e), 0);
-              return (
-                <div key={key} ref={sectionRefFor(i)}>
-                  <TimelineSection
-                    state={s.state}
-                    startedAt={s.startedAt}
-                    elapsedMs={elapsedMs}
-                    eventCount={s.events.length}
-                    tokenSum={tokenSum}
-                    isOpen={isOpen}
-                    onToggle={() => toggleSection(key)}
-                  >
-                    {s.events.map((event) => (
-                      <TranscriptRow key={eventKey(event)} event={event} />
-                    ))}
-                  </TimelineSection>
-                </div>
-              );
-            })}
-          </div>
+      <TimelineToolbar
+        data-testid="timeline-toolbar"
+        className="shrink-0 bg-card"
+        filterState={filterState}
+        onFilterStateChange={setFilterState}
+        tokensByTool={tokensByTool}
+        searchValue={searchInput}
+        onSearchChange={setSearchInput}
+        liveMode={liveMode}
+        onLiveModeChange={setLiveMode}
+        onCollapseAll={collapseAll}
+        canCollapseAll={sections.length > 0}
+      />
+      <div className="relative flex min-h-0 flex-1 flex-col">
+        <div
+          ref={scrollRef}
+          className="relative flex min-h-0 flex-1 flex-col overflow-y-auto"
+          style={{ scrollbarGutter: 'stable' }}
+        >
+          {events.length === 0 ? (
+            <div
+              data-testid="timeline-empty"
+              className="flex flex-1 items-center justify-center p-6 text-sm text-muted-foreground"
+            >
+              No timeline events yet.
+            </div>
+          ) : filteredEvents.length === 0 ? (
+            <FilterEmptyState onShowAll={resetFilters} />
+          ) : (
+            <div className="flex flex-col gap-2 px-1 py-1">
+              {sections.map((s, i) => {
+                const key = sectionKey(s, i);
+                const isOpen = !collapsed[key];
+                const elapsedMs = (s.endedAt ?? now) - s.startedAt;
+                const tokenSum = s.events.reduce((sum, e) => sum + eventTokens(e), 0);
+                return (
+                  <div key={key} ref={sectionRefFor(i)}>
+                    <TimelineSection
+                      state={s.state}
+                      startedAt={s.startedAt}
+                      elapsedMs={elapsedMs}
+                      eventCount={s.events.length}
+                      tokenSum={tokenSum}
+                      isOpen={isOpen}
+                      onToggle={() => toggleSection(key)}
+                    >
+                      {s.events.map((event) => (
+                        <TranscriptRow key={eventKey(event)} event={event} />
+                      ))}
+                    </TimelineSection>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+        {filteredEvents.length > 0 && sections.length > 0 && (
+          <MinimapStripe
+            sections={minimapSections}
+            stripeHeight={stripeHeight}
+            onSectionJump={onSectionJump}
+          />
         )}
       </div>
-      {filteredEvents.length > 0 && sections.length > 0 && (
-        <MinimapStripe
-          sections={minimapSections}
-          stripeHeight={stripeHeight}
-          onSectionJump={onSectionJump}
-        />
-      )}
     </div>
   );
 }

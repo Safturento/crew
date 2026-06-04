@@ -552,7 +552,7 @@ describe('Timeline', () => {
     }
   });
 
-  it('renders the toolbar inside the scroll region as sticky', () => {
+  it('renders the toolbar outside the scroll viewport and not sticky', () => {
     mockUseTimeline.mockReturnValue(
       timelineResult({
         data: { events: [evt(1)] },
@@ -560,13 +560,14 @@ describe('Timeline', () => {
         status: 'success',
       }),
     );
-    render(<Timeline agentKey="KAN-1" agentState="running" />);
+    const { container } = render(<Timeline agentKey="KAN-1" agentState="running" />);
     const toolbar = screen.getByTestId('timeline-toolbar');
-    expect(toolbar.className).toMatch(/\bsticky\b/);
-    expect(toolbar.className).toMatch(/\btop-0\b/);
+    expect(toolbar.className).not.toMatch(/\bsticky\b/);
+    const scroll = container.querySelector('[class*="overflow-y-auto"]');
+    expect(scroll?.contains(toolbar)).toBe(false);
   });
 
-  it('mounts the toolbar inside the single scroll viewport (no second scroll container)', () => {
+  it('keeps exactly one scroll viewport with the toolbar lifted above it', () => {
     mockUseTimeline.mockReturnValue(
       timelineResult({
         data: { events: [evt(1), evt(2)] },
@@ -577,8 +578,8 @@ describe('Timeline', () => {
     const { container } = render(<Timeline agentKey="KAN-1" agentState="running" />);
     const scrollables = container.querySelectorAll('[class*="overflow-y-auto"]');
     expect(scrollables.length).toBe(1);
-    // Toolbar lives inside that one viewport, not outside it.
-    expect(scrollables[0].contains(screen.getByTestId('timeline-toolbar'))).toBe(true);
+    // Toolbar is a sibling above the viewport, not inside it.
+    expect(scrollables[0].contains(screen.getByTestId('timeline-toolbar'))).toBe(false);
   });
 
   it('mounts MinimapStripe alongside the scroll viewport when there are sections', () => {
