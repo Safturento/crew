@@ -27,6 +27,7 @@ import { registerAgentsRoutes } from './routes/agents.js';
 import { registerRunsRoutes } from './routes/runs.js';
 import { registerEventsRoutes } from './routes/events.js';
 import { registerMetricsRoutes } from './routes/metrics.js';
+import { registerActionsRoutes } from './routes/actions.js';
 
 const PLACEHOLDER_HTML = `<!DOCTYPE html>
 <html>
@@ -164,6 +165,7 @@ export async function buildApp({
   await registerRunsRoutes(app);
   await registerEventsRoutes(app);
   await registerMetricsRoutes(app);
+  await registerActionsRoutes(app);
 
   if (dashboardDistDir && existsSync(join(dashboardDistDir, 'index.html'))) {
     await app.register(fastifyStatic, { root: dashboardDistDir, prefix: '/' });

@@ -9,6 +9,7 @@ import {
   type Generated,
   type MigrationResultSet,
 } from 'kysely';
+import type { ActionKind, ActionStatus } from 'crew-shared';
 
 export interface AgentsTable {
   key: string;
@@ -91,12 +92,30 @@ export interface StartupEventsTable {
   log_path: string | null;
 }
 
+/** CREW-214: queued dashboard-triggered actions, drained by the host runner.
+ *  Insert/transition path: ActionService (enqueue → claim → report), each
+ *  flip publishing an `action.changed` SSE event. `payload` is the per-kind
+ *  JSON envelope (e.g. the `fix_pr` review comment); `error` is set only on
+ *  the `failed` terminal status. See migration 0006. */
+export interface ActionRequestsTable {
+  id: Generated<number>;
+  kind: ActionKind;
+  ticket_key: string;
+  project: string;
+  payload: Generated<string>; // JSON ActionPayload; DB default '{}'
+  status: Generated<ActionStatus>; // DB default 'pending'
+  error: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface DaemonDatabase {
   agents: AgentsTable;
   runs: RunsTable;
   tool_calls: ToolCallsTable;
   state_transitions: StateTransitionsTable;
   startup_events: StartupEventsTable;
+  action_requests: ActionRequestsTable;
 }
 
 /**

@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import type { ActionKind, ActionStatus } from 'crew-shared';
 
 /**
  * The hybrid event vocabulary the daemon emits over SSE:
@@ -20,13 +21,22 @@ export type SsePayload =
   | { type: 'tool_calls.changed'; data: { key: string } }
   | { type: 'startup_events.changed'; data: { key: string } }
   | { type: 'run.completed'; data: { key: string; ts: number } }
+  // CREW-214: a queued action changed status. `key` is the ticket key the
+  // request targets (the agent-to-be); the dashboard uses it to toast the
+  // originating QuickAction. Emitted on every lifecycle transition.
+  | {
+      type: 'action.changed';
+      data: { id: number; kind: ActionKind; key: string; status: ActionStatus };
+    }
   | { type: 'cache.miss'; data: Record<string, never> };
 
-export interface SseEvent {
-  id: string;
-  type: SsePayload['type'];
-  data: SsePayload['data'];
-}
+/**
+ * A published event: an `SsePayload` stamped with a buffer id. Kept as a
+ * discriminated union (rather than `{ type; data }` with independent unions)
+ * so a `type` check narrows `data` to the matching variant at call sites —
+ * `if (e.type === 'action.changed') e.data.status` is then type-safe.
+ */
+export type SseEvent = { id: string } & SsePayload;
 
 export interface SubscribeOpts {
   /**
@@ -65,7 +75,8 @@ export class EventBus {
   }
 
   publish(payload: SsePayload): SseEvent {
-    const event: SseEvent = { id: randomUUID(), type: payload.type, data: payload.data };
+    // Spread (not `{ type, data }`) so the union stays discriminated.
+    const event: SseEvent = { id: randomUUID(), ...payload };
     this.buffer.push(event);
     if (this.buffer.length > this.bufferSize) this.buffer.shift();
     for (const fn of this.subs) fn(event);

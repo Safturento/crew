@@ -1,0 +1,27 @@
+meta {
+  name: POST /api/actions/:id/result
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/api/actions/{{actionId}}/result
+  body: json
+}
+
+body:json {
+  {
+    "status": "launched"
+  }
+}
+
+assert {
+  res.status: eq 204
+}
+
+docs {
+  Records the host-side launch outcome for the claimed action, closing the
+  enqueue → pending → claim → result lifecycle. Reports `launched` here;
+  the runner reports `failed` with an `error` string on a spawn failure.
+  Returns 204 (no body); an unknown action id 404s.
+}
