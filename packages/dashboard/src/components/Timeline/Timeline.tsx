@@ -209,8 +209,8 @@ export function Timeline({ agentKey, agentState, tokensByTool = [] }: TimelinePr
           ) : filteredEvents.length === 0 ? (
             <FilterEmptyState onShowAll={resetFilters} />
           ) : (
-            {/* pr-6 reserves a gutter so content clears the MinimapStripe
-                (right: SCROLLBAR_GUTTER 14px + width STRIPE_WIDTH 8px). */}
+            // pr-6 reserves a gutter so content clears the MinimapStripe
+            // (right: SCROLLBAR_GUTTER 14px + width STRIPE_WIDTH 8px).
             <div className="flex flex-col gap-2 py-1 pl-1 pr-6">
               {sections.map((s, i) => {
                 const key = sectionKey(s, i);
