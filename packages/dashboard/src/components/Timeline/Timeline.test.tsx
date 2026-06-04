@@ -325,7 +325,7 @@ describe('Timeline', () => {
     expect(screen.getByRole('switch', { name: /live/i })).toHaveAttribute('aria-checked', 'false');
   });
 
-  it('shows a "N new events" pill when live mode is OFF and new events arrive', async () => {
+  it('never shows a new-events pill, even when events arrive while live mode is OFF', () => {
     mockUseTimeline.mockReturnValue(
       timelineResult({
         data: { events: [evt(1), evt(2)] },
@@ -343,43 +343,6 @@ describe('Timeline', () => {
       }),
     );
     rerender(<Timeline agentKey="KAN-1" agentState="finished" />);
-    expect(screen.getByRole('button', { name: /2 new events/i })).toBeInTheDocument();
-    await userEvent.click(screen.getByRole('button', { name: /2 new events/i }));
-    expect(screen.queryByRole('button', { name: /new events/i })).toBeNull();
-  });
-
-  it('does not treat filter toggling as new events (no pill on filter change)', async () => {
-    mockUseTimeline.mockReturnValue(
-      timelineResult({
-        data: { events: [evt(1), assistantThinking(2, 'pondering')] },
-        isSuccess: true,
-        status: 'success',
-      }),
-    );
-    render(<Timeline agentKey="KAN-1" agentState="finished" />);
-    expect(screen.queryByRole('button', { name: /new events/i })).toBeNull();
-    await openFilters();
-    await userEvent.click(screen.getByLabelText('Thinking'));
-    expect(screen.queryByRole('button', { name: /new events/i })).toBeNull();
-  });
-
-  it('does not show the new-events pill when live mode is ON', () => {
-    mockUseTimeline.mockReturnValue(
-      timelineResult({
-        data: { events: [evt(1), evt(2)] },
-        isSuccess: true,
-        status: 'success',
-      }),
-    );
-    const { rerender } = render(<Timeline agentKey="KAN-1" agentState="running" />);
-    mockUseTimeline.mockReturnValue(
-      timelineResult({
-        data: { events: [evt(1), evt(2), evt(3)] },
-        isSuccess: true,
-        status: 'success',
-      }),
-    );
-    rerender(<Timeline agentKey="KAN-1" agentState="running" />);
     expect(screen.queryByRole('button', { name: /new events/i })).toBeNull();
   });
 

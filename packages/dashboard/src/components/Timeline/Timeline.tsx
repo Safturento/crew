@@ -7,7 +7,7 @@ import { cn } from '../../lib/utils.js';
 import { Button } from '../ui/button.js';
 import { Filters, defaultTimelineFilterState, type TimelineFilterState } from './Filters.js';
 import { isToolVisible } from './filter-state.js';
-import { LiveModeToggle, NewEventsPill } from './LiveModeToggle.js';
+import { LiveModeToggle } from './LiveModeToggle.js';
 import { MinimapStripe } from './MinimapStripe.js';
 import { SearchBar } from './SearchBar.js';
 import {
@@ -102,22 +102,6 @@ export function Timeline({ agentKey, agentState, tokensByTool = [] }: TimelinePr
     const id = window.setInterval(() => setNow(Date.now()), 1_000);
     return () => window.clearInterval(id);
   }, [hasActiveSection]);
-
-  // New-events pill is driven by the *unfiltered* server-side length so
-  // toggling a chip never registers as "new events arrived."
-  const lastSeenServerLengthRef = useRef<number>(rawEvents.length);
-  const [pendingNewCount, setPendingNewCount] = useState(0);
-  useEffect(() => {
-    const prev = lastSeenServerLengthRef.current;
-    const next = rawEvents.length;
-    if (next > prev && !liveMode) {
-      setPendingNewCount((c) => c + (next - prev));
-    }
-    lastSeenServerLengthRef.current = next;
-  }, [rawEvents.length, liveMode]);
-  useEffect(() => {
-    if (liveMode) setPendingNewCount(0);
-  }, [liveMode]);
 
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const lastSeenVisibleLengthRef = useRef<number>(filteredEvents.length);
@@ -257,21 +241,6 @@ export function Timeline({ agentKey, agentState, tokensByTool = [] }: TimelinePr
           stripeHeight={stripeHeight}
           onSectionJump={onSectionJump}
         />
-      )}
-      {!liveMode && pendingNewCount > 0 && (
-        <div className="pointer-events-none absolute right-3 bottom-3">
-          <span className="pointer-events-auto">
-            <NewEventsPill
-              count={pendingNewCount}
-              onClick={() => {
-                if (scrollRef.current) {
-                  scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-                }
-                setPendingNewCount(0);
-              }}
-            />
-          </span>
-        </div>
       )}
     </div>
   );
