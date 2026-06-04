@@ -25,6 +25,9 @@ Organization: Active is grouped by topic (not chronology) since the dominant acc
     - [2026-05-16 — figma-snapshot `resolvedStylesFor` text-color heuristic picks the first TEXT descendant](#2026-05-16--figma-snapshot-resolvedstylesfor-text-color-heuristic-picks-the-first-text-descendant)
     - [2026-05-15 — `crew fix-pr` does not refresh `.mcp.json` — chrome wiring goes stale on resume](#2026-05-15--crew-fix-pr-does-not-refresh-mcpjson--chrome-wiring-goes-stale-on-resume)
   - [Dashboard UI](#dashboard-ui)
+    - [2026-06-03 — Wire CREW-136 `Switch` into the Timeline live toggle](#2026-06-03--wire-crew-136-switch-into-the-timeline-live-toggle)
+    - [2026-06-03 — Sticky Timeline toolbar overlaps the minimap stripe + scrollbar](#2026-06-03--sticky-timeline-toolbar-overlaps-the-minimap-stripe--scrollbar)
+    - [2026-06-03 — CREW-137 modal composites unverified until wired into a screen](#2026-06-03--crew-137-modal-composites-unverified-until-wired-into-a-screen)
     - [2026-05-22 — `${APP_URL}` template literal in DrawerHeader docker pill (backend bug)](#2026-05-22--app_url-template-literal-in-drawerheader-docker-pill-backend-bug)
     - [2026-05-22 — Layer-1 RunMetrics widget loses its drawer home in the redesign — find it a new one](#2026-05-22--layer-1-runmetrics-widget-loses-its-drawer-home-in-the-redesign--find-it-a-new-one)
     - [2026-05-13 — TopNav BrandMark renders a different glyph than the Figma "crew" mark](#2026-05-13--topnav-brandmark-renders-a-different-glyph-than-the-figma-crew-mark)
@@ -297,6 +300,48 @@ Organization: Active is grouped by topic (not chronology) since the dominant acc
 **Open questions:** Does `fix-pr` resume into a worktree fresh enough that re-asserting `.mcp.json` is always safe? Should `browsing` skill re-injection ride along?
 
 ### Dashboard UI
+
+#### 2026-06-03 — Wire CREW-136 `Switch` into the Timeline live toggle
+
+**What:** CREW-136 added a shadcn `Switch` primitive to the dashboard but wired it to no caller. The Timeline's "Live" toggle is the intended consumer — today it's a bespoke `<button role="switch">` in `LiveModeToggle.tsx` with hand-rolled emerald styling + a CSS status dot, predating the Switch component. Replace it with the DS `Switch` so the live toggle stops hand-rolling its own switch UI.
+
+**Why noticed:** Verifying the Batch B PRs before merge. CREW-136's Switch landed (PR #305) with no live caller; the obvious home is the Timeline live toggle, which still rolls its own.
+
+**Anchors:** `packages/dashboard/src/components/Timeline/LiveModeToggle.tsx` (bespoke `role="switch"` button to replace); `packages/dashboard/src/components/ui/switch.tsx` (the CREW-136 Switch, now on main); `Timeline.tsx:349` (`<LiveModeToggle active={liveMode} onChange={onLiveModeChange} />`); CREW-136.
+
+**What's been considered:** The existing control carries a "Live" text label + status dot, not a bare switch. Decide whether to (a) swap the whole control for `<Switch>` + a "Live" label, matching the Figma form-switch, or (b) keep the labelled-pill affordance but build it on the Switch primitive. The emerald active styling is custom — reconcile against the DS Switch on-state colour.
+
+**Shape of work:** Small — one component swap in `LiveModeToggle.tsx` + its test, plus a visual-fidelity pass against the Figma Switch. Likely folds into one "Timeline toolbar polish" ticket with the sticky-overlap fix below.
+
+**Open questions:** Does the Figma DS define a labelled "Live" switch variant, or just the bare Switch? If bare, the "Live" label + dot composition stays a caller-side decision.
+
+#### 2026-06-03 — Sticky Timeline toolbar overlaps the minimap stripe + scrollbar
+
+**What:** When the Timeline toolbar was refactored to `sticky top-0` (so it pins while the event list scrolls), it began overlapping two full-height siblings: the `MinimapStripe` (right-edge section-nav stripe) and the scroll container's native scrollbar (gutter `stable`). Both run from y=0 of the scroll area, so their top region renders under the pinned toolbar instead of starting below it.
+
+**Why noticed:** Manual verification of the Batch B Timeline work before merge — the sticky toolbar visibly collides with the minimap stripe + scrollbar at the top of the drawer / agent-page timeline.
+
+**Anchors:** `Timeline.tsx:198-260` — outer `relative flex h-full` wraps the scroll `div` (`ref=scrollRef`, `overflow-y-auto`, `scrollbarGutter: 'stable'`, lines 201-202), the `sticky top-0 z-10` `TimelineToolbar` (lines 204-206), and the `MinimapStripe` sibling (lines 254-260); `packages/dashboard/src/components/Timeline/MinimapStripe.tsx` (`SCROLLBAR_GUTTER = 14`, positioning).
+
+**What's been considered:** Candidate fixes — (a) offset `MinimapStripe`'s top by the toolbar height so it starts below the pinned toolbar; (b) move the toolbar out of the scroll container (sibling above it) so the scrollbar + minimap span only the event list — changes the sticky semantics but is the cleanest structurally; (c) opaque toolbar background masking the overlap (partial — doesn't fix the native scrollbar). Leaning (b).
+
+**Shape of work:** Small-to-medium layout fix in `Timeline.tsx` + `MinimapStripe.tsx`; verify sticky behaviour still works and the minimap still aligns to sections. Pairs with the Switch-wiring followup above as "Timeline toolbar polish."
+
+**Open questions:** Should the toolbar stay inside the scroll container (sticky) or move above it (scroll area then covers only the list)? That decides whether the minimap/scrollbar need a top offset or naturally clear the toolbar.
+
+#### 2026-06-03 — CREW-137 modal composites unverified until wired into a screen
+
+**What:** CREW-137 added the modal-family composites (Modal, AlertModal, ModalSelectionRow, Stepper) but wired none into a live screen, so their visual fidelity could not be verified at merge — the PR shipped on component-build correctness alone. When the first real consumer lands (e.g. the New Run modal), verify each composite against its Figma reference and adjust the composite where it diverges.
+
+**Why noticed:** Merging Batch B (CREW-137). The modal composites have no caller site yet, so visual fidelity is unverifiable until one exists — flagged at merge time as deferred verification.
+
+**Anchors:** the CREW-137 composites in `packages/dashboard/src/components/` (Modal, AlertModal, ModalSelectionRow, Stepper) + their `.figma.tsx`; CREW-137; the deferred modal screens (New Run / Register / Edit / Delete) marked out-of-scope in Epic CREW-134. Related: the 2026-05-09 "3 remaining ad-hoc modal frames need DS Modal swap" followup.
+
+**What's been considered:** Visual fidelity here is deferred-by-construction (build-then-wire). The first wiring ticket (most likely the New Run modal) should bake in a `visual-fidelity-check` pass over the modal + any composite it uses, treating divergences as adjust-the-composite work rather than caller-only fixes.
+
+**Shape of work:** No standalone ticket — fold a "verify modal composites against Figma" acceptance criterion into whichever ticket first wires a modal into a screen.
+
+**Open questions:** Which screen wires the first modal — the New Run flow? That ticket owns the verification.
 
 #### 2026-05-22 — `${APP_URL}` template literal in DrawerHeader docker pill (backend bug)
 
