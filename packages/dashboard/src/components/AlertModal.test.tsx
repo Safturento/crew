@@ -39,13 +39,7 @@ describe('AlertModal', () => {
   it('fires onCancel when the cancel button is clicked', () => {
     const handler = vi.fn();
     render(
-      <AlertModal
-        title="X"
-        description="Y"
-        open
-        onOpenChange={() => {}}
-        onCancel={handler}
-      />,
+      <AlertModal title="X" description="Y" open onOpenChange={() => {}} onCancel={handler} />,
     );
     fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
     expect(handler).toHaveBeenCalled();

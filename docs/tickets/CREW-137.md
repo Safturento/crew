@@ -31,13 +31,13 @@ Each ships a `.tsx`, a `*.test.tsx`, and a `.figma.tsx` Code Connect mapping.
   API (`size="icon-sm"`, `hasIcon`). CREW-135 actually shipped `PillBase` with sizes
   `xs|sm|md|lg` and an `icon: ReactNode` slot. The Modal/AlertModal close + action
   buttons use the real contract: icon-only close = `<Button color="running"
-  intensity="ghost" size="sm" icon={<X />} aria-label="Close" />` (matches DrawerHeader).
+intensity="ghost" size="sm" icon={<X />} aria-label="Close" />` (matches DrawerHeader).
 - **Author `alert-dialog.tsx` by hand, mirroring `dialog.tsx`.** The repo uses the
   unified `radix-ui` package (`import { AlertDialog as AlertDialogPrimitive } from
-  'radix-ui'`), not per-primitive `@radix-ui/react-*`. shadcn's CLI output would import
+'radix-ui'`), not per-primitive `@radix-ui/react-*`. shadcn's CLI output would import
   the wrong package and can't reach `ui.shadcn.com` from the sandbox anyway.
 - **Stepper styling matches the snapshot** — active step = bright foreground text,
-  inactive = muted; `·` between number and label, ` › ` chevron between steps. The
+  inactive = muted; `·` between number and label, `›` chevron between steps. The
   plan's blue-pill active style does not match the Figma render.
 
 ## Notes

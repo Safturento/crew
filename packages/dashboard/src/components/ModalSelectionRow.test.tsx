@@ -7,7 +7,9 @@ import { ModalSelectionRow } from './ModalSelectionRow';
 
 describe('ModalSelectionRow', () => {
   it('renders primary + secondary + meta text', () => {
-    render(<ModalSelectionRow primary="kanban-api" secondary="~/code/kanban-api" meta="4 active" />);
+    render(
+      <ModalSelectionRow primary="kanban-api" secondary="~/code/kanban-api" meta="4 active" />,
+    );
     expect(screen.getByText('kanban-api')).toBeInTheDocument();
     expect(screen.getByText('~/code/kanban-api')).toBeInTheDocument();
     expect(screen.getByText('4 active')).toBeInTheDocument();

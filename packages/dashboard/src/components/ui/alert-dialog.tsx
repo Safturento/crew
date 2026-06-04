@@ -100,15 +100,11 @@ function AlertDialogDescription({
 
 // Action and Cancel stay unstyled: Crew composites (AlertModal) supply a `Button`
 // via `asChild`, so the trigger styling comes from the Button, not these wrappers.
-function AlertDialogAction({
-  ...props
-}: React.ComponentProps<typeof AlertDialogPrimitive.Action>) {
+function AlertDialogAction({ ...props }: React.ComponentProps<typeof AlertDialogPrimitive.Action>) {
   return <AlertDialogPrimitive.Action data-slot="alert-dialog-action" {...props} />;
 }
 
-function AlertDialogCancel({
-  ...props
-}: React.ComponentProps<typeof AlertDialogPrimitive.Cancel>) {
+function AlertDialogCancel({ ...props }: React.ComponentProps<typeof AlertDialogPrimitive.Cancel>) {
   return <AlertDialogPrimitive.Cancel data-slot="alert-dialog-cancel" {...props} />;
 }
 
