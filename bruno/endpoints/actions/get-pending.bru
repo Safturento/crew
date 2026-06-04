@@ -1,0 +1,34 @@
+meta {
+  name: GET /api/actions/pending
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/api/actions/pending?timeoutMs=5000
+}
+
+params:query {
+  timeoutMs: 5000
+}
+
+assert {
+  res.status: eq 200
+  res.body.id: isNumber
+  res.body.status: eq claimed
+}
+
+tests {
+  test("the long-poll claims the action enqueued by post-enqueue", () => {
+    expect(res.body.id).to.equal(bru.getVar("actionId"));
+    expect(res.body.status).to.equal("claimed");
+    expect(res.body.kind).to.equal("run");
+  });
+}
+
+docs {
+  The host runner's long-poll. Returns promptly here because post-enqueue
+  left a pending row; the daemon atomically claims the oldest one and flips
+  it `pending → claimed`. A null body (still 200) is the timeout outcome
+  when nothing is pending.
+}

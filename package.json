@@ -20,7 +20,7 @@
     "baseline:capture": "docker compose run --rm --no-deps daemon node --experimental-strip-types /app/scripts/baseline-metrics-capture.ts",
     "format": "prettier --write packages docs",
     "format:check": "prettier --check packages docs",
-    "bruno:smoke": "cd bruno && bru run --env \"$CREW_BRUNO_ENV\" endpoints/health/get.bru endpoints/projects/get-list.bru endpoints/projects/get-show.bru endpoints/agents/post-register-run.bru endpoints/agents/get-list.bru endpoints/agents/get-by-key.bru endpoints/agents/get-by-key-not-found.bru endpoints/agents/get-by-key-with-transcript.bru endpoints/agents/get-state-history.bru endpoints/agents/get-timeline.bru endpoints/agents/post-refresh-pr-status.bru endpoints/metrics/get-aggregate.bru flows/main-smoke.bru"
+    "bruno:smoke": "cd bruno && bru run --env \"$CREW_BRUNO_ENV\" endpoints/health/get.bru endpoints/projects/get-list.bru endpoints/projects/get-show.bru endpoints/agents/post-register-run.bru endpoints/agents/get-list.bru endpoints/agents/get-by-key.bru endpoints/agents/get-by-key-not-found.bru endpoints/agents/get-by-key-with-transcript.bru endpoints/agents/get-state-history.bru endpoints/agents/get-timeline.bru endpoints/agents/post-refresh-pr-status.bru endpoints/metrics/get-aggregate.bru endpoints/actions/post-enqueue.bru endpoints/actions/get-pending.bru endpoints/actions/post-result.bru flows/main-smoke.bru"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
