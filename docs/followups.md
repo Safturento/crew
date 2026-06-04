@@ -303,6 +303,8 @@ Organization: Active is grouped by topic (not chronology) since the dominant acc
 
 #### 2026-06-03 — Wire CREW-136 `Switch` into the Timeline live toggle
 
+**Ticket:** [CREW-212](https://safturento.atlassian.net/browse/CREW-212) — Timeline toolbar polish (under Tech debt epic [CREW-23](https://safturento.atlassian.net/browse/CREW-23)). Bundled with the sticky-toolbar overlap fix below.
+
 **What:** CREW-136 added a shadcn `Switch` primitive to the dashboard but wired it to no caller. The Timeline's "Live" toggle is the intended consumer — today it's a bespoke `<button role="switch">` in `LiveModeToggle.tsx` with hand-rolled emerald styling + a CSS status dot, predating the Switch component. Replace it with the DS `Switch` so the live toggle stops hand-rolling its own switch UI.
 
 **Why noticed:** Verifying the Batch B PRs before merge. CREW-136's Switch landed (PR #305) with no live caller; the obvious home is the Timeline live toggle, which still rolls its own.
@@ -316,6 +318,8 @@ Organization: Active is grouped by topic (not chronology) since the dominant acc
 **Open questions:** Does the Figma DS define a labelled "Live" switch variant, or just the bare Switch? If bare, the "Live" label + dot composition stays a caller-side decision.
 
 #### 2026-06-03 — Sticky Timeline toolbar overlaps the minimap stripe + scrollbar
+
+**Ticket:** [CREW-212](https://safturento.atlassian.net/browse/CREW-212) — Timeline toolbar polish (under Tech debt epic [CREW-23](https://safturento.atlassian.net/browse/CREW-23)). Bundled with the Switch-wiring followup above.
 
 **What:** When the Timeline toolbar was refactored to `sticky top-0` (so it pins while the event list scrolls), it began overlapping two full-height siblings: the `MinimapStripe` (right-edge section-nav stripe) and the scroll container's native scrollbar (gutter `stable`). Both run from y=0 of the scroll area, so their top region renders under the pinned toolbar instead of starting below it.
 
