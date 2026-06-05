@@ -201,6 +201,10 @@ const FinishStepsResponseSchema = z.object({
   ),
 });
 
+const RunnerLogsSchema = z.object({
+  lines: z.array(z.string()),
+});
+
 const StateHistoryResponseSchema = z.object({
   transitions: z.array(
     z.object({
@@ -344,5 +348,18 @@ export class HttpDaemonClient implements DaemonClient {
     const res = await fetch(`${this.baseUrl}/api/runner/status`);
     if (!res.ok) throw new Error(`GET /api/runner/status: ${res.status}`);
     return RunnerStatusSchema.parse(await res.json());
+  }
+
+  /**
+   * CREW-221: tail the host runner's log. Returns the trailing `tail` lines
+   * (daemon default when omitted), or `[]` when no runner log exists yet —
+   * the normal state on a worktree stack that runs no runner. Backs the
+   * log viewer opened from the runner health chip.
+   */
+  async getRunnerLogs(tail?: number): Promise<string[]> {
+    const qs = tail === undefined ? '' : `?tail=${tail}`;
+    const res = await fetch(`${this.baseUrl}/api/runner/logs${qs}`);
+    if (!res.ok) throw new Error(`GET /api/runner/logs: ${res.status}`);
+    return RunnerLogsSchema.parse(await res.json()).lines;
   }
 }

@@ -13,4 +13,5 @@ export interface DaemonClient {
   listAgents(): Promise<Agent[]>;
   enqueueAction(input: EnqueueAction): Promise<ActionRequest>;
   getRunnerStatus(): Promise<RunnerStatus>;
+  getRunnerLogs(tail?: number): Promise<string[]>;
 }
