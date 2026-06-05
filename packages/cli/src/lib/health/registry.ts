@@ -5,6 +5,7 @@ import { playwrightConfig } from './checks/playwright-config.js';
 import { brunoSkeleton } from './checks/bruno-skeleton.js';
 import { baselinePresent } from './checks/baseline-present.js';
 import { dockerSocket } from './checks/docker-socket.js';
+import { aptDeps } from './checks/apt-deps.js';
 // P2 (dispatch-gate migration) appends its checks here too.
 import { excludedCommands } from './checks/excluded-commands.js';
 import { appUrlResolves } from './checks/app-url-resolves.js';
@@ -17,6 +18,7 @@ const ALL: HealthCheck[] = [
   brunoSkeleton,
   baselinePresent,
   dockerSocket,
+  aptDeps,
   excludedCommands,
   appUrlResolves
 ];
