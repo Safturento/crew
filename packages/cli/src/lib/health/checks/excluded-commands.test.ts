@@ -142,6 +142,22 @@ describe('excluded-commands check', () => {
       expect(r.status).toBe('ok');
     });
 
+    it('writes a set detect() accepts across all feature types (read/write parity)', async () => {
+      // Locks the single-command-set invariant between requiredEntries (read) and
+      // writeSettingsJson's excludedCommandsFor (write): if either side drifts, the
+      // round-trip fix → detect would leave a residual fail.
+      const cfg = {
+        ...cfgWithBruno,
+        ...cfgWithAuthoredPlaywright,
+        docker: { canonical_worktree: 'main' },
+      } as ProjectConfig;
+
+      await excludedCommands.fix!({ config: cfg, worktree });
+
+      const r = await excludedCommands.detect({ config: cfg, worktree });
+      expect(r.status).toBe('ok');
+    });
+
     it('array-merges without clobbering existing keys, and is idempotent', async () => {
       await writeSettings({
         sandbox: { excludedCommands: ['existing*'], extraField: true },

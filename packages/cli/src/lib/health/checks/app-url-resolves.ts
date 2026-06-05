@@ -42,7 +42,8 @@ function urlsToProbe(config: ProjectConfig): UrlToProbe[] {
  *    → a fast, network-free `fail` pointing at `env.toml` (the addition over the
  *    old probe; useful to `crew doctor` and a clearer dispatch message);
  *  - a resolved URL that doesn't answer → the dispatch-critical reachability
- *    `fail` ("docker stack failed to come up"), preserved byte-for-byte.
+ *    `fail` ("docker stack failed to come up"), with the same remediation +
+ *    details the old probe produced (the rendered dispatch error is unchanged).
  *
  * No `fix()`: reachability is dispatch-runtime state, and unresolved env is
  * `crew init` / `crew env init` territory (surfaced by `env-materialized`).

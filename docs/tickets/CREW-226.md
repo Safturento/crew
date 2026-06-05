@@ -49,9 +49,14 @@ suites are the regression guard.
   real dispatch, ports/env are supplied so resolution always completes and the path is byte-identical
   to the old probe.
 - **The gate now runs _all_ project checks** (`config-valid`, `env-materialized`, `excluded-commands`,
-  `app-url-resolves`), per spec §3. `config-valid` and `env-materialized` are benign no-ops in real
-  dispatch (the config was already schema-loaded; env is materialized upstream), so dispatch outcomes
-  are unchanged — but "healthy" is now defined in exactly one place.
+  `app-url-resolves`), per spec §3, on both fresh `crew run` and `crew resume` (both flow through
+  `prepareAgentEnvironment`). `config-valid` and `env-materialized` are benign no-ops in real dispatch
+  (the config was already schema-loaded; `.env` is materialized upstream on `run` and persists in the
+  worktree on `resume`), so real dispatch outcomes are unchanged — but "healthy" is now defined in
+  exactly one place. One new-but-narrow path: `crew resume` on a worktree whose `.env` was deleted now
+  fails `env-materialized` fast (fixable, clear remediation) instead of dying obscurely downstream —
+  an improvement, not a regression. (`crew fix-pr` is unaffected: it uses the slim `runResumePreflight`,
+  not the full gate.)
 - **No separate `active` gate on `excluded-commands`.** Applicability lives in `requiredEntries()`
   (empty ⇒ `ok`). For crew (bruno enabled) the entry set is identical to the old
   `buildPreflightChecks` path; the only divergence is a hypothetical docker-only project, for which

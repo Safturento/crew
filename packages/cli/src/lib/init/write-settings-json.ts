@@ -13,10 +13,10 @@ interface SettingsShape {
 /**
  * The sandbox `excludedCommands` a project needs in `.claude/settings.json`,
  * derived from the opted-in features. Mirrors the rules in
- * `lib/preflight/verify-excluded-commands.ts` (the verified prefix-glob form
- * `command*` so flag/wrapper variants still bypass the sandbox). Kept local to
- * the scaffolder for now; the eventual single-source consolidation into
- * `lib/health` is CREW-226 (T3).
+ * `lib/health/checks/excluded-commands.ts`'s `requiredEntries` (the verified
+ * prefix-glob form `command*` so flag/wrapper variants still bypass the
+ * sandbox). That check's `fix()` calls this writer, so this is the single write
+ * source and the two intentionally share one command set (CREW-226).
  */
 function excludedCommandsFor(answers: InitAnswers): string[] {
   const out: string[] = [];
