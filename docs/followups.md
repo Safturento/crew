@@ -46,6 +46,7 @@ Organization: Active is grouped by topic (not chronology) since the dominant acc
     - [2026-04-28 — Dashboard New Run modal + projects route view](#2026-04-28--dashboard-new-run-modal--projects-route-view)
     - [2026-04-28 — `useAttention.clear()` snapshot semantic isn't directly tested](#2026-04-28--useattentionclear-snapshot-semantic-isnt-directly-tested)
   - [Daemon, CLI & Dispatch](#daemon-cli--dispatch)
+    - [2026-06-05 — `bruno-skeleton` fix() defaults the scaffolded port instead of deriving it from config](#2026-06-05--bruno-skeleton-fix-defaults-the-scaffolded-port-instead-of-deriving-it-from-config)
     - [2026-06-04 — `finish_steps` table accumulates across `crew finish` re-runs (no run scoping)](#2026-06-04--finish_steps-table-accumulates-across-crew-finish-re-runs-no-run-scoping)
     - [2026-06-04 — Daemon test suite flakes under full-parallel `test:run`](#2026-06-04--daemon-test-suite-flakes-under-full-parallel-testrun)
     - [2026-06-04 — Runner pidfile has no liveness identity (recycled-PID false positive)](#2026-06-04--runner-pidfile-has-no-liveness-identity-recycled-pid-false-positive)
@@ -717,6 +718,22 @@ The "synthetic Unregistered section" feels right — single render path, no extr
 **Shape of work:** Tiny cleanup. Add 2–3 RTL test cases. Bundle into the cva-cleanup ticket above or stand alone.
 
 ### Daemon, CLI & Dispatch
+
+#### 2026-06-05 — `bruno-skeleton` fix() defaults the scaffolded port instead of deriving it from config
+
+**What:** The `bruno-skeleton` health-check `fix()` (`packages/cli/src/lib/health/checks/bruno-skeleton.ts`) builds an `InitAnswers` from the loaded `ProjectConfig` but omits `ports`, so `scaffoldBruno` falls back to `DEFAULT_DAEMON_PORT` (7773) when it writes the `environments/local.bru` `baseUrl`. A project whose daemon runs on a different port gets a scaffolded bruno environment pointing at the wrong port. The config does carry `bruno_smoke.base_url`, but that's typically a `${DAEMON_URL}` template resolved per-worktree from `env.toml` — the port isn't statically knowable from the config alone, which is why the scaffolder takes an explicit `ports.daemon` instead.
+
+**Why noticed:** Code review of CREW-227 (T4 health checks). Flagged Minor — the scaffold is a starting skeleton the user edits, and the doctor command that invokes `fix()` is a later ticket (CREW-228), so nothing consumes this path yet.
+
+**Anchors:**
+
+- `packages/cli/src/lib/health/checks/bruno-skeleton.ts` — `fix()` omits `ports` from `InitAnswers`
+- `packages/cli/src/lib/init/scaffold-bruno.ts` — `DEFAULT_DAEMON_PORT = 7773` fallback; `ENV_CONTENTS(port)` writes `baseUrl`
+- `packages/cli/src/lib/init/types.ts` — `InitAnswers.ports?: { daemon; dashboard }`
+
+**What's been considered:** Parsing the port out of `bruno_smoke.base_url` works only when it's a literal; for the common `${DAEMON_URL}` template it would need the materialized env (the same `envVars` the `env-materialized` check already builds). Cleanest fix is probably to thread the resolved daemon port through the `HealthContext` (or have `fix()` read `ctx.envVars`) once CREW-228 wires the doctor command and decides how the context carries materialized env.
+
+**Open questions:** Does the doctor `HealthContext` already carry a resolved daemon port / `DAEMON_URL` by the time `fix()` runs, or does the bruno fix need to materialize env itself?
 
 #### 2026-06-04 — `finish_steps` table accumulates across `crew finish` re-runs (no run scoping)
 

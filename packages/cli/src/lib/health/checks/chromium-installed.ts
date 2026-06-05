@@ -18,20 +18,23 @@ export interface ChromiumInstalledDeps {
 }
 
 /** Locate Playwright's browsers cache and look for a chromium build. */
-function isChromiumInstalledDefault(): Promise<boolean> {
+async function isChromiumInstalledDefault(): Promise<boolean> {
   const base =
     process.env.PLAYWRIGHT_BROWSERS_PATH && process.env.PLAYWRIGHT_BROWSERS_PATH !== '0'
       ? process.env.PLAYWRIGHT_BROWSERS_PATH
       : join(homedir(), '.cache', 'ms-playwright');
   try {
-    if (!existsSync(base)) return Promise.resolve(false);
-    const found = readdirSync(base).some((entry) => entry.startsWith('chromium'));
-    return Promise.resolve(found);
+    if (!existsSync(base)) return false;
+    return readdirSync(base).some((entry) => entry.startsWith('chromium'));
   } catch {
-    return Promise.resolve(false);
+    return false;
   }
 }
 
+// Deliberately not reused from `lib/mcp-config/install-browsers.ts`: that helper
+// routes output to a run-keyed log file (`playwrightLogPathFor(key)`), and a
+// doctor/health context has no run key. We also want `stdio: 'inherit'` so the
+// confirmed install streams to the user's terminal in an interactive session.
 async function installChromiumDefault(ctx: HealthContext): Promise<void> {
   const result = await execa('npx', ['playwright', 'install', 'chromium'], {
     cwd: ctx.worktree,
