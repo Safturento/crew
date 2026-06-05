@@ -12,7 +12,13 @@ import { StateIcon } from './ui/state-icon.js';
 import { formatDuration } from '@/format/duration';
 import { formatTokens } from '@/format/tokens';
 
-export type QuickActionKind = 'resume' | 'finish' | 'view-pr' | 'provide-input' | 'inspect';
+export type QuickActionKind =
+  | 'resume'
+  | 'finish'
+  | 'fix-pr'
+  | 'view-pr'
+  | 'provide-input'
+  | 'inspect';
 
 interface AgentRowProps {
   agent: Agent;
@@ -192,6 +198,19 @@ function QuickActions({
             <a href={agent.prUrl ?? '#'} target="_blank" rel="noreferrer" onClick={stop}>
               View PR
             </a>
+          </Button>
+          {/* CREW-219: Fix PR opens the comment modal that enqueues a fix_pr
+              action. Like Finish it drains through the host runner, so it's
+              gated on runner connectivity. */}
+          <Button
+            color="running"
+            intensity="ghost"
+            size="sm"
+            className={gateClass}
+            onClick={fire('fix-pr')}
+            {...gate}
+          >
+            Fix PR
           </Button>
           <Button
             color="running"

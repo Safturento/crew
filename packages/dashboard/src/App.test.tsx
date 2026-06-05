@@ -1,5 +1,5 @@
 import { QueryClient } from '@tanstack/react-query';
-import { screen, waitFor } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -228,6 +228,47 @@ describe('App — agent actions (CREW-217)', () => {
       kind: 'finish',
       project: 'kanban-api',
       ticketKey: 'KAN-50',
+    });
+  });
+
+  // CREW-219: Fix PR opens a comment modal before enqueueing, so the action
+  // carries the typed comment rather than firing on click like Resume/Finish.
+  it('opens the Fix PR modal and enqueues a fix_pr action with the comment', async () => {
+    const prOpenAgents: Agent[] = [
+      {
+        key: 'KAN-60',
+        projectName: 'kanban-api',
+        ticketTitle: 'PR open work',
+        state: 'pr_open',
+        startedAt: '2026-04-26T13:00:00Z',
+        tokens: 10,
+        prUrl: 'https://example.com/pr/60',
+      },
+    ];
+    vi.spyOn(defaultClient, 'getRunnerStatus').mockResolvedValue({ online: true, lastSeen: 1 });
+    const enqueue = vi.spyOn(defaultClient, 'enqueueAction').mockResolvedValue({
+      ...SAMPLE_ACTION,
+      kind: 'fix_pr',
+      ticketKey: 'KAN-60',
+      payload: { kind: 'fix_pr', comment: 'please rebase' },
+    });
+    const user = userEvent.setup();
+
+    renderWithProviders(<App client={new MockDaemonClient({ projects, agents: prOpenAgents })} />);
+
+    const fixPr = await screen.findByRole('button', { name: 'Fix PR' });
+    await waitFor(() => expect(fixPr).toBeEnabled());
+    await user.click(fixPr);
+
+    const dialog = await screen.findByRole('dialog');
+    await user.type(within(dialog).getByRole('textbox', { name: /comment/i }), 'please rebase');
+    await user.click(within(dialog).getByRole('button', { name: 'Fix PR' }));
+
+    expect(enqueue).toHaveBeenCalledWith({
+      kind: 'fix_pr',
+      project: 'kanban-api',
+      ticketKey: 'KAN-60',
+      comment: 'please rebase',
     });
   });
 

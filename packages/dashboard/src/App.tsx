@@ -8,6 +8,7 @@ import { useFaviconBadge } from './attention/useFaviconBadge.js';
 import { AgentsList } from './components/AgentsList.js';
 import type { QuickActionKind } from './components/AgentRow.js';
 import { ErrorFallback } from './components/ErrorFallback.js';
+import { FixPrModal } from './components/FixPrModal.js';
 import { NewRunModal } from './components/NewRunModal.js';
 import { TopNav } from './components/TopNav.js';
 import { ViewportFrame } from './components/ViewportFrame.js';
@@ -68,12 +69,20 @@ function AppContent({ client }: { client: DaemonClient }) {
   // enqueue mutation; NewRunModal is presentational.
   const [newRunOpen, setNewRunOpen] = useState(false);
 
+  // CREW-219: Fix PR can't fire on click — it needs a comment first. The
+  // QuickAction opens this modal; submitting it enqueues the fix_pr action
+  // carrying the comment. Holding the target agent keeps the modal a pure
+  // presentational child.
+  const [fixPrAgent, setFixPrAgent] = useState<Agent | null>(null);
+
   const onAgentAction = useCallback(
     (kind: QuickActionKind, agent: Agent) => {
       if (kind === 'resume') {
         enqueue.mutate({ kind: 'run', project: agent.projectName, ticketKey: agent.key });
       } else if (kind === 'finish') {
         enqueue.mutate({ kind: 'finish', project: agent.projectName, ticketKey: agent.key });
+      } else if (kind === 'fix-pr') {
+        setFixPrAgent(agent);
       }
     },
     [enqueue],
@@ -119,6 +128,23 @@ function AppContent({ client }: { client: DaemonClient }) {
         onConfirm={({ project, ticketKey }) => enqueue.mutate({ kind: 'run', project, ticketKey })}
       />
       {route.kind === 'agent-drawer' && <AgentDrawer agentKey={route.key} />}
+      {fixPrAgent && (
+        <FixPrModal
+          agentKey={fixPrAgent.key}
+          open
+          onOpenChange={(open) => {
+            if (!open) setFixPrAgent(null);
+          }}
+          onSubmit={(comment) =>
+            enqueue.mutate({
+              kind: 'fix_pr',
+              project: fixPrAgent.projectName,
+              ticketKey: fixPrAgent.key,
+              comment,
+            })
+          }
+        />
+      )}
     </>
   );
 }

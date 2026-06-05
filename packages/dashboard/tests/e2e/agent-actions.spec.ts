@@ -49,6 +49,36 @@ test.describe('runner-aware agent actions (CREW-217)', () => {
     await expect(finish).toBeDisabled();
     await expect(finish).toHaveAttribute('title', /merged/i);
   });
+
+  // CREW-219: Fix PR can't fire on click — it opens a comment modal first, and
+  // the enqueued fix_pr action carries the typed comment.
+  test('Fix PR opens the comment modal and enqueues fix_pr with the comment', async ({ page }) => {
+    // Like Finish, the row's Fix PR degrades to disabled with no runner.
+    const rowFixPr = page.getByRole('button', { name: 'Fix PR' }).first();
+    await expect(rowFixPr).toBeDisabled();
+
+    await page.evaluate(() => {
+      (
+        window as unknown as { __crewTestInjectEvent: (n: string, d: unknown) => void }
+      ).__crewTestInjectEvent('runner.status_changed', { online: true, lastSeen: Date.now() });
+    });
+    await expect(rowFixPr).toBeEnabled();
+    await rowFixPr.click();
+
+    // The modal opens; submit stays disabled until a non-empty comment exists.
+    const dialog = page.getByRole('dialog');
+    await expect(dialog).toBeVisible();
+    const submit = dialog.getByRole('button', { name: 'Fix PR' });
+    await expect(submit).toBeDisabled();
+
+    await dialog.getByRole('textbox', { name: 'Comment' }).fill('please rebase on main');
+    await expect(submit).toBeEnabled();
+    await submit.click();
+
+    // Modal closes and the enqueue success toast confirms the round-trip.
+    await expect(dialog).toBeHidden();
+    await expect(page.getByText('Fix PR queued')).toBeVisible();
+  });
 });
 
 test.describe('finish-step checklist (CREW-220)', () => {
