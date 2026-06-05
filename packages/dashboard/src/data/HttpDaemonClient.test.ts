@@ -409,7 +409,11 @@ describe('HttpDaemonClient.enqueueAction (CREW-217)', () => {
   it('carries a fix_pr comment through to the body', async () => {
     const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
       new Response(
-        JSON.stringify({ ...SAMPLE_ACTION, kind: 'fix_pr', payload: { kind: 'fix_pr', comment: 'fix it' } }),
+        JSON.stringify({
+          ...SAMPLE_ACTION,
+          kind: 'fix_pr',
+          payload: { kind: 'fix_pr', comment: 'fix it' },
+        }),
         { status: 201, headers: { 'content-type': 'application/json' } },
       ),
     );
@@ -424,7 +428,12 @@ describe('HttpDaemonClient.enqueueAction (CREW-217)', () => {
     expect(fetchSpy).toHaveBeenCalledWith(
       '/api/actions',
       expect.objectContaining({
-        body: JSON.stringify({ kind: 'fix_pr', project: 'crew', ticketKey: 'CREW-1', comment: 'fix it' }),
+        body: JSON.stringify({
+          kind: 'fix_pr',
+          project: 'crew',
+          ticketKey: 'CREW-1',
+          comment: 'fix it',
+        }),
       }),
     );
   });

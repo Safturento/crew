@@ -49,7 +49,9 @@ beforeEach(() => {
       bucket!.delete(fn);
     };
   });
-  qc = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
+  qc = new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  });
 });
 
 afterEach(() => {
@@ -108,9 +110,7 @@ describe('useActionToasts', () => {
 
     fire('action.changed', { id: 9, kind: 'run', key: 'CREW-7', status: 'failed' });
 
-    await waitFor(() =>
-      expect(toast.error).toHaveBeenCalledWith(expect.stringMatching(/CREW-7/)),
-    );
+    await waitFor(() => expect(toast.error).toHaveBeenCalledWith(expect.stringMatching(/CREW-7/)));
   });
 
   it('toasts success when an action.changed reports launched', async () => {

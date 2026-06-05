@@ -42,7 +42,7 @@ epic (CREW-208). The base layer the action UIs (T6–T9) build on:
 - **Local zod schemas for action/runner responses.** Mirrors the existing
   `HttpDaemonClient` convention of inlining response schemas rather than pulling
   runtime values from the `crew-shared` barrel (Vite-bundling concern). Action
-  *types* (`ActionRequest`, `EnqueueAction`, `ActionKind`) come in as type-only
+  _types_ (`ActionRequest`, `EnqueueAction`, `ActionKind`) come in as type-only
   imports, which are already used elsewhere in the dashboard.
 - **`useRunnerStatus` stores state in TanStack Query.** SSE `runner.status_changed`
   patches the `['runner-status']` cache; a 30s poll is the belt-and-suspenders

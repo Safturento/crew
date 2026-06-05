@@ -202,13 +202,7 @@ function QuickActions({
       // signal "PR done." Finish is the meaningful next action.
       return (
         <QaGroup>
-          <Button
-            color="running"
-            intensity="mid"
-            size="sm"
-            icon={<GitMerge aria-hidden />}
-            asChild
-          >
+          <Button color="running" intensity="mid" size="sm" icon={<GitMerge aria-hidden />} asChild>
             <a href={agent.prUrl ?? '#'} target="_blank" rel="noreferrer" onClick={stop}>
               View merged PR
             </a>
