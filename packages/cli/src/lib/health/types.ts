@@ -1,4 +1,5 @@
 import type { ProjectConfig } from 'crew-shared';
+import type { DockerPorts } from '../mcp-config/index.js';
 
 export type CheckStatus = 'ok' | 'warn' | 'fail';
 
@@ -15,6 +16,12 @@ export interface HealthContext {
   worktree: string;
   /** Materialized env vars from env.toml (when the project uses one). */
   envVars?: Record<string, string>;
+  /**
+   * Resolved docker port map. Dispatch-only (supplied by the fresh-mode gate so
+   * the app-url check can resolve `{httpsPort}`-style templates); absent under
+   * `crew doctor`, where templates resolve from `envVars` alone.
+   */
+  dockerPorts?: DockerPorts;
 }
 
 export interface HealthCheck {
