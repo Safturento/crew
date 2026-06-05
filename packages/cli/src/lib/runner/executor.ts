@@ -5,11 +5,18 @@ export type ExecutionResult = { status: 'launched' } | { status: 'failed'; error
 
 export interface ExecutorDeps {
   /**
-   * Spawn a command in `cwd`. Resolves on a clean spawn+exit, rejects on
-   * failure — injected so tests can drive the verb mapping without a shell.
-   * In production this is an `execa` wrapper.
+   * Run a short command in `cwd` to completion. Resolves on a clean exit,
+   * rejects on failure. Used for `gh pr comment`, which must finish (the
+   * comment must land on the PR) before the agent verb launches.
    */
   exec: (file: string, args: string[], opts: { cwd: string }) => Promise<unknown>;
+  /**
+   * Launch a long-running agent verb (`crew run`/`fix-pr`/`finish`) in `cwd`,
+   * detached. Resolves once the process has spawned — "launched" means it
+   * started, not that the (minutes-long) agent run finished. Rejects on spawn
+   * failure (e.g. `crew` not on PATH).
+   */
+  launch: (file: string, args: string[], opts: { cwd: string }) => Promise<unknown>;
   /**
    * Resolve a project slug to its on-disk repo path. Throws when the project
    * has no registered config — the runner reports that as a `failed` launch
@@ -45,16 +52,16 @@ export async function executeAction(
   try {
     switch (action.kind) {
       case 'run':
-        await deps.exec('crew', ['run', action.ticketKey], { cwd });
+        await deps.launch('crew', ['run', action.ticketKey], { cwd });
         break;
       case 'fix_pr': {
         const comment = action.payload.kind === 'fix_pr' ? action.payload.comment : '';
         await deps.exec('gh', ['pr', 'comment', action.ticketKey, '--body', comment], { cwd });
-        await deps.exec('crew', ['fix-pr', action.ticketKey, '--from-pr'], { cwd });
+        await deps.launch('crew', ['fix-pr', action.ticketKey, '--from-pr'], { cwd });
         break;
       }
       case 'finish':
-        await deps.exec('crew', ['finish', action.ticketKey], { cwd });
+        await deps.launch('crew', ['finish', action.ticketKey], { cwd });
         break;
       default:
         return {
