@@ -15,6 +15,11 @@ export interface InitAnswers {
   defaultBranch?: string;
   jira: { projectKey: string; site: string };
   github: { repo: string };
+  /**
+   * Orchestration ports seeded into `env.toml`. Defaults to
+   * `{ daemon: 7773, dashboard: 5173 }` when omitted.
+   */
+  ports?: { daemon: number; dashboard: number };
   /** Present when the project runs a Docker stack. */
   docker?: { canonicalWorktree: string };
   /** Sandbox allow-list for crew dispatches. */
