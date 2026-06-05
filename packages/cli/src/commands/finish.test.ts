@@ -34,6 +34,7 @@ const mockedUnlink = vi.mocked(unlink);
 interface DaemonClientStub {
   registerRun: ReturnType<typeof vi.fn>;
   completeRun: ReturnType<typeof vi.fn>;
+  reportFinishStep: ReturnType<typeof vi.fn>;
 }
 
 function makeDaemonClient(
@@ -64,6 +65,7 @@ function makeDaemonClient(
     baseUrl: 'http://localhost:7773',
     registerRun: vi.fn().mockResolvedValue(registerResult),
     completeRun: vi.fn().mockResolvedValue(completeResult),
+    reportFinishStep: vi.fn().mockResolvedValue({ ok: true }),
   };
 }
 
@@ -608,5 +610,112 @@ describe('runFinish daemon round-trips', () => {
     // No runId to complete — completeRun must be skipped to avoid a stray
     // 4xx against the daemon when it comes back up.
     expect(daemonClient.completeRun).not.toHaveBeenCalled();
+  });
+});
+
+describe('runFinish finish-step emission', () => {
+  interface ReportedStep {
+    index: number;
+    label: string;
+    status: 'ok' | 'skip' | 'error';
+    detail?: string;
+  }
+
+  function reportedSteps(client: DaemonClientStub): ReportedStep[] {
+    return client.reportFinishStep.mock.calls.map((call) => {
+      const [, payload] = call as [string, ReportedStep & { ts: number }];
+      return { index: payload.index, label: payload.label, status: payload.status, detail: payload.detail };
+    });
+  }
+
+  it('reports each cleanup step as ok with monotonic indices on the happy path', async () => {
+    mockHappyPathExeca();
+    // title-fetch getIssue + transition-check getIssue (already Done → jira skip).
+    fetchMock.mockResolvedValueOnce(
+      ok({ key: 'KAN-23', fields: { summary: 'Add board archival endpoint' } }),
+    );
+    fetchMock.mockResolvedValueOnce(ok({ key: 'KAN-23', fields: { status: { name: 'Done' } } }));
+    mockedUnlink.mockResolvedValue(undefined);
+
+    const deps = makeDeps();
+    const result = await runFinish('KAN-23', deps);
+    expect(result.ok).toBe(true);
+
+    const steps = reportedSteps(deps.daemonClient);
+    // Every step targets the agent key.
+    for (const call of deps.daemonClient.reportFinishStep.mock.calls) {
+      expect(call[0]).toBe('KAN-23');
+    }
+    // Indices are a contiguous 0..n-1 sequence in emission order.
+    expect(steps.map((s) => s.index)).toEqual(steps.map((_, i) => i));
+
+    const byLabel = (re: RegExp) => steps.find((s) => re.test(s.label));
+    expect(byLabel(/^docker compose down -v$/)?.status).toBe('ok');
+    expect(byLabel(/^git worktree remove /)?.status).toBe('ok');
+    expect(byLabel(/^git branch -D KAN-23$/)?.status).toBe('ok');
+    expect(byLabel(/^git push origin --delete KAN-23$/)?.status).toBe('ok');
+    expect(byLabel(/^git fetch --prune origin$/)?.status).toBe('ok');
+  });
+
+  it('reports skipped steps as skip when the worktree is not registered', async () => {
+    mockHappyPathExeca({ worktreeRegistered: false });
+    fetchMock.mockResolvedValueOnce(
+      ok({ key: 'KAN-23', fields: { summary: 'Add board archival endpoint' } }),
+    );
+    fetchMock.mockResolvedValueOnce(ok({ key: 'KAN-23', fields: { status: { name: 'Done' } } }));
+    mockedUnlink.mockResolvedValue(undefined);
+
+    const deps = makeDeps();
+    const result = await runFinish('KAN-23', deps);
+    expect(result.ok).toBe(true);
+
+    const steps = reportedSteps(deps.daemonClient);
+    const skips = steps.filter((s) => s.status === 'skip').map((s) => s.label);
+    expect(skips.some((l) => /docker compose down -v/.test(l))).toBe(true);
+    expect(skips.some((l) => /git worktree remove/.test(l))).toBe(true);
+  });
+
+  it('reports a failing step as error carrying the failure detail', async () => {
+    // worktree not registered → skips the worktree teardown; branch -D fails.
+    mockedExeca.mockResolvedValueOnce({
+      stdout: JSON.stringify([{ number: 42, state: 'MERGED' }]),
+    } as never); // gh pr list
+    mockedExeca.mockResolvedValueOnce({
+      stdout: `worktree /home/u/Repos/Recipes-App\nHEAD abc\nbranch refs/heads/main\n`,
+    } as never); // git worktree list (not registered)
+    mockedExeca.mockRejectedValueOnce(new Error('branch not found')); // git branch -D
+    mockedExeca.mockResolvedValueOnce({ stdout: '' } as never); // git push origin --delete
+    mockedExeca.mockResolvedValueOnce({ stdout: '' } as never); // git fetch --prune
+    fetchMock.mockResolvedValueOnce(
+      ok({ key: 'KAN-23', fields: { summary: 'Add board archival endpoint' } }),
+    );
+    fetchMock.mockResolvedValueOnce(ok({ key: 'KAN-23', fields: { status: { name: 'Done' } } }));
+    mockedUnlink.mockResolvedValue(undefined);
+
+    const deps = makeDeps();
+    const result = await runFinish('KAN-23', deps);
+    expect(result.ok).toBe(true);
+
+    const steps = reportedSteps(deps.daemonClient);
+    const branchStep = steps.find((s) => /git branch -D KAN-23/.test(s.label));
+    expect(branchStep?.status).toBe('error');
+    expect(branchStep?.detail).toContain('branch not found');
+  });
+
+  it('does not report finish steps when the daemon is unreachable', async () => {
+    mockHappyPathExeca();
+    fetchMock.mockResolvedValueOnce(
+      ok({ key: 'KAN-23', fields: { summary: 'Add board archival endpoint' } }),
+    );
+    fetchMock.mockResolvedValueOnce(ok({ key: 'KAN-23', fields: { status: { name: 'Done' } } }));
+    mockedUnlink.mockResolvedValue(undefined);
+
+    const daemonClient = makeDaemonClient({
+      registerResult: { ok: false, reason: 'connect_error' },
+    });
+    const deps = makeDeps({ daemonClient });
+    const result = await runFinish('KAN-23', deps);
+    expect(result.ok).toBe(true);
+    expect(daemonClient.reportFinishStep).not.toHaveBeenCalled();
   });
 });

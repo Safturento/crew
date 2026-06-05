@@ -1,5 +1,5 @@
 import pc from 'picocolors';
-import type { ActionRequest, ActionStatus } from 'crew-shared';
+import type { ActionRequest, ActionStatus, FinishStepInput } from 'crew-shared';
 
 export type RunCommand = 'run' | 'fix-pr' | 'finish';
 
@@ -188,6 +188,37 @@ export class CrewDaemonClient {
       return { ok: true };
     } catch (err) {
       this.warn(`reportActionResult: ${(err as Error).message}`);
+      return { ok: false, reason: 'connect_error' };
+    }
+  }
+
+  /**
+   * Report one `crew finish` step result to the daemon (201 → the stored
+   * step). Best-effort like the other methods: a downed daemon returns
+   * `{ ok: false, reason }` rather than throwing, so finish's local cleanup
+   * is never broken by a missing daemon. The agent `key` is the route param;
+   * `input` is the `finishStepSchema` body (index/label/status/detail?/ts).
+   */
+  async reportFinishStep(
+    key: string,
+    input: FinishStepInput,
+  ): Promise<DaemonResult<{ ok: true }>> {
+    try {
+      const res = await fetch(
+        `${this.baseUrl}/api/agents/${encodeURIComponent(key)}/finish-step`,
+        {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify(input),
+        },
+      );
+      if (!res.ok) {
+        this.warn(`reportFinishStep: HTTP ${res.status}`);
+        return { ok: false, reason: `http_${res.status}` };
+      }
+      return { ok: true };
+    } catch (err) {
+      this.warn(`reportFinishStep: ${(err as Error).message}`);
       return { ok: false, reason: 'connect_error' };
     }
   }

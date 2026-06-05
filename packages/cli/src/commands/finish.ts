@@ -4,6 +4,7 @@ import { randomUUID } from 'node:crypto';
 import { readdir, stat, unlink } from 'node:fs/promises';
 import { basename, dirname, join, resolve, sep } from 'node:path';
 import pc from 'picocolors';
+import type { FinishStepStatus } from 'crew-shared';
 import {
   type CrewDaemonClient,
   crewDaemonClientFromEnv,
@@ -120,17 +121,54 @@ export async function pruneSandboxStubs(
   }
 }
 
+/**
+ * Reports one finish step (ok/skip/error) to the daemon so the dashboard
+ * drawer can render a live checklist (CREW-220). The label is the same
+ * human string echoed to the terminal; `detail` carries the error message
+ * (or skip reason). Best-effort — implementations may no-op when the daemon
+ * is unreachable.
+ */
+type StepReporter = (label: string, status: FinishStepStatus, detail?: string) => Promise<void>;
+
+/**
+ * Builds a reporter bound to one agent key + a monotonic step index, so the
+ * stored checklist preserves emission order. Returns a no-op when there is
+ * no daemon run to attach to (registration failed / daemon down) — avoids a
+ * per-step round-trip and warning storm against an unreachable daemon.
+ */
+function makeStepReporter(
+  key: string,
+  daemonClient: CrewDaemonClient,
+  enabled: boolean,
+): StepReporter {
+  if (!enabled) return async () => {};
+  let index = 0;
+  return async (label, status, detail) => {
+    await daemonClient.reportFinishStep(key, {
+      index: index++,
+      label,
+      status,
+      detail,
+      ts: Date.now(),
+    });
+  };
+}
+
 async function step(
   label: string,
   fn: () => Promise<void>,
   log: (msg: string) => void,
   warn: (msg: string) => void,
+  report: StepReporter,
 ): Promise<void> {
   try {
     await fn();
     log(label);
+    await report(label, 'ok');
   } catch (err) {
-    warn(`${label}: ${(err as Error).message}`);
+    const detail = (err as Error).message;
+    warn(`${label}: ${detail}`);
+    await report(label, 'error', detail);
   }
 }
 
@@ -140,7 +178,9 @@ async function transitionJira(
   secrets: { email: string; token: string },
   log: (msg: string) => void,
   warn: (msg: string) => void,
+  report: StepReporter,
 ): Promise<void> {
+  const label = `jira ${key} → Done`;
   const jira = new JiraClient({
     site: config.jira.site,
     email: secrets.email,
@@ -150,18 +190,23 @@ async function transitionJira(
     const issue = await jira.getIssue(key);
     if (issue.fields.status.name === 'Done') {
       log(`jira ${key} already Done`);
+      await report(label, 'skip', 'already Done');
       return;
     }
     const transitions = await jira.getTransitions(key);
     const done = transitions.find((t) => t.to.name === 'Done' || t.name === 'Done');
     if (!done) {
       warn(`jira transition to Done: no transition with target "Done" found for ${key}`);
+      await report(label, 'error', `no transition with target "Done" found for ${key}`);
       return;
     }
     await jira.transition(key, done.id);
     log(`jira ${key} → Done`);
+    await report(label, 'ok');
   } catch (err) {
-    warn(`jira transition: ${(err as Error).message}`);
+    const detail = (err as Error).message;
+    warn(`jira transition: ${detail}`);
+    await report(label, 'error', detail);
   }
 }
 
@@ -169,16 +214,22 @@ async function unlinkIfExists(
   path: string,
   log: (msg: string) => void,
   warn: (msg: string) => void,
+  report: StepReporter,
 ): Promise<void> {
+  const label = `rm ${path}`;
   try {
     await unlink(path);
-    log(`rm ${path}`);
+    log(label);
+    await report(label, 'ok');
   } catch (err) {
     const code = (err as NodeJS.ErrnoException).code;
     if (code === 'ENOENT') {
       warn(`rm ${path}: skipped (does not exist)`);
+      await report(label, 'skip', 'does not exist');
     } else {
-      warn(`rm ${path}: ${(err as Error).message}`);
+      const detail = (err as Error).message;
+      warn(`rm ${path}: ${detail}`);
+      await report(label, 'error', detail);
     }
   }
 }
@@ -248,6 +299,9 @@ export async function runFinish(key: string, deps: FinishDeps): Promise<FinishRe
     startedAt,
   });
   const runId = registration.ok ? registration.run.id : null;
+  // Each step() / skip path reports its outcome so the dashboard drawer can
+  // render a live checklist (CREW-220). No-op when no daemon run is attached.
+  const report = makeStepReporter(key, daemonClient, runId !== null);
 
   let exitCode = 0;
   try {
@@ -259,6 +313,7 @@ export async function runFinish(key: string, deps: FinishDeps): Promise<FinishRe
         },
         log,
         warn,
+        report,
       );
       await step(
         `git worktree remove ${worktreePath}`,
@@ -267,10 +322,17 @@ export async function runFinish(key: string, deps: FinishDeps): Promise<FinishRe
         },
         log,
         warn,
+        report,
       );
     } else {
       warn(`docker compose down -v: skipped (worktree ${worktreePath} not registered)`);
+      await report('docker compose down -v', 'skip', `worktree ${worktreePath} not registered`);
       warn(`git worktree remove: skipped (${worktreePath} not registered)`);
+      await report(
+        `git worktree remove ${worktreePath}`,
+        'skip',
+        `${worktreePath} not registered`,
+      );
     }
 
     await step(
@@ -280,6 +342,7 @@ export async function runFinish(key: string, deps: FinishDeps): Promise<FinishRe
       },
       log,
       warn,
+      report,
     );
 
     await step(
@@ -289,6 +352,7 @@ export async function runFinish(key: string, deps: FinishDeps): Promise<FinishRe
       },
       log,
       warn,
+      report,
     );
 
     await step(
@@ -298,18 +362,24 @@ export async function runFinish(key: string, deps: FinishDeps): Promise<FinishRe
       },
       log,
       warn,
+      report,
     );
 
     if (jiraSecrets) {
-      await transitionJira(key, config, jiraSecrets, log, warn);
+      await transitionJira(key, config, jiraSecrets, log, warn, report);
     } else {
       warn(
         'jira transition to Done: skipped (CREW_JIRA_EMAIL / CREW_JIRA_API_TOKEN not set). Transition manually.',
       );
+      await report(
+        `jira ${key} → Done`,
+        'skip',
+        'CREW_JIRA_EMAIL / CREW_JIRA_API_TOKEN not set',
+      );
     }
 
-    await unlinkIfExists(`/tmp/crew-run-${key}.log`, log, warn);
-    await unlinkIfExists(`/tmp/crew-fix-pr-${key}.log`, log, warn);
+    await unlinkIfExists(`/tmp/crew-run-${key}.log`, log, warn, report);
+    await unlinkIfExists(`/tmp/crew-fix-pr-${key}.log`, log, warn, report);
   } catch (err) {
     exitCode = 1;
     if (runId !== null) {
