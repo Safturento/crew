@@ -1,6 +1,6 @@
 ---
 description: Patterns and rules for the crew-cli package
-last_updated: 2026-05-13
+last_updated: 2026-06-05
 ---
 
 # crew-cli
@@ -10,7 +10,7 @@ Thin command-line wrapper. Subcommands parse args, call `shared/`, render output
 ## Rules specific to this package
 
 - Each subcommand in `src/commands/<name>.ts` is a thin wrapper. Business logic lives in `src/lib/` or `packages/shared/`.
-- Lib subdirs (`run/`, `runner/`, `prompts/`, `skills/`, `preflight/`, `figma-snapshot/`, `bruno-smoke/`, `db-clone/`, `jira/`, `github/`, `mcp-config/`, `git/`, `normalize-line-endings/`) each own one concern. Don't cross-import between sibling lib subdirs without explicit reason. (`runner/` is the host action-queue consumer — see `.agents/architecture.md`.)
+- Lib subdirs (`run/`, `runner/`, `prompts/`, `skills/`, `preflight/`, `health/`, `figma-snapshot/`, `bruno-smoke/`, `db-clone/`, `jira/`, `github/`, `mcp-config/`, `git/`, `normalize-line-endings/`) each own one concern. Don't cross-import between sibling lib subdirs without explicit reason. (`runner/` is the host action-queue consumer — see `.agents/architecture.md`.)
 - New subcommands register in `src/index.ts`; the command shape is `crew <name>`.
 
 ## When you need it
