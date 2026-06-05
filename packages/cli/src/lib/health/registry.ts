@@ -3,12 +3,21 @@ import { configValid } from './checks/config-valid.js';
 import { envMaterialized } from './checks/env-materialized.js';
 import { playwrightConfig } from './checks/playwright-config.js';
 import { brunoSkeleton } from './checks/bruno-skeleton.js';
+import { baselinePresent } from './checks/baseline-present.js';
 // P2 (dispatch-gate migration) appends its checks here too.
 import { excludedCommands } from './checks/excluded-commands.js';
 import { appUrlResolves } from './checks/app-url-resolves.js';
 // P3 (remaining checks) appends its checks here.
 
-const ALL: HealthCheck[] = [configValid, envMaterialized, playwrightConfig, brunoSkeleton, excludedCommands, appUrlResolves];
+const ALL: HealthCheck[] = [
+  configValid,
+  envMaterialized,
+  playwrightConfig,
+  brunoSkeleton,
+  baselinePresent,
+  excludedCommands,
+  appUrlResolves
+];
 
 /**
  * Return the checks applicable to a scope. `project` and `machine` filter by
