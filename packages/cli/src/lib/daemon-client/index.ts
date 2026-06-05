@@ -199,19 +199,13 @@ export class CrewDaemonClient {
    * is never broken by a missing daemon. The agent `key` is the route param;
    * `input` is the `finishStepSchema` body (index/label/status/detail?/ts).
    */
-  async reportFinishStep(
-    key: string,
-    input: FinishStepInput,
-  ): Promise<DaemonResult<{ ok: true }>> {
+  async reportFinishStep(key: string, input: FinishStepInput): Promise<DaemonResult<{ ok: true }>> {
     try {
-      const res = await fetch(
-        `${this.baseUrl}/api/agents/${encodeURIComponent(key)}/finish-step`,
-        {
-          method: 'POST',
-          headers: { 'content-type': 'application/json' },
-          body: JSON.stringify(input),
-        },
-      );
+      const res = await fetch(`${this.baseUrl}/api/agents/${encodeURIComponent(key)}/finish-step`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(input),
+      });
       if (!res.ok) {
         this.warn(`reportFinishStep: HTTP ${res.status}`);
         return { ok: false, reason: `http_${res.status}` };

@@ -141,7 +141,9 @@ function QuickActions({
   // the PR is merged. Before that it renders disabled + annotated; on
   // pr_merged it falls back to the shared runner gate.
   const finishGate =
-    agent.state === 'pr_merged' ? gate : { disabled: true, title: 'Available after the PR is merged' };
+    agent.state === 'pr_merged'
+      ? gate
+      : { disabled: true, title: 'Available after the PR is merged' };
 
   switch (agent.state) {
     case 'idle':

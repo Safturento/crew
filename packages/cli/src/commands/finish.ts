@@ -328,11 +328,7 @@ export async function runFinish(key: string, deps: FinishDeps): Promise<FinishRe
       warn(`docker compose down -v: skipped (worktree ${worktreePath} not registered)`);
       await report('docker compose down -v', 'skip', `worktree ${worktreePath} not registered`);
       warn(`git worktree remove: skipped (${worktreePath} not registered)`);
-      await report(
-        `git worktree remove ${worktreePath}`,
-        'skip',
-        `${worktreePath} not registered`,
-      );
+      await report(`git worktree remove ${worktreePath}`, 'skip', `${worktreePath} not registered`);
     }
 
     await step(
@@ -371,11 +367,7 @@ export async function runFinish(key: string, deps: FinishDeps): Promise<FinishRe
       warn(
         'jira transition to Done: skipped (CREW_JIRA_EMAIL / CREW_JIRA_API_TOKEN not set). Transition manually.',
       );
-      await report(
-        `jira ${key} → Done`,
-        'skip',
-        'CREW_JIRA_EMAIL / CREW_JIRA_API_TOKEN not set',
-      );
+      await report(`jira ${key} → Done`, 'skip', 'CREW_JIRA_EMAIL / CREW_JIRA_API_TOKEN not set');
     }
 
     await unlinkIfExists(`/tmp/crew-run-${key}.log`, log, warn, report);

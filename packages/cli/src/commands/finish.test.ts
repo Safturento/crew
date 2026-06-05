@@ -624,7 +624,12 @@ describe('runFinish finish-step emission', () => {
   function reportedSteps(client: DaemonClientStub): ReportedStep[] {
     return client.reportFinishStep.mock.calls.map((call) => {
       const [, payload] = call as [string, ReportedStep & { ts: number }];
-      return { index: payload.index, label: payload.label, status: payload.status, detail: payload.detail };
+      return {
+        index: payload.index,
+        label: payload.label,
+        status: payload.status,
+        detail: payload.detail,
+      };
     });
   }
 

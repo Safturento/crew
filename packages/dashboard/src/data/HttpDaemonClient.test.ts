@@ -316,8 +316,22 @@ describe('HttpDaemonClient.getFinishSteps (CREW-220)', () => {
       new Response(
         JSON.stringify({
           steps: [
-            { key: 'KAN-1', index: 0, label: 'git branch -D KAN-1', status: 'ok', detail: null, ts: 1000 },
-            { key: 'KAN-1', index: 1, label: 'jira KAN-1 → Done', status: 'skip', detail: 'already Done', ts: 1100 },
+            {
+              key: 'KAN-1',
+              index: 0,
+              label: 'git branch -D KAN-1',
+              status: 'ok',
+              detail: null,
+              ts: 1000,
+            },
+            {
+              key: 'KAN-1',
+              index: 1,
+              label: 'jira KAN-1 → Done',
+              status: 'skip',
+              detail: 'already Done',
+              ts: 1100,
+            },
           ],
         }),
         { status: 200 },
