@@ -1,12 +1,34 @@
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
+import type { ReactElement } from 'react';
 
 import { TopNav } from './TopNav.js';
+import { defaultClient } from '../data/queries.js';
+
+let qc: QueryClient;
+
+function renderTopNav(ui: ReactElement) {
+  return render(<QueryClientProvider client={qc}>{ui}</QueryClientProvider>);
+}
+
+beforeEach(() => {
+  qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  // The mounted RunnerStatusChip reads runner status/logs; stub both so
+  // TopNav tests stay offline and deterministic.
+  vi.spyOn(defaultClient, 'getRunnerStatus').mockResolvedValue({ online: false, lastSeen: null });
+  vi.spyOn(defaultClient, 'getRunnerLogs').mockResolvedValue([]);
+});
+
+afterEach(() => {
+  vi.restoreAllMocks();
+  qc.clear();
+});
 
 describe('TopNav', () => {
   it('marks the Agents tab active for the agents-list route', () => {
-    render(
+    renderTopNav(
       <TopNav
         route={{ kind: 'agents-list' }}
         attentionCount={0}
@@ -19,7 +41,7 @@ describe('TopNav', () => {
   });
 
   it('marks the Projects tab active for the projects route', () => {
-    render(
+    renderTopNav(
       <TopNav
         route={{ kind: 'projects' }}
         attentionCount={0}
@@ -31,7 +53,7 @@ describe('TopNav', () => {
   });
 
   it('disables the Clear attention button when count is 0', () => {
-    render(
+    renderTopNav(
       <TopNav
         route={{ kind: 'agents-list' }}
         attentionCount={0}
@@ -43,7 +65,7 @@ describe('TopNav', () => {
   });
 
   it('shows the count badge when attentionCount > 0', () => {
-    render(
+    renderTopNav(
       <TopNav
         route={{ kind: 'agents-list' }}
         attentionCount={3}
@@ -59,7 +81,7 @@ describe('TopNav', () => {
   it('fires onClearAttention when the button is clicked', async () => {
     const user = userEvent.setup();
     const onClear = vi.fn();
-    render(
+    renderTopNav(
       <TopNav
         route={{ kind: 'agents-list' }}
         attentionCount={2}
@@ -74,7 +96,7 @@ describe('TopNav', () => {
   it('fires onNewRun when the + New Run button is clicked', async () => {
     const user = userEvent.setup();
     const onNew = vi.fn();
-    render(
+    renderTopNav(
       <TopNav
         route={{ kind: 'agents-list' }}
         attentionCount={0}
@@ -84,5 +106,17 @@ describe('TopNav', () => {
     );
     await user.click(screen.getByRole('button', { name: /New Run/ }));
     expect(onNew).toHaveBeenCalled();
+  });
+
+  it('mounts the runner status chip', () => {
+    renderTopNav(
+      <TopNav
+        route={{ kind: 'agents-list' }}
+        attentionCount={0}
+        onClearAttention={() => {}}
+        onNewRun={() => {}}
+      />,
+    );
+    expect(screen.getByRole('button', { name: /Runner (online|offline)/i })).toBeInTheDocument();
   });
 });

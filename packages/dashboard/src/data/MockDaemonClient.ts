@@ -10,6 +10,7 @@ export interface MockDaemonClientOptions {
   projects?: Project[];
   projectDetails?: Record<string, ProjectDetailResponse>;
   runnerStatus?: RunnerStatus;
+  runnerLogs?: string[];
 }
 
 export class MockDaemonClient implements DaemonClient {
@@ -17,6 +18,7 @@ export class MockDaemonClient implements DaemonClient {
   private readonly projects: Project[];
   private readonly projectDetails: Record<string, ProjectDetailResponse>;
   private readonly runnerStatus: RunnerStatus;
+  private readonly runnerLogs: string[];
   /** Records of every action enqueued through this mock, for assertions. */
   readonly enqueued: EnqueueAction[] = [];
 
@@ -25,6 +27,7 @@ export class MockDaemonClient implements DaemonClient {
     this.projects = options.projects ?? FIXTURE_PROJECTS;
     this.projectDetails = options.projectDetails ?? FIXTURE_PROJECT_DETAILS;
     this.runnerStatus = options.runnerStatus ?? { online: true, lastSeen: Date.now() };
+    this.runnerLogs = options.runnerLogs ?? [];
   }
 
   async listProjects(): Promise<Project[]> {
@@ -61,5 +64,9 @@ export class MockDaemonClient implements DaemonClient {
 
   async getRunnerStatus(): Promise<RunnerStatus> {
     return this.runnerStatus;
+  }
+
+  async getRunnerLogs(): Promise<string[]> {
+    return this.runnerLogs;
   }
 }

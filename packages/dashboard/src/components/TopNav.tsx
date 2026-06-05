@@ -3,6 +3,7 @@ import { Plus } from 'lucide-react';
 
 import type { Route } from '../routing/parseRoute.js';
 import { BrandMark } from './BrandMark.js';
+import { RunnerStatusChip } from './RunnerStatusChip.js';
 import { Badge } from './ui/badge.js';
 import { Button } from './ui/button.js';
 
@@ -35,6 +36,7 @@ export function TopNav({ route, attentionCount, onClearAttention, onNewRun }: To
         </nav>
       </div>
       <div className="flex items-center gap-2">
+        <RunnerStatusChip />
         <Button
           color="running"
           intensity="ghost"
