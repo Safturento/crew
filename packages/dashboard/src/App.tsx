@@ -1,15 +1,20 @@
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useQuery, useQueryErrorResetBoundary } from '@tanstack/react-query';
 import { ErrorBoundary } from 'react-error-boundary';
+import { Toaster } from 'sonner';
 
 import { useAttention } from './attention/useAttention.js';
 import { useFaviconBadge } from './attention/useFaviconBadge.js';
 import { AgentsList } from './components/AgentsList.js';
+import type { QuickActionKind } from './components/AgentRow.js';
 import { ErrorFallback } from './components/ErrorFallback.js';
 import { TopNav } from './components/TopNav.js';
 import { ViewportFrame } from './components/ViewportFrame.js';
+import { useActionToasts, useEnqueueAction } from './data/actions.js';
 import type { DaemonClient } from './data/DaemonClient.js';
 import { HttpDaemonClient } from './data/HttpDaemonClient.js';
+import type { Agent } from './data/types.js';
+import { useRunnerStatus } from './data/useRunnerStatus.js';
 import { AgentDrawer } from './routes/AgentDrawer.js';
 import { AgentFullPage } from './routes/AgentFullPage.js';
 import { ProjectDetailPage } from './routes/ProjectDetailPage.js';
@@ -25,6 +30,7 @@ export function App({ client = defaultClient }: { client?: DaemonClient } = {}) 
       <ErrorBoundary FallbackComponent={ErrorFallback} onReset={reset}>
         <AppContent client={client} />
       </ErrorBoundary>
+      <Toaster theme="dark" position="bottom-right" richColors />
     </ViewportFrame>
   );
 }
@@ -48,6 +54,26 @@ function AppContent({ client }: { client: DaemonClient }) {
   const attention = useAttention(agents);
   useFaviconBadge(attention.count);
 
+  // CREW-217: the action layer. `useActionToasts` surfaces the runner's
+  // launch outcome (failed/launched) over SSE; `useRunnerStatus` drives the
+  // no-runner degradation; `onAgentAction` finally backs the QuickAction
+  // thread (AgentRow → ProjectSection → AgentsList). Resume → `run`,
+  // Finish → `finish`; the other QuickActions belong to later tickets.
+  const runner = useRunnerStatus();
+  const enqueue = useEnqueueAction();
+  useActionToasts();
+
+  const onAgentAction = useCallback(
+    (kind: QuickActionKind, agent: Agent) => {
+      if (kind === 'resume') {
+        enqueue.mutate({ kind: 'run', project: agent.projectName, ticketKey: agent.key });
+      } else if (kind === 'finish') {
+        enqueue.mutate({ kind: 'finish', project: agent.projectName, ticketKey: agent.key });
+      }
+    },
+    [enqueue],
+  );
+
   const body = useMemo(() => {
     switch (route.kind) {
       case 'agent-full':
@@ -64,11 +90,13 @@ function AppContent({ client }: { client: DaemonClient }) {
             projects={projects}
             agents={agents}
             onSelectAgent={(key) => navigate(`/agent/${key}`)}
+            onAgentAction={onAgentAction}
             onOpenProject={(name) => navigate(`/projects/${name}`)}
+            runnerOnline={runner.online}
           />
         );
     }
-  }, [route, projects, agents]);
+  }, [route, projects, agents, onAgentAction, runner.online]);
 
   return (
     <>

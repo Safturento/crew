@@ -24,6 +24,8 @@ interface AgentsListProps {
   onSelectAgent: (key: string) => void;
   onAgentAction?: (kind: QuickActionKind, agent: Agent) => void;
   onOpenProject?: (name: string) => void;
+  /** CREW-217: gates runner-dependent QuickActions on every row. */
+  runnerOnline?: boolean;
 }
 
 export function AgentsList({
@@ -32,6 +34,7 @@ export function AgentsList({
   onSelectAgent,
   onAgentAction,
   onOpenProject,
+  runnerOnline = true,
 }: AgentsListProps) {
   const [hideFinished, setHideFinished] = useState<boolean>(readHideFinished);
 
@@ -83,6 +86,7 @@ export function AgentsList({
               onSelectAgent={onSelectAgent}
               onAgentAction={onAgentAction}
               onOpenProject={onOpenProject}
+              runnerOnline={runnerOnline}
             />
           ))}
       </div>

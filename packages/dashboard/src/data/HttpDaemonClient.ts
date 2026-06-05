@@ -1,6 +1,7 @@
 import { z } from 'zod';
+import type { ActionRequest, EnqueueAction } from 'crew-shared';
 
-import type { DaemonClient } from './DaemonClient.js';
+import type { DaemonClient, RunnerStatus } from './DaemonClient.js';
 import type {
   Agent,
   AgentDetail,
@@ -151,6 +152,35 @@ const RefreshPrStatusResponseSchema = z.object({
 
 export type RefreshPrStatusResponse = z.infer<typeof RefreshPrStatusResponseSchema>;
 
+/**
+ * CREW-217: wire schemas for the dashboard action layer. Defined locally
+ * (rather than importing the `crew-shared` zod values) to stay consistent
+ * with the inline-schema convention above — the shared barrel re-exports a
+ * node-only loader Vite won't bundle, so only the *types* cross over.
+ */
+const ActionPayloadSchema = z.discriminatedUnion('kind', [
+  z.object({ kind: z.literal('run') }),
+  z.object({ kind: z.literal('fix_pr'), comment: z.string() }),
+  z.object({ kind: z.literal('finish') }),
+]);
+
+const ActionRequestSchema = z.object({
+  id: z.number(),
+  kind: z.enum(['run', 'fix_pr', 'finish']),
+  ticketKey: z.string(),
+  project: z.string(),
+  payload: ActionPayloadSchema,
+  status: z.enum(['pending', 'claimed', 'launching', 'launched', 'failed']),
+  error: z.string().nullable(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+});
+
+const RunnerStatusSchema = z.object({
+  online: z.boolean(),
+  lastSeen: z.number().nullable(),
+});
+
 const StateHistoryResponseSchema = z.object({
   transitions: z.array(
     z.object({
@@ -256,5 +286,32 @@ export class HttpDaemonClient implements DaemonClient {
     if (res.status === 404) throw new AgentNotFoundError(key);
     if (!res.ok) throw new Error(`POST /api/agents/${key}/refresh-pr-status: ${res.status}`);
     return RefreshPrStatusResponseSchema.parse(await res.json());
+  }
+
+  /**
+   * CREW-217: enqueue a dashboard-triggered action (`run` / `fix_pr` /
+   * `finish`). The daemon records it as `pending` and a host runner drains
+   * it; the returned `ActionRequest` carries the new id + status. The body
+   * is the `enqueueActionSchema` shape (validated server-side).
+   */
+  async enqueueAction(input: EnqueueAction): Promise<ActionRequest> {
+    const res = await fetch(`${this.baseUrl}/api/actions`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(input),
+    });
+    if (!res.ok) throw new Error(`POST /api/actions: ${res.status}`);
+    return ActionRequestSchema.parse(await res.json());
+  }
+
+  /**
+   * CREW-217: current runner online/offline + last-heartbeat epoch-ms.
+   * Seeds `useRunnerStatus()` on mount; SSE `runner.status_changed` keeps
+   * it live thereafter.
+   */
+  async getRunnerStatus(): Promise<RunnerStatus> {
+    const res = await fetch(`${this.baseUrl}/api/runner/status`);
+    if (!res.ok) throw new Error(`GET /api/runner/status: ${res.status}`);
+    return RunnerStatusSchema.parse(await res.json());
   }
 }

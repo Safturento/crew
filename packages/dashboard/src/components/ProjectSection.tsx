@@ -13,6 +13,8 @@ interface ProjectSectionProps {
   onAgentAction?: (kind: QuickActionKind, agent: Agent) => void;
   onOpenProject?: (name: string) => void;
   showHeader?: boolean;
+  /** CREW-217: forwarded to each row to gate runner-dependent QuickActions. */
+  runnerOnline?: boolean;
 }
 
 export function ProjectSection({
@@ -22,6 +24,7 @@ export function ProjectSection({
   onAgentAction,
   onOpenProject,
   showHeader = true,
+  runnerOnline = true,
 }: ProjectSectionProps) {
   const [collapsed, setCollapsed] = useState(false);
   const active = agents.filter((a) => a.state !== 'finished').length;
@@ -40,7 +43,13 @@ export function ProjectSection({
         </div>
       ) : (
         agents.map((a) => (
-          <AgentRow key={a.key} agent={a} onSelect={onSelectAgent} onAction={onAgentAction} />
+          <AgentRow
+            key={a.key}
+            agent={a}
+            onSelect={onSelectAgent}
+            onAction={onAgentAction}
+            runnerOnline={runnerOnline}
+          />
         ))
       )}
     </div>
