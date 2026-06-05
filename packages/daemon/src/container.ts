@@ -10,6 +10,8 @@ import { EventBus } from './services/EventBus.js';
 import { TimelineService } from './services/TimelineService.js';
 import { MetricsService } from './services/MetricsService.js';
 import { PrPoller } from './services/PrPoller.js';
+import { RunnerStatusService } from './services/RunnerStatusService.js';
+import { FinishStepsService } from './services/FinishStepsService.js';
 import { ActionService } from './services/ActionService.js';
 import { resolveJsonlPathForAgent } from './services/resolveJsonlPath.js';
 
@@ -35,6 +37,8 @@ export interface DaemonCradle {
   timelineService: TimelineService;
   metricsService: MetricsService;
   prPoller: PrPoller;
+  runnerStatusService: RunnerStatusService;
+  finishStepsService: FinishStepsService;
   actionService: ActionService;
 }
 
@@ -109,6 +113,17 @@ export function buildContainer(deps: BuildContainerDeps): AwilixContainer<Daemon
     prPoller: asFunction(
       ({ db, eventBus, logger }: DaemonCradle) => new PrPoller({ db, eventBus, logger }),
     ).singleton(),
+    // CREW-215: tracks the host runner's heartbeat → online/offline edges.
+    // Singleton because the heartbeat state + falling-edge timer must be
+    // shared across every request that posts a heartbeat or reads status.
+    runnerStatusService: asFunction(
+      ({ eventBus }: DaemonCradle) => new RunnerStatusService({ eventBus }),
+    ).singleton(),
+    // CREW-215: stateless (db + bus injected), so request-scoped like the
+    // other query services.
+    finishStepsService: asFunction(
+      ({ db, eventBus }: DaemonCradle) => new FinishStepsService({ db, eventBus }),
+    ).scoped(),
     // CREW-214: queued dashboard actions. Scoped — it carries no state of
     // its own (the queue lives in SQLite + the singleton event bus), so a
     // per-request instance is fine and matches the other DB-backed services.

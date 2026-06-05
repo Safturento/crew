@@ -1,0 +1,41 @@
+meta {
+  name: POST /api/agents/:key/finish-step
+  type: http
+  seq: 12
+}
+
+post {
+  url: {{baseUrl}}/api/agents/{{agentKey}}/finish-step
+  body: json
+}
+
+body:json {
+  {
+    "index": 0,
+    "label": "lint",
+    "status": "ok",
+    "ts": 1700000000000
+  }
+}
+
+assert {
+  res.status: eq 201
+  res.body.key: eq {{agentKey}}
+  res.body.index: eq 0
+  res.body.status: eq ok
+}
+
+tests {
+  test("finish-step echoes the stored row for the chained agent", () => {
+    expect(res.body.key).to.equal(bru.getVar("agentKey"));
+    expect(res.body.label).to.equal("lint");
+    expect(res.body.detail).to.equal(null);
+    expect(res.body.ts).to.equal(1700000000000);
+  });
+}
+
+docs {
+  `crew finish` POSTs one row per step. The daemon stores it and pings
+  `finish_step.changed{key}` over SSE. Uses the agentKey chained forward
+  by `post-register-run.bru`.
+}

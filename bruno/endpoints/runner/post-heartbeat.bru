@@ -1,0 +1,27 @@
+meta {
+  name: POST /api/runner/heartbeat
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/api/runner/heartbeat
+  body: none
+}
+
+assert {
+  res.status: eq 200
+  res.body.online: eq true
+}
+
+tests {
+  test("heartbeat reports online with a numeric lastSeen", () => {
+    expect(res.body.online).to.equal(true);
+    expect(res.body.lastSeen).to.be.a("number");
+  });
+}
+
+docs {
+  The host runner pings this on an interval. The first heartbeat flips the
+  runner online and emits `runner.status_changed` on the rising edge.
+}

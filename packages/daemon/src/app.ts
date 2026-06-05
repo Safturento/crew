@@ -27,6 +27,8 @@ import { registerAgentsRoutes } from './routes/agents.js';
 import { registerRunsRoutes } from './routes/runs.js';
 import { registerEventsRoutes } from './routes/events.js';
 import { registerMetricsRoutes } from './routes/metrics.js';
+import { registerRunnerRoutes } from './routes/runner.js';
+import { registerFinishStepsRoutes } from './routes/finish-steps.js';
 import { registerActionsRoutes } from './routes/actions.js';
 
 const PLACEHOLDER_HTML = `<!DOCTYPE html>
@@ -105,6 +107,10 @@ export async function buildApp({
   const ingest = container.cradle.ingestService;
   // CREW-202: PrPoller is also a singleton; lifecycle hooked alongside.
   const prPoller = container.cradle.prPoller;
+  // CREW-215: the runner-status falling-edge timer is a singleton too. No
+  // network side effects (unlike PrPoller), so it runs unconditionally —
+  // without heartbeats `checkStale` is a no-op, so it's quiet in tests.
+  const runnerStatusService = container.cradle.runnerStatusService;
   // Tests build the app inside vitest, where shelling out to `gh` is both
   // noise (real network) and a source of flakiness (it can publish SSE
   // events mid-test). Vitest sets `VITEST=true`; CREW_PR_POLLER_DISABLED
@@ -127,9 +133,12 @@ export async function buildApp({
     // CREW-202: start the background PR-status poller. Each round walks
     // pr_open agents and asks `gh pr view` for the current PR state.
     if (!prPollerDisabled) prPoller.start();
+    // CREW-215: start the runner-status staleness timer (falling edge).
+    runnerStatusService.start();
   });
   app.addHook('onClose', async () => {
     if (!prPollerDisabled) prPoller.stop();
+    runnerStatusService.stop();
     await ingest.stop();
   });
 
@@ -165,6 +174,8 @@ export async function buildApp({
   await registerRunsRoutes(app);
   await registerEventsRoutes(app);
   await registerMetricsRoutes(app);
+  await registerRunnerRoutes(app);
+  await registerFinishStepsRoutes(app);
   await registerActionsRoutes(app);
 
   if (dashboardDistDir && existsSync(join(dashboardDistDir, 'index.html'))) {

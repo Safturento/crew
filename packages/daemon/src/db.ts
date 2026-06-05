@@ -92,6 +92,19 @@ export interface StartupEventsTable {
   log_path: string | null;
 }
 
+/** CREW-215: one row per `crew finish` step, fed by
+ *  POST /api/agents/:key/finish-step and read back as an ordered checklist
+ *  by the dashboard drawer. `idx` is the step ordinal (wire field `index`);
+ *  `ts` is epoch-ms. */
+export interface FinishStepsTable {
+  id: Generated<number>;
+  agent_key: string;
+  idx: number;
+  label: string;
+  status: 'ok' | 'skip' | 'error';
+  detail: string | null;
+  ts: number;
+}
 /** CREW-214: queued dashboard-triggered actions, drained by the host runner.
  *  Insert/transition path: ActionService (enqueue → claim → report), each
  *  flip publishing an `action.changed` SSE event. `payload` is the per-kind
@@ -115,6 +128,7 @@ export interface DaemonDatabase {
   tool_calls: ToolCallsTable;
   state_transitions: StateTransitionsTable;
   startup_events: StartupEventsTable;
+  finish_steps: FinishStepsTable;
   action_requests: ActionRequestsTable;
 }
 

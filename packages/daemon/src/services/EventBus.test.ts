@@ -104,4 +104,32 @@ describe('EventBus', () => {
     expect(seen).toHaveLength(1);
     expect(seen[0]).toMatchObject({ type: 'cache.miss' });
   });
+
+  // CREW-215: runner-ops + finish-step intake introduce two new variants on
+  // the SsePayload union. The bus is payload-agnostic, so these assert the
+  // variants carry their data shapes through publish→subscribe intact.
+  it('carries runner.status_changed data through to subscribers', () => {
+    const bus = new EventBus({ bufferSize: 10 });
+    const seen: SseEvent[] = [];
+    bus.subscribe({ onEvent: (e) => seen.push(e) });
+
+    bus.publish({ type: 'runner.status_changed', data: { online: true, lastSeen: 1234 } });
+
+    expect(seen).toHaveLength(1);
+    expect(seen[0]).toMatchObject({
+      type: 'runner.status_changed',
+      data: { online: true, lastSeen: 1234 },
+    });
+  });
+
+  it('carries finish_step.changed data through to subscribers', () => {
+    const bus = new EventBus({ bufferSize: 10 });
+    const seen: SseEvent[] = [];
+    bus.subscribe({ onEvent: (e) => seen.push(e) });
+
+    bus.publish({ type: 'finish_step.changed', data: { key: 'CREW-1' } });
+
+    expect(seen).toHaveLength(1);
+    expect(seen[0]).toMatchObject({ type: 'finish_step.changed', data: { key: 'CREW-1' } });
+  });
 });

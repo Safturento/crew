@@ -27,6 +27,11 @@ services:
       # ~/.crew/startup/<key>.jsonl from the host on dispatch; the daemon's
       # chokidar watcher ingests them into startup_events.
       - ${HOME}/.crew/startup:/root/.crew/startup:ro
+      # Read-only: host runner log (CREW-215). The host runner process writes
+      # ~/.crew/runner/runner.log; GET /api/runner/logs tails it. One runner
+      # per host, so all stacks (canonical + worktree) bind the same host
+      # path — worktree stacks just have no runner writing to it.
+      - ${HOME}/.crew/runner:/root/.crew/runner:ro
       # Read-only: host `gh` CLI auth so PrPoller's `gh pr view` calls
       # (CREW-202) inherit the user's token without an in-container login.
       # Daemon image installs gh; this mounts the credentials.
