@@ -141,6 +141,8 @@ describe('App', () => {
     const failingClient: DaemonClient = {
       listProjects: () => Promise.reject(new Error('daemon unreachable')),
       listAgents: () => Promise.reject(new Error('daemon unreachable')),
+      enqueueAction: () => Promise.reject(new Error('daemon unreachable')),
+      getRunnerStatus: () => Promise.reject(new Error('daemon unreachable')),
     };
     const queryClient = new QueryClient({
       defaultOptions: { queries: { retry: false, throwOnError: true } },

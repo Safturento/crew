@@ -368,3 +368,110 @@ describe('HttpDaemonClient.refreshPrStatus (CREW-202)', () => {
     await expect(new HttpDaemonClient().refreshPrStatus('K')).rejects.toThrow(/500/);
   });
 });
+
+const SAMPLE_ACTION = {
+  id: 7,
+  kind: 'run',
+  ticketKey: 'CREW-1',
+  project: 'crew',
+  payload: { kind: 'run' },
+  status: 'pending',
+  error: null,
+  createdAt: '2026-06-04T00:00:00Z',
+  updatedAt: '2026-06-04T00:00:00Z',
+};
+
+describe('HttpDaemonClient.enqueueAction (CREW-217)', () => {
+  it('POSTs the action to /api/actions and returns the parsed ActionRequest', async () => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify(SAMPLE_ACTION), {
+        status: 201,
+        headers: { 'content-type': 'application/json' },
+      }),
+    );
+
+    const action = await new HttpDaemonClient().enqueueAction({
+      kind: 'run',
+      project: 'crew',
+      ticketKey: 'CREW-1',
+    });
+
+    expect(action).toMatchObject({ id: 7, kind: 'run', status: 'pending' });
+    expect(fetchSpy).toHaveBeenCalledWith(
+      '/api/actions',
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({ kind: 'run', project: 'crew', ticketKey: 'CREW-1' }),
+      }),
+    );
+  });
+
+  it('carries a fix_pr comment through to the body', async () => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(
+        JSON.stringify({ ...SAMPLE_ACTION, kind: 'fix_pr', payload: { kind: 'fix_pr', comment: 'fix it' } }),
+        { status: 201, headers: { 'content-type': 'application/json' } },
+      ),
+    );
+
+    await new HttpDaemonClient().enqueueAction({
+      kind: 'fix_pr',
+      project: 'crew',
+      ticketKey: 'CREW-1',
+      comment: 'fix it',
+    });
+
+    expect(fetchSpy).toHaveBeenCalledWith(
+      '/api/actions',
+      expect.objectContaining({
+        body: JSON.stringify({ kind: 'fix_pr', project: 'crew', ticketKey: 'CREW-1', comment: 'fix it' }),
+      }),
+    );
+  });
+
+  it('throws on non-2xx', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('bad', { status: 400 }));
+    await expect(
+      new HttpDaemonClient().enqueueAction({ kind: 'run', project: 'crew', ticketKey: 'CREW-1' }),
+    ).rejects.toThrow(/400/);
+  });
+
+  it('throws on schema mismatch', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify({ id: 'not-a-number' }), { status: 201 }),
+    );
+    await expect(
+      new HttpDaemonClient().enqueueAction({ kind: 'run', project: 'crew', ticketKey: 'CREW-1' }),
+    ).rejects.toThrow();
+  });
+});
+
+describe('HttpDaemonClient.getRunnerStatus (CREW-217)', () => {
+  it('GETs /api/runner/status and returns the parsed status', async () => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify({ online: true, lastSeen: 1717459200000 }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      }),
+    );
+
+    const status = await new HttpDaemonClient().getRunnerStatus();
+
+    expect(status).toEqual({ online: true, lastSeen: 1717459200000 });
+    expect(fetchSpy).toHaveBeenCalledWith('/api/runner/status');
+  });
+
+  it('accepts a null lastSeen (no heartbeat yet)', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify({ online: false, lastSeen: null }), { status: 200 }),
+    );
+
+    const status = await new HttpDaemonClient().getRunnerStatus();
+    expect(status).toEqual({ online: false, lastSeen: null });
+  });
+
+  it('throws on non-2xx', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('boom', { status: 500 }));
+    await expect(new HttpDaemonClient().getRunnerStatus()).rejects.toThrow(/500/);
+  });
+});

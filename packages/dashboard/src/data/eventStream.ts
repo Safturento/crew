@@ -21,6 +21,10 @@ const EVENT_NAMES = [
   'agent.state_changed',
   'tool_calls.changed',
   'run.completed',
+  // CREW-217: action-queue + runner-health pings drive the dashboard
+  // action layer (toasts on launch failure, the runner-aware degradation).
+  'action.changed',
+  'runner.status_changed',
   'cache.miss',
 ] as const;
 
