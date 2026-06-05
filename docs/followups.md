@@ -10,6 +10,7 @@ Organization: Active is grouped by topic (not chronology) since the dominant acc
 
 - [Active](#active)
   - [Figma & Crew DS](#figma--crew-ds)
+    - [2026-06-04 — `FinishSteps` checklist has no Crew DS Figma counterpart](#2026-06-04--finishsteps-checklist-has-no-crew-ds-figma-counterpart)
     - [2026-05-24 — Publish `state/pr-merged` variable in Crew DS Figma](#2026-05-24--publish-statepr-merged-variable-in-crew-ds-figma)
     - [2026-05-12 — Move figma-snapshot PAGE_DIR_MAP into project config](#2026-05-12--move-figma-snapshot-page_dir_map-into-project-config)
     - [2026-05-12 — Pill trailing-icon support + CodeChip mono-font composite](#2026-05-12--pill-trailing-icon-support--codechip-mono-font-composite)
@@ -102,6 +103,20 @@ Organization: Active is grouped by topic (not chronology) since the dominant acc
 ## Active
 
 ### Figma & Crew DS
+
+#### 2026-06-04 — `FinishSteps` checklist has no Crew DS Figma counterpart
+
+**What:** CREW-220 shipped `packages/dashboard/src/components/FinishSteps.tsx` — the agent drawer's live `crew finish` step checklist (ok/skip/error rows). It is figma-less feature-internal (same status as `MinimapStripe`): no finish-checklist was ever designed in the Crew DS Figma, so the component borrows the `TokensByTool` card shell and the status palette (`emerald-500` / `muted-foreground` / `red-400`) by hand. A future fidelity pass could design a proper Figma counterpart and a `.figma.tsx` Code Connect mapping so it joins the regular DS-composite inventory.
+
+**Why noticed:** Building T8 of the dashboard-actions Epic (CREW-208). The `visual-fidelity-check` had no snapshot component to compare against — by design here, but worth a deliberate design pass rather than leaving it as a permanent gap.
+
+**Anchors:**
+
+- `packages/dashboard/src/components/FinishSteps.tsx` — the code component
+- `.agents/design-system.md` — "Code-shipped composites" inventory (row marked _no Figma — feature-internal_)
+- `packages/dashboard/src/components/TokensByTool.tsx` — the card shell + section idiom it borrows
+
+**Shape of work:** small Crew DS Figma pass (one card composite, three status row variants) + a `FinishSteps.figma.tsx` mapping; opportunistic, low priority.
 
 #### 2026-05-24 — Publish `state/pr-merged` variable in Crew DS Figma
 

@@ -1,7 +1,7 @@
 ---
 name: design-system
 description: Crew Figma DS + token bindings + Pill primitive contract
-last_updated: 2026-06-03
+last_updated: 2026-06-04
 covers:
   - 'packages/dashboard/src/components/**'
   - '*.figma.tsx'
@@ -135,6 +135,7 @@ Figma node IDs below are in the live consolidated file (`9FeJPriqdsdA4n9R5Xsrr8`
 | `DrawerHeader`       | `594:803`                       | `packages/dashboard/src/components/DrawerHeader.tsx`             |
 | `TokenBarRow`        | `555:449`                       | `packages/dashboard/src/components/TokenBarRow.tsx`              |
 | `TokensByTool`       | `577:643`                       | `packages/dashboard/src/components/TokensByTool.tsx`             |
+| `FinishSteps`        | _(no Figma — feature-internal)_ | `packages/dashboard/src/components/FinishSteps.tsx`              |
 | `ViewportFrame`      | `220:292`                       | `packages/dashboard/src/components/ViewportFrame.tsx`            |
 | `ProjectRow`         | `220:300`                       | `packages/dashboard/src/components/ProjectRow.tsx`               |
 | `ProjectHeader`      | `220:315`                       | `packages/dashboard/src/components/ProjectHeader.tsx`            |
@@ -151,6 +152,8 @@ Figma node IDs below are in the live consolidated file (`9FeJPriqdsdA4n9R5Xsrr8`
 The modal-family composites (`Modal`, `AlertModal`, `ModalSelectionRow`, `Stepper`) landed via CREW-137 (T3 of the DS→code reconciliation). They are **build-only — no caller sites yet**; modal screens get wired in separate slices. `Modal` wraps the `dialog` primitive, `AlertModal` wraps the new `alert-dialog` primitive.
 
 `TopNav`, `AgentRow`, `TimelineSection`, and `Stepper` resolve to component sets in the live file; the rest resolve to single components. `ErrorFallback` is the only un-built composite from the original Phase 4 inventory; it lands alongside the next fidelity ticket that surfaces a need.
+
+`FinishSteps` (CREW-220) is the drawer's live `crew finish` step checklist (ok/skip/error rows). It is figma-less feature-internal — the same status as `MinimapStripe` — because no finish-checklist was ever designed in the Crew DS Figma; it borrows the `TokensByTool` card shell and the status palette (`emerald-500` / `muted-foreground` / `red-400`) directly. A future fidelity pass could add a Figma counterpart (tracked in `docs/followups.md`).
 
 > **Figma-side Pill consolidation (2026-05-12) is now reconciled in code (CREW-135).** The Figma DS merged `Button` / `StateBadge` / `CountBadge` / `TimelineTag` into a unified `Pill` component set, and the Crew DS moved into the dashboard file. CREW-135 reconciled the dashboard code: an internal `PillBase` owns the shared anatomy, and `Button` / `Badge` / `Tag` (under `components/ui/`) wrap it. The standalone `StateBadge.tsx` and `CountBadge.tsx` composites are retired — every state pill and count pill is now a `Badge`. See [`docs/rationale/design-system.md`](../docs/rationale/design-system.md#2026-05-12-figma-side-pill-consolidation) for the migration history.
 
