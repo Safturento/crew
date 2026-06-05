@@ -30,9 +30,7 @@ describe('runPreflight (fail-fast adapter over lib/health)', () => {
       { name: 'a', scope: 'project', detect: async () => ok('fine') },
       { name: 'b', scope: 'project', detect: async () => ok('also fine') },
     ];
-    await expect(
-      runPreflight({ config: validConfig, worktree, checks }),
-    ).resolves.toBeUndefined();
+    await expect(runPreflight({ config: validConfig, worktree, checks })).resolves.toBeUndefined();
   });
 
   it('throws PreflightError carrying the first failing check’s fields', async () => {
@@ -71,9 +69,7 @@ describe('runPreflight (fail-fast adapter over lib/health)', () => {
     const checks: HealthCheck[] = [
       { name: 'baseline', scope: 'project', detect: async () => warn('baseline missing') },
     ];
-    await expect(
-      runPreflight({ config: validConfig, worktree, checks }),
-    ).resolves.toBeUndefined();
+    await expect(runPreflight({ config: validConfig, worktree, checks })).resolves.toBeUndefined();
   });
 
   it('drives the real registry by default: a missing settings.json fails excluded-commands', async () => {

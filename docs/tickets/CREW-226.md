@@ -41,14 +41,14 @@ suites are the regression guard.
 
 - **App-url check keeps the network probe (behaviour-preserving), despite the "resolves" rename.**
   The plan's Task 2.2 wording leans toward template-resolution-only, but the ticket's hard acceptance
-  criterion is "no dispatch-behaviour change" and spec §3 says *"each absorbed check keeps its current
-  behaviour."* The dispatch gate's app-url check is the one that catches "docker stack failed to come
+  criterion is "no dispatch-behaviour change" and spec §3 says _"each absorbed check keeps its current
+  behaviour."_ The dispatch gate's app-url check is the one that catches "docker stack failed to come
   up" — dropping the probe would be a real regression. So `app-url-resolves.detect()` resolves the
   template (clean `fail` + `env.toml` remediation when a `${VAR}` is unresolved — the plan's addition,
   and a fast network-free signal for `doctor`) **and then** probes the resolved URL (preserved). In
   real dispatch, ports/env are supplied so resolution always completes and the path is byte-identical
   to the old probe.
-- **The gate now runs *all* project checks** (`config-valid`, `env-materialized`, `excluded-commands`,
+- **The gate now runs _all_ project checks** (`config-valid`, `env-materialized`, `excluded-commands`,
   `app-url-resolves`), per spec §3. `config-valid` and `env-materialized` are benign no-ops in real
   dispatch (the config was already schema-loaded; env is materialized upstream), so dispatch outcomes
   are unchanged — but "healthy" is now defined in exactly one place.

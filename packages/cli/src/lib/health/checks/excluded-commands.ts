@@ -117,7 +117,8 @@ export const excludedCommands: HealthCheck = {
     for (const entry of required) {
       if (!excluded.includes(entry.command)) {
         return fail('.claude/settings.json missing required excludedCommands', {
-          remediation: 'add the entry to sandbox.excludedCommands (crew doctor --fix, or crew init)',
+          remediation:
+            'add the entry to sandbox.excludedCommands (crew doctor --fix, or crew init)',
           fixable: true,
           details: {
             missing: `"${entry.command}"`,
