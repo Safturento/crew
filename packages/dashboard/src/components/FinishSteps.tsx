@@ -55,7 +55,10 @@ export function FinishSteps({ steps }: FinishStepsProps) {
           const Icon = STATUS_ICON[step.status];
           return (
             <li
-              key={step.index}
+              // `index` resets to 0 each `crew finish` run while the daemon
+              // accumulates rows across runs, so it repeats — compose it with
+              // `ts` (per-run wall-clock) for a stable, collision-free key.
+              key={`${step.ts}-${step.index}`}
               data-status={step.status}
               className="flex items-start gap-2.5 border-t border-border px-3.5 py-2 first:border-t-0 text-sm"
             >
