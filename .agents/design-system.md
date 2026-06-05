@@ -1,7 +1,7 @@
 ---
 name: design-system
 description: Crew Figma DS + token bindings + Pill primitive contract
-last_updated: 2026-06-03
+last_updated: 2026-06-04
 covers:
   - 'packages/dashboard/src/components/**'
   - '*.figma.tsx'
@@ -217,6 +217,7 @@ The decision is reversible — the file structure stays compatible with future p
 | `AlertModal`         | `packages/dashboard/src/components/AlertModal.figma.tsx`        | `AlertModal` (Crew file)                    | `373:413`     |
 | `ModalSelectionRow`  | `packages/dashboard/src/components/ModalSelectionRow.figma.tsx` | `ModalSelectionRow` (Crew file)             | `350:236`     |
 | `Stepper`            | `packages/dashboard/src/components/Stepper.figma.tsx`           | `Stepper` set (Crew file)                   | `378:462`     |
+| `NewRunModal`        | `packages/dashboard/src/components/NewRunModal.figma.tsx`       | `New Run modal — 1. Select Project` (Crew file, Dashboard Screens) | `1:2980`      |
 
 ### Pill mapping — color × intensity × type
 
