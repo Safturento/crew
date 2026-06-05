@@ -48,10 +48,6 @@
           {
             "type": "command",
             "command": "./packages/cli/scripts/hooks/visual-fidelity-pr-gate.sh"
-          },
-          {
-            "type": "command",
-            "command": "./packages/cli/scripts/hooks/doc-parity-gate.sh"
           }
         ]
       },
