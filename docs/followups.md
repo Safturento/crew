@@ -42,6 +42,7 @@ Organization: Active is grouped by topic (not chronology) since the dominant acc
     - [2026-04-28 — Dashboard New Run modal + projects route view](#2026-04-28--dashboard-new-run-modal--projects-route-view)
     - [2026-04-28 — `useAttention.clear()` snapshot semantic isn't directly tested](#2026-04-28--useattentionclear-snapshot-semantic-isnt-directly-tested)
   - [Daemon, CLI & Dispatch](#daemon-cli--dispatch)
+    - [2026-06-04 — Runner pidfile has no liveness identity (recycled-PID false positive)](#2026-06-04--runner-pidfile-has-no-liveness-identity-recycled-pid-false-positive)
     - [2026-06-04 — `GET /api/runner/logs` reads the whole log file into memory](#2026-06-04--get-apirunnerlogs-reads-the-whole-log-file-into-memory)
     - [2026-06-03 — `deriveState` falls through to `finished` when PR-create isn't detected](#2026-06-03--derivestate-falls-through-to-finished-when-pr-create-isnt-detected)
     - [2026-06-03 — `getStackUrl` is orphaned + duplicated by `docker-list`'s port/URL helpers](#2026-06-03--getstackurl-is-orphaned--duplicated-by-docker-lists-porturl-helpers)
@@ -641,6 +642,18 @@ The "synthetic Unregistered section" feels right — single render path, no extr
 **Shape of work:** Tiny cleanup. Add 2–3 RTL test cases. Bundle into the cva-cleanup ticket above or stand alone.
 
 ### Daemon, CLI & Dispatch
+
+#### 2026-06-04 — Runner pidfile has no liveness identity (recycled-PID false positive)
+
+**What:** `crew runner` (CREW-216) tracks its supervisor by bare PID in `~/.config/crew/runner.pid`. `isProcessAlive(pid)` (`packages/cli/src/commands/runner.ts`) only asks "is _some_ process with this PID alive" via `process.kill(pid, 0)`. After a reboot or PID recycle, a stale pidfile can point at an unrelated live process, so `crew runner status` reports "running" and `crew runner start` no-ops (and `stop` would SIGTERM a stranger). Standard pidfile limitation; acceptable for v1 but a latent foot-gun on a long-lived host.
+
+**Why noticed:** Code review of CREW-216 (this session) flagged it Minor — the runner is the first long-lived crew process, so it's the first place this classic pidfile gap bites.
+
+**Anchors:** `packages/cli/src/commands/runner.ts` `isProcessAlive` / `readPidFile`; `packages/cli/src/lib/runner/supervisor.ts` `startRunner`/`stopRunner` (the pure liveness consumers).
+
+**What's been considered:** stamp the pidfile with a start token (write `pid:starttoken`, where the token is e.g. the supervisor's start time) and compare on read; or verify `/proc/<pid>/cmdline` contains `crew runner __supervise` before trusting the pid. The `/proc` check is Linux-only (the runner is a Linux/WSL host process today, so acceptable), the start-token approach is portable but needs a way to fetch the live process's start time.
+
+**Shape of work:** small, contained — one helper that validates pid identity, threaded through the `readPid`/`isAlive` boundaries already injected into `startRunner`/`stopRunner`/`runnerStatus`. The pure layer doesn't change; only the command's boundary wiring does.
 
 #### 2026-06-04 — `GET /api/runner/logs` reads the whole log file into memory
 

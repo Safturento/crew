@@ -86,6 +86,123 @@ describe('CrewDaemonClient.completeRun', () => {
   });
 });
 
+describe('CrewDaemonClient.claimPendingAction', () => {
+  const row = {
+    id: 7,
+    kind: 'run' as const,
+    ticketKey: 'CREW-1',
+    project: 'crew',
+    payload: { kind: 'run' as const },
+    status: 'claimed' as const,
+    error: null,
+    createdAt: '2026-06-04T00:00:00Z',
+    updatedAt: '2026-06-04T00:00:01Z',
+  };
+
+  it('long-polls and returns the claimed action on 200', async () => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify(row), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      }),
+    );
+    const client = new CrewDaemonClient({ baseUrl: 'http://localhost:7773' });
+    const result = await client.claimPendingAction(25_000);
+    expect('action' in result).toBe(true);
+    if ('action' in result) expect(result.action?.id).toBe(7);
+    expect(fetchSpy).toHaveBeenCalledWith(
+      'http://localhost:7773/api/actions/pending?timeoutMs=25000',
+      expect.objectContaining({ method: 'GET' }),
+    );
+  });
+
+  it('returns action:null when the long-poll times out with a null body', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response('null', { status: 200, headers: { 'content-type': 'application/json' } }),
+    );
+    const client = new CrewDaemonClient({ baseUrl: 'http://localhost:7773' });
+    const result = await client.claimPendingAction();
+    expect('action' in result).toBe(true);
+    if ('action' in result) expect(result.action).toBeNull();
+  });
+
+  it('returns ok:false on connection error without throwing', async () => {
+    vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('ECONNREFUSED'));
+    const warn = vi.fn();
+    const client = new CrewDaemonClient({ baseUrl: 'http://localhost:7773', warn });
+    const result = await client.claimPendingAction();
+    expect('action' in result).toBe(false);
+    expect(warn).toHaveBeenCalled();
+  });
+});
+
+describe('CrewDaemonClient.reportActionResult', () => {
+  it('POSTs the status+error and returns ok:true on 204', async () => {
+    const fetchSpy = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValue(new Response(null, { status: 204 }));
+    const client = new CrewDaemonClient({ baseUrl: 'http://localhost:7773' });
+    const result = await client.reportActionResult(7, 'failed', 'boom');
+    expect(result.ok).toBe(true);
+    expect(fetchSpy).toHaveBeenCalledWith(
+      'http://localhost:7773/api/actions/7/result',
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({ status: 'failed', error: 'boom' }),
+      }),
+    );
+  });
+
+  it('omits error from the body when not provided', async () => {
+    const fetchSpy = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValue(new Response(null, { status: 204 }));
+    const client = new CrewDaemonClient({ baseUrl: 'http://localhost:7773' });
+    await client.reportActionResult(7, 'launched');
+    expect(fetchSpy).toHaveBeenCalledWith(
+      'http://localhost:7773/api/actions/7/result',
+      expect.objectContaining({ body: JSON.stringify({ status: 'launched' }) }),
+    );
+  });
+
+  it('returns ok:false on connection error', async () => {
+    vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('ECONNREFUSED'));
+    const warn = vi.fn();
+    const client = new CrewDaemonClient({ baseUrl: 'http://localhost:7773', warn });
+    const result = await client.reportActionResult(7, 'launching');
+    expect(result.ok).toBe(false);
+    expect(warn).toHaveBeenCalled();
+  });
+});
+
+describe('CrewDaemonClient.heartbeat', () => {
+  it('POSTs to /api/runner/heartbeat and returns the status on 200', async () => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify({ online: true, lastSeen: 123 }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      }),
+    );
+    const client = new CrewDaemonClient({ baseUrl: 'http://localhost:7773' });
+    const result = await client.heartbeat();
+    expect('online' in result).toBe(true);
+    if ('online' in result) expect(result.online).toBe(true);
+    expect(fetchSpy).toHaveBeenCalledWith(
+      'http://localhost:7773/api/runner/heartbeat',
+      expect.objectContaining({ method: 'POST' }),
+    );
+  });
+
+  it('returns ok:false on connection error without throwing', async () => {
+    vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('ECONNREFUSED'));
+    const warn = vi.fn();
+    const client = new CrewDaemonClient({ baseUrl: 'http://localhost:7773', warn });
+    const result = await client.heartbeat();
+    expect('online' in result).toBe(false);
+    expect(warn).toHaveBeenCalled();
+  });
+});
+
 describe('crewDaemonClientFromEnv', () => {
   it('uses CREW_PORT when set', async () => {
     const { crewDaemonClientFromEnv } = await import('./index.js');
