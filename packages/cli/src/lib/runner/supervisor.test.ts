@@ -38,6 +38,13 @@ describe('startRunner', () => {
     expect(spawnDetached).not.toHaveBeenCalled();
   });
 
+  it('does not record a pidfile when the spawn yields no valid pid', () => {
+    const writePid = vi.fn();
+    const result = startRunner(startDeps({ spawnDetached: () => -1, writePid }));
+    expect(result).toEqual({ started: false, pid: -1, alreadyRunning: false });
+    expect(writePid).not.toHaveBeenCalled();
+  });
+
   it('replaces a stale pidfile (dead pid) by spawning fresh', () => {
     const writePid = vi.fn();
     const result = startRunner(

@@ -33,26 +33,41 @@ export async function runOnce(deps: RunnerLoopDeps): Promise<PollOutcome> {
   if (claim.action === null) return 'idle';
 
   const action = claim.action;
-  deps.log(`claimed action ${action.id} (${action.kind} ${action.ticketKey} @ ${action.project})`);
-  await deps.client.reportActionResult(action.id, 'launching');
+  try {
+    deps.log(
+      `claimed action ${action.id} (${action.kind} ${action.ticketKey} @ ${action.project})`,
+    );
+    await deps.client.reportActionResult(action.id, 'launching');
 
-  const result = await deps.execute(action);
-  if (result.status === 'launched') {
-    await deps.client.reportActionResult(action.id, 'launched');
-    deps.log(`launched action ${action.id} (${action.kind} ${action.ticketKey})`);
-    return 'launched';
+    const result = await deps.execute(action);
+    if (result.status === 'launched') {
+      await deps.client.reportActionResult(action.id, 'launched');
+      deps.log(`launched action ${action.id} (${action.kind} ${action.ticketKey})`);
+      return 'launched';
+    }
+
+    await deps.client.reportActionResult(action.id, 'failed', result.error);
+    deps.log(`failed action ${action.id} (${action.kind} ${action.ticketKey}): ${result.error}`);
+    return 'failed';
+  } catch (err) {
+    // Defensive: nothing in the happy path is expected to throw (the client
+    // is never-throws and executeAction catches), but the loop runs under a
+    // crash-respawning supervisor — so absorb an unexpected throw into a
+    // backoff-and-retry rather than killing the worker and churning respawns.
+    deps.log(`iteration error on action ${action.id}: ${(err as Error).message}`);
+    return 'poll_error';
   }
-
-  await deps.client.reportActionResult(action.id, 'failed', result.error);
-  deps.log(`failed action ${action.id} (${action.kind} ${action.ticketKey}): ${result.error}`);
-  return 'failed';
 }
 
 export interface RunLoopDeps extends RunnerLoopDeps {
   client: ClaimReportClient & Pick<CrewDaemonClient, 'heartbeat'>;
   /** Aborting this signal stops the loop after the in-flight iteration. */
   signal: AbortSignal;
-  /** Heartbeat cadence; fires once immediately on start. Default 10s. */
+  /**
+   * Heartbeat cadence; fires once immediately on start. Default 5s — the
+   * daemon's runner-staleness window is 15s, so 5s gives a 3× margin where a
+   * single dropped heartbeat can't flap the dashboard chip offline.
+   */
   heartbeatMs?: number;
   /** Delay after a poll error before re-polling, so a downed daemon doesn't busy-spin. Default 2s. */
   errorBackoffMs?: number;
@@ -86,7 +101,7 @@ function startHeartbeat(
  */
 export async function runLoop(deps: RunLoopDeps): Promise<void> {
   const sleep = deps.sleep ?? defaultSleep;
-  const stopHeartbeat = startHeartbeat(deps.client, deps.heartbeatMs ?? 10_000, deps.signal);
+  const stopHeartbeat = startHeartbeat(deps.client, deps.heartbeatMs ?? 5_000, deps.signal);
   try {
     while (!deps.signal.aborted) {
       const outcome = await runOnce(deps);

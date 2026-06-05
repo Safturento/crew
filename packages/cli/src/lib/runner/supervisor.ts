@@ -40,6 +40,12 @@ export function startRunner(deps: StartDeps): StartResult {
   }
   if (existing !== null) deps.log(`stale pidfile (pid ${existing} dead); respawning`);
   const pid = deps.spawnDetached();
+  if (pid <= 0) {
+    // Spawn failed to yield a usable pid. Never record it — a 0/-1 pidfile is
+    // dangerous (`process.kill(-1, …)` signals every process we may signal).
+    deps.log(`runner failed to start (no pid)`);
+    return { started: false, pid, alreadyRunning: false };
+  }
   deps.writePid(pid);
   deps.log(`runner started (pid ${pid})`);
   return { started: true, pid, alreadyRunning: false };

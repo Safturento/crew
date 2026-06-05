@@ -55,6 +55,10 @@ export interface WorkerDeps {
  */
 export async function runWorker(deps: WorkerDeps): Promise<void> {
   const paths = runnerPaths(deps.env);
+  // The supervised path (`crew runner __worker`) overrides `log` to write to
+  // stdout, which the supervisor has already redirected to runner.log — so
+  // this file-append default is only for a standalone/test invocation. Don't
+  // rely on both being active at once (two fds → interleaved writes).
   const log =
     deps.log ??
     ((line: string): void => {

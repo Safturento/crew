@@ -70,6 +70,9 @@ function startAction(env: Env = process.env): void {
   });
   if (result.alreadyRunning) {
     console.log(pc.yellow('!'), `runner already running (pid ${result.pid})`);
+  } else if (!result.started) {
+    console.error(pc.red('✗'), 'runner failed to start (supervisor did not spawn)');
+    process.exitCode = 1;
   }
 }
 

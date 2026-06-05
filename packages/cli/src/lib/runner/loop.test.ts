@@ -77,6 +77,16 @@ describe('runOnce', () => {
     expect(outcome).toBe('failed');
     expect(d.client.reportActionResult).toHaveBeenNthCalledWith(2, 5, 'failed', 'spawn ENOENT');
   });
+
+  it('degrades to poll_error (does not throw) on an unexpected error mid-iteration', async () => {
+    const d = loopDeps();
+    d.client.claimPendingAction.mockResolvedValue({ action: claimed });
+    d.client.reportActionResult.mockRejectedValue(new Error('socket hang up'));
+    // A throw here would kill the worker and trigger a supervisor respawn; we
+    // want it absorbed into a backoff-and-retry instead.
+    const outcome = await runOnce(d);
+    expect(outcome).toBe('poll_error');
+  });
 });
 
 function runLoopDeps(over: Partial<RunLoopDeps> = {}): RunLoopDeps & {
