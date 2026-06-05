@@ -149,7 +149,9 @@ Figma node IDs below are in the live consolidated file (`9FeJPriqdsdA4n9R5Xsrr8`
 | `ModalSelectionRow`  | `350:236`                       | `packages/dashboard/src/components/ModalSelectionRow.tsx`        |
 | `Stepper`            | `378:462`                       | `packages/dashboard/src/components/Stepper.tsx`                  |
 
-The modal-family composites (`Modal`, `AlertModal`, `ModalSelectionRow`, `Stepper`) landed via CREW-137 (T3 of the DS→code reconciliation). They are **build-only — no caller sites yet**; modal screens get wired in separate slices. `Modal` wraps the `dialog` primitive, `AlertModal` wraps the new `alert-dialog` primitive.
+The modal-family composites (`Modal`, `AlertModal`, `ModalSelectionRow`, `Stepper`) landed via CREW-137 (T3 of the DS→code reconciliation); modal screens get wired in separate slices. `Modal` got its first caller in CREW-219 — the feature modal `FixPrModal.tsx` (Fix PR comment box on `pr_open` agents) composes `Modal` + a comment textarea. `AlertModal`, `ModalSelectionRow`, and `Stepper` remain **build-only — no caller sites yet**. `Modal` wraps the `dialog` primitive, `AlertModal` wraps the new `alert-dialog` primitive.
+
+`FixPrModal` itself has **no Figma counterpart and no `.figma.tsx`** — it's a feature modal (composes the designed `Modal` primitive), not a DS composite, so it stays out of the Code-shipped-composites table above. Its button variant choices follow `AlertModal` (Cancel `running/mid`; primary `loud`, color `running` rather than the destructive-default `error` since Fix PR is constructive). Verification record: `docs/visual-fidelity-reports/CREW-219.md`.
 
 `TopNav`, `AgentRow`, `TimelineSection`, and `Stepper` resolve to component sets in the live file; the rest resolve to single components. `ErrorFallback` is the only un-built composite from the original Phase 4 inventory; it lands alongside the next fidelity ticket that surfaces a need.
 
