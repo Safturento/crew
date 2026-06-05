@@ -1,0 +1,78 @@
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { mkdtempSync, rmSync, readFileSync, existsSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { parse as parseToml } from 'smol-toml';
+import { projectConfigSchema } from 'crew-shared';
+import { writeProjectToml } from './write-project-toml.js';
+import type { InitAnswers } from './types.js';
+
+let dir: string;
+
+beforeEach(() => {
+  dir = mkdtempSync(join(tmpdir(), 'crew-init-toml-'));
+});
+afterEach(() => {
+  rmSync(dir, { recursive: true, force: true });
+});
+
+const fullAnswers: InitAnswers = {
+  name: 'demo',
+  repoPath: '/home/me/Repos/demo',
+  jira: { projectKey: 'DEMO', site: 'https://demo.atlassian.net' },
+  github: { repo: 'me/demo' },
+  docker: { canonicalWorktree: 'demo' },
+  sandbox: { allowedDomains: ['github.com', 'api.anthropic.com'] },
+  playwright: {
+    smoke: true,
+    authored: { testsDir: 'tests/e2e', testCommand: 'npm run test:e2e' },
+  },
+  brunoSmoke: { collectionDir: 'bruno' },
+};
+
+describe('writeProjectToml', () => {
+  it('writes <name>.toml into the projects dir', () => {
+    const written = writeProjectToml(fullAnswers, dir);
+    expect(written).toBe(join(dir, 'demo.toml'));
+    expect(existsSync(written)).toBe(true);
+  });
+
+  it('emits TOML that round-trips through projectConfigSchema', () => {
+    const written = writeProjectToml(fullAnswers, dir);
+    const parsed = parseToml(readFileSync(written, 'utf8'));
+    const result = projectConfigSchema.safeParse(parsed);
+    expect(result.success).toBe(true);
+  });
+
+  it('uses ${VAR} refs for playwright.app_url and bruno_smoke.base_url', () => {
+    const written = writeProjectToml(fullAnswers, dir);
+    const parsed = parseToml(readFileSync(written, 'utf8')) as Record<string, any>;
+    expect(parsed.playwright.app_url).toBe('${APP_URL}');
+    expect(parsed.bruno_smoke.base_url).toBe('${DAEMON_URL}');
+  });
+
+  it('carries name, repo_path, jira, github through to the TOML', () => {
+    const written = writeProjectToml(fullAnswers, dir);
+    const parsed = parseToml(readFileSync(written, 'utf8')) as Record<string, any>;
+    expect(parsed.name).toBe('demo');
+    expect(parsed.repo_path).toBe('/home/me/Repos/demo');
+    expect(parsed.default_branch).toBe('main');
+    expect(parsed.jira.project_key).toBe('DEMO');
+    expect(parsed.github.repo).toBe('me/demo');
+  });
+
+  it('omits optional blocks when the answers do not opt in', () => {
+    const minimal: InitAnswers = {
+      name: 'bare',
+      repoPath: '/x/bare',
+      jira: { projectKey: 'BARE', site: 'https://bare.atlassian.net' },
+      github: { repo: 'me/bare' },
+    };
+    const written = writeProjectToml(minimal, dir);
+    const parsed = parseToml(readFileSync(written, 'utf8')) as Record<string, any>;
+    expect(parsed.playwright).toBeUndefined();
+    expect(parsed.bruno_smoke).toBeUndefined();
+    expect(parsed.docker).toBeUndefined();
+    expect(projectConfigSchema.safeParse(parsed).success).toBe(true);
+  });
+});
