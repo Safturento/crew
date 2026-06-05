@@ -13,14 +13,14 @@ This is **Phase 3** of the plan (`docs/superpowers/plans/2026-06-05-crew-init-do
 
 ## Scope (the six checks)
 
-| Check | Scope | detect | fix |
-| --- | --- | --- | --- |
-| `playwright-config` | project | when `playwright` opted-in, require `playwright.config.ts` + `tests/e2e/` | `scaffoldPlaywright` (T2) |
-| `chromium-installed` | machine | when playwright opted-in, Playwright Chromium present | `npx playwright install chromium` — **confirm-gated** |
-| `bruno-skeleton` | project | when `bruno_smoke` opted-in, require `bruno/` collection | `scaffoldBruno` (T2) |
-| `docker-socket` | machine | `docker info` reachable | none |
-| `apt-deps` | machine | required apt packages present; **skip gracefully** (ok+note) off-apt | report-only (never sudo non-interactively) |
-| `baseline-present` | project, **warn-level** | `AGENTS.md` + `.agents/` exist; **warn** never fail | none |
+| Check                | Scope                   | detect                                                                    | fix                                                   |
+| -------------------- | ----------------------- | ------------------------------------------------------------------------- | ----------------------------------------------------- |
+| `playwright-config`  | project                 | when `playwright` opted-in, require `playwright.config.ts` + `tests/e2e/` | `scaffoldPlaywright` (T2)                             |
+| `chromium-installed` | machine                 | when playwright opted-in, Playwright Chromium present                     | `npx playwright install chromium` — **confirm-gated** |
+| `bruno-skeleton`     | project                 | when `bruno_smoke` opted-in, require `bruno/` collection                  | `scaffoldBruno` (T2)                                  |
+| `docker-socket`      | machine                 | `docker info` reachable                                                   | none                                                  |
+| `apt-deps`           | machine                 | required apt packages present; **skip gracefully** (ok+note) off-apt      | report-only (never sudo non-interactively)            |
+| `baseline-present`   | project, **warn-level** | `AGENTS.md` + `.agents/` exist; **warn** never fail                       | none                                                  |
 
 ## Relevant files
 
