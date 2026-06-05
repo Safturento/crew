@@ -7,6 +7,19 @@ import { projectConfigSchema } from 'crew-shared';
 import { writeProjectToml } from './write-project-toml.js';
 import type { InitAnswers } from './types.js';
 
+interface RawToml {
+  name: string;
+  repo_path: string;
+  default_branch: string;
+  jira: { project_key: string };
+  github: { repo: string };
+  docker?: unknown;
+  playwright?: { app_url: string };
+  bruno_smoke?: { base_url: string };
+}
+
+const asRaw = (raw: string): RawToml => parseToml(raw) as unknown as RawToml;
+
 let dir: string;
 
 beforeEach(() => {
@@ -46,14 +59,14 @@ describe('writeProjectToml', () => {
 
   it('uses ${VAR} refs for playwright.app_url and bruno_smoke.base_url', () => {
     const written = writeProjectToml(fullAnswers, dir);
-    const parsed = parseToml(readFileSync(written, 'utf8')) as Record<string, any>;
-    expect(parsed.playwright.app_url).toBe('${APP_URL}');
-    expect(parsed.bruno_smoke.base_url).toBe('${DAEMON_URL}');
+    const parsed = asRaw(readFileSync(written, 'utf8'));
+    expect(parsed.playwright?.app_url).toBe('${APP_URL}');
+    expect(parsed.bruno_smoke?.base_url).toBe('${DAEMON_URL}');
   });
 
   it('carries name, repo_path, jira, github through to the TOML', () => {
     const written = writeProjectToml(fullAnswers, dir);
-    const parsed = parseToml(readFileSync(written, 'utf8')) as Record<string, any>;
+    const parsed = asRaw(readFileSync(written, 'utf8'));
     expect(parsed.name).toBe('demo');
     expect(parsed.repo_path).toBe('/home/me/Repos/demo');
     expect(parsed.default_branch).toBe('main');
@@ -69,7 +82,7 @@ describe('writeProjectToml', () => {
       github: { repo: 'me/bare' },
     };
     const written = writeProjectToml(minimal, dir);
-    const parsed = parseToml(readFileSync(written, 'utf8')) as Record<string, any>;
+    const parsed = asRaw(readFileSync(written, 'utf8'));
     expect(parsed.playwright).toBeUndefined();
     expect(parsed.bruno_smoke).toBeUndefined();
     expect(parsed.docker).toBeUndefined();
