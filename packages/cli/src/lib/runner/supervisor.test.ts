@@ -15,6 +15,7 @@ function startDeps(over: Partial<StartDeps> = {}): StartDeps {
     readPid: () => null,
     writePid: vi.fn(),
     isAlive: () => false,
+    ensureLogDir: () => ({ dir: '/logs', writable: true }),
     spawnDetached: () => 4242,
     log: vi.fn(),
     ...over,
@@ -53,6 +54,29 @@ describe('startRunner', () => {
     expect(result.started).toBe(true);
     expect(result.pid).toBe(77);
     expect(writePid).toHaveBeenCalledWith(77);
+  });
+
+  it('aborts with a remediation message when the log dir is not writable', () => {
+    const spawnDetached = vi.fn(() => 4242);
+    const writePid = vi.fn();
+    const result = startRunner(
+      startDeps({
+        ensureLogDir: () => ({ dir: '/logs', writable: false }),
+        spawnDetached,
+        writePid,
+      }),
+    );
+    expect(result.started).toBe(false);
+    expect(result.logDirError).toContain('/logs');
+    expect(result.logDirError).toContain('chown');
+    expect(spawnDetached).not.toHaveBeenCalled();
+    expect(writePid).not.toHaveBeenCalled();
+  });
+
+  it('does not probe the log dir when a live runner already holds the pidfile', () => {
+    const ensureLogDir = vi.fn(() => ({ dir: '/logs', writable: true }));
+    startRunner(startDeps({ readPid: () => 999, isAlive: () => true, ensureLogDir }));
+    expect(ensureLogDir).not.toHaveBeenCalled();
   });
 });
 

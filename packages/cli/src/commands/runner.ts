@@ -5,6 +5,7 @@ import { dirname } from 'node:path';
 import pc from 'picocolors';
 import {
   crewDaemonClientFromEnv,
+  ensureRunnerLogDir,
   runnerPaths,
   runWorker,
   formatLogLine,
@@ -65,11 +66,18 @@ function startAction(env: Env = process.env): void {
       writeFileSync(paths.pidFile, String(pid));
     },
     isAlive: isProcessAlive,
+    // Create ~/.crew/runner user-owned before opening the log. Standalone
+    // `crew runner start` (no `crew up`) may run after a bare `docker compose
+    // up` already fabricated the dir as `nobody`; surface a chown fix then.
+    ensureLogDir: () => ensureRunnerLogDir(env),
     spawnDetached: () => spawnSupervisor(env, paths.logFile, paths.logDir),
     log: (m) => console.log(pc.green('✓'), m),
   });
   if (result.alreadyRunning) {
     console.log(pc.yellow('!'), `runner already running (pid ${result.pid})`);
+  } else if (result.logDirError) {
+    console.error(pc.red('✗'), result.logDirError);
+    process.exitCode = 1;
   } else if (!result.started) {
     console.error(pc.red('✗'), 'runner failed to start (supervisor did not spawn)');
     process.exitCode = 1;

@@ -8,11 +8,24 @@ describe('runUp', () => {
     const exec = vi.fn(async (file: string, args: string[]) => {
       calls.push([file, ...args]);
     });
-    await runUp({ exec, log: vi.fn() });
+    await runUp({ exec, log: vi.fn(), ensureRunnerDir: vi.fn() });
     expect(calls).toEqual([
       ['docker', 'compose', 'up', '-d'],
       ['crew', 'runner', 'start'],
     ]);
+  });
+
+  it('pre-creates the host runner dir before compose can mount it', async () => {
+    const order: string[] = [];
+    const exec = vi.fn(async (file: string, args: string[]) => {
+      order.push([file, ...args].join(' '));
+    });
+    const ensureRunnerDir = vi.fn(() => {
+      order.push('ensure-runner-dir');
+    });
+    await runUp({ exec, log: vi.fn(), ensureRunnerDir });
+    expect(order[0]).toBe('ensure-runner-dir');
+    expect(order.indexOf('ensure-runner-dir')).toBeLessThan(order.indexOf('docker compose up -d'));
   });
 });
 

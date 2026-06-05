@@ -42,6 +42,7 @@ Organization: Active is grouped by topic (not chronology) since the dominant acc
     - [2026-04-28 — Dashboard New Run modal + projects route view](#2026-04-28--dashboard-new-run-modal--projects-route-view)
     - [2026-04-28 — `useAttention.clear()` snapshot semantic isn't directly tested](#2026-04-28--useattentionclear-snapshot-semantic-isnt-directly-tested)
   - [Daemon, CLI & Dispatch](#daemon-cli--dispatch)
+    - [2026-06-04 — Daemon test suite flakes under full-parallel `test:run`](#2026-06-04--daemon-test-suite-flakes-under-full-parallel-testrun)
     - [2026-06-04 — Runner pidfile has no liveness identity (recycled-PID false positive)](#2026-06-04--runner-pidfile-has-no-liveness-identity-recycled-pid-false-positive)
     - [2026-06-04 — `GET /api/runner/logs` reads the whole log file into memory](#2026-06-04--get-apirunnerlogs-reads-the-whole-log-file-into-memory)
     - [2026-06-03 — `deriveState` falls through to `finished` when PR-create isn't detected](#2026-06-03--derivestate-falls-through-to-finished-when-pr-create-isnt-detected)
@@ -642,6 +643,18 @@ The "synthetic Unregistered section" feels right — single render path, no extr
 **Shape of work:** Tiny cleanup. Add 2–3 RTL test cases. Bundle into the cva-cleanup ticket above or stand alone.
 
 ### Daemon, CLI & Dispatch
+
+#### 2026-06-04 — Daemon test suite flakes under full-parallel `test:run`
+
+**What:** Running the daemon vitest suite at full parallelism (35 files at once, as `npm run test:run` does) produces non-deterministic failures: across consecutive runs I saw `routes/runner.test.ts > tails the last N lines` fail alone, then it + `routes/runs.test.ts > returns 409 when already completed`, then a single failure again — while every one of those tests passes 3/3 in isolation. The failing _set_ changes run-to-run with no code change, and the slow case clocked ~7.7s for a normally-instant route test, pointing at resource/timing contention rather than a logic bug.
+
+**Why noticed:** During CREW-222 verification (a CLI-only change touching zero daemon files), `npm run test:run` went red on daemon route tests. Investigation (systematic-debugging) proved the diff touches only `packages/cli`, the daemon binary is byte-identical to origin/main, the tests pass in isolation, and the failing set is non-deterministic — i.e. pre-existing environmental flakiness, not a regression from CREW-222.
+
+**Anchors:** `packages/daemon/src/routes/runner.test.ts`, `packages/daemon/src/routes/runs.test.ts`; root `package.json` `test:run` (cross-workspace vitest). Repro: `cd packages/daemon && npx vitest run` a few times on WSL.
+
+**What's been considered:** likely a Fastify `app.inject` / SQLite-tmpdir setup-teardown race surfacing only under parallel fileParallelism on WSL. Options: cap daemon vitest `poolOptions`/`fileParallelism`, give each test an isolated DB/tmp fixture if any share state, or mark known-flaky tests for retry. Needs a short investigation pass to find which shared resource (tmpdir, port, in-memory DB) the parallel races contend on before picking a fix.
+
+**Shape of work:** small-to-medium investigation in the daemon test harness — first reproduce + bisect which resource the flaky tests share, then either isolate fixtures or constrain parallelism. No production code expected to change.
 
 #### 2026-06-04 — Runner pidfile has no liveness identity (recycled-PID false positive)
 

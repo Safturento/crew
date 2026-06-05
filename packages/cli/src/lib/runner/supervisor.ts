@@ -17,6 +17,13 @@ export interface StartDeps {
   writePid: (pid: number) => void;
   /** `process.kill(pid, 0)` liveness probe — true when the pid is alive. */
   isAlive: (pid: number) => boolean;
+  /**
+   * Ensure the log dir exists host-side and report whether it's writable.
+   * Run before spawning so a `nobody`-owned dir (Docker won the mount race)
+   * surfaces a chown remediation instead of an EACCES stack when the worker
+   * opens runner.log.
+   */
+  ensureLogDir: () => { dir: string; writable: boolean };
   /** Spawn the detached supervisor process; returns its pid. */
   spawnDetached: () => number;
   log: (msg: string) => void;
@@ -26,6 +33,8 @@ export interface StartResult {
   started: boolean;
   pid: number;
   alreadyRunning: boolean;
+  /** Set when start was aborted because the log dir isn't writable. */
+  logDirError?: string;
 }
 
 /**
@@ -37,6 +46,15 @@ export function startRunner(deps: StartDeps): StartResult {
   if (existing !== null && deps.isAlive(existing)) {
     deps.log(`runner already running (pid ${existing})`);
     return { started: false, pid: existing, alreadyRunning: true };
+  }
+  const logDir = deps.ensureLogDir();
+  if (!logDir.writable) {
+    const message =
+      `runner log dir ${logDir.dir} is not writable by the current user — ` +
+      `Docker likely created it as 'nobody'. ` +
+      `Fix ownership with: sudo chown -R "$(id -u):$(id -g)" ${logDir.dir}`;
+    deps.log(message);
+    return { started: false, pid: -1, alreadyRunning: false, logDirError: message };
   }
   if (existing !== null) deps.log(`stale pidfile (pid ${existing} dead); respawning`);
   const pid = deps.spawnDetached();
