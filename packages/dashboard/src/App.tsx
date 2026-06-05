@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useQuery, useQueryErrorResetBoundary } from '@tanstack/react-query';
 import { ErrorBoundary } from 'react-error-boundary';
 import { Toaster } from 'sonner';
@@ -8,6 +8,7 @@ import { useFaviconBadge } from './attention/useFaviconBadge.js';
 import { AgentsList } from './components/AgentsList.js';
 import type { QuickActionKind } from './components/AgentRow.js';
 import { ErrorFallback } from './components/ErrorFallback.js';
+import { NewRunModal } from './components/NewRunModal.js';
 import { TopNav } from './components/TopNav.js';
 import { ViewportFrame } from './components/ViewportFrame.js';
 import { useActionToasts, useEnqueueAction } from './data/actions.js';
@@ -63,6 +64,10 @@ function AppContent({ client }: { client: DaemonClient }) {
   const enqueue = useEnqueueAction();
   useActionToasts();
 
+  // CREW-218: the "+ New Run" stepper modal. App owns the open state + the
+  // enqueue mutation; NewRunModal is presentational.
+  const [newRunOpen, setNewRunOpen] = useState(false);
+
   const onAgentAction = useCallback(
     (kind: QuickActionKind, agent: Agent) => {
       if (kind === 'resume') {
@@ -104,11 +109,15 @@ function AppContent({ client }: { client: DaemonClient }) {
         route={route}
         attentionCount={attention.count}
         onClearAttention={attention.clear}
-        onNewRun={() => {
-          /* New Run modal lands in a future plan */
-        }}
+        onNewRun={() => setNewRunOpen(true)}
       />
       <div className="flex-1 overflow-y-auto">{body}</div>
+      <NewRunModal
+        open={newRunOpen}
+        onOpenChange={setNewRunOpen}
+        projects={projects}
+        onConfirm={({ project, ticketKey }) => enqueue.mutate({ kind: 'run', project, ticketKey })}
+      />
       {route.kind === 'agent-drawer' && <AgentDrawer agentKey={route.key} />}
     </>
   );
