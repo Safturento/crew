@@ -12,6 +12,7 @@ import { MetricsService } from './services/MetricsService.js';
 import { PrPoller } from './services/PrPoller.js';
 import { RunnerStatusService } from './services/RunnerStatusService.js';
 import { FinishStepsService } from './services/FinishStepsService.js';
+import { ActionService } from './services/ActionService.js';
 import { resolveJsonlPathForAgent } from './services/resolveJsonlPath.js';
 
 /**
@@ -38,6 +39,7 @@ export interface DaemonCradle {
   prPoller: PrPoller;
   runnerStatusService: RunnerStatusService;
   finishStepsService: FinishStepsService;
+  actionService: ActionService;
 }
 
 declare module '@fastify/awilix' {
@@ -121,6 +123,12 @@ export function buildContainer(deps: BuildContainerDeps): AwilixContainer<Daemon
     // other query services.
     finishStepsService: asFunction(
       ({ db, eventBus }: DaemonCradle) => new FinishStepsService({ db, eventBus }),
+    ).scoped(),
+    // CREW-214: queued dashboard actions. Scoped — it carries no state of
+    // its own (the queue lives in SQLite + the singleton event bus), so a
+    // per-request instance is fine and matches the other DB-backed services.
+    actionService: asFunction(
+      ({ db, eventBus }: DaemonCradle) => new ActionService({ db, eventBus }),
     ).scoped(),
   });
   return container;

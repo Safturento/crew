@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import type { ActionKind, ActionStatus } from 'crew-shared';
 
 /**
  * The hybrid event vocabulary the daemon emits over SSE:
@@ -28,6 +29,13 @@ export type SsePayload =
   // CREW-215: invalidation ping for a `crew finish` step — the dashboard
   // refetches `GET /api/agents/:key/finish-steps` for the named agent.
   | { type: 'finish_step.changed'; data: { key: string } }
+  // CREW-214: a queued action changed status. `key` is the ticket key the
+  // request targets (the agent-to-be); the dashboard uses it to toast the
+  // originating QuickAction. Emitted on every lifecycle transition.
+  | {
+      type: 'action.changed';
+      data: { id: number; kind: ActionKind; key: string; status: ActionStatus };
+    }
   | { type: 'cache.miss'; data: Record<string, never> };
 
 /**

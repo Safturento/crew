@@ -126,11 +126,14 @@ function parseFrame(frame: string): ParsedFrame {
   if (!out.id || !out.event || !('data' in out)) {
     throw new Error(`malformed SSE frame: ${JSON.stringify(frame)}`);
   }
+  // SSE wire frames carry no static type↔data correlation, so reconstruct
+  // the discriminated union via an unchecked cast — the tests assert on the
+  // parsed fields directly.
   return {
     id: out.id,
-    type: out.event as SseEvent['type'],
+    type: out.event,
     data: JSON.parse(out.data),
-  };
+  } as unknown as SseEvent;
 }
 
 describe('GET /api/events', () => {

@@ -5,7 +5,7 @@ import { join, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { sql, type Kysely } from 'kysely';
 import { createDb, runMigrations, type DaemonDatabase } from '../db.js';
-import { down } from './0006_finish_steps.js';
+import { down } from './0007_finish_steps.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const MIGRATIONS_DIR = resolve(__dirname);

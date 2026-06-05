@@ -67,7 +67,7 @@ The config encodes: repo path, default branch, Jira project key + site, GitHub r
 
 SQLite at `~/.config/crew/state.db`. Schema lives in `packages/daemon/src/db.ts` + numbered migrations in `packages/daemon/src/migrations/`. **Never edit a shipped migration — add a new numbered file instead.**
 
-Tables: `agents`, `runs`, `tool_calls`, `state_transitions`, `startup_events`, `finish_steps`. `startup_events` is fed by a chokidar watcher on `~/.crew/startup/<key>.jsonl` (CREW-201) — see [`dispatch.md`](dispatch.md) for the producer side. `finish_steps` (CREW-215) is written by `POST /api/agents/:key/finish-step` as `crew finish` reports each step, and read back as the drawer's finish checklist.
+Tables: `agents`, `runs`, `tool_calls`, `state_transitions`, `startup_events`, `action_requests`, `finish_steps`. `startup_events` is fed by a chokidar watcher on `~/.crew/startup/<key>.jsonl` (CREW-201) — see [`dispatch.md`](dispatch.md) for the producer side. `action_requests` (CREW-214) is the dashboard-triggered action queue: the dashboard enqueues a `run`/`fix_pr`/`finish` request, the host runner long-polls + atomically claims it, and each status transition publishes an `action.changed` SSE event from `ActionService`. `finish_steps` (CREW-215) is written by `POST /api/agents/:key/finish-step` as `crew finish` reports each step, and read back as the drawer's finish checklist.
 
 ## Inherited conventions
 
