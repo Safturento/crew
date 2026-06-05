@@ -6,6 +6,7 @@ import type {
   Agent,
   AgentDetail,
   AggregateMetrics,
+  FinishStep,
   Project,
   ProjectDetailResponse,
   StateTransition,
@@ -181,6 +182,25 @@ const RunnerStatusSchema = z.object({
   lastSeen: z.number().nullable(),
 });
 
+/**
+ * CREW-220: `GET /api/agents/:key/finish-steps` response. Each step is the
+ * stored shape — `detail` is nullable (NULL in the DB). Defined locally per
+ * the inline-schema convention; only the `FinishStep` *type* crosses over
+ * from `crew-shared`.
+ */
+const FinishStepsResponseSchema = z.object({
+  steps: z.array(
+    z.object({
+      key: z.string(),
+      index: z.number(),
+      label: z.string(),
+      status: z.enum(['ok', 'skip', 'error']),
+      detail: z.string().nullable(),
+      ts: z.number(),
+    }),
+  ),
+});
+
 const StateHistoryResponseSchema = z.object({
   transitions: z.array(
     z.object({
@@ -268,6 +288,17 @@ export class HttpDaemonClient implements DaemonClient {
     const events = parsed.events as unknown as TranscriptEvent[];
     const warning = res.headers.get('X-Crew-Warning');
     return warning ? { events, warnings: [warning] } : { events };
+  }
+
+  /**
+   * CREW-220: the ordered `crew finish` step checklist for one agent. Seeds
+   * `useFinishSteps()` on mount; the SSE `finish_step.changed` ping drives a
+   * refetch as new steps stream in.
+   */
+  async getFinishSteps(key: string): Promise<FinishStep[]> {
+    const res = await fetch(`${this.baseUrl}/api/agents/${encodeURIComponent(key)}/finish-steps`);
+    if (!res.ok) throw new Error(`GET /api/agents/${key}/finish-steps: ${res.status}`);
+    return FinishStepsResponseSchema.parse(await res.json()).steps;
   }
 
   /**

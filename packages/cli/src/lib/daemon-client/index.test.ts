@@ -175,6 +175,44 @@ describe('CrewDaemonClient.reportActionResult', () => {
   });
 });
 
+describe('CrewDaemonClient.reportFinishStep', () => {
+  const step = { index: 2, label: 'git fetch --prune origin', status: 'ok' as const, ts: 1700 };
+
+  it('POSTs the step body to /api/agents/:key/finish-step and returns ok on 201', async () => {
+    const fetchSpy = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValue(new Response(JSON.stringify({}), { status: 201 }));
+    const client = new CrewDaemonClient({ baseUrl: 'http://localhost:7773' });
+    const result = await client.reportFinishStep('KAN-1', step);
+    expect(result.ok).toBe(true);
+    expect(fetchSpy).toHaveBeenCalledWith(
+      'http://localhost:7773/api/agents/KAN-1/finish-step',
+      expect.objectContaining({ method: 'POST', body: JSON.stringify(step) }),
+    );
+  });
+
+  it('url-encodes the agent key in the path', async () => {
+    const fetchSpy = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValue(new Response(JSON.stringify({}), { status: 201 }));
+    const client = new CrewDaemonClient({ baseUrl: 'http://localhost:7773' });
+    await client.reportFinishStep('KAN 1/2', step);
+    expect(fetchSpy).toHaveBeenCalledWith(
+      'http://localhost:7773/api/agents/KAN%201%2F2/finish-step',
+      expect.anything(),
+    );
+  });
+
+  it('returns ok:false on connection error without throwing', async () => {
+    vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('ECONNREFUSED'));
+    const warn = vi.fn();
+    const client = new CrewDaemonClient({ baseUrl: 'http://localhost:7773', warn });
+    const result = await client.reportFinishStep('KAN-1', step);
+    expect(result.ok).toBe(false);
+    expect(warn).toHaveBeenCalled();
+  });
+});
+
 describe('CrewDaemonClient.heartbeat', () => {
   it('POSTs to /api/runner/heartbeat and returns the status on 200', async () => {
     const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(

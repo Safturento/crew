@@ -310,6 +310,62 @@ describe('HttpDaemonClient.getTimeline', () => {
   });
 });
 
+describe('HttpDaemonClient.getFinishSteps (CREW-220)', () => {
+  it('GETs /api/agents/:key/finish-steps and returns the ordered steps', async () => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          steps: [
+            {
+              key: 'KAN-1',
+              index: 0,
+              label: 'git branch -D KAN-1',
+              status: 'ok',
+              detail: null,
+              ts: 1000,
+            },
+            {
+              key: 'KAN-1',
+              index: 1,
+              label: 'jira KAN-1 → Done',
+              status: 'skip',
+              detail: 'already Done',
+              ts: 1100,
+            },
+          ],
+        }),
+        { status: 200 },
+      ),
+    );
+
+    const steps = await new HttpDaemonClient().getFinishSteps('KAN-1');
+
+    expect(steps).toHaveLength(2);
+    expect(steps[0]).toEqual({
+      key: 'KAN-1',
+      index: 0,
+      label: 'git branch -D KAN-1',
+      status: 'ok',
+      detail: null,
+      ts: 1000,
+    });
+    expect(steps[1]?.status).toBe('skip');
+    expect(fetchSpy).toHaveBeenCalledWith('/api/agents/KAN-1/finish-steps');
+  });
+
+  it('throws on non-2xx', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('boom', { status: 500 }));
+    await expect(new HttpDaemonClient().getFinishSteps('KAN-1')).rejects.toThrow(/500/);
+  });
+
+  it('throws on schema mismatch', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify({ steps: [{ index: 0 }] }), { status: 200 }),
+    );
+    await expect(new HttpDaemonClient().getFinishSteps('KAN-1')).rejects.toThrow();
+  });
+});
+
 describe('HttpDaemonClient.refreshPrStatus (CREW-202)', () => {
   it('POSTs to /api/agents/:key/refresh-pr-status and parses the response', async () => {
     const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(

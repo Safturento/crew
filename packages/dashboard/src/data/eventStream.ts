@@ -25,6 +25,9 @@ const EVENT_NAMES = [
   // action layer (toasts on launch failure, the runner-aware degradation).
   'action.changed',
   'runner.status_changed',
+  // CREW-220: pings the drawer's finish-step checklist to refetch as each
+  // `crew finish` step streams in.
+  'finish_step.changed',
   'cache.miss',
 ] as const;
 

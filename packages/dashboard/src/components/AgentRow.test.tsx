@@ -100,6 +100,34 @@ describe('AgentRow', () => {
     expect(link.querySelector('svg')?.classList.toString()).toMatch(/lucide-git-merge/);
   });
 
+  // CREW-220: Finish does post-merge cleanup, so it is only actionable once
+  // the PR is merged. On every other state it renders disabled + annotated.
+  it('disables Finish until the agent reaches pr_merged', () => {
+    for (const state of ['idle', 'pr_open'] as AgentState[]) {
+      const { unmount } = render(
+        <AgentRow
+          agent={{ ...baseAgent, state, prUrl: 'https://example.com/pr/1' }}
+          onSelect={() => {}}
+        />,
+      );
+      const finish = screen.getByRole('button', { name: 'Finish' });
+      expect(finish).toBeDisabled();
+      expect(finish).toHaveAttribute('title', expect.stringMatching(/merged/i));
+      unmount();
+    }
+  });
+
+  it('enables Finish on pr_merged when a runner is online', () => {
+    render(
+      <AgentRow
+        agent={{ ...baseAgent, state: 'pr_merged', prUrl: 'https://example.com/pr/9' }}
+        onSelect={() => {}}
+        runnerOnline
+      />,
+    );
+    expect(screen.getByRole('button', { name: 'Finish' })).toBeEnabled();
+  });
+
   it('renders "Resume" + "Finish" quick actions for idle state', () => {
     render(<AgentRow agent={{ ...baseAgent, state: 'idle' }} onSelect={() => {}} />);
     expect(screen.getByRole('button', { name: 'Resume' })).toBeInTheDocument();

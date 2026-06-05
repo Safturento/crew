@@ -10,6 +10,7 @@ Organization: Active is grouped by topic (not chronology) since the dominant acc
 
 - [Active](#active)
   - [Figma & Crew DS](#figma--crew-ds)
+    - [2026-06-04 — `FinishSteps` checklist has no Crew DS Figma counterpart](#2026-06-04--finishsteps-checklist-has-no-crew-ds-figma-counterpart)
     - [2026-05-24 — Publish `state/pr-merged` variable in Crew DS Figma](#2026-05-24--publish-statepr-merged-variable-in-crew-ds-figma)
     - [2026-05-12 — Move figma-snapshot PAGE_DIR_MAP into project config](#2026-05-12--move-figma-snapshot-page_dir_map-into-project-config)
     - [2026-05-12 — Pill trailing-icon support + CodeChip mono-font composite](#2026-05-12--pill-trailing-icon-support--codechip-mono-font-composite)
@@ -43,6 +44,7 @@ Organization: Active is grouped by topic (not chronology) since the dominant acc
     - [2026-04-28 — Dashboard New Run modal + projects route view](#2026-04-28--dashboard-new-run-modal--projects-route-view)
     - [2026-04-28 — `useAttention.clear()` snapshot semantic isn't directly tested](#2026-04-28--useattentionclear-snapshot-semantic-isnt-directly-tested)
   - [Daemon, CLI & Dispatch](#daemon-cli--dispatch)
+    - [2026-06-04 — `finish_steps` table accumulates across `crew finish` re-runs (no run scoping)](#2026-06-04--finish_steps-table-accumulates-across-crew-finish-re-runs-no-run-scoping)
     - [2026-06-04 — Daemon test suite flakes under full-parallel `test:run`](#2026-06-04--daemon-test-suite-flakes-under-full-parallel-testrun)
     - [2026-06-04 — Runner pidfile has no liveness identity (recycled-PID false positive)](#2026-06-04--runner-pidfile-has-no-liveness-identity-recycled-pid-false-positive)
     - [2026-06-04 — `GET /api/runner/logs` reads the whole log file into memory](#2026-06-04--get-apirunnerlogs-reads-the-whole-log-file-into-memory)
@@ -103,6 +105,20 @@ Organization: Active is grouped by topic (not chronology) since the dominant acc
 ## Active
 
 ### Figma & Crew DS
+
+#### 2026-06-04 — `FinishSteps` checklist has no Crew DS Figma counterpart
+
+**What:** CREW-220 shipped `packages/dashboard/src/components/FinishSteps.tsx` — the agent drawer's live `crew finish` step checklist (ok/skip/error rows). It is figma-less feature-internal (same status as `MinimapStripe`): no finish-checklist was ever designed in the Crew DS Figma, so the component borrows the `TokensByTool` card shell and the status palette (`emerald-500` / `muted-foreground` / `red-400`) by hand. A future fidelity pass could design a proper Figma counterpart and a `.figma.tsx` Code Connect mapping so it joins the regular DS-composite inventory.
+
+**Why noticed:** Building T8 of the dashboard-actions Epic (CREW-208). The `visual-fidelity-check` had no snapshot component to compare against — by design here, but worth a deliberate design pass rather than leaving it as a permanent gap.
+
+**Anchors:**
+
+- `packages/dashboard/src/components/FinishSteps.tsx` — the code component
+- `.agents/design-system.md` — "Code-shipped composites" inventory (row marked _no Figma — feature-internal_)
+- `packages/dashboard/src/components/TokensByTool.tsx` — the card shell + section idiom it borrows
+
+**Shape of work:** small Crew DS Figma pass (one card composite, three status row variants) + a `FinishSteps.figma.tsx` mapping; opportunistic, low priority.
 
 #### 2026-05-24 — Publish `state/pr-merged` variable in Crew DS Figma
 
@@ -667,6 +683,23 @@ The "synthetic Unregistered section" feels right — single render path, no extr
 **Shape of work:** Tiny cleanup. Add 2–3 RTL test cases. Bundle into the cva-cleanup ticket above or stand alone.
 
 ### Daemon, CLI & Dispatch
+
+#### 2026-06-04 — `finish_steps` table accumulates across `crew finish` re-runs (no run scoping)
+
+**What:** The daemon's `finish_steps` table (migration `0007`, CREW-215) has no `(agent_key, run_id)` discriminator and no unique constraint on `(agent_key, idx)`. `FinishStepsService.list(key)` returns _every_ row for the agent ordered by `id`. Meanwhile the CLI resets its per-step `index` to 0 at the start of each `crew finish` run (`makeStepReporter`, `packages/cli/src/commands/finish.ts`). So a second `crew finish` for the same key (a retry after a partial failure, or a manual re-run) appends a fresh `0,1,2,…` sequence — the agent's checklist becomes `[0,1,2,…,0,1,2,…]` and grows unbounded over the agent's lifetime. The drawer shows the concatenation of all runs with no visual run boundary.
+
+**Why noticed:** Code review of CREW-220 (T8). The dashboard consumer (`FinishSteps.tsx`) originally keyed rows on `step.index`, which collides on the repeated indices — fixed in CREW-220 by keying on `${ts}-${index}`. But that's a band-aid over the daemon-side question: should the checklist be scoped to the latest run (or grouped per run) rather than an ever-growing concatenation?
+
+**Anchors:**
+
+- `packages/daemon/src/migrations/0007_finish_steps.ts` — table DDL (no run_id, no unique idx)
+- `packages/daemon/src/services/FinishStepsService.ts:62-77` — `list()` returns all rows by `id`
+- `packages/cli/src/commands/finish.ts` — `makeStepReporter` resets `index` per run
+- `packages/dashboard/src/components/FinishSteps.tsx` — consumer; `${ts}-${index}` key works around the collision
+
+**What's been considered:** Two shapes — (a) clear prior `finish_steps` for the agent at the start of each run (latest-run-only semantics, simplest, matches "the drawer shows the current cleanup"); (b) add a `run_id` and group/scope the checklist per run (keeps history, more UI work). (a) is likely enough — finish is terminal cleanup, history of prior failed attempts has low value.
+
+**Shape of work:** small daemon change (clear-on-new-run or run_id column + migration) + a `FinishStepsService` tweak; optional dashboard grouping if (b). The CREW-220 key fix means there's no rendering bug in the meantime, just unbounded growth + concatenated display.
 
 #### 2026-06-04 — Daemon test suite flakes under full-parallel `test:run`
 
