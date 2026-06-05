@@ -25,7 +25,7 @@ Implements **Task T4** of `docs/superpowers/plans/2026-06-03-dashboard-agent-act
 
 ## Decisions
 
-- **No new HTTP routes / Bruno endpoints.** T4 only *consumes* the T2/T3 routes
+- **No new HTTP routes / Bruno endpoints.** T4 only _consumes_ the T2/T3 routes
   (`/api/actions/pending`, `/api/actions/:id/result`, `/api/runner/heartbeat`).
   CLI-only; no dashboard/UI surface, so no visual-fidelity work.
 - **daemon-client never-throws convention.** New methods return

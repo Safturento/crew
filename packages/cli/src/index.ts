@@ -15,6 +15,9 @@ import { daemonCommand } from './commands/daemon.js';
 import { figmaSnapshotCommand } from './commands/figma-snapshot.js';
 import { backfillTitlesCommand } from './commands/backfill-titles.js';
 import { normalizeLineEndingsCommand } from './commands/normalize-line-endings.js';
+import { runnerCommand } from './commands/runner.js';
+import { upCommand } from './commands/up.js';
+import { downCommand } from './commands/down.js';
 
 const program = new Command();
 
@@ -39,5 +42,8 @@ program.addCommand(daemonCommand);
 program.addCommand(figmaSnapshotCommand);
 program.addCommand(backfillTitlesCommand);
 program.addCommand(normalizeLineEndingsCommand);
+program.addCommand(runnerCommand);
+program.addCommand(upCommand);
+program.addCommand(downCommand);
 
 program.parse(process.argv);

@@ -100,14 +100,12 @@ describe('CrewDaemonClient.claimPendingAction', () => {
   };
 
   it('long-polls and returns the claimed action on 200', async () => {
-    const fetchSpy = vi
-      .spyOn(globalThis, 'fetch')
-      .mockResolvedValue(
-        new Response(JSON.stringify(row), {
-          status: 200,
-          headers: { 'content-type': 'application/json' },
-        }),
-      );
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify(row), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      }),
+    );
     const client = new CrewDaemonClient({ baseUrl: 'http://localhost:7773' });
     const result = await client.claimPendingAction(25_000);
     expect('action' in result).toBe(true);

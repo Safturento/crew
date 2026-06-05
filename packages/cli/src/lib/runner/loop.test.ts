@@ -15,7 +15,10 @@ const claimed: ActionRequest = {
 };
 
 function loopDeps(over: Partial<RunnerLoopDeps> = {}): RunnerLoopDeps & {
-  client: { claimPendingAction: ReturnType<typeof vi.fn>; reportActionResult: ReturnType<typeof vi.fn> };
+  client: {
+    claimPendingAction: ReturnType<typeof vi.fn>;
+    reportActionResult: ReturnType<typeof vi.fn>;
+  };
   execute: ReturnType<typeof vi.fn>;
   log: ReturnType<typeof vi.fn>;
 } {

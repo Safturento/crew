@@ -1,12 +1,6 @@
 import { Command } from 'commander';
 import { spawn, type ChildProcess } from 'node:child_process';
-import {
-  mkdirSync,
-  openSync,
-  readFileSync,
-  unlinkSync,
-  writeFileSync,
-} from 'node:fs';
+import { mkdirSync, openSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 import pc from 'picocolors';
 import {
@@ -120,9 +114,7 @@ async function statusAction(env: Env = process.env): Promise<void> {
       : pc.yellow('! runner not running'),
   );
   console.log(
-    report.daemonReachable
-      ? pc.green('✓ daemon reachable')
-      : pc.yellow('! daemon unreachable'),
+    report.daemonReachable ? pc.green('✓ daemon reachable') : pc.yellow('! daemon unreachable'),
   );
 }
 

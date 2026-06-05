@@ -126,10 +126,7 @@ export class CrewDaemonClient {
     }
   }
 
-  async updateTicketTitle(
-    key: string,
-    ticketTitle: string,
-  ): Promise<DaemonResult<{ ok: true }>> {
+  async updateTicketTitle(key: string, ticketTitle: string): Promise<DaemonResult<{ ok: true }>> {
     try {
       const res = await fetch(`${this.baseUrl}/api/agents/${encodeURIComponent(key)}`, {
         method: 'PATCH',

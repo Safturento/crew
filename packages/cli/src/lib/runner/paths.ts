@@ -16,7 +16,9 @@ export interface RunnerPaths {
  * worker writes is the same one `GET /api/runner/logs` tails through the
  * docker mount.
  */
-export function runnerPaths(env: NodeJS.ProcessEnv | Record<string, string | undefined>): RunnerPaths {
+export function runnerPaths(
+  env: NodeJS.ProcessEnv | Record<string, string | undefined>,
+): RunnerPaths {
   const configDir = env.CREW_CONFIG_DIR ?? join(homedir(), '.config', 'crew');
   const logDir = env.CREW_RUNNER_LOG_DIR ?? join(homedir(), '.crew', 'runner');
   return {

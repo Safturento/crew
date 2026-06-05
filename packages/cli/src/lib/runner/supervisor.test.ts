@@ -80,7 +80,9 @@ describe('stopRunner', () => {
   it('cleans up a stale pidfile without signalling a dead pid', () => {
     const kill = vi.fn();
     const removePid = vi.fn();
-    const result = stopRunner(stopDeps({ readPid: () => 9, isAlive: () => false, kill, removePid }));
+    const result = stopRunner(
+      stopDeps({ readPid: () => 9, isAlive: () => false, kill, removePid }),
+    );
     expect(result).toEqual({ stopped: true });
     expect(kill).not.toHaveBeenCalled();
     expect(removePid).toHaveBeenCalled();
@@ -103,7 +105,9 @@ describe('runnerStatus', () => {
   });
 
   it('reports not running when the pid is dead, and nulls the pid', async () => {
-    const report = await runnerStatus(statusDeps({ isAlive: () => false, checkDaemon: async () => false }));
+    const report = await runnerStatus(
+      statusDeps({ isAlive: () => false, checkDaemon: async () => false }),
+    );
     expect(report).toEqual({ running: false, pid: null, daemonReachable: false });
   });
 });
@@ -121,11 +125,10 @@ describe('runSupervisor', () => {
 
   it('does not respawn after a clean worker exit', async () => {
     const spawnWorker = vi.fn(() => ({ exited: Promise.resolve(0) }));
-    let stop = false;
     await runSupervisor(
       superviseDeps({
         spawnWorker,
-        shouldStop: () => stop,
+        shouldStop: () => false,
       }),
     );
     // shouldStop starts false → spawn once → exit 0 → break.
