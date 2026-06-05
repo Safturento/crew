@@ -85,6 +85,7 @@ Organization: Active is grouped by topic (not chronology) since the dominant acc
     - [2026-04-28 — Flesh out the project-resolution design](#2026-04-28--flesh-out-the-project-resolution-design)
     - [2026-04-26 — Architecture doc open questions still unresolved](#2026-04-26--architecture-doc-open-questions-still-unresolved)
   - [Process & Conventions](#process--conventions)
+    - [2026-06-05 — Global doc-parity hook double-warns in crew (two parity warnings per commit)](#2026-06-05--global-doc-parity-hook-double-warns-in-crew-two-parity-warnings-per-commit)
     - [2026-05-15 — `.agents/` topic-doc system vs native `.claude/rules/` and agents.md alignment](#2026-05-15--agents-topic-doc-system-vs-native-clauderules-and-agentsmd-alignment)
     - [2026-05-12 — Rethink followup-tracking system (priority tier + Jira backlog sync)](#2026-05-12--rethink-followup-tracking-system-priority-tier--jira-backlog-sync)
 - [Resolved](#resolved)
@@ -1318,6 +1319,8 @@ Two halves ship as one subcommand.
 
 - One subcommand with a mode flag (`crew init --check`?) vs two thin commands sharing a library?
 
+**Update (2026-06-05) — builds on the `establishing-a-new-project` skill.** As of 2026-06-04 a user-level `establishing-a-new-project` skill (in `~/dotfiles`, public) owns the _universal, stack-agnostic_ repo baseline: `.agents/` + `AGENTS.md` + the `CLAUDE.md` shim + a human-facing `README.md` + git hygiene (`.gitattributes`/`.gitignore`) + the `docs/` tree (followups, superpowers specs+plans). `crew init` should **build on top of** that skill — assume/invoke it for the baseline — and own only the **crew-specific, stack-coupled** layer: the project TOML at `~/.config/crew/projects/<name>.toml`, the repo `env.toml`, `<repo>/.claude/settings.json` (sandbox + `excludedCommands`), the Playwright/Bruno skeletons, project registration, and `doctor` health-checks. It must not duplicate the baseline. This also settles the **skill-vs-subcommand** split: a **subcommand** for crew onboarding (imperative, deterministic machine-state) and a **skill** for the universal baseline (agent-guided authoring). The remaining open question (one subcommand with a mode flag vs two thin commands) is unaffected.
+
 #### 2026-04-30 — Per-config-block reference docs
 
 **What:** Every TOML option documented with its purpose, defaults, validation rules, and required project-side setup. Lives in `docs/config-reference.md` or similar.
@@ -1392,6 +1395,26 @@ The other two open questions (sandbox config drift, Phase 2 + Phase 3 separation
 **Shape of work:** Each is independent. #1 punts until "we want to install crew on a machine that doesn't already have it." #2 is design-spec-then-implementation. #3 likely doesn't need its own ticket — accept the duplication.
 
 ### Process & Conventions
+
+#### 2026-06-05 — Global doc-parity hook double-warns in crew (two parity warnings per commit)
+
+**What:** The user-level `~/.claude/hooks/doc-parity-gate.sh` (added 2026-06-04 by the dotfiles project-bootstrap-convention work, registered as a `PreToolUse`/Bash hook in `~/.claude/settings.json`) fires on every `git commit` / `gh pr create` in **every** repo — including crew, which already wires its **own** repo-local `doc-parity-gate.sh` via `crew/.claude/settings.json`. So crew commits now trigger **two** doc-parity warnings (both soft, non-blocking), one from each hook.
+
+**Why noticed:** Surfaced while consolidating `~/.claude` config into dotfiles ([Safturento/dotfiles#3](https://github.com/Safturento/dotfiles/pull/3)) on 2026-06-05 — the global hook became visibly tracked and its overlap with crew's repo-local copy was obvious. The duplication is harmless but noisy and will confuse anyone reading the warnings.
+
+**Anchors:**
+
+- `~/.claude/hooks/doc-parity-gate.sh` (global; symlinked from `~/dotfiles/claude/hooks/`) + its `PreToolUse`/Bash registration in `~/.claude/settings.json`
+- `packages/cli/scripts/hooks/doc-parity-gate.sh` (crew repo-local) + its registration in `crew/.claude/settings.json` (CREW-163)
+
+**What's been considered:**
+
+- **Drop crew's repo-local hook** in favor of the global one — simplest, but only if the global hook handles crew's `.agents/` `covers:` logic equivalently (verify behavior parity first; the repo-local one may be crew-specialized).
+- **Make the global hook a no-op when a repo-local `.claude/settings.json` already registers a `doc-parity-gate`** — keeps both installable without double-firing; the global hook detects the project registration and bows out.
+
+**Shape of work:** Small — diff the two scripts to confirm functional equivalence for crew, then either delete the repo-local registration or add a repo-local-detection guard to the global hook. Decide which hook is canonical first.
+
+**Open questions:** Are the two scripts actually equivalent, or is crew's repo-local version specialized (crew-specific `covers:` handling) such that the global one can't replace it?
 
 #### 2026-05-15 — `.agents/` topic-doc system vs native `.claude/rules/` and agents.md alignment
 
