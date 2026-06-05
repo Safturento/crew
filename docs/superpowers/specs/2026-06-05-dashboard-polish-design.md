@@ -21,7 +21,7 @@ Five fixes:
 2. **#2 — "Skills" and "Tools › Skill" are double-classified** (dashboard only).
 3. **#6 — Drawer filter/search settings are lost on close+reopen** (dashboard only), plus the filter-popover outside-click guard.
 4. **#4 — The drawer's APP_URL pill shows the wrong/empty URL** (CLI + daemon + dashboard).
-5. **#8 — `crew fix-pr` leaves the agent stuck on "PR Open" instead of "Running"** (CLI and/or daemon).
+5. **#8 — Full ticket-lifecycle timeline + correct cross-run state** (daemon, dashboard, possibly CLI). Grew during review from a badge fix into showing every run's transcript across the ticket lifecycle, segmented — the substantial item of the batch.
 
 ## Out of scope (tracked elsewhere)
 
@@ -178,52 +178,77 @@ S–M. Bounded by the schema + CLI registration change if path (a) is chosen.
 
 ---
 
-## #8 — `crew fix-pr` stuck on "PR Open"
+## #8 — Full ticket-lifecycle timeline + correct cross-run state
 
-### Symptom
+> This item grew during review from a one-line badge fix into the substantial member of the batch. Two coupled requirements: (a) the current-state badge must track the *whole* lifecycle correctly (it gets stuck on "PR Open"), and (b) the timeline must show **every run's transcript across the ticket** — original run → PR opened → `fix-pr` as a second "running" segment → … → done — not just the latest run. The implementation plan must spend real time root-causing the live behavior before committing to a mechanism; this section frames that investigation rather than asserting a single cause.
 
-Running `crew fix-pr <KEY>` on a `pr_open` agent doesn't flip the dashboard to "Running" while the fix-pr run is in flight; it stays "PR Open."
+### Symptoms
 
-### Root cause
+1. **Badge stuck:** running `crew fix-pr <KEY>` on a `pr_open` agent doesn't flip the dashboard to "Running" while the fix-pr run is in flight; it stays "PR Open."
+2. **Lifecycle not shown:** the timeline doesn't present the ticket's full history as distinct lifecycle segments across runs.
 
-`deriveState` (`AgentsService.ts`) short-circuits to `running`/`initializing` **only when the latest run's `completed_at` is null**:
+### What's established (from code reading)
 
-```ts
-if (input.completedAt === null) {
-  return input.latestHasToolCalls ? 'running' : 'initializing';
-}
-…
-if (input.hasPrCreate) return 'pr_open';
-```
+- **`fix-pr` *does* register + complete a run.** `fix-pr.ts` calls `daemonClient.registerRun(...)` (`:299`) and `completeRun(...)` (`:347`). So "fix-pr never opens a run row" is **not** the cause.
+- **`fix-pr` resumes the *same* session id.** It uses `spawnClaudeResume({ sessionId: session.sessionId, … })` (`:271`/`:305`), so its events **append to the original run's JSONL** rather than creating a new transcript file.
+- **The timeline only ever loads one transcript.** `resolveJsonlPathForAgent` selects the latest `run`/`fix-pr` session with `ORDER BY runs.id DESC LIMIT 1`; `TimelineService.getTimeline` reads exactly that file (plus startup rows). If a run ever *did* get a distinct session id, its transcript would be dropped from the view.
+- **State transitions are already logged per run.** `IngestService` writes `state_transitions` rows on each derived flip during tool-call replay (`:263/:364/:404/:559`); `PrPoller` writes `pr_merged` (`:113`). `getStateHistory` reads this ordered log. `groupEventsByState` (dashboard) already segments the timeline by these transitions — so a correct transition log is what drives the lifecycle segmentation the user wants.
+- **The badge ignores that log.** `deriveState` recomputes from a `has_pr_create` `MAX(...)` flag (permanently `1` once `gh pr create` ran) plus the latest run's `completed_at`/`exit_code`. Its only override to `running` is the `completed_at === null` in-flight branch.
 
-`has_pr_create` is a `MAX(...)` across **all** runs, so it is permanently `1` once `gh pr create` ever ran. The in-flight branch is the only thing that can override it. Therefore: **if a `crew fix-pr` dispatch does not register an in-flight run row the daemon can see** (a `runs` row with `command='fix-pr'`, `completed_at=null`, picked up by the `latest` subquery), the in-flight branch never fires and the agent stays `pr_open`.
+### Hypotheses to confirm in the plan (root-cause first)
 
-> Plan-time investigation (do this first): confirm whether `crew fix-pr` opens a `runs` row at dispatch the way `crew run` does, and whether that row is what the `latest` subquery selects (it already filters `command IN ('run','fix-pr')`). The fix lands in whichever layer is missing the row.
+> **Badge stuck — candidate causes** (resolve empirically against a live `fix-pr`, inspecting `runs`, `state_transitions`, and the JSONL):
+> - **(H1)** The fix-pr run's `completed_at` is set quickly / already set by the time the dashboard renders, so `deriveState` skips the in-flight branch and falls through to `hasPrCreate → pr_open`. (i.e. the in-flight window is real but invisible.)
+> - **(H2)** Resuming the *same* session id confuses the `latest` subquery or `latestHasToolCalls` (tool calls attributed across two run rows sharing one session), so the in-flight branch doesn't fire as expected.
+> - **(H3)** `registerRun` for fix-pr isn't actually reached in the user's flow (env/daemon-client guard), despite the code path existing.
+>
+> **Lifecycle segmentation — candidate causes:**
+> - **(L1)** Because fix-pr appends to the same JSONL, the events *are* present, but the transition log isn't re-flipping `pr_open → running → pr_open` on resume (so `groupEventsByState` shows one merged span instead of distinct run/fix-pr segments).
+> - **(L2)** Some runs *do* get distinct session ids (or distinct worktrees), and `resolveJsonlPathForAgent`'s `LIMIT 1` silently drops them.
 
-### Fix
+### Design direction (settle in the plan)
 
-Make a `fix-pr` dispatch register an in-flight run row at start (mirroring `crew run`) so `deriveState`'s `completedAt === null` branch fires → **Running** while it runs, settling back to **PR Open** (or **PR Merged**, if `PrPoller` has seen a merge) on completion. No change to the `has_pr_create` semantics is required if the in-flight row exists.
+The user has explicitly authorized refactoring state derivation if that's the clean fix. Leading direction:
 
-> If investigation shows the row *is* registered but state still sticks, the alternative root cause is the `latest` subquery / `latestHasToolCalls` computation; re-scope the fix there. Either way the desired observable behavior is identical.
+1. **Make the badge transition-log-driven.** Derive the current state from the **last `state_transitions` row** (the same source `getStateHistory` already exposes) rather than recomputing from the forever-true `has_pr_create` flag. This makes the badge a pure projection of the logged lifecycle, so "running again during fix-pr" falls out for free *provided* IngestService writes the flip. Keep `finished`/`pr_merged` precedence. Migrate the `list()` + `getByKey()` derivation onto this single source.
+   > Open: does every transition that should exist actually get written today (esp. `pr_open → running` when a resume begins)? If not, the IngestService replay needs to emit it. This is the core of the refactor.
+
+2. **Aggregate all runs into one lifecycle timeline.** Replace the single-path resolver with a resolver that returns **every** `run`/`fix-pr` transcript for the agent in order, and have `TimelineService` read+parse each, **tagging every event with its originating run** (run id + command + ordinal). Two cases to handle uniformly:
+   - Same-session resume (today's fix-pr): one growing JSONL — segment by the `state_transitions` flips.
+   - Distinct sessions (if/when they occur): concatenate multiple files in run order.
+   `finish` runs have no JSONL and contribute only their step events (already handled elsewhere).
+
+3. **Segment the timeline UI by lifecycle phase.** `groupEventsByState` already groups by state; ensure a `pr_open → running` flip starts a fresh "running" section so the fix-pr work reads as its own segment. Add a per-segment affordance making the run/phase boundary legible ("Run 1", "PR opened", "Fix-pr", …). This is where #5's stable-key work matters most: with multiple segments, key rows by `runId + uuid/startedAt + index` so nothing remounts across the 1 s ticker.
+
+### Scope boundary
+
+In scope: the badge correctness, the multi-run aggregation, the lifecycle segmentation, and whatever transition-write gaps the investigation surfaces. **Out of scope:** changing how `fix-pr` resumes (same-session resume stays); streaming; server-side pagination of very long aggregated timelines (note it as a future optimization if aggregation makes timelines large).
 
 ### Verification
 
-Service/unit test: with an existing completed `run` (hasPrCreate) **plus** an in-flight `fix-pr` run (completed_at null), `deriveState` → `running`; after the fix-pr run completes with exit 0 and no merge, → `pr_open`. End-to-end sanity against a real fix-pr if feasible.
+- Service/unit: with a completed `run` (hasPrCreate) **plus** an in-flight `fix-pr` run, derived current state → `running`; after fix-pr completes (exit 0, no merge) → `pr_open`; after `PrPoller` sees merge → `pr_merged`; after `finish` ok → `finished`.
+- Aggregation: an agent with a `run` + a `fix-pr` yields a timeline containing **both** segments' events, each tagged with its run, ordered correctly.
+- Segmentation/UI: the rendered timeline shows distinct running segments either side of the `pr_open` flip; expanding a row in any segment persists across the runtime ticker.
+- Manual: reproduce a real `run → fix-pr` cycle and confirm badge + segmented timeline match the lifecycle.
 
 ### Size
 
-S, pending root-cause confirmation. Could be a CLI registration gap, a daemon derivation gap, or both.
+M (the heavyweight of this batch). Plausibly splits into child tickets: **8a** state-derivation refactor (transition-log-driven badge + any missing transition writes), **8b** multi-run transcript aggregation (resolver + TimelineService + run tagging), **8c** lifecycle segmentation UI (segment headers, folding in #5's keys). Final split decided in the plan after the root-cause step.
 
 ---
 
 ## Cross-cutting notes
 
-- **Parallelism / merge safety:** all five are disjoint in their primary files, but several touch known append-point files (per the parallel-merge convention). #2 and #5 both edit `Timeline`-area files; #4 and #8 both edit `AgentsService.ts`. Plan the Epic's children so the two pairs don't merge simultaneously, and let one migration-adder (#4, if path (a)) go per batch.
-- **Doc parity:** #4/#8 touch daemon services + possibly a migration + CLI dispatch → check `.agents/architecture.md`, `.agents/dispatch.md`, `packages/daemon/AGENTS.md` `covers:` globs. #2/#5/#6 are dashboard-only → `.agents/design-system.md` / dashboard docs. Run `agents-doc-parity-check` before each child PR.
-- **No new followups** are required for these five; the popover guard is folded into #6 rather than deferred.
+- **#5 is now folded into #8c.** The stable-`eventKey` fix is a prerequisite for the lifecycle segmentation UI (multiple segments make remount-on-tick far more visible). It can still ship first as a standalone XS fix, but its final home is alongside #8c — the plan decides whether to land it early or bundle it.
+- **Parallelism / merge safety:** the items are largely disjoint, but several touch known append-point files (per the parallel-merge convention). #2 and #5/#8c all edit `Timeline`-area files; #4 and #8a both edit `AgentsService.ts` (state derivation) — sequence these so they don't merge simultaneously. #4 and #8b may both add migrations — **one migration-adder per merge batch**; rebase the second.
+- **#8 ordering:** the root-cause investigation step gates 8a/8b/8c. 8a (state derivation) and 8b (aggregation resolver) can proceed in parallel after it; 8c (UI) depends on 8b's run-tagged events and ideally 8a's segment-correct transitions.
+- **Doc parity:** #4/#8 touch daemon services + likely a migration + CLI dispatch → check `.agents/architecture.md`, `.agents/dispatch.md`, `packages/daemon/AGENTS.md` `covers:` globs. #2/#5/#6/#8c are dashboard-only → `.agents/design-system.md` / dashboard docs. Run `agents-doc-parity-check` before each child PR.
+- **No new followups** are required for these items; the popover guard is folded into #6, #5 into #8c.
 
 ## Open questions (carried into the plan)
 
 1. #4 — mechanism (a)/(b)/(c) for sourcing the per-worktree URL. *Recommendation: (a).*
-2. #8 — exact layer of the missing in-flight run row (CLI dispatch vs daemon derivation), pending the investigation step.
-3. #2 — exact normalized tool-name string for `Skill` and whether `toolAlias` already normalizes it.
+2. #8 — **root-cause first.** Which of H1/H2/H3 explains the stuck badge, and which of L1/L2 explains the missing segmentation (resolve empirically against a live `run → fix-pr` cycle before committing the fix).
+3. #8 — does the transition log already record every flip needed for segmentation (esp. `pr_open → running` on resume)? If not, where does IngestService's replay need to emit it?
+4. #8 — final child-ticket split (8a/8b/8c vs fewer), decided after the root-cause step.
+5. #2 — exact normalized tool-name string for `Skill` and whether `toolAlias` already normalizes it.
