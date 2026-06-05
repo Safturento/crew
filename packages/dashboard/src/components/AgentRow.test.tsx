@@ -58,7 +58,7 @@ describe('AgentRow', () => {
     expect(screen.getByRole('button', { name: 'Provide input' })).toBeInTheDocument();
   });
 
-  it('renders "View PR" + "Finish" quick actions for pr_open state', () => {
+  it('renders "View PR" + "Fix PR" + "Finish" quick actions for pr_open state', () => {
     render(
       <AgentRow
         agent={{ ...baseAgent, state: 'pr_open', prUrl: 'https://example.com/pr/1' }}
@@ -69,7 +69,50 @@ describe('AgentRow', () => {
       'href',
       'https://example.com/pr/1',
     );
+    expect(screen.getByRole('button', { name: 'Fix PR' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Finish' })).toBeInTheDocument();
+  });
+
+  // CREW-219: Fix PR is exclusive to pr_open — it opens the comment modal that
+  // enqueues a fix_pr action. It must not leak into any other state.
+  it('forwards a "fix-pr" onAction event for pr_open', async () => {
+    const user = userEvent.setup();
+    const onAction = vi.fn();
+    render(
+      <AgentRow
+        agent={{ ...baseAgent, state: 'pr_open', prUrl: 'https://example.com/pr/1' }}
+        onSelect={() => {}}
+        onAction={onAction}
+      />,
+    );
+    await user.click(screen.getByRole('button', { name: 'Fix PR' }));
+    expect(onAction).toHaveBeenCalledWith('fix-pr', expect.objectContaining({ key: 'KAN-31' }));
+  });
+
+  it('only shows Fix PR for pr_open (not pr_merged, idle, or waiting)', () => {
+    for (const state of ['pr_merged', 'idle', 'waiting'] as AgentState[]) {
+      const { unmount } = render(
+        <AgentRow
+          agent={{ ...baseAgent, state, prUrl: 'https://example.com/pr/1' }}
+          onSelect={() => {}}
+        />,
+      );
+      expect(screen.queryByRole('button', { name: 'Fix PR' })).not.toBeInTheDocument();
+      unmount();
+    }
+  });
+
+  // CREW-217 gate: Fix PR enqueues runner work, so it degrades to disabled
+  // when no runner is connected, same as Resume/Finish.
+  it('disables Fix PR when the runner is offline', () => {
+    render(
+      <AgentRow
+        agent={{ ...baseAgent, state: 'pr_open', prUrl: 'https://example.com/pr/1' }}
+        onSelect={() => {}}
+        runnerOnline={false}
+      />,
+    );
+    expect(screen.getByRole('button', { name: 'Fix PR' })).toBeDisabled();
   });
 
   // CREW-202: pr_merged replaces the "View PR" pill with "View merged PR"

@@ -18,6 +18,7 @@ Organization: Active is grouped by topic (not chronology) since the dominant acc
     - [2026-05-11 — `idle` and `waiting` agent states not reachable from daemon fixtures](#2026-05-11--idle-and-waiting-agent-states-not-reachable-from-daemon-fixtures)
     - [2026-05-09 — Crew Dashboard Screens: 3 remaining ad-hoc modal frames need DS Modal swap + semantic-token bindings](#2026-05-09--crew-dashboard-screens-3-remaining-ad-hoc-modal-frames-need-ds-modal-swap--semantic-token-bindings)
   - [Visual Fidelity Tooling](#visual-fidelity-tooling)
+    - [2026-06-04 — chrome MCP browser fails to auto-start on port 9223 in crew dispatches](#2026-06-04--chrome-mcp-browser-fails-to-auto-start-on-port-9223-in-crew-dispatches)
     - [2026-06-03 — No live render surface for caller-less DS primitives (visual-fidelity Step 5 gap)](#2026-06-03--no-live-render-surface-for-caller-less-ds-primitives-visual-fidelity-step-5-gap)
     - [2026-05-18 — visual-fidelity-check: per-fixture snapshot copy vs committed artifact + Step 4 path-vocab drift](#2026-05-18--visual-fidelity-check-per-fixture-snapshot-copy-vs-committed-artifact--step-4-path-vocab-drift)
     - [2026-05-18 — `.agents/design-system.md` frontmatter URLs stale after Crew DS consolidation](#2026-05-18--agentsdesign-systemmd-frontmatter-urls-stale-after-crew-ds-consolidation)
@@ -221,6 +222,20 @@ Organization: Active is grouped by topic (not chronology) since the dominant acc
 - [ ] Padding/gap/radius FLOAT bindings in the same pass, or deferred?
 
 ### Visual Fidelity Tooling
+
+#### 2026-06-04 — chrome MCP browser fails to auto-start on port 9223 in crew dispatches
+
+**What:** During `crew run` dispatches, the `superpowers-chrome` MCP server is wired into the worktree `.mcp.json` correctly (server resolves, `browser_mode` even reports `running: true` with a pid + port 9223), but every `navigate`/DOM action fails with `Chrome did not become ready on port 9223 within 15000ms`. The Chrome process spawns but its CDP endpoint never answers the readiness probe — so `visual-fidelity-check` Step 5 (the live computed-style / rendered-pixel cross-check the gate explicitly routes to chrome MCP) cannot run. The gate degrades to structural + caller checks plus a Playwright-MCP screenshot, which is sound for token/structure parity but skips the chrome-driven computed-style inspection the skill prescribes.
+
+**Why noticed:** CREW-219 (Fix PR comment modal). Reached Step 5, `mcp__chrome__use_browser` was present in the tool inventory, but Chrome would not bind 9223 across repeated retries and a headed/headless toggle. `/tmp/crew-mcp-CREW-219.log` showed the wiring itself was clean (no plugin-resolution warnings), so the failure is the browser launch, not the MCP config. Likely a WSL2 sandbox networking / Chrome-launch-flags issue (system `google-chrome` at `/usr/bin/google-chrome`; the server manages its own profile under `~/.cache/superpowers/browser-profiles/`). Distinct from the [2026-06-03 caller-less-primitive gap](#2026-06-03--no-live-render-surface-for-caller-less-ds-primitives-visual-fidelity-step-5-gap): there the component had no render surface; here the surface renders fine (confirmed via Playwright MCP) but the chrome MCP browser won't come up.
+
+**Anchors:** `/tmp/crew-mcp-CREW-<KEY>.log` (per-dispatch wiring diagnostic, CREW-184); `superpowers-chrome` MCP at `~/.claude/plugins/cache/superpowers-marketplace/superpowers-chrome/2.0.0/mcp/dist/index.js`; readiness probe on port 9223; `.agents/dispatch.md` step 8 (`writeMcpFile` / chrome wiring); `docs/visual-fidelity-reports/CREW-219.md` (verification-gap section).
+
+**What's been considered:** Retries + headed-mode toggle (`show_browser`) did not help — the process is up but the CDP port is unresponsive, pointing at a launch-flag / WSL loopback issue rather than a race. Not fixable from inside a dispatch (chrome setup is outside the per-ticket remit and lives in the plugin + host). Worth a focused infra pass: capture the chrome stderr/launch flags the MCP server uses, try `--no-sandbox` / explicit `--remote-debugging-address=127.0.0.1`, and confirm the WSL2 loopback reaches 9223. Until then, chrome-dependent Step 5 is effectively unavailable in dispatches and the gate should be allowed to degrade to structural + Playwright-screenshot evidence with an explicit logged gap.
+
+**Shape of work:** infra/debug spike on the superpowers-chrome launch path (not a crew code change first — diagnose, then decide whether crew's `writeMcpFile` should pass extra Chrome flags or set `--remote-debugging-address`).
+
+**Open questions:** Is this WSL2-specific, or does it also fail on the maintainer's primary host? Does Playwright MCP (which launches its own `--headless` chromium and _does_ work in-dispatch) hint at the missing flag the chrome server needs?
 
 #### 2026-06-03 — No live render surface for caller-less DS primitives (visual-fidelity Step 5 gap)
 
