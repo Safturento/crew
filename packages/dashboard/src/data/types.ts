@@ -1,4 +1,4 @@
-import type { ProjectConfig, TranscriptEvent } from 'crew-shared';
+import type { FinishStepStatus, ProjectConfig, TranscriptEvent } from 'crew-shared';
 
 export type AgentState =
   | 'initializing'
@@ -128,4 +128,18 @@ export interface StateTransition {
   ts: number;
 }
 
-export type { ProjectConfig, TranscriptEvent };
+/**
+ * One `crew finish` step as read back from the daemon (CREW-220). Mirrors
+ * the stored shape: `detail` is `string | null` (NULL in the DB) rather
+ * than the optional `string` the CLI emit side accepts.
+ */
+export interface FinishStep {
+  key: string;
+  index: number;
+  label: string;
+  status: FinishStepStatus;
+  detail: string | null;
+  ts: number;
+}
+
+export type { FinishStepStatus, ProjectConfig, TranscriptEvent };

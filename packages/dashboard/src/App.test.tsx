@@ -215,7 +215,9 @@ describe('App — agent actions (CREW-217)', () => {
       .mockResolvedValue({ ...SAMPLE_ACTION, kind: 'finish', payload: { kind: 'finish' } });
     const user = userEvent.setup();
 
-    renderWithProviders(<App client={new MockDaemonClient({ projects, agents: idleAgents })} />);
+    // CREW-220: Finish is only actionable once the PR is merged.
+    const mergedAgents: Agent[] = [{ ...idleAgents[0]!, state: 'pr_merged' }];
+    renderWithProviders(<App client={new MockDaemonClient({ projects, agents: mergedAgents })} />);
 
     const finish = await screen.findByRole('button', { name: 'Finish' });
     await waitFor(() => expect(finish).toBeEnabled());

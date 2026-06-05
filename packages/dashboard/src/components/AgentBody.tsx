@@ -1,5 +1,7 @@
 import { useAgent } from '../data/queries.js';
+import { useFinishSteps } from '../data/useFinishSteps.js';
 import { DrawerHeader } from './DrawerHeader.js';
+import { FinishSteps } from './FinishSteps.js';
 import { TokensByTool } from './TokensByTool.js';
 import { Timeline } from './Timeline/Timeline.js';
 
@@ -13,6 +15,7 @@ interface AgentBodyProps {
 
 export function AgentBody({ agentKey, mode, onClose }: AgentBodyProps) {
   const { data, isLoading, error } = useAgent(agentKey);
+  const finishSteps = useFinishSteps(agentKey);
 
   if (isLoading) {
     return (
@@ -47,6 +50,7 @@ export function AgentBody({ agentKey, mode, onClose }: AgentBodyProps) {
           total={data.tokens.total}
           model={data.model}
         />
+        <FinishSteps steps={finishSteps} />
         <div className="min-h-0 flex-1">
           <Timeline
             agentKey={agentKey}
