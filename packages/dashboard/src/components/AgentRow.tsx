@@ -137,6 +137,12 @@ function QuickActions({
   const gate = runnerOnline ? {} : { disabled: true, title: 'Waiting for runner' };
   const gateClass = 'disabled:cursor-not-allowed disabled:opacity-40';
 
+  // CREW-220: Finish does post-merge cleanup, so it is only actionable once
+  // the PR is merged. Before that it renders disabled + annotated; on
+  // pr_merged it falls back to the shared runner gate.
+  const finishGate =
+    agent.state === 'pr_merged' ? gate : { disabled: true, title: 'Available after the PR is merged' };
+
   switch (agent.state) {
     case 'idle':
       return (
@@ -157,7 +163,7 @@ function QuickActions({
             size="sm"
             className={gateClass}
             onClick={fire('finish')}
-            {...gate}
+            {...finishGate}
           >
             Finish
           </Button>
@@ -191,7 +197,7 @@ function QuickActions({
             size="sm"
             className={gateClass}
             onClick={fire('finish')}
-            {...gate}
+            {...finishGate}
           >
             Finish
           </Button>
@@ -213,7 +219,7 @@ function QuickActions({
             size="sm"
             className={gateClass}
             onClick={fire('finish')}
-            {...gate}
+            {...finishGate}
           >
             Finish
           </Button>
