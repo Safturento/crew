@@ -4,6 +4,7 @@ import { envMaterialized } from './checks/env-materialized.js';
 import { playwrightConfig } from './checks/playwright-config.js';
 import { brunoSkeleton } from './checks/bruno-skeleton.js';
 import { baselinePresent } from './checks/baseline-present.js';
+import { dockerSocket } from './checks/docker-socket.js';
 // P2 (dispatch-gate migration) appends its checks here too.
 import { excludedCommands } from './checks/excluded-commands.js';
 import { appUrlResolves } from './checks/app-url-resolves.js';
@@ -15,6 +16,7 @@ const ALL: HealthCheck[] = [
   playwrightConfig,
   brunoSkeleton,
   baselinePresent,
+  dockerSocket,
   excludedCommands,
   appUrlResolves
 ];
