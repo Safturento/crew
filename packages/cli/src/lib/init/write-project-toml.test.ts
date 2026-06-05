@@ -74,6 +74,27 @@ describe('writeProjectToml', () => {
     expect(parsed.github.repo).toBe('me/demo');
   });
 
+  it('emits start_command for a non-docker Playwright project (schema-valid)', () => {
+    const noDocker: InitAnswers = {
+      name: 'standalone',
+      repoPath: '/x/standalone',
+      jira: { projectKey: 'SA', site: 'https://sa.atlassian.net' },
+      github: { repo: 'me/standalone' },
+      playwright: {
+        appUrl: 'http://localhost:3000',
+        smoke: true,
+        startCommand: 'npm run dev',
+      },
+    };
+    const written = writeProjectToml(noDocker, dir);
+    const parsed = parseToml(readFileSync(written, 'utf8')) as {
+      playwright: { start_command: string };
+    };
+    expect(parsed.playwright.start_command).toBe('npm run dev');
+    // superRefine: start_command is mandatory when [playwright] is set without [docker]
+    expect(projectConfigSchema.safeParse(parsed).success).toBe(true);
+  });
+
   it('omits optional blocks when the answers do not opt in', () => {
     const minimal: InitAnswers = {
       name: 'bare',

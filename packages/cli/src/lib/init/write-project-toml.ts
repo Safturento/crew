@@ -14,6 +14,10 @@ import type { InitAnswers } from './types.js';
  * Writing this file *is* registration: `discoverProjectConfig` matches a repo
  * to its config by `repo_path`, so there is no separate registry step.
  *
+ * Caller preconditions (enforced by `projectConfigSchema` on read, not here):
+ * when `answers.playwright` is present it must enable at least one of `smoke` /
+ * `authored`, and must supply `startCommand` if there is no `docker` block.
+ *
  * @param answers   the wizard answers / health-check-derived config
  * @param projectsDir the dir to write `<name>.toml` into (e.g. `~/.config/crew/projects`)
  * @returns the absolute path written
@@ -39,6 +43,9 @@ export function writeProjectToml(answers: InitAnswers, projectsDir: string): str
     const pw: Record<string, unknown> = {
       app_url: answers.playwright.appUrl ?? '${APP_URL}',
     };
+    if (answers.playwright.startCommand) {
+      pw.start_command = answers.playwright.startCommand;
+    }
     if (answers.playwright.smoke) {
       pw.smoke = { enabled: true };
     }

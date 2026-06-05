@@ -31,6 +31,12 @@ export interface InitAnswers {
      * per-worktree from `env.toml`). Pass a literal only for non-env-driven apps.
      */
     appUrl?: string;
+    /**
+     * Command that brings the app up for the suite. Required by the schema
+     * when Playwright is configured *without* a `[docker]` block (the agent
+     * needs a way to start the app); omit it for docker-backed projects.
+     */
+    startCommand?: string;
     /** MCP-driven smoke flow (`[playwright.smoke]`). */
     smoke?: boolean;
     /** Authored e2e suite (`[playwright.authored]`). */
