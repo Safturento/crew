@@ -124,7 +124,7 @@ Regeneration — the REST export **plus** Plugin-API enrichment (component prope
 
 Skip rules (in `computeGateSkip`): `verify_after_run=false`, `--skip-docker`, docker unavailable, zero commits ahead, or non-green baseline.
 
-**Pre-PR (doc-parity-gate hook).** Planned for CREW-163 (Phase 3). Sibling shell hook to `visual-fidelity-pr-gate`; walks the diff and warns when a `.agents/<topic>.md`'s `covers:` glob overlaps a changed path without the doc being touched in the same commit. Not yet wired.
+**Pre-PR (doc-parity-gate hook).** Originally shipped repo-local under CREW-163 — `packages/cli/scripts/hooks/doc-parity-gate.sh`, a sibling to `visual-fidelity-pr-gate` that walks the diff and warns when a `.agents/<topic>.md`'s `covers:` glob overlaps a changed path without the doc being touched in the same commit. As of 2026-06-05 the repo-local registration was **removed** from `<repo>/.claude/settings.json` to stop it double-firing with the user-level global hook (`~/.claude/hooks/doc-parity-gate.sh`, tracked in dotfiles), which is a strict superset — identical `.agents/` parity logic plus a README-freshness nudge. The repo-local script + its `.test.sh` remain in-repo, unregistered, as a portable, re-registerable fallback.
 
 ## Logs
 

@@ -85,10 +85,10 @@ Organization: Active is grouped by topic (not chronology) since the dominant acc
     - [2026-04-28 — Flesh out the project-resolution design](#2026-04-28--flesh-out-the-project-resolution-design)
     - [2026-04-26 — Architecture doc open questions still unresolved](#2026-04-26--architecture-doc-open-questions-still-unresolved)
   - [Process & Conventions](#process--conventions)
-    - [2026-06-05 — Global doc-parity hook double-warns in crew (two parity warnings per commit)](#2026-06-05--global-doc-parity-hook-double-warns-in-crew-two-parity-warnings-per-commit)
     - [2026-05-15 — `.agents/` topic-doc system vs native `.claude/rules/` and agents.md alignment](#2026-05-15--agents-topic-doc-system-vs-native-clauderules-and-agentsmd-alignment)
     - [2026-05-12 — Rethink followup-tracking system (priority tier + Jira backlog sync)](#2026-05-12--rethink-followup-tracking-system-priority-tier--jira-backlog-sync)
 - [Resolved](#resolved)
+  - [2026-06-05 — Global doc-parity hook double-warns in crew (two parity warnings per commit)](#2026-06-05--global-doc-parity-hook-double-warns-in-crew-two-parity-warnings-per-commit)
   - [2026-06-03 — Wire CREW-136 `Switch` into the Timeline live toggle](#2026-06-03--wire-crew-136-switch-into-the-timeline-live-toggle)
   - [2026-06-03 — Sticky Timeline toolbar overlaps the minimap stripe + scrollbar](#2026-06-03--sticky-timeline-toolbar-overlaps-the-minimap-stripe--scrollbar)
   - [2026-05-19 — `crew figma-snapshot` has no per-node refresh](#2026-05-19--crew-figma-snapshot-has-no-per-node-refresh)
@@ -1396,26 +1396,6 @@ The other two open questions (sandbox config drift, Phase 2 + Phase 3 separation
 
 ### Process & Conventions
 
-#### 2026-06-05 — Global doc-parity hook double-warns in crew (two parity warnings per commit)
-
-**What:** The user-level `~/.claude/hooks/doc-parity-gate.sh` (added 2026-06-04 by the dotfiles project-bootstrap-convention work, registered as a `PreToolUse`/Bash hook in `~/.claude/settings.json`) fires on every `git commit` / `gh pr create` in **every** repo — including crew, which already wires its **own** repo-local `doc-parity-gate.sh` via `crew/.claude/settings.json`. So crew commits now trigger **two** doc-parity warnings (both soft, non-blocking), one from each hook.
-
-**Why noticed:** Surfaced while consolidating `~/.claude` config into dotfiles ([Safturento/dotfiles#3](https://github.com/Safturento/dotfiles/pull/3)) on 2026-06-05 — the global hook became visibly tracked and its overlap with crew's repo-local copy was obvious. The duplication is harmless but noisy and will confuse anyone reading the warnings.
-
-**Anchors:**
-
-- `~/.claude/hooks/doc-parity-gate.sh` (global; symlinked from `~/dotfiles/claude/hooks/`) + its `PreToolUse`/Bash registration in `~/.claude/settings.json`
-- `packages/cli/scripts/hooks/doc-parity-gate.sh` (crew repo-local) + its registration in `crew/.claude/settings.json` (CREW-163)
-
-**What's been considered:**
-
-- **Drop crew's repo-local hook** in favor of the global one — simplest, but only if the global hook handles crew's `.agents/` `covers:` logic equivalently (verify behavior parity first; the repo-local one may be crew-specialized).
-- **Make the global hook a no-op when a repo-local `.claude/settings.json` already registers a `doc-parity-gate`** — keeps both installable without double-firing; the global hook detects the project registration and bows out.
-
-**Shape of work:** Small — diff the two scripts to confirm functional equivalence for crew, then either delete the repo-local registration or add a repo-local-detection guard to the global hook. Decide which hook is canonical first.
-
-**Open questions:** Are the two scripts actually equivalent, or is crew's repo-local version specialized (crew-specific `covers:` handling) such that the global one can't replace it?
-
 #### 2026-05-15 — `.agents/` topic-doc system vs native `.claude/rules/` and agents.md alignment
 
 **Ticket:** [CREW-210](https://safturento.atlassian.net/browse/CREW-210) — parked in Backlog (needs planning).
@@ -1469,6 +1449,14 @@ The other two open questions (sandbox config drift, Phase 2 + Phase 3 separation
 - Should priority on the markdown side map directly to Jira priority, or stay a separate signal?
 
 ## Resolved
+
+### 2026-06-05 — Global doc-parity hook double-warns in crew (two parity warnings per commit)
+
+**Resolved 2026-06-05:** Removed crew's repo-local `doc-parity-gate.sh` registration from `crew/.claude/settings.json` in favour of the global hook. Diffing the two confirmed the global hook (`~/.claude/hooks/doc-parity-gate.sh`, tracked in dotfiles) is a **strict superset** — identical `.agents/` `covers:` parity logic, plus a README-freshness nudge and extra merge-base fallbacks — so crew loses nothing and gains the README check. The repo-local script + its test stay in-repo (now unregistered) as a portable, re-registerable fallback.
+
+**What:** The user-level `~/.claude/hooks/doc-parity-gate.sh` fired on every `git commit` / `gh pr create` in every repo — including crew, which already wired its own repo-local `doc-parity-gate.sh` via `crew/.claude/settings.json` — so crew commits triggered two soft doc-parity warnings, one from each hook.
+
+**Anchors:** `~/.claude/hooks/doc-parity-gate.sh` (global, from `~/dotfiles/claude/hooks/`); `packages/cli/scripts/hooks/doc-parity-gate.sh` + `.test.sh` (crew repo-local, CREW-163, now unregistered); `crew/.claude/settings.json` PreToolUse Bash hooks.
 
 ### 2026-06-03 — Wire CREW-136 `Switch` into the Timeline live toggle
 
