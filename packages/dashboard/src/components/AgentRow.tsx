@@ -18,6 +18,13 @@ interface AgentRowProps {
   agent: Agent;
   onSelect: (key: string) => void;
   onAction?: (kind: QuickActionKind, agent: Agent) => void;
+  /**
+   * CREW-217: when false, the enqueue-able QuickActions (Resume, Finish)
+   * are disabled + annotated "Waiting for runner" — no host runner is
+   * connected to drain the action queue. Defaults to enabled so callers
+   * that don't track runner health (tests, fixtures) keep working.
+   */
+  runnerOnline?: boolean;
 }
 
 const ACTIVE_STATES = new Set<AgentState>(['running', 'initializing']);
@@ -43,7 +50,7 @@ const agentRow = cva(
   },
 );
 
-export function AgentRow({ agent, onSelect, onAction }: AgentRowProps) {
+export function AgentRow({ agent, onSelect, onAction, runnerOnline = true }: AgentRowProps) {
   const runtime = useLiveRuntime(agent.startedAt, ACTIVE_STATES.has(agent.state));
   const meta = STATE_META[agent.state];
   const stateClasses = STATE_CLASSES[agent.state];
@@ -94,7 +101,7 @@ export function AgentRow({ agent, onSelect, onAction }: AgentRowProps) {
           />
         </MetaList>
       </div>
-      <QuickActions agent={agent} onAction={onAction} />
+      <QuickActions agent={agent} onAction={onAction} runnerOnline={runnerOnline} />
     </div>
   );
 }
@@ -111,9 +118,11 @@ function MetaItem({ icon, value }: { icon: ReactNode; value: string }) {
 function QuickActions({
   agent,
   onAction,
+  runnerOnline = true,
 }: {
   agent: Agent;
   onAction?: (kind: QuickActionKind, agent: Agent) => void;
+  runnerOnline?: boolean;
 }) {
   const stop = (e: MouseEvent) => e.stopPropagation();
   const fire = (kind: QuickActionKind) => (e: MouseEvent) => {
@@ -121,14 +130,35 @@ function QuickActions({
     onAction?.(kind, agent);
   };
 
+  // CREW-217: Resume + Finish enqueue actions a host runner drains. With no
+  // runner connected they degrade to disabled + "Waiting for runner" rather
+  // than enqueueing work nothing can pick up. The View-PR link and the
+  // waiting/error actions don't touch the queue, so they stay enabled.
+  const gate = runnerOnline ? {} : { disabled: true, title: 'Waiting for runner' };
+  const gateClass = 'disabled:cursor-not-allowed disabled:opacity-40';
+
   switch (agent.state) {
     case 'idle':
       return (
         <QaGroup>
-          <Button color="running" intensity="mid" size="sm" onClick={fire('resume')}>
+          <Button
+            color="running"
+            intensity="mid"
+            size="sm"
+            className={gateClass}
+            onClick={fire('resume')}
+            {...gate}
+          >
             Resume
           </Button>
-          <Button color="running" intensity="ghost" size="sm" onClick={fire('finish')}>
+          <Button
+            color="running"
+            intensity="ghost"
+            size="sm"
+            className={gateClass}
+            onClick={fire('finish')}
+            {...gate}
+          >
             Finish
           </Button>
         </QaGroup>
@@ -155,7 +185,14 @@ function QuickActions({
               View PR
             </a>
           </Button>
-          <Button color="running" intensity="ghost" size="sm" onClick={fire('finish')}>
+          <Button
+            color="running"
+            intensity="ghost"
+            size="sm"
+            className={gateClass}
+            onClick={fire('finish')}
+            {...gate}
+          >
             Finish
           </Button>
         </QaGroup>
@@ -176,7 +213,14 @@ function QuickActions({
               View merged PR
             </a>
           </Button>
-          <Button color="running" intensity="ghost" size="sm" onClick={fire('finish')}>
+          <Button
+            color="running"
+            intensity="ghost"
+            size="sm"
+            className={gateClass}
+            onClick={fire('finish')}
+            {...gate}
+          >
             Finish
           </Button>
         </QaGroup>

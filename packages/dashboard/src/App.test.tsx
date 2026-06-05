@@ -38,6 +38,9 @@ function renderApp() {
 
 beforeEach(() => {
   window.location.hash = '';
+  // useRunnerStatus polls defaultClient on mount; default it to offline so
+  // tests that don't care about the runner stay deterministic and quiet.
+  vi.spyOn(defaultClient, 'getRunnerStatus').mockResolvedValue({ online: false, lastSeen: null });
 });
 
 describe('App', () => {
@@ -138,6 +141,9 @@ describe('App', () => {
   });
 
   it('renders the error fallback when a query rejects', async () => {
+    // useRunnerStatus polls defaultClient (not the injected client); resolve
+    // it so only the failing list queries throw to the boundary.
+    vi.spyOn(defaultClient, 'getRunnerStatus').mockResolvedValue({ online: false, lastSeen: null });
     const failingClient: DaemonClient = {
       listProjects: () => Promise.reject(new Error('daemon unreachable')),
       listAgents: () => Promise.reject(new Error('daemon unreachable')),
@@ -153,5 +159,82 @@ describe('App', () => {
     expect(await screen.findByRole('alert')).toBeInTheDocument();
     expect(screen.getByText(/daemon unreachable/)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /retry/i })).toBeInTheDocument();
+  });
+});
+
+describe('App — agent actions (CREW-217)', () => {
+  const idleAgents: Agent[] = [
+    {
+      key: 'KAN-50',
+      projectName: 'kanban-api',
+      ticketTitle: 'Idle work',
+      state: 'idle',
+      startedAt: '2026-04-26T13:00:00Z',
+      tokens: 10,
+    },
+  ];
+
+  const SAMPLE_ACTION = {
+    id: 1,
+    kind: 'run' as const,
+    ticketKey: 'KAN-50',
+    project: 'kanban-api',
+    payload: { kind: 'run' as const },
+    status: 'pending' as const,
+    error: null,
+    createdAt: '2026-06-04T00:00:00Z',
+    updatedAt: '2026-06-04T00:00:00Z',
+  };
+
+  beforeEach(() => {
+    window.location.hash = '';
+  });
+
+  it('enqueues a run action when Resume is clicked (runner online)', async () => {
+    vi.spyOn(defaultClient, 'getRunnerStatus').mockResolvedValue({ online: true, lastSeen: 1 });
+    const enqueue = vi.spyOn(defaultClient, 'enqueueAction').mockResolvedValue(SAMPLE_ACTION);
+    const user = userEvent.setup();
+
+    renderWithProviders(<App client={new MockDaemonClient({ projects, agents: idleAgents })} />);
+
+    const resume = await screen.findByRole('button', { name: 'Resume' });
+    await waitFor(() => expect(resume).toBeEnabled());
+    await user.click(resume);
+
+    expect(enqueue).toHaveBeenCalledWith({
+      kind: 'run',
+      project: 'kanban-api',
+      ticketKey: 'KAN-50',
+    });
+  });
+
+  it('enqueues a finish action when Finish is clicked (runner online)', async () => {
+    vi.spyOn(defaultClient, 'getRunnerStatus').mockResolvedValue({ online: true, lastSeen: 1 });
+    const enqueue = vi
+      .spyOn(defaultClient, 'enqueueAction')
+      .mockResolvedValue({ ...SAMPLE_ACTION, kind: 'finish', payload: { kind: 'finish' } });
+    const user = userEvent.setup();
+
+    renderWithProviders(<App client={new MockDaemonClient({ projects, agents: idleAgents })} />);
+
+    const finish = await screen.findByRole('button', { name: 'Finish' });
+    await waitFor(() => expect(finish).toBeEnabled());
+    await user.click(finish);
+
+    expect(enqueue).toHaveBeenCalledWith({
+      kind: 'finish',
+      project: 'kanban-api',
+      ticketKey: 'KAN-50',
+    });
+  });
+
+  it('disables the enqueue-able QuickActions when no runner is online', async () => {
+    vi.spyOn(defaultClient, 'getRunnerStatus').mockResolvedValue({ online: false, lastSeen: null });
+
+    renderWithProviders(<App client={new MockDaemonClient({ projects, agents: idleAgents })} />);
+
+    const resume = await screen.findByRole('button', { name: 'Resume' });
+    expect(resume).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Finish' })).toBeDisabled();
   });
 });
