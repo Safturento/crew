@@ -25,6 +25,7 @@ Organization: Active is grouped by topic (not chronology) since the dominant acc
     - [2026-05-16 — figma-snapshot `resolvedStylesFor` text-color heuristic picks the first TEXT descendant](#2026-05-16--figma-snapshot-resolvedstylesfor-text-color-heuristic-picks-the-first-text-descendant)
     - [2026-05-15 — `crew fix-pr` does not refresh `.mcp.json` — chrome wiring goes stale on resume](#2026-05-15--crew-fix-pr-does-not-refresh-mcpjson--chrome-wiring-goes-stale-on-resume)
   - [Dashboard UI](#dashboard-ui)
+    - [2026-06-04 — New Run modal step 2 is a text entry, not the Figma open-ticket picker](#2026-06-04--new-run-modal-step-2-is-a-text-entry-not-the-figma-open-ticket-picker)
     - [2026-06-03 — CREW-137 modal composites unverified until wired into a screen](#2026-06-03--crew-137-modal-composites-unverified-until-wired-into-a-screen)
     - [2026-05-22 — `${APP_URL}` template literal in DrawerHeader docker pill (backend bug)](#2026-05-22--app_url-template-literal-in-drawerheader-docker-pill-backend-bug)
     - [2026-05-22 — Layer-1 RunMetrics widget loses its drawer home in the redesign — find it a new one](#2026-05-22--layer-1-runmetrics-widget-loses-its-drawer-home-in-the-redesign--find-it-a-new-one)
@@ -303,6 +304,29 @@ Organization: Active is grouped by topic (not chronology) since the dominant acc
 **Open questions:** Does `fix-pr` resume into a worktree fresh enough that re-asserting `.mcp.json` is always safe? Should `browsing` skill re-injection ride along?
 
 ### Dashboard UI
+
+#### 2026-06-04 — New Run modal step 2 is a text entry, not the Figma open-ticket picker
+
+**What:** CREW-218's New Run modal ships step 2 ("Pick a ticket") as a single `FormField` where the operator types a ticket key, and step 3 ("Confirm") omits the Figma's "Title" summary row. The Figma frames (`1:3418`, `9:2`) instead show a searchable list of the project's **open Jira tickets** (rows like `KAN-31 · Drag-and-drop reordering…` with a priority badge + a "Filter open tickets…" search input) and a ticket _title_ on the confirm step. Both gaps have the same root cause: no daemon endpoint serves open tickets or a ticket summary to the dashboard — `DaemonClient` exposes only `listProjects` / `listAgents` / `enqueueAction` / `getRunnerStatus`. The plan (T6 step 2) explicitly deferred live ticket fetching ("otherwise skip in v1").
+
+**Why noticed:** Implementing CREW-218. Step 1 (project picker) maps cleanly to `listProjects()`, but steps 2–3 need data the dashboard can't fetch yet, so the modal degrades to a typed key. Surfaced during the visual-fidelity pass as the largest code↔Figma divergence (medium, intentional).
+
+**Anchors:**
+
+- `packages/dashboard/src/components/NewRunModal.tsx` — step 2 `FormField`; step 3 `SummaryRow`s (no Title).
+- Figma `1:3418` (Select Ticket), `9:2` (Confirm) + composites `362:2212` / `362:2213` in `.crew/figma-snapshot/`.
+- `packages/dashboard/src/data/DaemonClient.ts` — the missing `listOpenTickets(project)` / `getTicket(key)` surface.
+- `packages/shared/src/jira` — the Jira client the daemon would call.
+- Sibling followup directly above: "CREW-137 modal composites unverified" — CREW-218 is the wiring ticket it anticipated; its Modal/Stepper/ModalSelectionRow/FormField fidelity is now verified (AlertModal still unwired).
+
+**What's been considered:** A `GET /api/projects/:slug/tickets` (open issues via the project's Jira board) + `GET /api/tickets/:key` (summary) would let step 2 become the real picker and step 3 show the title. Out of scope for T6 (dashboard-only); needs a daemon route + Jira-client call + Bruno coverage. Also open: should the New Run modal's "Spawn agent" respect runner-online status (like T5's QuickAction degradation), or is queuing-while-offline acceptable since the daemon holds the pending action until a runner connects? Today it always enqueues.
+
+**Shape of work:** One daemon ticket (open-tickets + ticket-summary routes + Jira client + Bruno) blocking one dashboard ticket (swap step 2's FormField for a `ModalSelectionRow` list with the search `Input`, add the Title row to step 3). The runner-gating question is a small separate decision, possibly just a disabled-state on Spawn.
+
+**Open questions:**
+
+- [ ] Source of "open tickets" — the project's Jira board/JQL, or only tickets with no existing agent yet?
+- [ ] Should Spawn be disabled / warn when no runner is online?
 
 #### 2026-06-03 — CREW-137 modal composites unverified until wired into a screen
 

@@ -123,11 +123,11 @@ export function NewRunModal({ open, onOpenChange, projects, onConfirm }: NewRunM
                 color="white"
                 intensity="loud"
                 size="sm"
-                icon={<ArrowRight aria-hidden />}
                 disabled={!canAdvanceTicket}
                 onClick={() => setStep(3)}
               >
                 Next
+                <ArrowRight aria-hidden />
               </Button>
             </div>
           </div>
@@ -156,14 +156,9 @@ export function NewRunModal({ open, onOpenChange, projects, onConfirm }: NewRunM
               >
                 Back
               </Button>
-              <Button
-                color="white"
-                intensity="loud"
-                size="sm"
-                icon={<ArrowRight aria-hidden />}
-                onClick={confirm}
-              >
+              <Button color="white" intensity="loud" size="sm" onClick={confirm}>
                 Spawn agent
+                <ArrowRight aria-hidden />
               </Button>
             </div>
           </div>
