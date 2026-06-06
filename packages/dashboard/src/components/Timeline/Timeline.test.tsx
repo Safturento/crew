@@ -738,6 +738,28 @@ describe('Timeline filter persistence (CREW-232)', () => {
     // A different agent gets the curated defaults — Thinking back off.
     expect(screen.getAllByTestId('transcript-row')).toHaveLength(1);
   });
+
+  // The drawer is rendered without a React key (App.tsx), so navigating between
+  // two agents reuses this Timeline instance — the agentKey prop changes but the
+  // component is NOT remounted. Filters must re-seed from the new agent rather
+  // than leak the previous agent's state (and persist it under the wrong key).
+  it('re-seeds filters when the agent key changes without a remount', async () => {
+    mockUseTimeline.mockReturnValue(timelineResult(persistEvents));
+    const { rerender } = render(<Timeline agentKey="KAN-REUSE-A" />);
+    await userEvent.type(screen.getByRole('searchbox'), 'pondering');
+    expect(screen.getByRole('searchbox')).toHaveValue('pondering');
+
+    // Same instance, new agent — mirrors the unkeyed drawer swapping agents.
+    rerender(<Timeline agentKey="KAN-REUSE-B" />);
+    expect(screen.getByRole('searchbox')).toHaveValue('');
+    // The previous agent's search must not have been persisted under the new key.
+    const storedB = sessionStorage.getItem('crew:timeline-filters:KAN-REUSE-B');
+    expect(storedB === null || JSON.parse(storedB).search === '').toBe(true);
+
+    // Switching back restores the first agent's persisted search.
+    rerender(<Timeline agentKey="KAN-REUSE-A" />);
+    expect(screen.getByRole('searchbox')).toHaveValue('pondering');
+  });
 });
 
 describe('eventKey', () => {
