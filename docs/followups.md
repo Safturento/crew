@@ -27,6 +27,7 @@ Organization: Active is grouped by topic (not chronology) since the dominant acc
     - [2026-05-16 — figma-snapshot `resolvedStylesFor` text-color heuristic picks the first TEXT descendant](#2026-05-16--figma-snapshot-resolvedstylesfor-text-color-heuristic-picks-the-first-text-descendant)
     - [2026-05-15 — `crew fix-pr` does not refresh `.mcp.json` — chrome wiring goes stale on resume](#2026-05-15--crew-fix-pr-does-not-refresh-mcpjson--chrome-wiring-goes-stale-on-resume)
   - [Dashboard UI](#dashboard-ui)
+    - [2026-06-05 — Dashboard has no cancel action; CLI kill never notifies the daemon](#2026-06-05--dashboard-has-no-cancel-action-cli-kill-never-notifies-the-daemon)
     - [2026-06-04 — New Run modal step 2 is a text entry, not the Figma open-ticket picker](#2026-06-04--new-run-modal-step-2-is-a-text-entry-not-the-figma-open-ticket-picker)
     - [2026-06-03 — CREW-137 modal composites unverified until wired into a screen](#2026-06-03--crew-137-modal-composites-unverified-until-wired-into-a-screen)
     - [2026-05-22 — `${APP_URL}` template literal in DrawerHeader docker pill (backend bug)](#2026-05-22--app_url-template-literal-in-drawerheader-docker-pill-backend-bug)
@@ -336,6 +337,23 @@ Organization: Active is grouped by topic (not chronology) since the dominant acc
 **Open questions:** Does `fix-pr` resume into a worktree fresh enough that re-asserting `.mcp.json` is always safe? Should `browsing` skill re-injection ride along?
 
 ### Dashboard UI
+
+#### 2026-06-05 — Dashboard has no cancel action; CLI kill never notifies the daemon
+
+**What:** There is no way to stop an in-flight `crew run` from the dashboard, and stopping one from a separate shell (`kill`, killing the container, deleting the worktree) never tells the daemon the run ended. `crew run` only POSTs `…/runs/:id/complete` on a clean exit of the foreground process — claude exits normally, or a foreground Ctrl+C that the `sigintHandler` forwards to claude before falling through to the `completeRun` call. An out-of-band kill skips that path entirely, so the run row keeps `completed_at = null` and the agent shows "running" forever (the orphaned-run symptom). The dashboard's action surface (the CREW-208 lineage: New Run / Fix PR / Finish) has no Cancel verb, so the operator's only recourse is a CLI kill — which is exactly what orphans the run.
+
+**Why noticed:** 2026-06-05 session. After hard-resetting the four Dashboard-polish runs (CREW-231–234) from the command line — there's no dashboard control for it — all four kept showing "running" on the dashboard. Tracing it: the kill bypassed `completeRun`, leaving the run rows in-flight. The display self-corrects on re-dispatch (state derivation keys off the latest run by id), but the orphaned rows persist underneath, and there's no graceful way to end a run from the UI in the first place.
+
+**Anchors:** `packages/cli/src/commands/run.ts` ~`:587`–`:657` (the abort controller, `sigintHandler`, and the `completeRun` call reached only on the clean path); `packages/daemon/src/routes/runs.ts` (the `:runId/complete` endpoint a Cancel action would land); `packages/cli/src/lib/runner/` + `packages/daemon/src/routes/runner.ts` (the host runner that executes dispatched verbs — a Cancel would need it to signal the spawned process); the CREW-208 dashboard-actions lineage. Pairs with the 2026-05-18 reaper followup below.
+
+**What's been considered:** Two complementary angles, both wanted — (1) a **dashboard Cancel/Abort action** routed through the action queue + runner (signal the spawned `crew run` process) so it lands a clean `completeRun`, mirroring how New Run / Fix PR / Finish already flow; (2) a **daemon-side reaper** (the 2026-05-18 followup) as the backstop for kills that bypass *any* graceful path (SIGKILL, container death). The action handles the intentional case cleanly; the reaper catches the rest. The terminal-state question is shared with the reaper: a cancelled/reaped run probably wants a distinct `cancelled`/`abandoned` state rather than `error`.
+
+**Shape of work:** Belongs to the not-yet-planned runner-status/logs epic (item #3 of the 2026-06-05 dashboard worklist) or a dedicated run-lifecycle-control slice — not its own ticket until that epic is brainstormed. Medium: a daemon action verb + route, runner support for signalling a tracked child process, a dashboard button on active agents, and the terminal-state decision.
+
+**Open questions:**
+
+- Does the runner currently track the PID of each `crew run` it spawns well enough to signal it cleanly? (Check `packages/cli/src/lib/runner/`.)
+- New terminal state (`cancelled`) vs reusing `error`? Resolve together with the reaper followup, which raises the same question.
 
 #### 2026-06-04 — New Run modal step 2 is a text entry, not the Figma open-ticket picker
 
@@ -833,6 +851,8 @@ The "synthetic Unregistered section" feels right — single render path, no extr
 **What:** A crew run can finish its real-world work — PR opened and merged, Jira ticket Done — while the daemon's run record stays stuck in `running` indefinitely. The daemon marks a run complete only when the CLI delivers `POST /api/agents/runs/:id/complete` on Claude exit. If that call never lands (CLI crash, daemon down at exit, killed process), the run sits in `running` forever — `completed_at` null, metrics null, no PR URL — and the dashboard shows the agent as perpetually active. Nothing detects or reaps these.
 
 **Why noticed:** CREW-158's daemon run (run 23, started 2026-05-14) was found still `running` 4 days later, even though its work had shipped via merged PR #208 and the ticket is `Done`. Manual recovery with `POST /api/agents/runs/23/complete` `exitCode 137` — which lands the agent in `error`, because the daemon derives `error` from any non-zero exit and only `exitCode 0` yields a clean completion. So orphaned runs are both invisible (no detection) and unrecoverable to a clean state (manual completion can only produce `error`).
+
+**2026-06-05 update — recurred:** hard-resetting the four Dashboard-polish runs (CREW-231–234) from the CLI left all four stuck showing `running`, same mechanism (an out-of-band kill bypasses `completeRun`). This is the backstop half of a pair: the graceful half is the 2026-06-05 "Dashboard has no cancel action; CLI kill never notifies the daemon" followup (above), which would handle the *intentional* stop cleanly; this reaper catches kills that bypass any graceful path. The terminal-state open question below is shared between the two — resolve together.
 
 **Anchors:** `packages/daemon/src/routes/runs.ts` (register + `:runId/complete` endpoints); `packages/daemon/src/services/AgentsService.ts`, `IngestService.ts` (run state); `packages/cli/src/lib/preflight/run-resume-preflight.ts` (existing orphan-detection on the resume path); CREW-158 / daemon run 23 / PR #208.
 
