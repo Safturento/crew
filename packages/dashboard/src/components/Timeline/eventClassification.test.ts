@@ -120,6 +120,25 @@ describe('eventCategories (Slim 7)', () => {
     expect([...eventCategories(event)]).toEqual(['tools']);
   });
 
+  it('classifies a non-Skill tool_result under tools (id resolves to a normal tool)', () => {
+    const event = userWith([{ type: 'tool_result', tool_use_id: 't1', content: 'ok' }]);
+    const map = new Map([['t1', 'Bash']]);
+    expect([...eventCategories(event, map)]).toEqual(['tools']);
+  });
+
+  it('classifies a Skill tool_result under skills (id resolves to Skill)', () => {
+    const event = userWith([
+      { type: 'tool_result', tool_use_id: 'sk1', content: 'Launching skill: …' },
+    ]);
+    const map = new Map([['sk1', 'Skill']]);
+    expect([...eventCategories(event, map)]).toEqual(['skills']);
+  });
+
+  it('falls back to tools for a tool_result with an unresolvable id', () => {
+    const event = userWith([{ type: 'tool_result', tool_use_id: 'unknown', content: 'ok' }]);
+    expect([...eventCategories(event, new Map())]).toEqual(['tools']);
+  });
+
   it('classifies bare-string user content as conversation', () => {
     const event = {
       type: 'user',

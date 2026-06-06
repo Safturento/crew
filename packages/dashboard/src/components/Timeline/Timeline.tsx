@@ -252,7 +252,11 @@ export function Timeline({ agentKey, agentState, tokensByTool = [] }: TimelinePr
                       onToggle={() => toggleSection(key)}
                     >
                       {s.events.map((event, evIdx) => (
-                        <TranscriptRow key={eventKey(event, evIdx)} event={event} />
+                        <TranscriptRow
+                          key={eventKey(event, evIdx)}
+                          event={event}
+                          toolNameById={toolNameById}
+                        />
                       ))}
                     </TimelineSection>
                   </div>
@@ -363,7 +367,7 @@ function matchesFilters(
   toolNameById: ReadonlyMap<string, string>,
   needle: string,
 ): boolean {
-  const cats = eventCategories(event);
+  const cats = eventCategories(event, toolNameById);
   let categoryMatch = false;
   for (const c of cats) {
     if (state.categories.has(c)) {

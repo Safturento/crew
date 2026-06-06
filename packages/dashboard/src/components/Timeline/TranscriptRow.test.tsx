@@ -253,6 +253,36 @@ describe('TranscriptRow', () => {
       expect(row).toHaveAttribute('data-category', 'hooks-and-skills');
       expect(screen.getByTestId('transcript-row-tag')).toHaveTextContent('Skill invoked');
     });
+
+    it('renders a Skill tool_result under hooks-and-skills (Skill result), not Tools/Result', () => {
+      const event = {
+        type: 'user',
+        timestamp: ts,
+        message: {
+          role: 'user',
+          content: [{ type: 'tool_result', tool_use_id: 'sk1', content: 'Launching skill: …' }],
+        },
+      } as unknown as UserEvent;
+      render(<TranscriptRow event={event} toolNameById={new Map([['sk1', 'Skill']])} />);
+      const row = screen.getByTestId('transcript-row');
+      expect(row).toHaveAttribute('data-category', 'hooks-and-skills');
+      expect(screen.getByTestId('transcript-row-tag')).toHaveTextContent('Skill result');
+    });
+
+    it('keeps a non-Skill tool_result under tools (Result)', () => {
+      const event = {
+        type: 'user',
+        timestamp: ts,
+        message: {
+          role: 'user',
+          content: [{ type: 'tool_result', tool_use_id: 'tu-9', content: 'ok' }],
+        },
+      } as unknown as UserEvent;
+      render(<TranscriptRow event={event} toolNameById={new Map([['tu-9', 'Bash']])} />);
+      const row = screen.getByTestId('transcript-row');
+      expect(row).toHaveAttribute('data-category', 'tools');
+      expect(screen.getByTestId('transcript-row-tag')).toHaveTextContent('Result');
+    });
   });
 
   describe('system category', () => {
