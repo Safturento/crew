@@ -53,6 +53,7 @@ export function AgentBody({ agentKey, mode, onClose }: AgentBodyProps) {
         <FinishSteps steps={finishSteps} />
         <div className="min-h-0 flex-1">
           <Timeline
+            key={agentKey}
             agentKey={agentKey}
             agentState={data.state}
             tokensByTool={data.tokens_by_tool}

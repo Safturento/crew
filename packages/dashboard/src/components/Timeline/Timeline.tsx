@@ -7,6 +7,7 @@ import { cn } from '../../lib/utils.js';
 import { Button } from '../ui/button.js';
 import { Filters, defaultTimelineFilterState, type TimelineFilterState } from './Filters.js';
 import { isToolVisible } from './filter-state.js';
+import { loadFilters, saveFilters } from './filter-persistence.js';
 import { LiveModeToggle } from './LiveModeToggle.js';
 import { MinimapStripe } from './MinimapStripe.js';
 import { SearchBar } from './SearchBar.js';
@@ -60,11 +61,21 @@ function eventTokens(e: TranscriptEvent): number {
 export function Timeline({ agentKey, agentState, tokensByTool = [] }: TimelineProps) {
   const { data: timelineData, isLoading } = useTimeline(agentKey);
   const { data: historyData } = useStateHistory(agentKey);
+  // Seed filter + search from the per-agent persisted snapshot. The drawer
+  // instance is keyed by `agentKey` (see AgentBody), so these initializers run
+  // fresh per agent — different agents fall back to the curated defaults.
+  const persisted = useMemo(() => loadFilters(agentKey), [agentKey]);
   const [filterState, setFilterState] = useState<TimelineFilterState>(
-    () => defaultTimelineFilterState,
+    () => persisted?.state ?? defaultTimelineFilterState,
   );
-  const [searchInput, setSearchInput] = useState('');
+  const [searchInput, setSearchInput] = useState(() => persisted?.search ?? '');
   const deferredSearch = useDeferredValue(searchInput);
+
+  // Write-through: persist filter + search on every change (not liveMode or
+  // section-collapse — those are intentionally session-ephemeral).
+  useEffect(() => {
+    saveFilters(agentKey, filterState, searchInput);
+  }, [agentKey, filterState, searchInput]);
   const [liveMode, setLiveMode] = useState<boolean>(() => isLiveByDefault(agentState));
 
   const rawEvents = timelineData?.events ?? [];

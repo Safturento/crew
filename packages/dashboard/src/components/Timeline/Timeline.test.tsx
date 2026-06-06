@@ -179,6 +179,7 @@ const sampleTokensByTool: AgentDetailTokensByTool[] = [
 
 describe('Timeline', () => {
   beforeEach(() => {
+    sessionStorage.clear();
     mockUseTimeline.mockReset();
     mockUseStateHistory.mockReset();
     mockUseStateHistory.mockReturnValue(stateHistoryResult([]));
@@ -620,6 +621,39 @@ describe('Timeline', () => {
     const segment = screen.getAllByTestId('minimap-segment')[0];
     await userEvent.click(segment);
     expect(liveToggle).toHaveAttribute('aria-checked', 'false');
+  });
+
+  it('persists filter changes across drawer reopen for the same agent', async () => {
+    mockUseTimeline.mockReturnValue(
+      timelineResult({ data: { events: [evt(1)] }, isSuccess: true, status: 'success' }),
+    );
+    const { unmount } = render(<Timeline agentKey="KAN-persist" />);
+    await openFilters();
+    expect(isCategoryChecked('Thinking')).toBe(false);
+    await userEvent.click(screen.getByLabelText('Thinking'));
+    expect(isCategoryChecked('Thinking')).toBe(true);
+    unmount();
+
+    // Reopen the same agent's drawer — the toggled filter is restored.
+    render(<Timeline agentKey="KAN-persist" />);
+    await openFilters();
+    expect(isCategoryChecked('Thinking')).toBe(true);
+  });
+
+  it('does not leak persisted filters to a different agent', async () => {
+    mockUseTimeline.mockReturnValue(
+      timelineResult({ data: { events: [evt(1)] }, isSuccess: true, status: 'success' }),
+    );
+    const { unmount } = render(<Timeline agentKey="KAN-A" />);
+    await openFilters();
+    await userEvent.click(screen.getByLabelText('Thinking'));
+    expect(isCategoryChecked('Thinking')).toBe(true);
+    unmount();
+
+    // A different agent starts from the curated defaults.
+    render(<Timeline agentKey="KAN-B" />);
+    await openFilters();
+    expect(isCategoryChecked('Thinking')).toBe(false);
   });
 
   it('toggling a single section is independent of the others', async () => {
