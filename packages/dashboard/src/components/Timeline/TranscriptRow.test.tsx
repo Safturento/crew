@@ -243,7 +243,9 @@ describe('TranscriptRow', () => {
         timestamp: ts,
         message: {
           role: 'assistant',
-          content: [{ type: 'tool_use', id: 't1', name: 'Skill', input: { command: 'brainstorming' } }],
+          content: [
+            { type: 'tool_use', id: 't1', name: 'Skill', input: { command: 'brainstorming' } },
+          ],
           usage: { output_tokens: 12 },
         },
       } as unknown as AssistantEvent;
