@@ -46,6 +46,7 @@ Organization: Active is grouped by topic (not chronology) since the dominant acc
     - [2026-04-28 — Dashboard New Run modal + projects route view](#2026-04-28--dashboard-new-run-modal--projects-route-view)
     - [2026-04-28 — `useAttention.clear()` snapshot semantic isn't directly tested](#2026-04-28--useattentionclear-snapshot-semantic-isnt-directly-tested)
   - [Daemon, CLI & Dispatch](#daemon-cli--dispatch)
+    - [2026-06-05 — Preflight fail-fast order surfaces `bruno-skeleton` before `excluded-commands` (red test on main)](#2026-06-05--preflight-fail-fast-order-surfaces-bruno-skeleton-before-excluded-commands-red-test-on-main)
     - [2026-06-05 — `bruno-skeleton` fix() defaults the scaffolded port instead of deriving it from config](#2026-06-05--bruno-skeleton-fix-defaults-the-scaffolded-port-instead-of-deriving-it-from-config)
     - [2026-06-04 — `finish_steps` table accumulates across `crew finish` re-runs (no run scoping)](#2026-06-04--finish_steps-table-accumulates-across-crew-finish-re-runs-no-run-scoping)
     - [2026-06-04 — Daemon test suite flakes under full-parallel `test:run`](#2026-06-04--daemon-test-suite-flakes-under-full-parallel-testrun)
@@ -720,6 +721,18 @@ The "synthetic Unregistered section" feels right — single render path, no extr
 **Shape of work:** Tiny cleanup. Add 2–3 RTL test cases. Bundle into the cva-cleanup ticket above or stand alone.
 
 ### Daemon, CLI & Dispatch
+
+#### 2026-06-05 — Preflight fail-fast order surfaces `bruno-skeleton` before `excluded-commands` (red test on main)
+
+**What:** `packages/cli/src/lib/preflight/run-preflight.test.ts` > "drives the real registry by default: a missing settings.json fails excluded-commands" is **failing on `main`** (verified at base commit `7ca8d32`, independent of CREW-228). The test builds a config with `bruno_smoke` enabled and neither a `bruno/` skeleton nor a `.claude/settings.json`, then asserts `runPreflight` throws `PreflightError(checkName: 'excluded-commands')`. But `registry.ts`'s `ALL` array now orders `brunoSkeleton` (index 3) ahead of `excludedCommands` (index 8), and the fail-fast adapter throws on the _first_ fail — so it throws `bruno-skeleton` instead. Either the registry order or the test's expectation drifted when T3 (CREW-226) and T4 (CREW-227) merged their registry entries in different orders.
+
+**Why noticed:** Running the cleanliness sweep (`npm run test:run`) during CREW-228 (the `crew doctor` command, which doesn't touch `registry.ts` or preflight). The failure reproduces at the base commit before any CREW-228 work, confirming it is pre-existing and out of this ticket's scope.
+
+**Anchors:** `packages/cli/src/lib/health/registry.ts` (the `ALL` order); `packages/cli/src/lib/preflight/run-preflight.test.ts:82`; CREW-226 (T3, preflight adapter), CREW-227 (T4, the six checks). `git checkout 7ca8d32 -- … && npx vitest run preflight/run-preflight` reproduces.
+
+**What's been considered:** Two fixes — (a) make the preflight ordering deterministic/intentional (e.g. dispatch-critical checks like `excluded-commands`/`app-url-resolves` ordered first so the gate surfaces them before scaffold gaps) and update the test to match; or (b) if `bruno-skeleton`-first is actually desired, update the test's expected `checkName`. (a) reads as the intended behavior — the dispatch gate historically led with `excluded-commands`. Belongs with whoever owns the preflight adapter, not the doctor command.
+
+**Shape of work:** small — reorder `ALL` (or add an explicit preflight ordering) + adjust the one test assertion. One commit.
 
 #### 2026-06-05 — `bruno-skeleton` fix() defaults the scaffolded port instead of deriving it from config
 

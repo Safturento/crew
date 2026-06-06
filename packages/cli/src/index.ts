@@ -18,6 +18,7 @@ import { normalizeLineEndingsCommand } from './commands/normalize-line-endings.j
 import { runnerCommand } from './commands/runner.js';
 import { upCommand } from './commands/up.js';
 import { downCommand } from './commands/down.js';
+import { doctorCommand } from './commands/doctor.js';
 
 const program = new Command();
 
@@ -45,5 +46,6 @@ program.addCommand(normalizeLineEndingsCommand);
 program.addCommand(runnerCommand);
 program.addCommand(upCommand);
 program.addCommand(downCommand);
+program.addCommand(doctorCommand);
 
 program.parse(process.argv);
