@@ -34,6 +34,10 @@ export async function gatherInitAnswers(
     (await number({ message: 'Dashboard port', default: DEFAULT_DASHBOARD_PORT })) ??
     DEFAULT_DASHBOARD_PORT;
 
+  // `app_url` template, `default_branch`, and env contexts are intentionally
+  // not prompted: the scaffolders default them (`${APP_URL}` / `main` / the
+  // standard orchestration context) and they're rarely overridden at init time.
+  // Edit the generated TOML / env.toml directly for the uncommon case.
   const answers: InitAnswers = {
     name,
     repoPath: cwd,
@@ -67,24 +71,34 @@ export async function gatherInitAnswers(
       message: 'Enable an authored e2e suite?',
       default: Boolean(existing?.playwright?.authored),
     });
-    answers.playwright = { smoke };
-    if (authored) {
-      const testsDir = await input({
-        message: 'Authored tests directory',
-        default: existing?.playwright?.authored?.tests_dir ?? 'tests/e2e',
-      });
-      const testCommand = await input({
-        message: 'Authored test command',
-        default: existing?.playwright?.authored?.test_command ?? 'npm run test:e2e',
-      });
-      answers.playwright.authored = { testsDir, testCommand };
-    }
-    // The schema requires start_command when Playwright runs without Docker.
-    if (!wantsDocker) {
-      answers.playwright.startCommand = await input({
-        message: 'Command that brings the app up for the suite',
-        default: existing?.playwright?.start_command ?? 'npm run dev',
-      });
+    // The schema requires at least one of smoke / authored when [playwright] is
+    // configured — opting into neither is the same as not using Playwright, so
+    // skip the block entirely rather than write a config that won't load.
+    if (!smoke && !authored) {
+      console.log(
+        pc.yellow('•'),
+        'Playwright needs the smoke flow or an authored suite — skipping Playwright setup.',
+      );
+    } else {
+      answers.playwright = { smoke };
+      if (authored) {
+        const testsDir = await input({
+          message: 'Authored tests directory',
+          default: existing?.playwright?.authored?.tests_dir ?? 'tests/e2e',
+        });
+        const testCommand = await input({
+          message: 'Authored test command',
+          default: existing?.playwright?.authored?.test_command ?? 'npm run test:e2e',
+        });
+        answers.playwright.authored = { testsDir, testCommand };
+      }
+      // The schema requires start_command when Playwright runs without Docker.
+      if (!wantsDocker) {
+        answers.playwright.startCommand = await input({
+          message: 'Command that brings the app up for the suite',
+          default: existing?.playwright?.start_command ?? 'npm run dev',
+        });
+      }
     }
   }
 

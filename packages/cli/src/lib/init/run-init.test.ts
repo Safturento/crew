@@ -136,6 +136,24 @@ describe('runInit', () => {
     expect(withBaseline.baselineWarning).toBeUndefined();
   });
 
+  it('fails fast (no partial writes) when the answers render a schema-invalid config', async () => {
+    // Playwright opted in but neither smoke nor authored enabled — the schema's
+    // superRefine rejects this, so writing it would poison the next config load.
+    const answers: InitAnswers = {
+      name: 'demo',
+      repoPath: repo,
+      jira: { projectKey: 'DEMO', site: 'https://demo.atlassian.net' },
+      github: { repo: 'me/demo' },
+      playwright: { smoke: false },
+    };
+
+    await expect(runInit({ cwd: repo, answers, projectsDir })).rejects.toThrow(/playwright/i);
+
+    // nothing was written — the guard runs before any scaffolding
+    expect(existsSync(join(projectsDir, 'demo.toml'))).toBe(false);
+    expect(existsSync(join(repo, 'env.toml'))).toBe(false);
+  });
+
   it('materializes .env via runEnvInit for a docker-backed project', async () => {
     const canonical = basename(repo);
     const answers: InitAnswers = {

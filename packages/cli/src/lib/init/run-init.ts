@@ -1,6 +1,6 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
-import { defaultProjectConfigDir, loadProjectConfigByName } from 'crew-shared';
+import { defaultProjectConfigDir, loadProjectConfigByName, parseProjectConfig } from 'crew-shared';
 import { runEnvInit, type EnvResult } from '../../commands/env.js';
 import { baselinePresent } from '../health/checks/baseline-present.js';
 import type { HealthContext } from '../health/types.js';
@@ -114,10 +114,24 @@ export async function runInit(options: RunInitOptions): Promise<InitResult> {
   const log = options.log ?? (() => {});
   const result: InitResult = { written: [], skipped: [] };
 
+  // Fail fast: never let an invalid answer set produce a partial scaffold. A
+  // half-written project (e.g. a `[playwright]` block with neither smoke nor
+  // authored enabled) is worse than none — the very next config load would
+  // throw. Validate the rendered config against the schema before writing
+  // anything.
+  const projectToml = renderProjectToml(answers);
+  try {
+    parseProjectConfig(projectToml);
+  } catch (err) {
+    throw new Error(
+      `crew init: refusing to write an invalid project config — ${(err as Error).message}`,
+    );
+  }
+
   // 1. project TOML (registration) — converge-aware
   await convergeManagedFile(
     join(projectsDir, `${answers.name}.toml`),
-    renderProjectToml(answers),
+    projectToml,
     confirm,
     result,
     log,
