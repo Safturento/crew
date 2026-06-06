@@ -228,8 +228,8 @@ export function Timeline({ agentKey, agentState, tokensByTool = [] }: TimelinePr
                       isOpen={isOpen}
                       onToggle={() => toggleSection(key)}
                     >
-                      {s.events.map((event) => (
-                        <TranscriptRow key={eventKey(event)} event={event} />
+                      {s.events.map((event, evIdx) => (
+                        <TranscriptRow key={eventKey(event, evIdx)} event={event} />
                       ))}
                     </TimelineSection>
                   </div>
@@ -324,9 +324,14 @@ function TimelineToolbar({
   );
 }
 
-function eventKey(event: TranscriptEvent): string {
-  const r = event as unknown as { uuid?: string; timestamp?: string };
-  return r.uuid ?? r.timestamp ?? Math.random().toString(36).slice(2);
+export function eventKey(event: TranscriptEvent, index: number): string {
+  const r = event as unknown as {
+    uuid?: string;
+    timestamp?: string;
+    startedAt?: string;
+    type?: string;
+  };
+  return r.uuid ?? r.timestamp ?? r.startedAt ?? `${r.type ?? 'event'}:${index}`;
 }
 
 function matchesFilters(

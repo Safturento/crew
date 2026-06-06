@@ -236,6 +236,23 @@ describe('TranscriptRow', () => {
       render(<TranscriptRow event={event} />);
       expect(screen.getByTestId('transcript-row-tag')).toHaveTextContent('Future unknown subtype');
     });
+
+    it('renders a Skill tool_use like a skill attachment (Skill invoked, hooks-and-skills)', () => {
+      const event = {
+        type: 'assistant',
+        timestamp: ts,
+        message: {
+          role: 'assistant',
+          content: [
+            { type: 'tool_use', id: 't1', name: 'Skill', input: { command: 'brainstorming' } },
+          ],
+        },
+      } as unknown as AssistantEvent;
+      render(<TranscriptRow event={event} />);
+      const row = screen.getByTestId('transcript-row');
+      expect(row).toHaveAttribute('data-category', 'hooks-and-skills');
+      expect(screen.getByTestId('transcript-row-tag')).toHaveTextContent('Skill invoked');
+    });
   });
 
   describe('system category', () => {
