@@ -16,7 +16,7 @@ import type { HealthCheck, HealthContext } from '../lib/health/types.js';
 import { renderReport } from '../lib/health/render.js';
 
 export interface RunDoctorOptions {
-  /** Directory to resolve the project from (and to probe machine state from). */
+  /** Directory the single-project resolver discovers the project from. */
   cwd: string;
   /** Apply each fixable fail's `fix()`, then re-detect. */
   fix?: boolean;
@@ -45,9 +45,7 @@ export interface DoctorResult {
 function buildContext(config: ProjectConfig): HealthContext {
   const worktree = config.repo_path;
   const envPath = join(worktree, '.env');
-  const envVars = existsSync(envPath)
-    ? parseEnvFile(readFileSync(envPath, 'utf8'))
-    : undefined;
+  const envVars = existsSync(envPath) ? parseEnvFile(readFileSync(envPath, 'utf8')) : undefined;
   return { config, worktree, envVars };
 }
 
