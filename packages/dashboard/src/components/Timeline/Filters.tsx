@@ -3,6 +3,7 @@ import { Fragment, useMemo, useState } from 'react';
 
 import type { AgentDetailTokensByTool } from '../../data/types.js';
 import { aggregateByAlias } from '../../format/tool-alias.js';
+import { useOverlayGuard } from '../../routes/overlay-guard.js';
 import { Button } from '../ui/button.js';
 import { Checkbox } from '../ui/checkbox.js';
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover.js';
@@ -30,6 +31,7 @@ interface FiltersProps {
 export function Filters({ state, onChange, tokensByTool }: FiltersProps) {
   const [open, setOpen] = useState(false);
   const [toolsExpanded, setToolsExpanded] = useState(false);
+  const guard = useOverlayGuard();
 
   const aliasRows = useMemo(
     () =>
@@ -53,7 +55,21 @@ export function Filters({ state, onChange, tokensByTool }: FiltersProps) {
     : 0;
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover
+      open={open}
+      onOpenChange={(next) => {
+        setOpen(next);
+        if (next) {
+          guard.setOverlayOpen(true);
+        } else {
+          // Radix closes on pointerdown-outside, firing this BEFORE the
+          // backdrop's click. Defer clearing the flag to the next tick so the
+          // synchronous backdrop click still sees the overlay as open and
+          // doesn't dismiss the drawer along with the popover.
+          setTimeout(() => guard.setOverlayOpen(false), 0);
+        }
+      }}
+    >
       <PopoverTrigger asChild>
         <Button
           color="idle"

@@ -36,6 +36,7 @@ const SAMPLE_DETAIL: AgentDetail = {
 };
 
 beforeEach(() => {
+  sessionStorage.clear();
   vi.spyOn(defaultClient, 'getAgent').mockResolvedValue(SAMPLE_DETAIL);
   vi.spyOn(defaultClient, 'getTimeline').mockResolvedValue({ events: [] as TranscriptEvent[] });
   window.location.hash = '#/agent/KAN-1';
@@ -112,5 +113,22 @@ describe('AgentDrawer', () => {
     renderWithProviders(<AgentDrawer agentKey="KAN-1" />);
     expect(await screen.findByTestId('agent-body')).toBeInTheDocument();
     expect(await screen.findByTestId('timeline-empty')).toBeInTheDocument();
+  });
+
+  it('keeps the drawer open when a backdrop click dismisses the filters popover', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<AgentDrawer agentKey="KAN-1" />);
+    await screen.findByTestId('drawer-header');
+
+    // Open the Filters popover, then dismiss it by clicking the backdrop.
+    await user.click(await screen.findByRole('button', { name: /open timeline filters/i }));
+    expect(await screen.findByRole('button', { name: /select all/i })).toBeInTheDocument();
+    await user.click(screen.getByTestId('drawer-backdrop'));
+
+    // The popover closes but the drawer stays open (no navigation away).
+    await waitFor(() =>
+      expect(screen.queryByRole('button', { name: /select all/i })).not.toBeInTheDocument(),
+    );
+    expect(window.location.hash).toBe('#/agent/KAN-1');
   });
 });
