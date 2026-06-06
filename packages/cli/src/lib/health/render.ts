@@ -41,7 +41,8 @@ export function renderReport(outcomes: CheckOutcome[], opts: RenderOptions): str
   ).length;
 
   lines.push('');
-  lines.push(`  ${problems} problems (${fixable} auto-fixable)`);
+  const noun = problems === 1 ? 'problem' : 'problems';
+  lines.push(`  ${problems} ${noun} (${fixable} auto-fixable)`);
 
   return lines.join('\n');
 }

@@ -3,13 +3,18 @@ import { renderReport } from './render.js';
 import { ok, warn, fail } from './types.js';
 import type { CheckOutcome } from './run-health.js';
 
-const outcome = (name: string, scope: 'project' | 'machine', result: CheckOutcome['result']): CheckOutcome => ({
+const outcome = (
+  name: string,
+  scope: 'project' | 'machine',
+  result: CheckOutcome['result'],
+): CheckOutcome => ({
   check: { name, scope, detect: async () => result },
   result,
 });
 
 // picocolors emits ANSI escapes; strip them so assertions read plainly.
-const plain = (s: string) => s.replace(/\[[0-9;]*m/g, '');
+const ANSI = new RegExp(`${String.fromCharCode(0x1b)}\\[[0-9;]*m`, 'g');
+const plain = (s: string) => s.replace(ANSI, '');
 
 describe('renderReport', () => {
   it('renders a glyph per finding and indents remediation under problems', () => {
@@ -26,7 +31,9 @@ describe('renderReport', () => {
       outcome(
         'baseline-present',
         'project',
-        warn('AGENTS.md is missing', { remediation: 'run the establishing-a-new-project skill' }),
+        warn('AGENTS.md is missing', {
+          remediation: 'run the establishing-a-new-project skill',
+        }),
       ),
     ];
 
@@ -60,5 +67,17 @@ describe('renderReport', () => {
     const report = plain(renderReport(outcomes, {}));
 
     expect(report).toContain('0 problems');
+  });
+
+  it('uses the singular "problem" when exactly one finding is a problem', () => {
+    const outcomes: CheckOutcome[] = [
+      outcome('a', 'project', ok('fine')),
+      outcome('b', 'project', fail('broken')),
+    ];
+
+    const report = plain(renderReport(outcomes, {}));
+
+    expect(report).toContain('1 problem (0 auto-fixable)');
+    expect(report).not.toContain('1 problems');
   });
 });
