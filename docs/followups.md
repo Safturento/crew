@@ -341,6 +341,8 @@ Organization: Active is grouped by topic (not chronology) since the dominant acc
 
 #### 2026-06-05 — Dashboard has no cancel action; CLI kill never notifies the daemon
 
+**Ticket:** [CREW-235](https://safturento.atlassian.net/browse/CREW-235) — Epic "Runner control parity (UI ⇄ CLI run-lifecycle actions)", needs-planning. This is the Epic's graceful-path half; resolution gated on Epic completion.
+
 **What:** There is no way to stop an in-flight `crew run` from the dashboard, and stopping one from a separate shell (`kill`, killing the container, deleting the worktree) never tells the daemon the run ended. `crew run` only POSTs `…/runs/:id/complete` on a clean exit of the foreground process — claude exits normally, or a foreground Ctrl+C that the `sigintHandler` forwards to claude before falling through to the `completeRun` call. An out-of-band kill skips that path entirely, so the run row keeps `completed_at = null` and the agent shows "running" forever (the orphaned-run symptom). The dashboard's action surface (the CREW-208 lineage: New Run / Fix PR / Finish) has no Cancel verb, so the operator's only recourse is a CLI kill — which is exactly what orphans the run.
 
 **Why noticed:** 2026-06-05 session. After hard-resetting the four Dashboard-polish runs (CREW-231–234) from the command line — there's no dashboard control for it — all four kept showing "running" on the dashboard. Tracing it: the kill bypassed `completeRun`, leaving the run rows in-flight. The display self-corrects on re-dispatch (state derivation keys off the latest run by id), but the orphaned rows persist underneath, and there's no graceful way to end a run from the UI in the first place.
@@ -864,6 +866,8 @@ The "synthetic Unregistered section" feels right — single render path, no extr
 - Does the fix-pr dispatch need to surface the install log paths back to the agent's prompt template the way `prepareAgentEnvironment` does? Look at how `runResumePreflight`'s result is currently threaded.
 
 #### 2026-05-18 — Daemon has no reaper for orphaned runs stuck in `running`
+
+**Ticket:** [CREW-235](https://safturento.atlassian.net/browse/CREW-235) — Epic "Runner control parity (UI ⇄ CLI run-lifecycle actions)", needs-planning. This is the Epic's backstop half; resolution gated on Epic completion.
 
 **What:** A crew run can finish its real-world work — PR opened and merged, Jira ticket Done — while the daemon's run record stays stuck in `running` indefinitely. The daemon marks a run complete only when the CLI delivers `POST /api/agents/runs/:id/complete` on Claude exit. If that call never lands (CLI crash, daemon down at exit, killed process), the run sits in `running` forever — `completed_at` null, metrics null, no PR URL — and the dashboard shows the agent as perpetually active. Nothing detects or reaps these.
 
