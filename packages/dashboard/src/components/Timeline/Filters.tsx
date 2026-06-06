@@ -2,6 +2,7 @@ import { ChevronDown, ChevronRight, Filter } from 'lucide-react';
 import { Fragment, useMemo, useState } from 'react';
 
 import type { AgentDetailTokensByTool } from '../../data/types.js';
+import { useOverlayGuard } from '../../routes/overlay-guard.js';
 import { aggregateByAlias } from '../../format/tool-alias.js';
 import { Button } from '../ui/button.js';
 import { Checkbox } from '../ui/checkbox.js';
@@ -28,6 +29,7 @@ interface FiltersProps {
 }
 
 export function Filters({ state, onChange, tokensByTool }: FiltersProps) {
+  const guard = useOverlayGuard();
   const [open, setOpen] = useState(false);
   const [toolsExpanded, setToolsExpanded] = useState(false);
 
@@ -53,7 +55,18 @@ export function Filters({ state, onChange, tokensByTool }: FiltersProps) {
     : 0;
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover
+      open={open}
+      onOpenChange={(next) => {
+        setOpen(next);
+        // Tell the drawer backdrop an overlay is open. On close, defer flipping
+        // the flag to the next tick: Radix dismisses on `pointerdown`, so the
+        // backdrop's synchronous `click` still needs to see `true` to skip its
+        // navigate. Verified empirically against the running drawer.
+        if (next) guard.setOverlayOpen(true);
+        else setTimeout(() => guard.setOverlayOpen(false), 0);
+      }}
+    >
       <PopoverTrigger asChild>
         <Button
           color="idle"
