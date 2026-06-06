@@ -1,22 +1,22 @@
 ---
 name: testing
 description: Bruno + Playwright + daemon fixtures
-last_updated: 2026-05-15
+last_updated: 2026-06-06
 covers:
-  - "bruno/**"
-  - "packages/*/src/**/*.test.ts"
-  - "packages/dashboard/tests/**"
+  - 'bruno/**'
+  - 'packages/*/src/**/*.test.ts'
+  - 'packages/dashboard/tests/**'
 ---
 
 # Testing
 
 Crew has three test surfaces. Each has its own home, runner, and trigger rule.
 
-| Surface           | Location                              | Runner         | Trigger to run                                 |
-| ----------------- | ------------------------------------- | -------------- | ---------------------------------------------- |
-| Unit              | `packages/*/src/**/*.test.ts`         | Vitest         | Always part of `npm run test:run`              |
-| API smoke (Bruno) | `bruno/endpoints/`, `bruno/flows/`    | `@usebruno/cli` | `npm run bruno:smoke` (needs `CREW_BRUNO_ENV`) |
-| Dashboard e2e     | `packages/dashboard/tests/e2e/*.spec.ts` | Playwright   | `npm run test:e2e`                             |
+| Surface           | Location                                 | Runner          | Trigger to run                                 |
+| ----------------- | ---------------------------------------- | --------------- | ---------------------------------------------- |
+| Unit              | `packages/*/src/**/*.test.ts`            | Vitest          | Always part of `npm run test:run`              |
+| API smoke (Bruno) | `bruno/endpoints/`, `bruno/flows/`       | `@usebruno/cli` | `npm run bruno:smoke` (needs `CREW_BRUNO_ENV`) |
+| Dashboard e2e     | `packages/dashboard/tests/e2e/*.spec.ts` | Playwright      | `npm run test:e2e`                             |
 
 Unit tests live alongside source (`foo.ts` + `foo.test.ts`). E2e tests live in their own `tests/e2e/` tree because they need the dashboard built and the worktree's docker stack running.
 
@@ -63,6 +63,12 @@ Key behavior:
 - **Project TOMLs are seeded too.** `serve.ts` writes `crew.toml` and `recipes.toml` into the daemon's `configDir` alongside the DB rows. Without those files, `ProjectsService` filters every fixture agent off the `/api/projects` response and the dashboard renders an empty grid.
 
 If your local stack has no fixtures and you expected some, check: are you in the canonical worktree (which skips the seed by design), or is `CREW_SEED_FIXTURES=1` missing from `.env`?
+
+## Daemon unit-test harness (`packages/daemon/vitest.config.ts`)
+
+The daemon package carries its own `vitest.config.ts` (closest-config wins over the repo-root one) so it can register a `setupFiles` entry, `src/test/setup.ts`. That setup file pins `CREW_STARTUP_EVENTS_DIR` at a fresh empty temp dir for the whole package's test run.
+
+Why it exists: any test that builds the full app (`buildApp`) triggers the `onReady` hook's chokidar watcher on the startup-event dir. Unisolated, that defaults to the developer's real `~/.crew/startup`, and chokidar's initial scan (`ignoreInitial:false`) replays every historical `<key>.jsonl` through `IngestService` — a burst of synchronous SQLite writes on the shared db that starves later `app.inject` calls and trips the 5s test timeout. The setup file makes that scan always a no-op, so individual tests don't each have to isolate the env var themselves.
 
 ## Sandboxed vs un-sandboxed test runs
 
