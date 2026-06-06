@@ -179,6 +179,9 @@ const sampleTokensByTool: AgentDetailTokensByTool[] = [
 
 describe('Timeline', () => {
   beforeEach(() => {
+    // Filters now write through to sessionStorage on every render; clear it so
+    // a key reused across tests doesn't seed the next render with stale filters.
+    sessionStorage.clear();
     mockUseTimeline.mockReset();
     mockUseStateHistory.mockReset();
     mockUseStateHistory.mockReturnValue(stateHistoryResult([]));
@@ -674,6 +677,88 @@ describe('Timeline', () => {
     expect(toggles[0]).toHaveAttribute('aria-expanded', 'false');
     expect(toggles[1]).toHaveAttribute('aria-expanded', 'true');
     expect(toggles[2]).toHaveAttribute('aria-expanded', 'true');
+  });
+});
+
+describe('Timeline filter persistence (CREW-232)', () => {
+  const persistEvents = {
+    data: { events: [evt(1), assistantThinking(2, 'pondering')] },
+    isSuccess: true as const,
+    status: 'success' as const,
+  };
+
+  beforeEach(() => {
+    sessionStorage.clear();
+    mockUseTimeline.mockReset();
+    mockUseStateHistory.mockReset();
+    mockUseStateHistory.mockReturnValue(stateHistoryResult([]));
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('restores a toggled filter when the same agent reopens', async () => {
+    mockUseTimeline.mockReturnValue(timelineResult(persistEvents));
+    const { unmount } = render(<Timeline agentKey="KAN-PERSIST" />);
+    // Thinking is off by default → only the conversation row renders.
+    expect(screen.getAllByTestId('transcript-row')).toHaveLength(1);
+    await openFilters();
+    await userEvent.click(screen.getByLabelText('Thinking'));
+    expect(screen.getAllByTestId('transcript-row')).toHaveLength(2);
+    unmount();
+
+    mockUseTimeline.mockReturnValue(timelineResult(persistEvents));
+    render(<Timeline agentKey="KAN-PERSIST" />);
+    // Persisted: Thinking stays on across the remount.
+    expect(screen.getAllByTestId('transcript-row')).toHaveLength(2);
+  });
+
+  it('restores the search box for the same agent', async () => {
+    mockUseTimeline.mockReturnValue(timelineResult(persistEvents));
+    const { unmount } = render(<Timeline agentKey="KAN-SEARCH" />);
+    await userEvent.type(screen.getByRole('searchbox'), 'pondering');
+    unmount();
+
+    mockUseTimeline.mockReturnValue(timelineResult(persistEvents));
+    render(<Timeline agentKey="KAN-SEARCH" />);
+    expect(screen.getByRole('searchbox')).toHaveValue('pondering');
+  });
+
+  it('uses defaults for a different agent key', async () => {
+    mockUseTimeline.mockReturnValue(timelineResult(persistEvents));
+    const { unmount } = render(<Timeline agentKey="KAN-A" />);
+    await openFilters();
+    await userEvent.click(screen.getByLabelText('Thinking'));
+    expect(screen.getAllByTestId('transcript-row')).toHaveLength(2);
+    unmount();
+
+    mockUseTimeline.mockReturnValue(timelineResult(persistEvents));
+    render(<Timeline agentKey="KAN-B" />);
+    // A different agent gets the curated defaults — Thinking back off.
+    expect(screen.getAllByTestId('transcript-row')).toHaveLength(1);
+  });
+
+  // The drawer is rendered without a React key (App.tsx), so navigating between
+  // two agents reuses this Timeline instance — the agentKey prop changes but the
+  // component is NOT remounted. Filters must re-seed from the new agent rather
+  // than leak the previous agent's state (and persist it under the wrong key).
+  it('re-seeds filters when the agent key changes without a remount', async () => {
+    mockUseTimeline.mockReturnValue(timelineResult(persistEvents));
+    const { rerender } = render(<Timeline agentKey="KAN-REUSE-A" />);
+    await userEvent.type(screen.getByRole('searchbox'), 'pondering');
+    expect(screen.getByRole('searchbox')).toHaveValue('pondering');
+
+    // Same instance, new agent — mirrors the unkeyed drawer swapping agents.
+    rerender(<Timeline agentKey="KAN-REUSE-B" />);
+    expect(screen.getByRole('searchbox')).toHaveValue('');
+    // The previous agent's search must not have been persisted under the new key.
+    const storedB = sessionStorage.getItem('crew:timeline-filters:KAN-REUSE-B');
+    expect(storedB === null || JSON.parse(storedB).search === '').toBe(true);
+
+    // Switching back restores the first agent's persisted search.
+    rerender(<Timeline agentKey="KAN-REUSE-A" />);
+    expect(screen.getByRole('searchbox')).toHaveValue('pondering');
   });
 });
 

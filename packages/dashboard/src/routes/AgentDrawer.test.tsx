@@ -113,4 +113,22 @@ describe('AgentDrawer', () => {
     expect(await screen.findByTestId('agent-body')).toBeInTheDocument();
     expect(await screen.findByTestId('timeline-empty')).toBeInTheDocument();
   });
+
+  it('stays open when a click dismissing the filters popover lands on the backdrop (CREW-232)', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<AgentDrawer agentKey="KAN-1" />);
+    await screen.findByTestId('drawer-header');
+
+    // Open the Filters popover that lives in the drawer's timeline toolbar
+    // (the toolbar only renders once the timeline finishes loading).
+    await user.click(await screen.findByRole('button', { name: /open timeline filters/i }));
+    expect(await screen.findByText('Conversation')).toBeInTheDocument();
+
+    // Clicking outside the popover lands on the drawer backdrop. The popover
+    // dismisses, but the drawer must NOT navigate away.
+    await user.click(screen.getByTestId('drawer-backdrop'));
+
+    expect(window.location.hash).toBe('#/agent/KAN-1');
+    expect(screen.getByTestId('drawer-header')).toBeInTheDocument();
+  });
 });

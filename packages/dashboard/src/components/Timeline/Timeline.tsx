@@ -6,6 +6,7 @@ import type { AgentDetailTokensByTool, AgentState, TranscriptEvent } from '../..
 import { cn } from '../../lib/utils.js';
 import { Button } from '../ui/button.js';
 import { Filters, defaultTimelineFilterState, type TimelineFilterState } from './Filters.js';
+import { loadFilters, saveFilters } from './filter-persistence.js';
 import { isToolVisible } from './filter-state.js';
 import { LiveModeToggle } from './LiveModeToggle.js';
 import { MinimapStripe } from './MinimapStripe.js';
@@ -60,11 +61,33 @@ function eventTokens(e: TranscriptEvent): number {
 export function Timeline({ agentKey, agentState, tokensByTool = [] }: TimelineProps) {
   const { data: timelineData, isLoading } = useTimeline(agentKey);
   const { data: historyData } = useStateHistory(agentKey);
+  // Seed filter + search from any per-agent state persisted in a prior drawer
+  // session; `liveMode` and section-collapse are intentionally not persisted.
   const [filterState, setFilterState] = useState<TimelineFilterState>(
-    () => defaultTimelineFilterState,
+    () => loadFilters(agentKey)?.state ?? defaultTimelineFilterState,
   );
-  const [searchInput, setSearchInput] = useState('');
+  const [searchInput, setSearchInput] = useState(() => loadFilters(agentKey)?.search ?? '');
+
+  // The drawer is rendered without a React key (App.tsx), so switching agents
+  // reuses this component instance — the agentKey prop changes but state is not
+  // reset on its own. Re-seed from the new agent's persisted filters during
+  // render so we never show (or persist under the new key) the prior agent's
+  // state. See react.dev "resetting state when a prop changes".
+  const [seededFor, setSeededFor] = useState(agentKey);
+  if (seededFor !== agentKey) {
+    setSeededFor(agentKey);
+    const next = loadFilters(agentKey);
+    setFilterState(next?.state ?? defaultTimelineFilterState);
+    setSearchInput(next?.search ?? '');
+  }
+
   const deferredSearch = useDeferredValue(searchInput);
+
+  // Write through on every change so the next time this agent's drawer opens
+  // (or the page reloads) the filters come back.
+  useEffect(() => {
+    saveFilters(agentKey, filterState, searchInput);
+  }, [agentKey, filterState, searchInput]);
   const [liveMode, setLiveMode] = useState<boolean>(() => isLiveByDefault(agentState));
 
   const rawEvents = timelineData?.events ?? [];
