@@ -87,6 +87,48 @@ describe('POST /api/agents/runs', () => {
     }
   });
 
+  // CREW-233: the CLI passes the materialized per-worktree APP_URL so the
+  // drawer's app pill can link to the agent's actual running app.
+  it('stores the per-worktree appUrl on register', async () => {
+    const { app, db } = await setupApp();
+    try {
+      const res = await app.inject({
+        method: 'POST',
+        url: '/api/agents/runs',
+        payload: { ...validBody, appUrl: 'http://localhost:51234' },
+      });
+      expect(res.statusCode).toBe(201);
+      const agents = await db.selectFrom('agents').selectAll().execute();
+      expect(agents[0]?.app_url).toBe('http://localhost:51234');
+    } finally {
+      await app.close();
+      await db.destroy();
+    }
+  });
+
+  it('preserves an existing app_url when a later register omits it (COALESCE)', async () => {
+    const { app, db } = await setupApp();
+    try {
+      await app.inject({
+        method: 'POST',
+        url: '/api/agents/runs',
+        payload: { ...validBody, appUrl: 'http://localhost:51234' },
+      });
+      // fix-pr re-register with no appUrl must not wipe the stored value.
+      const res2 = await app.inject({
+        method: 'POST',
+        url: '/api/agents/runs',
+        payload: { ...validBody, sessionId: 's2', command: 'fix-pr' },
+      });
+      expect(res2.statusCode).toBe(201);
+      const agents = await db.selectFrom('agents').selectAll().execute();
+      expect(agents[0]?.app_url).toBe('http://localhost:51234');
+    } finally {
+      await app.close();
+      await db.destroy();
+    }
+  });
+
   it('returns 409 on duplicate session_id', async () => {
     const { app, db } = await setupApp();
     try {

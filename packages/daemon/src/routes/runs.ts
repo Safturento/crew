@@ -17,6 +17,10 @@ const RegisterRunBody = z.object({
   sessionId: z.string().min(1),
   command: RunCommand,
   startedAt: z.string().min(1),
+  // CREW-233: the materialized per-worktree APP_URL (env.toml). Nullable +
+  // optional — only docker/env-spec projects have one, and a fix-pr
+  // re-register may legitimately omit it (the upsert COALESCEs to preserve).
+  appUrl: z.string().nullable().optional(),
 });
 
 const RegisterRunResponse = z.object({
@@ -96,6 +100,7 @@ export async function registerRunsRoutes(app: DaemonApp): Promise<void> {
           worktree_path: body.worktreePath,
           branch: body.branch,
           pr_url: null,
+          app_url: body.appUrl ?? null,
           created_at: new Date().toISOString(),
         })
         .onConflict((oc) =>
@@ -104,6 +109,9 @@ export async function registerRunsRoutes(app: DaemonApp): Promise<void> {
             worktree_path: (eb) => eb.ref('excluded.worktree_path'),
             branch: (eb) => eb.ref('excluded.branch'),
             ticket_title: sql`COALESCE(NULLIF(excluded.ticket_title, ''), agents.ticket_title)`,
+            // Preserve a stored per-worktree app_url when a later register
+            // (e.g. fix-pr) omits it — mirrors the ticket_title COALESCE.
+            app_url: sql`COALESCE(excluded.app_url, agents.app_url)`,
           }),
         )
         .execute();
