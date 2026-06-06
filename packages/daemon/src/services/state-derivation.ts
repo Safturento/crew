@@ -12,8 +12,58 @@
  * the tool-call-driven helper.
  */
 import { hasPrCreateInvocation } from 'crew-shared';
+import type { AgentState } from './AgentsService.js';
 
 export type TransitionState = 'init' | 'running' | 'pr_open' | 'pr_merged' | 'finished' | 'error';
+
+/**
+ * Every value `state_transitions.to_state` can hold (mirrors the DB column
+ * union in `db.ts`). The tool-call-driven machine only ever writes the six
+ * `TransitionState` values; `idle`/`waiting` are reserved by the schema but
+ * unreachable in v1. Kept here so `currentStateFromTransitions` can accept a
+ * raw `to_state` without an unsafe cast at the call site.
+ */
+export type TransitionTarget = TransitionState | 'idle' | 'waiting';
+
+/**
+ * Maps a `state_transitions.to_state` value to the UI badge union `AgentState`.
+ * `init` → `initializing` (the transitions table uses the spec's canonical
+ * `init`; the badge uses `initializing`). `idle`/`waiting` are unreachable in
+ * v1 but map to `running` (an idle/waiting agent is mid-session, not finished)
+ * so the badge never has a hole if the schema's reserved states ever appear.
+ */
+const TRANSITION_TO_AGENT_STATE: Record<TransitionTarget, AgentState> = {
+  init: 'initializing',
+  running: 'running',
+  pr_open: 'pr_open',
+  pr_merged: 'pr_merged',
+  finished: 'finished',
+  error: 'error',
+  idle: 'running',
+  waiting: 'running',
+};
+
+/**
+ * Projects an agent's current non-terminal badge state from its
+ * `state_transitions` log: the `to_state` of the latest transition (by `ts`),
+ * mapped to `AgentState`. Falls back to `initializing` when the agent has no
+ * transitions yet.
+ *
+ * The log is maintained by `IngestService` (live `gh pr create` detection — the
+ * ⏎/cd-prefixed variant included — and the fix-pr `pr_open → running` cycle), so
+ * projecting from it keeps the list and drawer badges in lock-step with the
+ * timeline instead of recomputing from divergent SQL flags. `AgentsService`
+ * layers the authoritative terminal guards (finish/error/pr_merged) on top —
+ * see its `deriveState` — because the CREW-96 backfill never wrote those
+ * terminal transitions for historical agents.
+ */
+export function currentStateFromTransitions(
+  transitions: ReadonlyArray<{ to: TransitionTarget; ts: number }>,
+): AgentState {
+  if (transitions.length === 0) return 'initializing';
+  const latest = transitions.reduce((a, b) => (b.ts >= a.ts ? b : a));
+  return TRANSITION_TO_AGENT_STATE[latest.to];
+}
 
 export interface ToolCallSlice {
   tool_name: string;
