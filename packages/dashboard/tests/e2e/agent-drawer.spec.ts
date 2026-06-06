@@ -74,6 +74,48 @@ test.describe('Agent drawer', () => {
     await expect(page.getByTestId('drawer-header')).toHaveCount(0);
   });
 
+  test('keeps the drawer open when a backdrop click dismisses the filters popover', async ({
+    page,
+  }) => {
+    await mockTimeline(page, SEEDED_AGENT_KEY, TWO_GROUP_EVENTS);
+    await page.goto(`/#/agent/${SEEDED_AGENT_KEY}`);
+    await expect(page.getByTestId('drawer-header')).toBeVisible();
+
+    // Open the Filters popover.
+    await page.getByRole('button', { name: /open timeline filters/i }).click();
+    await expect(page.getByRole('button', { name: /select all/i })).toBeVisible();
+
+    // Click the backdrop (upper-left, clear of the right-aligned drawer panel).
+    // Pre-fix this dismissed the popover AND closed the whole drawer.
+    await page.getByTestId('drawer-backdrop').click({ position: { x: 50, y: 50 } });
+
+    await expect(page.getByRole('button', { name: /select all/i })).toHaveCount(0);
+    await expect(page.getByTestId('drawer-header')).toBeVisible();
+    await expect(page).toHaveURL(new RegExp(`#/agent/${SEEDED_AGENT_KEY}$`));
+  });
+
+  test('persists timeline filters across drawer reopen for the same agent', async ({ page }) => {
+    await mockTimeline(page, SEEDED_AGENT_KEY, TWO_GROUP_EVENTS);
+    await page.goto(`/#/agent/${SEEDED_AGENT_KEY}`);
+
+    // Thinking is OFF by default — turn it ON.
+    await page.getByRole('button', { name: /open timeline filters/i }).click();
+    const thinking = page.getByRole('checkbox', { name: 'Thinking' });
+    await expect(thinking).toHaveAttribute('aria-checked', 'false');
+    await thinking.click();
+    await expect(thinking).toHaveAttribute('aria-checked', 'true');
+
+    // Leave and reopen the same agent's drawer — the filter is restored.
+    await page.goto('/');
+    await expect(page.getByTestId('drawer-header')).toHaveCount(0);
+    await page.goto(`/#/agent/${SEEDED_AGENT_KEY}`);
+    await page.getByRole('button', { name: /open timeline filters/i }).click();
+    await expect(page.getByRole('checkbox', { name: 'Thinking' })).toHaveAttribute(
+      'aria-checked',
+      'true',
+    );
+  });
+
   test('Open as page navigates to /agent/:key/full without drawer chrome', async ({ page }) => {
     await page.goto(`/#/agent/${SEEDED_AGENT_KEY}`);
     await page.getByRole('link', { name: /open as page/i }).click();
