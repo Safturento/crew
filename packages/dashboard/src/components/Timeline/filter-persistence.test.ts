@@ -43,4 +43,12 @@ describe('filter-persistence', () => {
     sessionStorage.setItem(filterStorageKey('CREW-4'), JSON.stringify({ categories: 'nope' }));
     expect(loadFilters('CREW-4')).toBeNull();
   });
+
+  it('returns null when tools.mode is not a known mode', () => {
+    sessionStorage.setItem(
+      filterStorageKey('CREW-5'),
+      JSON.stringify({ categories: [], tools: { mode: 'garbage', set: [] }, search: '' }),
+    );
+    expect(loadFilters('CREW-5')).toBeNull();
+  });
 });
