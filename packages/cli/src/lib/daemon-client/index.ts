@@ -12,6 +12,9 @@ export interface RegisterRunInput {
   sessionId: string;
   command: RunCommand;
   startedAt: string;
+  /** Materialized per-worktree APP_URL (CREW-233). Omitted/null for legacy or
+   *  non-docker projects; the daemon COALESCEs null against the stored value. */
+  appUrl?: string | null;
 }
 
 export interface RegisterRunSuccess {

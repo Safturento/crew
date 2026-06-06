@@ -71,8 +71,8 @@ export function buildContainer(deps: BuildContainerDeps): AwilixContainer<Daemon
     // what it actually scans; if `DaemonConfig` later splits the two,
     // change this argument, not the service's parameter name.
     agentsService: asFunction(
-      ({ db, config, timelineService }: DaemonCradle) =>
-        new AgentsService({ db, projectsDir: config.configDir, timelineService }),
+      ({ db, config, timelineService, logger }: DaemonCradle) =>
+        new AgentsService({ db, projectsDir: config.configDir, timelineService, logger }),
     ).scoped(),
     metricsService: asFunction(
       ({ db, logger }: DaemonCradle) => new MetricsService({ db, logger }),

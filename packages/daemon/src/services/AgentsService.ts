@@ -1,5 +1,6 @@
 import type { Kysely } from 'kysely';
 import { sql } from 'kysely';
+import type { Logger } from 'pino';
 import { deriveAppUrl, deriveJiraUrl, loadProjectConfigByName } from 'crew-shared';
 import type { DaemonDatabase } from '../db.js';
 import type { TimelineService } from './TimelineService.js';
@@ -125,17 +126,26 @@ export interface AgentsServiceDeps {
    * wires the cradle's `timelineService`.
    */
   timelineService?: TimelineService;
+  /**
+   * Optional pino logger. `getByKey` warns through it when a project config
+   * load fails (CREW-233) rather than silently swallowing — a degraded URL
+   * pill should leave a trace. Optional so unit tests can omit it; production
+   * wires the cradle logger via the DI container.
+   */
+  logger?: Logger;
 }
 
 export class AgentsService {
   private readonly db: Kysely<DaemonDatabase>;
   private readonly projectsDir: string | undefined;
   private readonly timelineService: TimelineService | undefined;
+  private readonly logger: Logger | undefined;
 
   constructor(deps: AgentsServiceDeps) {
     this.db = deps.db;
     this.projectsDir = deps.projectsDir;
     this.timelineService = deps.timelineService;
+    this.logger = deps.logger;
   }
 
   async list(): Promise<AgentSummary[]> {
@@ -287,7 +297,7 @@ export class AgentsService {
 
     const agent = await this.db
       .selectFrom('agents')
-      .select(['key', 'project_name', 'ticket_title', 'worktree_path', 'pr_url'])
+      .select(['key', 'project_name', 'ticket_title', 'worktree_path', 'pr_url', 'app_url'])
       .where('key', '=', key)
       .executeTakeFirst();
 
@@ -365,17 +375,23 @@ export class AgentsService {
     });
 
     // Project config is optional plumbing for the drawer's app + Jira pills.
-    // Missing or invalid config leaves the pills hidden rather than failing
+    // Missing or invalid config leaves the pills degraded rather than failing
     // the request — the agent row alone is more useful than a 500.
-    let appUrl: string | null = null;
+    //
+    // CREW-233: the stored per-worktree `app_url` (passed by the CLI at run
+    // registration) wins — it points at the agent's actual running port. Fall
+    // back to the static `deriveAppUrl(cfg)` only when none was stored, so the
+    // canonical main stack and pre-0008 agents are unchanged.
+    let appUrl: string | null = agent?.app_url ?? null;
     let jiraUrl: string | null = null;
     if (project) {
       try {
         const cfg = loadProjectConfigByName(project, this.projectsDir);
-        appUrl = deriveAppUrl(cfg);
+        if (appUrl === null) appUrl = deriveAppUrl(cfg);
         jiraUrl = deriveJiraUrl(cfg, key);
-      } catch {
-        // swallow — pills hide when URLs are null
+      } catch (err) {
+        // Don't swallow — a degraded URL pill should leave a trace.
+        this.logger?.warn({ err, project, key }, 'project config load failed; URL pills degraded');
       }
     }
 
