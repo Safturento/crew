@@ -71,6 +71,9 @@ const HOOK_ATTACHMENTS: ReadonlySet<string> = new Set([
 
 const SKILL_ATTACHMENTS: ReadonlySet<string> = new Set(['skill_listing', 'invoked_skills']);
 
+/** Tool name that represents a skill invocation — coalesced into the Skills lens. */
+const SKILL_TOOL_NAME = 'Skill';
+
 interface ContentBlock {
   type?: string;
   text?: string;
@@ -121,8 +124,9 @@ export function eventCategories(event: TranscriptEvent): Set<CategoryId> {
       const content = (event as AssistantOrUserShape).message?.content;
       if (Array.isArray(content)) {
         for (const block of content) {
-          if (block.type === 'tool_use') categories.add('tools');
-          else if (block.type === 'text') categories.add('conversation');
+          if (block.type === 'tool_use') {
+            categories.add(block.name === SKILL_TOOL_NAME ? 'skills' : 'tools');
+          } else if (block.type === 'text') categories.add('conversation');
           else if (block.type === 'thinking') categories.add('thinking');
           else categories.add('system');
         }
@@ -138,6 +142,10 @@ export function eventCategories(event: TranscriptEvent): Set<CategoryId> {
       }
       if (Array.isArray(content)) {
         for (const block of content) {
+          // tool_result blocks have no tool name without the id→name map, so a
+          // Skill result can't be split out here — they stay under `tools`. The
+          // paired tool_use already contributes `skills`, so a Skill invocation
+          // is still reachable via the Skills filter.
           if (block.type === 'tool_result') categories.add('tools');
           else if (block.type === 'text') categories.add('conversation');
           else categories.add('system');
@@ -215,6 +223,7 @@ export function eventToolAliases(
     if (Array.isArray(content)) {
       for (const block of content) {
         if (block.type === 'tool_use' && typeof block.name === 'string') {
+          if (block.name === SKILL_TOOL_NAME) continue;
           aliases.push(toolAlias(block.name));
         }
       }
@@ -225,7 +234,7 @@ export function eventToolAliases(
       for (const block of content) {
         if (block.type === 'tool_result' && typeof block.tool_use_id === 'string') {
           const name = toolNameById.get(block.tool_use_id);
-          if (name) aliases.push(toolAlias(name));
+          if (name && name !== SKILL_TOOL_NAME) aliases.push(toolAlias(name));
         }
       }
     }

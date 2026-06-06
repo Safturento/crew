@@ -110,6 +110,24 @@ describe('eventCategories (Slim 7)', () => {
     expect([...eventCategories(event)]).toEqual(['tools']);
   });
 
+  it('classifies a Skill tool_use under skills, not tools', () => {
+    const event = assistantWith([{ type: 'tool_use', id: 't1', name: 'Skill', input: {} }]);
+    expect([...eventCategories(event)]).toEqual(['skills']);
+  });
+
+  it('still classifies a non-Skill tool_use under tools', () => {
+    const event = assistantWith([{ type: 'tool_use', id: 't2', name: 'Bash', input: {} }]);
+    expect([...eventCategories(event)]).toEqual(['tools']);
+  });
+
+  it('a mixed turn with text + Skill lands in conversation AND skills', () => {
+    const event = assistantWith([
+      { type: 'text', text: 'hi' },
+      { type: 'tool_use', id: 't3', name: 'Skill', input: {} },
+    ]);
+    expect(new Set(eventCategories(event))).toEqual(new Set(['conversation', 'skills']));
+  });
+
   it('classifies assistant thinking as thinking', () => {
     const event = assistantWith([{ type: 'thinking', thinking: 'reasoning' }]);
     expect([...eventCategories(event)]).toEqual(['thinking']);
@@ -340,6 +358,17 @@ describe('eventToolAliases', () => {
   it('returns [] for a tool_result whose id is not in the map (do not hide)', () => {
     const event = userWith([{ type: 'tool_result', tool_use_id: 'orphan', content: 'ok' }]);
     expect(eventToolAliases(event, new Map())).toEqual([]);
+  });
+
+  it('excludes a Skill tool_use from the tool-name alias list', () => {
+    const event = assistantWith([{ type: 'tool_use', id: 't4', name: 'Skill', input: {} }]);
+    expect(eventToolAliases(event, new Map())).toEqual([]);
+  });
+
+  it('excludes a Skill tool_result (resolved via the map) from the alias list', () => {
+    const event = userWith([{ type: 'tool_result', tool_use_id: 't5', content: 'ok' }]);
+    const map = mapWith([['t5', 'Skill']]);
+    expect(eventToolAliases(event, map)).toEqual([]);
   });
 
   it('returns [] for events with no tool linkage at all', () => {

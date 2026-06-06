@@ -192,6 +192,22 @@ function specsForAssistant(event: AssistantEvent): RowSpec[] {
 
 function specForAssistantBlock(event: AssistantEvent, block: AssistantContent): RowSpec {
   const tokens = event.message.usage?.output_tokens;
+  if (isToolUse(block) && block.name === 'Skill') {
+    // A Skill tool_use is a skill invocation — render it like a skill
+    // attachment (Skill invoked label + hooks-and-skills palette), matching
+    // the Skills filter lens it classifies into (CREW-231 #2).
+    const summary = summarizeToolInput(block.input);
+    return {
+      blockType: 'tool_use',
+      category: 'hooks-and-skills',
+      tone: 'default',
+      tagLabel: 'Skill invoked',
+      oneLiner: truncate(summary),
+      timestamp: event.timestamp,
+      tokens,
+      expanded: prettyJson(block.input),
+    };
+  }
   if (isToolUse(block)) {
     const alias = toolAlias(block.name);
     const summary = summarizeToolInput(block.input);
