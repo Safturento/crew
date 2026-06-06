@@ -529,6 +529,37 @@ describe('Timeline', () => {
     ]);
   });
 
+  // CREW-234: a full run → fix-pr lifecycle. The transition log re-flips
+  // pr_open → running when fix-pr starts, so the timeline must render three
+  // distinct segments — running, pr_open, running — with each phase's events
+  // landing in its own section (fix-pr reads as its own running segment).
+  it('renders distinct running/pr_open/running segments across a fix-pr cycle', () => {
+    const transitions: StateTransition[] = [
+      { from: 'running', to: 'pr_open', ts: Date.parse('2026-04-29T12:00:01.5Z') },
+      { from: 'pr_open', to: 'running', ts: Date.parse('2026-04-29T12:00:02.5Z') },
+    ];
+    mockUseTimeline.mockReturnValue(
+      timelineResult({
+        // evt(1)@:01 → leading running; evt(2)@:02 → pr_open; evt(3)@:03 → fix-pr running.
+        data: { events: [evt(1), evt(2), evt(3)] },
+        isSuccess: true,
+        status: 'success',
+      }),
+    );
+    mockUseStateHistory.mockReturnValue(stateHistoryResult(transitions));
+    render(<Timeline agentKey="KAN-1" agentState="running" />);
+    const sections = screen.getAllByTestId('timeline-section');
+    expect(sections.map((s) => s.getAttribute('data-state'))).toEqual([
+      'running',
+      'pr_open',
+      'running',
+    ]);
+    // Each phase owns exactly its own event — the fix-pr run is its own segment.
+    for (const section of sections) {
+      expect(section.querySelectorAll('[data-testid="transcript-row"]')).toHaveLength(1);
+    }
+  });
+
   it('Collapse-all collapses every section in one click', async () => {
     const transitions: StateTransition[] = [
       { from: null, to: 'init', ts: Date.parse('2026-04-29T11:59:50Z') },
