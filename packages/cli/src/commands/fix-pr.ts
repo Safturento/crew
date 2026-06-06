@@ -305,6 +305,10 @@ async function runFixPr(key: string, flags: FixPrFlags): Promise<void> {
       sessionId: session.sessionId,
       command: 'fix-pr',
       startedAt: new Date().toISOString(),
+      // CREW-233: re-send the materialized per-worktree APP_URL for env-spec
+      // projects. Null for legacy projects — the upsert COALESCEs, so the
+      // value stored by the original `crew run` is preserved either way.
+      appUrl: envVars?.APP_URL ?? null,
     });
     if (registration.ok) runId = registration.run.id;
   }

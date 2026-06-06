@@ -43,6 +43,28 @@ describe('CrewDaemonClient.registerRun', () => {
     );
   });
 
+  it('serializes the per-worktree appUrl into the POST body (CREW-233)', async () => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          agent: { ...validBody },
+          run: {
+            id: 7,
+            agentKey: 'KAN-1',
+            command: 'run',
+            sessionId: 's1',
+            startedAt: validBody.startedAt,
+          },
+        }),
+        { status: 201, headers: { 'content-type': 'application/json' } },
+      ),
+    );
+    const client = new CrewDaemonClient({ baseUrl: 'http://localhost:7773' });
+    await client.registerRun({ ...validBody, appUrl: 'http://localhost:51234' });
+    const body = JSON.parse((fetchSpy.mock.calls[0]?.[1] as RequestInit).body as string);
+    expect(body.appUrl).toBe('http://localhost:51234');
+  });
+
   it('returns ok:false on connection error without throwing', async () => {
     vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('ECONNREFUSED'));
     const warn = vi.fn();

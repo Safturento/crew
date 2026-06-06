@@ -12,6 +12,13 @@ export interface RegisterRunInput {
   sessionId: string;
   command: RunCommand;
   startedAt: string;
+  /**
+   * Materialized per-worktree APP_URL (env.toml). Optional + nullable — only
+   * docker/env-spec projects have one. The daemon stores it so the drawer's
+   * app pill links to the agent's actual running app (CREW-233); a fix-pr
+   * re-register may omit it and the upsert preserves the stored value.
+   */
+  appUrl?: string | null;
 }
 
 export interface RegisterRunSuccess {
