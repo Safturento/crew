@@ -6,6 +6,7 @@ import type { AgentDetailTokensByTool, AgentState, TranscriptEvent } from '../..
 import { cn } from '../../lib/utils.js';
 import { Button } from '../ui/button.js';
 import { Filters, defaultTimelineFilterState, type TimelineFilterState } from './Filters.js';
+import { loadFilters, saveFilters } from './filter-persistence.js';
 import { isToolVisible } from './filter-state.js';
 import { LiveModeToggle } from './LiveModeToggle.js';
 import { MinimapStripe } from './MinimapStripe.js';
@@ -60,11 +61,20 @@ function eventTokens(e: TranscriptEvent): number {
 export function Timeline({ agentKey, agentState, tokensByTool = [] }: TimelineProps) {
   const { data: timelineData, isLoading } = useTimeline(agentKey);
   const { data: historyData } = useStateHistory(agentKey);
+  // Seed filter + search from any per-agent state persisted in a prior drawer
+  // session; `liveMode` and section-collapse are intentionally not persisted.
+  const persisted = useMemo(() => loadFilters(agentKey), [agentKey]);
   const [filterState, setFilterState] = useState<TimelineFilterState>(
-    () => defaultTimelineFilterState,
+    () => persisted?.state ?? defaultTimelineFilterState,
   );
-  const [searchInput, setSearchInput] = useState('');
+  const [searchInput, setSearchInput] = useState(() => persisted?.search ?? '');
   const deferredSearch = useDeferredValue(searchInput);
+
+  // Write through on every change so the next time this agent's drawer opens
+  // (or the page reloads) the filters come back.
+  useEffect(() => {
+    saveFilters(agentKey, filterState, searchInput);
+  }, [agentKey, filterState, searchInput]);
   const [liveMode, setLiveMode] = useState<boolean>(() => isLiveByDefault(agentState));
 
   const rawEvents = timelineData?.events ?? [];
