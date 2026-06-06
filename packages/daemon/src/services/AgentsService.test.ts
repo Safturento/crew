@@ -1,4 +1,5 @@
-import { describe, it, expect, afterEach } from 'vitest';
+import { describe, it, expect, afterEach, vi } from 'vitest';
+import type { Logger } from 'pino';
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, dirname, resolve } from 'node:path';
@@ -33,6 +34,7 @@ async function makeAgent(
     worktreePath: string;
     branch: string;
     prUrl: string | null;
+    appUrl: string | null;
   }> = {},
 ): Promise<void> {
   await db
@@ -44,6 +46,7 @@ async function makeAgent(
       worktree_path: overrides.worktreePath ?? `/x/${key}`,
       branch: overrides.branch ?? key,
       pr_url: overrides.prUrl ?? null,
+      app_url: overrides.appUrl ?? null,
       created_at: '2026-04-29T12:00:00Z',
     })
     .execute();
@@ -773,6 +776,60 @@ describe('AgentsService.getByKey', () => {
       const detail = await new AgentsService({ db, projectsDir }).getByKey('KAN-23');
       expect(detail?.app_url).toBeNull();
       expect(detail?.jira_url).toBeNull();
+    } finally {
+      await db.destroy();
+    }
+  });
+
+  // CREW-233: the stored per-worktree app_url wins over the static config port.
+  it('prefers the stored per-worktree app_url over deriveAppUrl(cfg)', async () => {
+    const db = await freshDb();
+    try {
+      await makeAgent(db, 'KAN-23', {
+        projectName: 'kanban-api',
+        appUrl: 'http://localhost:51234',
+      });
+      await makeRun(db, 'KAN-23', 's1');
+      const projectsDir = makeProjectsDir({ 'kanban-api': KANBAN_TOML });
+      const detail = await new AgentsService({ db, projectsDir }).getByKey('KAN-23');
+      // KANBAN_TOML's playwright.app_url is :7421 — the stored value must win.
+      expect(detail?.app_url).toBe('http://localhost:51234');
+      expect(detail?.jira_url).toBe('https://safturento.atlassian.net/browse/KAN-23');
+    } finally {
+      await db.destroy();
+    }
+  });
+
+  it('falls back to deriveAppUrl(cfg) when no app_url is stored', async () => {
+    const db = await freshDb();
+    try {
+      await makeAgent(db, 'KAN-23', { projectName: 'kanban-api', appUrl: null });
+      await makeRun(db, 'KAN-23', 's1');
+      const projectsDir = makeProjectsDir({ 'kanban-api': KANBAN_TOML });
+      const detail = await new AgentsService({ db, projectsDir }).getByKey('KAN-23');
+      expect(detail?.app_url).toBe('http://localhost:7421');
+    } finally {
+      await db.destroy();
+    }
+  });
+
+  it('logs a warning (instead of swallowing) when project config load fails', async () => {
+    const db = await freshDb();
+    try {
+      await makeAgent(db, 'KAN-23', { projectName: 'kanban-api', appUrl: null });
+      await makeRun(db, 'KAN-23', 's1');
+      const warn = vi.fn();
+      const logger = { warn } as unknown as Logger;
+      // Empty projects dir — loader throws; the failure must be logged, not swallowed.
+      const projectsDir = makeProjectsDir();
+      const detail = await new AgentsService({ db, projectsDir, logger }).getByKey('KAN-23');
+      expect(detail?.app_url).toBeNull();
+      expect(detail?.jira_url).toBeNull();
+      expect(warn).toHaveBeenCalledTimes(1);
+      expect(warn).toHaveBeenCalledWith(
+        expect.objectContaining({ project: 'kanban-api', key: 'KAN-23' }),
+        expect.stringContaining('project config'),
+      );
     } finally {
       await db.destroy();
     }

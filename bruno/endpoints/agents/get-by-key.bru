@@ -76,6 +76,13 @@ tests {
     expect(res.body.jira_url === null || typeof res.body.jira_url === "string").to.equal(true);
   });
 
+  test("app_url echoes the per-worktree URL registered for BRUNO-1 (CREW-233)", () => {
+    // post-register-run.bru registered BRUNO-1 with appUrl=:51234 earlier in
+    // the smoke chain; the stored per-worktree value must win over the static
+    // config port and round-trip back here.
+    expect(res.body.app_url).to.equal("http://localhost:51234");
+  });
+
   test("tokens_by_tool rows shape: { tool, tokens: bucket, totalTokens } (CREW-195)", () => {
     for (const row of res.body.tokens_by_tool) {
       expect(row.tool).to.be.a("string");

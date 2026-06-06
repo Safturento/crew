@@ -43,6 +43,19 @@ describe('CrewDaemonClient.registerRun', () => {
     );
   });
 
+  it('includes the per-worktree appUrl in the POST body when provided (CREW-233)', async () => {
+    const fetchSpy = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValue(new Response(null, { status: 500 }));
+    const client = new CrewDaemonClient({ baseUrl: 'http://localhost:7773', warn: vi.fn() });
+    await client.registerRun({ ...validBody, appUrl: 'http://localhost:51234' });
+    const body = JSON.parse((fetchSpy.mock.calls[0]?.[1] as RequestInit).body as string) as Record<
+      string,
+      unknown
+    >;
+    expect(body.appUrl).toBe('http://localhost:51234');
+  });
+
   it('returns ok:false on connection error without throwing', async () => {
     vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('ECONNREFUSED'));
     const warn = vi.fn();

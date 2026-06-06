@@ -316,6 +316,10 @@ export async function runRun(key: string, opts: RunOptions): Promise<never> {
 
   let dockerPorts: { httpPort: number; httpsPort: number; postgresPort: number } | undefined;
   let envVars: Record<string, string> | undefined;
+  // CREW-233: the materialized per-worktree app URL, captured here so it can be
+  // handed to the daemon at registerRun — the drawer's app pill then links to
+  // this agent's actual running port instead of the static config one.
+  let materializedAppUrl: string | undefined;
   if (config.docker) {
     const result = await bracketStartupPhase(
       key,
@@ -352,11 +356,13 @@ export async function runRun(key: string, opts: RunOptions): Promise<never> {
       console.log(pc.dim(`    https:   ${env.caddyHttpsPort}`));
       console.log(pc.dim(`    pg:      ${env.postgresPort}`));
       console.log(pc.dim(`    url:     ${env.appUrl}`));
+      materializedAppUrl = env.appUrl;
     } else {
       envVars = result.base;
       console.log(pc.dim(`→ materialized ${join(worktree, '.env')} from env.toml`));
       if (envVars.APP_URL) {
         console.log(pc.dim(`    url:     ${envVars.APP_URL}`));
+        materializedAppUrl = envVars.APP_URL;
       }
     }
   }
@@ -643,6 +649,7 @@ export async function runRun(key: string, opts: RunOptions): Promise<never> {
     sessionId,
     command: 'run',
     startedAt,
+    appUrl: materializedAppUrl ?? null,
   });
   const runId = registration.ok ? registration.run.id : null;
 

@@ -18,6 +18,10 @@ export interface AgentsTable {
   worktree_path: string;
   branch: string | null;
   pr_url: string | null;
+  /** Per-worktree browsable app URL passed by the CLI at run registration
+   *  (CREW-233). Null for pre-0008 agents / registrations that omit it —
+   *  AgentsService.getByKey falls back to `deriveAppUrl(cfg)`. */
+  app_url: string | null;
   created_at: string;
 }
 

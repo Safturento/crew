@@ -305,6 +305,10 @@ async function runFixPr(key: string, flags: FixPrFlags): Promise<void> {
       sessionId: session.sessionId,
       command: 'fix-pr',
       startedAt: new Date().toISOString(),
+      // CREW-233: pass the materialized per-worktree APP_URL so the drawer pill
+      // stays correct across fix-pr cycles. The daemon COALESCEs null, so a
+      // missing value preserves the original run's stored URL.
+      appUrl: envVars?.APP_URL ?? null,
     });
     if (registration.ok) runId = registration.run.id;
   }
