@@ -17,7 +17,7 @@ If the rebase produces conflicts, follow these rules before going any further:
 - When all conflicts in the current rebase step are resolved: `git rebase --continue`. Loop until the rebase finishes.
 - Run `npm run lint`, `npm run typecheck`, `npm run test:run` — ALL must pass.
 - If you are not confident in a resolution: `git rebase --abort`, document the blocker in `docs/tickets/{{key}}.md` "Open questions", and exit WITHOUT applying the review feedback.
-- **If you resolved conflicts during this run, DO NOT push at the end** even if everything passes. The human must inspect the rebase resolution commits before they reach origin. After your feedback fixes are committed and verified, print exactly one line and exit: `Rebase resolution + feedback ready for inspection — run 'git push --force-with-lease origin {{key}}' once you've reviewed.`
+- **A conflict resolution does not hold back the push.** Once the feedback work is committed and the full verification passes, push the result like any clean session — `git push --force-with-lease origin {{key}}` (required because the rebase rewrote history; safe because `--force-with-lease` refuses to clobber a concurrent push). The resolution reaches only the PR branch `{{key}}`, which is reviewed before merge, so there is no separate pre-push inspection step. (The low-confidence escape hatch above is unchanged: if you weren't confident in a resolution, you already aborted without pushing.)
 
 ## Step 0.5: bring up the environment (do this AFTER Step 0 succeeds)
 
