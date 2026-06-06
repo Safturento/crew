@@ -22,7 +22,13 @@ import type { InitAnswers } from './types.js';
  * @param projectsDir the dir to write `<name>.toml` into (e.g. `~/.config/crew/projects`)
  * @returns the absolute path written
  */
-export function writeProjectToml(answers: InitAnswers, projectsDir: string): string {
+/**
+ * Render the project config TOML to a string without writing it. The single
+ * source of truth for the file's content; `writeProjectToml` writes its output,
+ * and `crew init`'s converge step renders prospective content here to diff
+ * against the on-disk file before deciding whether to (re)write.
+ */
+export function renderProjectToml(answers: InitAnswers): string {
   const obj: Record<string, unknown> = {
     name: answers.name,
     repo_path: answers.repoPath,
@@ -67,8 +73,12 @@ export function writeProjectToml(answers: InitAnswers, projectsDir: string): str
     };
   }
 
+  return `${stringifyToml(obj)}\n`;
+}
+
+export function writeProjectToml(answers: InitAnswers, projectsDir: string): string {
   mkdirSync(projectsDir, { recursive: true });
   const dest = join(projectsDir, `${answers.name}.toml`);
-  writeFileSync(dest, `${stringifyToml(obj)}\n`, 'utf8');
+  writeFileSync(dest, renderProjectToml(answers), 'utf8');
   return dest;
 }
