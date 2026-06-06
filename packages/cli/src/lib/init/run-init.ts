@@ -125,6 +125,7 @@ export async function runInit(options: RunInitOptions): Promise<InitResult> {
   } catch (err) {
     throw new Error(
       `crew init: refusing to write an invalid project config — ${(err as Error).message}`,
+      { cause: err },
     );
   }
 
