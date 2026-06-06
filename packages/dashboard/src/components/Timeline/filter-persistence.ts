@@ -47,7 +47,14 @@ export function loadFilters(
   if (!raw) return null;
   try {
     const p = JSON.parse(raw) as Serialized;
-    if (!Array.isArray(p.categories) || !p.tools || !Array.isArray(p.tools.set)) return null;
+    if (
+      !Array.isArray(p.categories) ||
+      !p.tools ||
+      !Array.isArray(p.tools.set) ||
+      (p.tools.mode !== 'all-known' && p.tools.mode !== 'explicit')
+    ) {
+      return null;
+    }
     return {
       state: {
         categories: new Set(p.categories),

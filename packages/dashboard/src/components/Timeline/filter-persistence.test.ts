@@ -29,6 +29,14 @@ describe('filter-persistence', () => {
     expect(loadFilters('CREW-3')).toBeNull();
   });
 
+  it('returns null when tools.mode is not a valid ToolsMode', () => {
+    sessionStorage.setItem(
+      filterStorageKey('CREW-4'),
+      JSON.stringify({ categories: [], tools: { mode: 'bogus', set: [] }, search: '' }),
+    );
+    expect(loadFilters('CREW-4')).toBeNull();
+  });
+
   it('namespaces the storage key by agent', () => {
     expect(filterStorageKey('CREW-9')).toBe('crew:timeline-filters:CREW-9');
   });
