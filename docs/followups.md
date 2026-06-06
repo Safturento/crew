@@ -48,10 +48,8 @@ Organization: Active is grouped by topic (not chronology) since the dominant acc
     - [2026-04-28 — Dashboard New Run modal + projects route view](#2026-04-28--dashboard-new-run-modal--projects-route-view)
     - [2026-04-28 — `useAttention.clear()` snapshot semantic isn't directly tested](#2026-04-28--useattentionclear-snapshot-semantic-isnt-directly-tested)
   - [Daemon, CLI & Dispatch](#daemon-cli--dispatch)
-    - [2026-06-05 — Preflight fail-fast order surfaces `bruno-skeleton` before `excluded-commands` (red test on main)](#2026-06-05--preflight-fail-fast-order-surfaces-bruno-skeleton-before-excluded-commands-red-test-on-main)
     - [2026-06-05 — `bruno-skeleton` fix() defaults the scaffolded port instead of deriving it from config](#2026-06-05--bruno-skeleton-fix-defaults-the-scaffolded-port-instead-of-deriving-it-from-config)
     - [2026-06-04 — `finish_steps` table accumulates across `crew finish` re-runs (no run scoping)](#2026-06-04--finish_steps-table-accumulates-across-crew-finish-re-runs-no-run-scoping)
-    - [2026-06-04 — Daemon test suite flakes under full-parallel `test:run`](#2026-06-04--daemon-test-suite-flakes-under-full-parallel-testrun)
     - [2026-06-04 — Runner pidfile has no liveness identity (recycled-PID false positive)](#2026-06-04--runner-pidfile-has-no-liveness-identity-recycled-pid-false-positive)
     - [2026-06-04 — `GET /api/runner/logs` reads the whole log file into memory](#2026-06-04--get-apirunnerlogs-reads-the-whole-log-file-into-memory)
     - [2026-06-03 — `deriveState` falls through to `finished` when PR-create isn't detected](#2026-06-03--derivestate-falls-through-to-finished-when-pr-create-isnt-detected)
@@ -93,6 +91,8 @@ Organization: Active is grouped by topic (not chronology) since the dominant acc
     - [2026-05-15 — `.agents/` topic-doc system vs native `.claude/rules/` and agents.md alignment](#2026-05-15--agents-topic-doc-system-vs-native-clauderules-and-agentsmd-alignment)
     - [2026-05-12 — Rethink followup-tracking system (priority tier + Jira backlog sync)](#2026-05-12--rethink-followup-tracking-system-priority-tier--jira-backlog-sync)
 - [Resolved](#resolved)
+  - [2026-06-05 — Preflight fail-fast order surfaces `bruno-skeleton` before `excluded-commands` (red test on main)](#2026-06-05--preflight-fail-fast-order-surfaces-bruno-skeleton-before-excluded-commands-red-test-on-main)
+  - [2026-06-04 — Daemon test suite flakes under full-parallel `test:run`](#2026-06-04--daemon-test-suite-flakes-under-full-parallel-testrun)
   - [2026-06-05 — Global doc-parity hook double-warns in crew (two parity warnings per commit)](#2026-06-05--global-doc-parity-hook-double-warns-in-crew-two-parity-warnings-per-commit)
   - [2026-06-03 — Wire CREW-136 `Switch` into the Timeline live toggle](#2026-06-03--wire-crew-136-switch-into-the-timeline-live-toggle)
   - [2026-06-03 — Sticky Timeline toolbar overlaps the minimap stripe + scrollbar](#2026-06-03--sticky-timeline-toolbar-overlaps-the-minimap-stripe--scrollbar)
@@ -748,18 +748,6 @@ The "synthetic Unregistered section" feels right — single render path, no extr
 
 ### Daemon, CLI & Dispatch
 
-#### 2026-06-05 — Preflight fail-fast order surfaces `bruno-skeleton` before `excluded-commands` (red test on main)
-
-**What:** `packages/cli/src/lib/preflight/run-preflight.test.ts` > "drives the real registry by default: a missing settings.json fails excluded-commands" is **failing on `main`** (verified at base commit `7ca8d32`, independent of CREW-228). The test builds a config with `bruno_smoke` enabled and neither a `bruno/` skeleton nor a `.claude/settings.json`, then asserts `runPreflight` throws `PreflightError(checkName: 'excluded-commands')`. But `registry.ts`'s `ALL` array now orders `brunoSkeleton` (index 3) ahead of `excludedCommands` (index 8), and the fail-fast adapter throws on the _first_ fail — so it throws `bruno-skeleton` instead. Either the registry order or the test's expectation drifted when T3 (CREW-226) and T4 (CREW-227) merged their registry entries in different orders.
-
-**Why noticed:** Running the cleanliness sweep (`npm run test:run`) during CREW-228 (the `crew doctor` command, which doesn't touch `registry.ts` or preflight). The failure reproduces at the base commit before any CREW-228 work, confirming it is pre-existing and out of this ticket's scope. (Independently re-confirmed during CREW-229 / T6 `crew init` — same single failure, touching none of `preflight/`, `registry.ts`, or this test.)
-
-**Anchors:** `packages/cli/src/lib/health/registry.ts` (the `ALL` order); `packages/cli/src/lib/preflight/run-preflight.test.ts:82`; `packages/cli/src/lib/health/checks/bruno-skeleton.ts` (fails when `bruno_smoke.enabled` and no skeleton present); CREW-226 (T3, preflight adapter), CREW-227 (T4, the six checks). `git checkout 7ca8d32 -- … && npx vitest run preflight/run-preflight` reproduces.
-
-**What's been considered:** Two fixes — (a) make the preflight ordering deterministic/intentional (e.g. dispatch-critical checks like `excluded-commands`/`app-url-resolves` ordered first so the gate surfaces them before scaffold gaps) and update the test to match; or (b) if `bruno-skeleton`-first is actually desired, update the test's expected `checkName`. A third angle worth weighing: whether `bruno-skeleton` should gate dispatch at all — a missing bruno skeleton arguably shouldn't block `crew run` the way a missing `excludedCommands` entry does (the latter breaks sandbox reachability, the former just means smoke isn't wired), so demoting it to warn-level / excluding it from the preflight projection would also make the test pass as-written. (a) reads as the intended behavior — the dispatch gate historically led with `excluded-commands`. Belongs with whoever owns the preflight adapter, not the doctor or init command.
-
-**Shape of work:** small — reorder `ALL` (or add an explicit preflight ordering) + adjust the one test assertion. One commit. Gated on the dispatch-blocking-vs-advisory semantics decision above.
-
 #### 2026-06-05 — `bruno-skeleton` fix() defaults the scaffolded port instead of deriving it from config
 
 **What:** The `bruno-skeleton` health-check `fix()` (`packages/cli/src/lib/health/checks/bruno-skeleton.ts`) builds an `InitAnswers` from the loaded `ProjectConfig` but omits `ports`, so `scaffoldBruno` falls back to `DEFAULT_DAEMON_PORT` (7773) when it writes the `environments/local.bru` `baseUrl`. A project whose daemon runs on a different port gets a scaffolded bruno environment pointing at the wrong port. The config does carry `bruno_smoke.base_url`, but that's typically a `${DAEMON_URL}` template resolved per-worktree from `env.toml` — the port isn't statically knowable from the config alone, which is why the scaffolder takes an explicit `ports.daemon` instead.
@@ -792,18 +780,6 @@ The "synthetic Unregistered section" feels right — single render path, no extr
 **What's been considered:** Two shapes — (a) clear prior `finish_steps` for the agent at the start of each run (latest-run-only semantics, simplest, matches "the drawer shows the current cleanup"); (b) add a `run_id` and group/scope the checklist per run (keeps history, more UI work). (a) is likely enough — finish is terminal cleanup, history of prior failed attempts has low value.
 
 **Shape of work:** small daemon change (clear-on-new-run or run_id column + migration) + a `FinishStepsService` tweak; optional dashboard grouping if (b). The CREW-220 key fix means there's no rendering bug in the meantime, just unbounded growth + concatenated display.
-
-#### 2026-06-04 — Daemon test suite flakes under full-parallel `test:run`
-
-**What:** Running the daemon vitest suite at full parallelism (35 files at once, as `npm run test:run` does) produces non-deterministic failures: across consecutive runs I saw `routes/runner.test.ts > tails the last N lines` fail alone, then it + `routes/runs.test.ts > returns 409 when already completed`, then a single failure again — while every one of those tests passes 3/3 in isolation. The failing _set_ changes run-to-run with no code change, and the slow case clocked ~7.7s for a normally-instant route test, pointing at resource/timing contention rather than a logic bug.
-
-**Why noticed:** During CREW-222 verification (a CLI-only change touching zero daemon files), `npm run test:run` went red on daemon route tests. Investigation (systematic-debugging) proved the diff touches only `packages/cli`, the daemon binary is byte-identical to origin/main, the tests pass in isolation, and the failing set is non-deterministic — i.e. pre-existing environmental flakiness, not a regression from CREW-222.
-
-**Anchors:** `packages/daemon/src/routes/runner.test.ts`, `packages/daemon/src/routes/runs.test.ts`; root `package.json` `test:run` (cross-workspace vitest). Repro: `cd packages/daemon && npx vitest run` a few times on WSL.
-
-**What's been considered:** likely a Fastify `app.inject` / SQLite-tmpdir setup-teardown race surfacing only under parallel fileParallelism on WSL. Options: cap daemon vitest `poolOptions`/`fileParallelism`, give each test an isolated DB/tmp fixture if any share state, or mark known-flaky tests for retry. Needs a short investigation pass to find which shared resource (tmpdir, port, in-memory DB) the parallel races contend on before picking a fix.
-
-**Shape of work:** small-to-medium investigation in the daemon test harness — first reproduce + bisect which resource the flaky tests share, then either isolate fixtures or constrain parallelism. No production code expected to change.
 
 #### 2026-06-04 — Runner pidfile has no liveness identity (recycled-PID false positive)
 
@@ -1325,6 +1301,8 @@ Auto-detect is most user-friendly; the flag is the cheapest first step.
 
 **What:** The onReady hook in `packages/daemon/src/app.ts:112` reads `process.env.CREW_STARTUP_EVENTS_DIR ?? join(homedir(), '.crew', 'startup')` directly, instead of going through `parseDaemonConfig` like `CREW_CONFIG_DIR` and `CREW_DB_FILE` do. Every test that builds the app via `buildApp` has to either (a) accept that the chokidar watcher will scan the developer's real `~/.crew/startup` and replay historical startup events into the EventBus, or (b) set the env var manually around its `setupApp`. The route-level `events.test.ts` was hit by (a) until 2026-05-24 — a fresh subscriber received a leaked startup event instead of the one the test had just published (UUID mismatch). Worked around in-test; the architectural fix is to fold `startupEventsDir` into `DaemonConfig` so `parseDaemonConfig({ CREW_STARTUP_EVENTS_DIR: ... })` is the single source of truth and tests just override it the way they already override config/db paths.
 
+**2026-06-06 update:** the _test-side symptom_ is now handled package-wide — PR #343 added a daemon `vitest.config.ts` whose setup file pins `CREW_STARTUP_EVENTS_DIR` at a fresh empty temp dir, so no test scans the developer's real `~/.crew/startup`. This entry stays open for the **architectural** fix it actually describes: folding `startupEventsDir` into `DaemonConfig` (the setup file is a harness workaround, not the single-source-of-truth wiring). The "Daemon test suite flakes under full-parallel `test:run`" followup — the runtime symptom of this same gap — is now Resolved by #343.
+
 **Why noticed:** Debugging the pre-existing `events.test.ts > streams a published event with correct id/event/data framing` failure during a "address the test failures agents keep mentioning in PRs" sweep. Conversation 2026-05-24; the test fix landed in `fix/daemon-events-test-isolation`, but the root cause is that one env var escaped the config layer.
 
 **Anchors:** `packages/daemon/src/app.ts:105-118` (onReady hook), `packages/daemon/src/config.ts` (`parseDaemonConfig` — needs the new field), `packages/daemon/src/services/IngestService.ts` (`watchStartupEvents` consumer), `packages/daemon/src/routes/events.test.ts` (current workaround at `setupApp`).
@@ -1529,6 +1507,26 @@ The other two open questions (sandbox config drift, Phase 2 + Phase 3 separation
 - Should priority on the markdown side map directly to Jira priority, or stay a separate signal?
 
 ## Resolved
+
+### 2026-06-05 — Preflight fail-fast order surfaces `bruno-skeleton` before `excluded-commands` (red test on main)
+
+**Resolved 2026-06-06:** The merge resolution was correct — `registry.ts`'s `ALL` order is intentional (`brunoSkeleton` is grouped with the scaffold checks, ahead of the CREW-226 P2 `excludedCommands`). The drift lived only in the test: it enables `bruno_smoke` against an empty worktree (so `excluded-commands` has a required entry to miss), which now also trips `bruno-skeleton` first. Fixed by scaffolding a `bruno/bruno.json` in the test worktree so `bruno-skeleton` passes and `excluded-commands` is again the asserted first fail. No product change. (#342)
+
+**What:** `packages/cli/src/lib/preflight/run-preflight.test.ts` > "drives the real registry by default: a missing settings.json fails excluded-commands" is **failing on `main`** (verified at base commit `7ca8d32`, independent of CREW-228). The test builds a config with `bruno_smoke` enabled and neither a `bruno/` skeleton nor a `.claude/settings.json`, then asserts `runPreflight` throws `PreflightError(checkName: 'excluded-commands')`. But `registry.ts`'s `ALL` array now orders `brunoSkeleton` (index 3) ahead of `excludedCommands` (index 8), and the fail-fast adapter throws on the _first_ fail — so it throws `bruno-skeleton` instead. Either the registry order or the test's expectation drifted when T3 (CREW-226) and T4 (CREW-227) merged their registry entries in different orders.
+
+**Why noticed:** Running the cleanliness sweep (`npm run test:run`) during CREW-228 (the `crew doctor` command, which doesn't touch `registry.ts` or preflight). The failure reproduces at the base commit before any CREW-228 work, confirming it is pre-existing and out of this ticket's scope. (Independently re-confirmed during CREW-229 / T6 `crew init` — same single failure, touching none of `preflight/`, `registry.ts`, or this test.)
+
+**Anchors:** `packages/cli/src/lib/health/registry.ts` (the `ALL` order); `packages/cli/src/lib/preflight/run-preflight.test.ts:82`; `packages/cli/src/lib/health/checks/bruno-skeleton.ts` (fails when `bruno_smoke.enabled` and no skeleton present); CREW-226 (T3, preflight adapter), CREW-227 (T4, the six checks). `git checkout 7ca8d32 -- … && npx vitest run preflight/run-preflight` reproduces.
+
+### 2026-06-04 — Daemon test suite flakes under full-parallel `test:run`
+
+**Resolved 2026-06-06:** Root cause was **not** the speculated SQLite-tmpdir/port fixture race below. The full-app route tests build the app via `buildApp`, whose `onReady` hook starts a chokidar watcher on the startup-event dir; with `CREW_STARTUP_EVENTS_DIR` unset it defaulted to the developer's real `~/.crew/startup`, and chokidar's initial scan (`ignoreInitial:false`) replayed every historical `<key>.jsonl` through `IngestService` — a burst of synchronous better-sqlite3 writes that starved later `app.inject` calls and tripped the 5s timeout (deterministic on any machine whose `~/.crew/startup` is non-empty; CI's is empty, hence green there). Fixed package-wide by a daemon-local `vitest.config.ts` whose setup file pins `CREW_STARTUP_EVENTS_DIR` at a fresh empty temp dir. (#343) The deeper architectural fix — folding `startupEventsDir` into `DaemonConfig` — stays tracked in the open "`CREW_STARTUP_EVENTS_DIR` bypasses `DaemonConfig`…" followup.
+
+**What:** Running the daemon vitest suite at full parallelism (35 files at once, as `npm run test:run` does) produces non-deterministic failures: across consecutive runs I saw `routes/runner.test.ts > tails the last N lines` fail alone, then it + `routes/runs.test.ts > returns 409 when already completed`, then a single failure again — while every one of those tests passes 3/3 in isolation. The failing _set_ changes run-to-run with no code change, and the slow case clocked ~7.7s for a normally-instant route test, pointing at resource/timing contention rather than a logic bug.
+
+**Why noticed:** During CREW-222 verification (a CLI-only change touching zero daemon files), `npm run test:run` went red on daemon route tests. Investigation (systematic-debugging) proved the diff touches only `packages/cli`, the daemon binary is byte-identical to origin/main, the tests pass in isolation, and the failing set is non-deterministic — i.e. pre-existing environmental flakiness, not a regression from CREW-222.
+
+**Anchors:** `packages/daemon/src/routes/runner.test.ts`, `packages/daemon/src/routes/runs.test.ts`; root `package.json` `test:run` (cross-workspace vitest). Repro: `cd packages/daemon && npx vitest run` a few times on WSL.
 
 ### 2026-06-05 — Global doc-parity hook double-warns in crew (two parity warnings per commit)
 
