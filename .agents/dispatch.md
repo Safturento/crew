@@ -44,7 +44,7 @@ The Figma snapshot is **not** a dispatch step — it is a committed artifact (se
 
 ## Preflight
 
-The dispatch gate is `runPreflight(...)` in `lib/preflight/run-preflight.ts` — a thin **fail-fast adapter** over the shared health-check registry in `lib/health/` (CREW-226). It runs every `scope: 'project'` check via `runHealth(checksFor('project'), ctx)` (collect-all), then throws `PreflightError` for the first `fail` so the calling command renders structured remediation and exits 1. `warn` and `ok` do not gate. "Healthy" is defined once in `lib/health/` and consumed by both this gate and (eventually) `crew doctor` — see `docs/superpowers/specs/2026-06-05-crew-init-doctor-design.md`.
+The dispatch gate is `runPreflight(...)` in `lib/preflight/run-preflight.ts` — a thin **fail-fast adapter** over the shared health-check registry in `lib/health/` (CREW-226). It runs every `scope: 'project'` check via `runHealth(checksFor('project'), ctx)` (collect-all), then throws `PreflightError` for the first `fail` so the calling command renders structured remediation and exits 1. `warn` and `ok` do not gate. "Healthy" is defined once in `lib/health/` and consumed by both this gate and `crew doctor` (`commands/doctor.ts`, CREW-228), which runs the same registry non-interactively, renders a grouped ✓/⚠/✗ report via `lib/health/render.ts`, applies the `fixable` fixes under `--fix`, and exits 1 when unhealthy — see `docs/superpowers/specs/2026-06-05-crew-init-doctor-design.md`.
 
 The project-scope checks the gate runs today, in registry order:
 
