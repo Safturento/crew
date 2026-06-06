@@ -20,7 +20,7 @@ If the rebase produces conflicts, follow these rules before going any further:
 - When all conflicts in the current rebase step are resolved: \`git rebase --continue\`. Loop until the rebase finishes.
 - Run \`npm run lint\`, \`npm run typecheck\`, \`npm run test:run\` — ALL must pass.
 - If you are not confident in a resolution: \`git rebase --abort\`, document the blocker in \`docs/tickets/KAN-23.md\` "Open questions", and exit WITHOUT applying the review feedback.
-- **If you resolved conflicts during this run, DO NOT push at the end** even if everything passes. The human must inspect the rebase resolution commits before they reach origin. After your feedback fixes are committed and verified, print exactly one line and exit: \`Rebase resolution + feedback ready for inspection — run 'git push --force-with-lease origin KAN-23' once you've reviewed.\`
+- **A conflict resolution does not hold back the push.** Once the feedback work is committed and the full verification passes, push the result like any clean session — \`git push --force-with-lease origin KAN-23\` (required because the rebase rewrote history; safe because \`--force-with-lease\` refuses to clobber a concurrent push). The resolution reaches only the PR branch \`KAN-23\`, which is reviewed before merge, so there is no separate pre-push inspection step. (The low-confidence escape hatch above is unchanged: if you weren't confident in a resolution, you already aborted without pushing.)
 
 ## Step 0.5: bring up the environment (do this AFTER Step 0 succeeds)
 
@@ -122,9 +122,7 @@ When you've finished addressing the review feedback, deliver the result back to 
 
 3. If there are no commits to push (you decided no changes were needed, or you're aborting), don't push — just exit. You may optionally add a brief comment to the PR explaining your reasoning, but do NOT resolve review threads yourself.
 
-Do not skip the push on a successful session — the user is relying on you to deliver the result back to the PR branch. If \`--force-with-lease\` is refused (e.g. branch-protection rules, concurrent upstream commits), surface that as the final error and exit; the user will resolve it manually.
-
-**Step 0 override:** if Step 0 produced rebase-resolution commits, DO NOT push at the end even if everything passes — follow the preamble's \`Rebase resolution + feedback ready for inspection\` exit path instead.
+Do not skip the push on a successful session — the user is relying on you to deliver the result back to the PR branch. This includes sessions where Step 0's rebase resolved conflicts: push those too (the resolution lands on the PR branch and is reviewed before merge). If \`--force-with-lease\` is refused (e.g. branch-protection rules, concurrent upstream commits), surface that as the final error and exit; the user will resolve it manually.
 
 ## Final report
 
@@ -162,7 +160,7 @@ If the rebase produces conflicts, follow these rules before going any further:
 - When all conflicts in the current rebase step are resolved: \`git rebase --continue\`. Loop until the rebase finishes.
 - Run \`npm run lint\`, \`npm run typecheck\`, \`npm run test:run\` — ALL must pass.
 - If you are not confident in a resolution: \`git rebase --abort\`, document the blocker in \`docs/tickets/KAN-23.md\` "Open questions", and exit WITHOUT applying the review feedback.
-- **If you resolved conflicts during this run, DO NOT push at the end** even if everything passes. The human must inspect the rebase resolution commits before they reach origin. After your feedback fixes are committed and verified, print exactly one line and exit: \`Rebase resolution + feedback ready for inspection — run 'git push --force-with-lease origin KAN-23' once you've reviewed.\`
+- **A conflict resolution does not hold back the push.** Once the feedback work is committed and the full verification passes, push the result like any clean session — \`git push --force-with-lease origin KAN-23\` (required because the rebase rewrote history; safe because \`--force-with-lease\` refuses to clobber a concurrent push). The resolution reaches only the PR branch \`KAN-23\`, which is reviewed before merge, so there is no separate pre-push inspection step. (The low-confidence escape hatch above is unchanged: if you weren't confident in a resolution, you already aborted without pushing.)
 
 ## Step 0.5: bring up the environment (do this AFTER Step 0 succeeds)
 
@@ -260,9 +258,7 @@ When you've finished addressing the review feedback, deliver the result back to 
 
 3. If there are no commits to push (you decided no changes were needed, or you're aborting), don't push — just exit. You may optionally add a brief comment to the PR explaining your reasoning, but do NOT resolve review threads yourself.
 
-Do not skip the push on a successful session — the user is relying on you to deliver the result back to the PR branch. If \`--force-with-lease\` is refused (e.g. branch-protection rules, concurrent upstream commits), surface that as the final error and exit; the user will resolve it manually.
-
-**Step 0 override:** if Step 0 produced rebase-resolution commits, DO NOT push at the end even if everything passes — follow the preamble's \`Rebase resolution + feedback ready for inspection\` exit path instead.
+Do not skip the push on a successful session — the user is relying on you to deliver the result back to the PR branch. This includes sessions where Step 0's rebase resolved conflicts: push those too (the resolution lands on the PR branch and is reviewed before merge). If \`--force-with-lease\` is refused (e.g. branch-protection rules, concurrent upstream commits), surface that as the final error and exit; the user will resolve it manually.
 
 ## Final report
 
@@ -300,7 +296,7 @@ If the rebase produces conflicts, follow these rules before going any further:
 - When all conflicts in the current rebase step are resolved: \`git rebase --continue\`. Loop until the rebase finishes.
 - Run \`npm run lint\`, \`npm run typecheck\`, \`npm run test:run\` — ALL must pass.
 - If you are not confident in a resolution: \`git rebase --abort\`, document the blocker in \`docs/tickets/KAN-23.md\` "Open questions", and exit WITHOUT applying the review feedback.
-- **If you resolved conflicts during this run, DO NOT push at the end** even if everything passes. The human must inspect the rebase resolution commits before they reach origin. After your feedback fixes are committed and verified, print exactly one line and exit: \`Rebase resolution + feedback ready for inspection — run 'git push --force-with-lease origin KAN-23' once you've reviewed.\`
+- **A conflict resolution does not hold back the push.** Once the feedback work is committed and the full verification passes, push the result like any clean session — \`git push --force-with-lease origin KAN-23\` (required because the rebase rewrote history; safe because \`--force-with-lease\` refuses to clobber a concurrent push). The resolution reaches only the PR branch \`KAN-23\`, which is reviewed before merge, so there is no separate pre-push inspection step. (The low-confidence escape hatch above is unchanged: if you weren't confident in a resolution, you already aborted without pushing.)
 
 ## Step 0.5: bring up the environment (do this AFTER Step 0 succeeds)
 
@@ -382,9 +378,7 @@ When you've finished addressing the review feedback, deliver the result back to 
 
 3. If there are no commits to push (you decided no changes were needed, or you're aborting), don't push — just exit. You may optionally add a brief comment to the PR explaining your reasoning, but do NOT resolve review threads yourself.
 
-Do not skip the push on a successful session — the user is relying on you to deliver the result back to the PR branch. If \`--force-with-lease\` is refused (e.g. branch-protection rules, concurrent upstream commits), surface that as the final error and exit; the user will resolve it manually.
-
-**Step 0 override:** if Step 0 produced rebase-resolution commits, DO NOT push at the end even if everything passes — follow the preamble's \`Rebase resolution + feedback ready for inspection\` exit path instead.
+Do not skip the push on a successful session — the user is relying on you to deliver the result back to the PR branch. This includes sessions where Step 0's rebase resolved conflicts: push those too (the resolution lands on the PR branch and is reviewed before merge). If \`--force-with-lease\` is refused (e.g. branch-protection rules, concurrent upstream commits), surface that as the final error and exit; the user will resolve it manually.
 
 ## Final report
 

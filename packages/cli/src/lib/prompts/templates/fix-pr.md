@@ -48,9 +48,7 @@ When you've finished addressing the review feedback, deliver the result back to 
 
 3. If there are no commits to push (you decided no changes were needed, or you're aborting), don't push — just exit. You may optionally add a brief comment to the PR explaining your reasoning, but do NOT resolve review threads yourself.
 
-Do not skip the push on a successful session — the user is relying on you to deliver the result back to the PR branch. If `--force-with-lease` is refused (e.g. branch-protection rules, concurrent upstream commits), surface that as the final error and exit; the user will resolve it manually.
-
-**Step 0 override:** if Step 0 produced rebase-resolution commits, DO NOT push at the end even if everything passes — follow the preamble's `Rebase resolution + feedback ready for inspection` exit path instead.
+Do not skip the push on a successful session — the user is relying on you to deliver the result back to the PR branch. This includes sessions where Step 0's rebase resolved conflicts: push those too (the resolution lands on the PR branch and is reviewed before merge). If `--force-with-lease` is refused (e.g. branch-protection rules, concurrent upstream commits), surface that as the final error and exit; the user will resolve it manually.
 
 ## Final report
 
