@@ -22,6 +22,7 @@ import { toolAlias } from '../../format/tool-alias.js';
 import { Tag } from '../ui/tag.js';
 import { colorForTool } from './event-palette.js';
 import { labelForAttachment, labelForSystem } from './event-labels.js';
+import { SKILL_TOOL_NAME } from './eventClassification.js';
 
 const LINE_ONE_MAX = 80;
 type Tone = 'default' | 'error';
@@ -192,7 +193,7 @@ function specsForAssistant(event: AssistantEvent): RowSpec[] {
 
 function specForAssistantBlock(event: AssistantEvent, block: AssistantContent): RowSpec {
   const tokens = event.message.usage?.output_tokens;
-  if (isToolUse(block) && block.name === 'Skill') {
+  if (isToolUse(block) && block.name === SKILL_TOOL_NAME) {
     // A Skill tool_use is a skill invocation — render it like a skill
     // attachment (Skill invoked label + hooks-and-skills palette), matching
     // the Skills filter lens it classifies into (CREW-231 #2).

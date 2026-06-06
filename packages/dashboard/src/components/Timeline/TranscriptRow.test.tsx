@@ -252,7 +252,11 @@ describe('TranscriptRow', () => {
       render(<TranscriptRow event={event} />);
       const row = screen.getByTestId('transcript-row');
       expect(row).toHaveAttribute('data-category', 'hooks-and-skills');
-      expect(screen.getByTestId('transcript-row-tag')).toHaveTextContent('Skill invoked');
+      const tag = screen.getByTestId('transcript-row-tag');
+      expect(tag).toHaveTextContent('Skill invoked');
+      // Picks up the hooks-and-skills (initializing) palette, not a per-tool color
+      // — reads identically to a skill attachment row.
+      expect(tag.dataset.color).toBe('initializing');
       expect(screen.getByTestId('transcript-row-text')).toHaveTextContent('brainstorming');
     });
   });

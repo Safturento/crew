@@ -72,7 +72,7 @@ const HOOK_ATTACHMENTS: ReadonlySet<string> = new Set([
 const SKILL_ATTACHMENTS: ReadonlySet<string> = new Set(['skill_listing', 'invoked_skills']);
 
 /** Tool name that represents a skill invocation — coalesced into the Skills lens. */
-const SKILL_TOOL_NAME = 'Skill';
+export const SKILL_TOOL_NAME = 'Skill';
 
 interface ContentBlock {
   type?: string;

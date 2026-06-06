@@ -19,12 +19,12 @@ The visual-relevant change is the new Skill branch in `specForAssistantBlock`
 the existing, already-validated skill-attachment `RowSpec` produced by
 `specForAttachment` for `invoked_skills`:
 
-| Field       | Skill tool_use (new)                   | Skill attachment (existing) |
-| ----------- | -------------------------------------- | --------------------------- |
-| `category`  | `hooks-and-skills`                     | `hooks-and-skills`          |
-| `tagLabel`  | `Skill invoked`                        | `Skill invoked`             |
-| `toolColor` | _(none)_                               | _(none)_                    |
-| Tag color   | `initializing` (via `CATEGORY_COLOR`)  | `initializing`              |
+| Field       | Skill tool_use (new)                  | Skill attachment (existing) |
+| ----------- | ------------------------------------- | --------------------------- |
+| `category`  | `hooks-and-skills`                    | `hooks-and-skills`          |
+| `tagLabel`  | `Skill invoked`                       | `Skill invoked`             |
+| `toolColor` | _(none)_                              | _(none)_                    |
+| Tag color   | `initializing` (via `CATEGORY_COLOR`) | `initializing`              |
 
 ## Structural check
 
@@ -50,8 +50,8 @@ caller-side variant mismatch to check.
 ## Visual check (live DOM)
 
 Dashboard reachable at `http://localhost:30808`; agent drawer (`CREW-102`)
-Timeline rendered correctly via both Playwright MCP and Chrome MCP. Startup + tool
-+ result rows render with their expected tags/palettes. The #5 fix was verified
+Timeline rendered correctly via both Playwright MCP and Chrome MCP. Startup, tool,
+and result rows render with their expected tags/palettes. The #5 fix was verified
 live: an expanded `Preflight` startup row stayed open across ~3 ticks of the 1s
 active-section runtime ticker (previously the `Math.random()` key remounted and
 collapsed it).
@@ -61,7 +61,7 @@ collapsed it).
 - The dev seed fixtures contain **no `Skill` tool_use event**, so a Skill row could
   not be rendered live in the browser. Coverage for #2's rendering is provided by
   the unit test `TranscriptRow.test.tsx > renders a Skill tool_use like a skill
-  attachment` (asserts `data-category="hooks-and-skills"`, tag `Skill invoked`,
+attachment` (asserts `data-category="hooks-and-skills"`, tag `Skill invoked`,
   text from the skill input) plus the structural-equivalence argument above. The
   Chrome MCP `eval` return value did not surface in-band (captured-to-file quirk);
   the rendered screenshots were used instead.
