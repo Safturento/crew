@@ -103,6 +103,27 @@ To turn on the `visual-fidelity-check` skill for `crew run CREW-*` dispatches ag
 
 A few one-time setup items before `crew` can do everything it's meant to.
 
+### Onboarding a project with `crew init`
+
+`crew init` is the guided way to set up the **crew-specific layer** for a repo — it automates most of the per-project steps documented below. Run it from the repo root:
+
+```bash
+crew init
+```
+
+It runs an interactive wizard (project name, Jira key + site, GitHub repo, daemon/dashboard ports, and opt-ins for **Docker · Playwright e2e · Bruno smoke**) and then writes:
+
+- `~/.config/crew/projects/<name>.toml` — the project config (writing it _is_ registration; discovery is a cwd match, so there's no separate registry step). `app_url` / `base_url` are written as `${VAR}` refs resolved per-worktree.
+- the repo `env.toml`, then materializes `.env` via `crew env init` (Docker-backed projects).
+- a `playwright.config.ts` + `tests/e2e/` skeleton (when Playwright is opted in) and a Bruno collection skeleton (when Bruno smoke is opted in).
+- `<repo>/.claude/settings.json`, seeding `sandbox.excludedCommands` with the smoke/e2e commands (array-merged — never clobbers an existing file).
+
+**It's idempotent.** Re-running converges: prompts are pre-filled from the current config, only crew-managed blocks are rewritten, and before overwriting a file that has diverged from what crew last wrote it shows a diff and asks — it never silently clobbers a hand-edit.
+
+**What it does _not_ do:** create the universal agent-context baseline (`.agents/`, `AGENTS.md`, `CLAUDE.md` shim, `README`, hygiene files, `docs/` tree). A CLI can't invoke an agent skill, so `crew init` detects the baseline and, when it's missing, warns and points you at the `establishing-a-new-project` skill — then proceeds. The baseline and the crew-specific layer are orthogonal and authored by different actors.
+
+The manual, à-la-carte versions of each piece are documented in the sections below — reach for those when you want to wire one feature into an already-onboarded project.
+
 ### Required Claude Code plugins (once per machine)
 
 Crew's agent prompts and skills reference a handful of Claude Code plugins. These are plugin-manager installs — crew can't vendor them — so install them once per machine:

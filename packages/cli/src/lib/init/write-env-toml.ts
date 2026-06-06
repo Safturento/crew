@@ -19,11 +19,17 @@ const DEFAULT_DASHBOARD_PORT = 5173;
  * @param worktree  the repo root to write `env.toml` into
  * @returns the absolute path written
  */
-export function writeEnvToml(answers: InitAnswers, worktree: string): string {
+/**
+ * Render the `env.toml` spec to a string without writing it. The single source
+ * of truth for the file's content; `writeEnvToml` writes its output, and
+ * `crew init`'s converge step renders prospective content here to diff against
+ * the on-disk file before deciding whether to (re)write.
+ */
+export function renderEnvToml(answers: InitAnswers): string {
   const daemon = answers.ports?.daemon ?? DEFAULT_DAEMON_PORT;
   const dashboard = answers.ports?.dashboard ?? DEFAULT_DASHBOARD_PORT;
 
-  const contents = `schema = 1
+  return `schema = 1
 
 [orchestration]
 COMPOSE_PROJECT_NAME = { kind = "template", value = "\${BASE_NAME}-\${WORKTREE_ID}" }
@@ -32,8 +38,10 @@ DASHBOARD_PORT       = { kind = "port", default = ${dashboard} }
 APP_URL              = { kind = "template", value = "http://localhost:\${DASHBOARD_PORT}" }
 DAEMON_URL           = { kind = "template", value = "http://localhost:\${DAEMON_PORT}" }
 `;
+}
 
+export function writeEnvToml(answers: InitAnswers, worktree: string): string {
   const dest = join(worktree, 'env.toml');
-  writeFileSync(dest, contents, 'utf8');
+  writeFileSync(dest, renderEnvToml(answers), 'utf8');
   return dest;
 }
