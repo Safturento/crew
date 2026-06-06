@@ -1,7 +1,7 @@
 ---
 name: design-system
 description: Crew Figma DS + token bindings + Pill primitive contract
-last_updated: 2026-06-05
+last_updated: 2026-06-06
 covers:
   - 'packages/dashboard/src/components/**'
   - '*.figma.tsx'
@@ -153,6 +153,8 @@ The modal-family composites (`Modal`, `AlertModal`, `ModalSelectionRow`, `Steppe
 
 `FixPrModal` itself has **no Figma counterpart and no `.figma.tsx`** — it's a feature modal (composes the designed `Modal` primitive), not a DS composite, so it stays out of the Code-shipped-composites table above. Its button variant choices follow `AlertModal` (Cancel `running/mid`; primary `loud`, color `running` rather than the destructive-default `error` since Fix PR is constructive). Verification record: `docs/visual-fidelity-reports/CREW-219.md`.
 
+`Drawer` (`packages/dashboard/src/components/Drawer.tsx`) is the right-anchored, full-height sibling to `Modal`: it wraps the same `dialog` primitive but as a side panel, and backs `AgentDrawer`. Like `FixPrModal` it's figma-less and stays out of the composites table — a structural primitive, not a designed composite. Its enter/exit slide uses the `drawer-in` / `drawer-out` keyframes in `index.css` (the repo has no tailwindcss-animate plugin, so the `animate-in` / `zoom-in` classes on `dialog` / `popover` are inert — see `docs/followups.md`). It replaced the former hand-rolled `fixed inset-0` drawer and its `overlay-guard` context (CREW-232): being a real Radix Dialog layer is what lets the nested Filters popover dismiss without closing the drawer. The Filters popover must be `modal` for the click-outside case — Radix only coordinates Escape to the top layer, so a non-modal popover's overlay-click would dismiss the drawer too.
+
 `TopNav`, `AgentRow`, `TimelineSection`, and `Stepper` resolve to component sets in the live file; the rest resolve to single components. `ErrorFallback` is the only un-built composite from the original Phase 4 inventory; it lands alongside the next fidelity ticket that surfaces a need.
 
 `FinishSteps` (CREW-220) is the drawer's live `crew finish` step checklist (ok/skip/error rows). It is figma-less feature-internal — the same status as `MinimapStripe` — because no finish-checklist was ever designed in the Crew DS Figma; it borrows the `TokensByTool` card shell and the status palette (`emerald-500` / `muted-foreground` / `red-400`) directly. A future fidelity pass could add a Figma counterpart (tracked in `docs/followups.md`).
@@ -205,23 +207,23 @@ The decision is reversible — the file structure stays compatible with future p
 
 `Button` / `Badge` / `Tag` map to the Crew consolidated file's unified `Pill` set (`272:120` in `9FeJPriqdsdA4n9R5Xsrr8`) — CREW-135. The remaining primitives still target Core's component nodes (file `UkPJj6vd7HMKcey7M0XF4N`), because the screens file instances those shadcn primitives directly from Core via the library link.
 
-| Code component       | Mapping file                                                    | Figma component                             | Figma node id |
-| -------------------- | --------------------------------------------------------------- | ------------------------------------------- | ------------- |
-| `Button`             | `packages/dashboard/src/components/ui/button.figma.tsx`         | `Pill` set (Crew file)                      | `272:120`     |
-| `Badge`              | `packages/dashboard/src/components/ui/badge.figma.tsx`          | `Pill` set (Crew file)                      | `272:120`     |
-| `Tag`                | `packages/dashboard/src/components/ui/tag.figma.tsx`            | `Pill` set (Crew file)                      | `272:120`     |
-| `Input`              | `packages/dashboard/src/components/ui/input.figma.tsx`          | `Default` set on Input page (Core)          | `520:3062`    |
-| `Checkbox`           | `packages/dashboard/src/components/ui/checkbox.figma.tsx`       | `Checkbox` composite (Crew file)            | `663:869`     |
-| `Switch`             | `packages/dashboard/src/components/ui/switch.figma.tsx`         | `Switch` set on Composites page (Crew file) | `335:242`     |
-| `FormField`          | `packages/dashboard/src/components/FormField.figma.tsx`         | `FormField` on Composites page (Crew file)  | `337:234`     |
-| `Dialog`             | `packages/dashboard/src/components/ui/dialog.figma.tsx`         | `Dialog` set on Dialog page (Core)          | `594:105`     |
-| `Label`              | `packages/dashboard/src/components/ui/label.figma.tsx`          | `Label` set on Label page (Core)            | `76:8617`     |
-| `Separator`          | `packages/dashboard/src/components/ui/separator.figma.tsx`      | `Separator` on Seperator page (Core)        | `76:10202`    |
-| `FormItem` (form.\*) | `packages/dashboard/src/components/ui/form.figma.tsx`           | `Field` component on Field page (Core)      | `1188:5362`   |
-| `Modal`              | `packages/dashboard/src/components/Modal.figma.tsx`             | `Modal` (Crew file)                         | `355:238`     |
-| `AlertModal`         | `packages/dashboard/src/components/AlertModal.figma.tsx`        | `AlertModal` (Crew file)                    | `373:413`     |
-| `ModalSelectionRow`  | `packages/dashboard/src/components/ModalSelectionRow.figma.tsx` | `ModalSelectionRow` (Crew file)             | `350:236`     |
-| `Stepper`            | `packages/dashboard/src/components/Stepper.figma.tsx`           | `Stepper` set (Crew file)                   | `378:462`     |
+| Code component       | Mapping file                                                    | Figma component                                                    | Figma node id |
+| -------------------- | --------------------------------------------------------------- | ------------------------------------------------------------------ | ------------- |
+| `Button`             | `packages/dashboard/src/components/ui/button.figma.tsx`         | `Pill` set (Crew file)                                             | `272:120`     |
+| `Badge`              | `packages/dashboard/src/components/ui/badge.figma.tsx`          | `Pill` set (Crew file)                                             | `272:120`     |
+| `Tag`                | `packages/dashboard/src/components/ui/tag.figma.tsx`            | `Pill` set (Crew file)                                             | `272:120`     |
+| `Input`              | `packages/dashboard/src/components/ui/input.figma.tsx`          | `Default` set on Input page (Core)                                 | `520:3062`    |
+| `Checkbox`           | `packages/dashboard/src/components/ui/checkbox.figma.tsx`       | `Checkbox` composite (Crew file)                                   | `663:869`     |
+| `Switch`             | `packages/dashboard/src/components/ui/switch.figma.tsx`         | `Switch` set on Composites page (Crew file)                        | `335:242`     |
+| `FormField`          | `packages/dashboard/src/components/FormField.figma.tsx`         | `FormField` on Composites page (Crew file)                         | `337:234`     |
+| `Dialog`             | `packages/dashboard/src/components/ui/dialog.figma.tsx`         | `Dialog` set on Dialog page (Core)                                 | `594:105`     |
+| `Label`              | `packages/dashboard/src/components/ui/label.figma.tsx`          | `Label` set on Label page (Core)                                   | `76:8617`     |
+| `Separator`          | `packages/dashboard/src/components/ui/separator.figma.tsx`      | `Separator` on Seperator page (Core)                               | `76:10202`    |
+| `FormItem` (form.\*) | `packages/dashboard/src/components/ui/form.figma.tsx`           | `Field` component on Field page (Core)                             | `1188:5362`   |
+| `Modal`              | `packages/dashboard/src/components/Modal.figma.tsx`             | `Modal` (Crew file)                                                | `355:238`     |
+| `AlertModal`         | `packages/dashboard/src/components/AlertModal.figma.tsx`        | `AlertModal` (Crew file)                                           | `373:413`     |
+| `ModalSelectionRow`  | `packages/dashboard/src/components/ModalSelectionRow.figma.tsx` | `ModalSelectionRow` (Crew file)                                    | `350:236`     |
+| `Stepper`            | `packages/dashboard/src/components/Stepper.figma.tsx`           | `Stepper` set (Crew file)                                          | `378:462`     |
 | `NewRunModal`        | `packages/dashboard/src/components/NewRunModal.figma.tsx`       | `New Run modal — 1. Select Project` (Crew file, Dashboard Screens) | `1:2980`      |
 
 ### Pill mapping — color × intensity × type

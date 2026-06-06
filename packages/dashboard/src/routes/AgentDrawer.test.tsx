@@ -38,17 +38,20 @@ const SAMPLE_DETAIL: AgentDetail = {
 beforeEach(() => {
   vi.spyOn(defaultClient, 'getAgent').mockResolvedValue(SAMPLE_DETAIL);
   vi.spyOn(defaultClient, 'getTimeline').mockResolvedValue({ events: [] as TranscriptEvent[] });
-  window.location.hash = '#/agent/KAN-1';
 });
 
 afterEach(() => {
   vi.restoreAllMocks();
-  window.location.hash = '';
 });
+
+function renderDrawer(onOpenChange: (open: boolean) => void = vi.fn()) {
+  renderWithProviders(<AgentDrawer agentKey="KAN-1" open onOpenChange={onOpenChange} />);
+  return onOpenChange;
+}
 
 describe('AgentDrawer', () => {
   it('renders the drawer header with project, ticket key, title, and state badge', async () => {
-    renderWithProviders(<AgentDrawer agentKey="KAN-1" />);
+    renderDrawer();
 
     expect(await screen.findByTestId('drawer-header')).toBeInTheDocument();
     expect(screen.getByText('kanban-api')).toBeInTheDocument();
@@ -58,65 +61,65 @@ describe('AgentDrawer', () => {
   });
 
   it('renders total tokens in the header', async () => {
-    renderWithProviders(<AgentDrawer agentKey="KAN-1" />);
+    renderDrawer();
 
     const header = await screen.findByTestId('drawer-header');
     expect(within(header).getByText('12.3k')).toBeInTheDocument();
   });
 
   it('renders the worktree path pill', async () => {
-    renderWithProviders(<AgentDrawer agentKey="KAN-1" />);
+    renderDrawer();
 
     await screen.findByTestId('drawer-header');
     expect(screen.getByText('/repos/kanban-api-KAN-1')).toBeInTheDocument();
   });
 
   it('links to /agent/:key/full via the Open as page action', async () => {
-    renderWithProviders(<AgentDrawer agentKey="KAN-1" />);
+    renderDrawer();
 
     const link = await screen.findByRole('link', { name: /open as page/i });
     expect(link).toHaveAttribute('href', '#/agent/KAN-1/full');
   });
 
-  it('closes on Esc and navigates to /', async () => {
+  it('requests close on Esc', async () => {
     const user = userEvent.setup();
-    renderWithProviders(<AgentDrawer agentKey="KAN-1" />);
+    const onOpenChange = renderDrawer();
     await screen.findByTestId('drawer-header');
 
     await user.keyboard('{Escape}');
 
-    await waitFor(() => expect(window.location.hash).toBe('#/'));
+    await waitFor(() => expect(onOpenChange).toHaveBeenCalledWith(false));
   });
 
-  it('closes when the backdrop is clicked', async () => {
+  it('requests close when the overlay is clicked', async () => {
     const user = userEvent.setup();
-    renderWithProviders(<AgentDrawer agentKey="KAN-1" />);
+    const onOpenChange = renderDrawer();
     await screen.findByTestId('drawer-header');
 
     await user.click(screen.getByTestId('drawer-backdrop'));
 
-    await waitFor(() => expect(window.location.hash).toBe('#/'));
+    await waitFor(() => expect(onOpenChange).toHaveBeenCalledWith(false));
   });
 
-  it('closes when the close button is clicked', async () => {
+  it('requests close when the close button is clicked', async () => {
     const user = userEvent.setup();
-    renderWithProviders(<AgentDrawer agentKey="KAN-1" />);
+    const onOpenChange = renderDrawer();
     await screen.findByTestId('drawer-header');
 
     await user.click(screen.getByRole('button', { name: /close drawer/i }));
 
-    await waitFor(() => expect(window.location.hash).toBe('#/'));
+    await waitFor(() => expect(onOpenChange).toHaveBeenCalledWith(false));
   });
 
   it('renders the Timeline inside the body slot', async () => {
-    renderWithProviders(<AgentDrawer agentKey="KAN-1" />);
+    renderDrawer();
     expect(await screen.findByTestId('agent-body')).toBeInTheDocument();
     expect(await screen.findByTestId('timeline-empty')).toBeInTheDocument();
   });
 
-  it('stays open when a click dismissing the filters popover lands on the backdrop (CREW-232)', async () => {
+  it('keeps the drawer open when dismissing the nested Filters popover (CREW-232)', async () => {
     const user = userEvent.setup();
-    renderWithProviders(<AgentDrawer agentKey="KAN-1" />);
+    const onOpenChange = renderDrawer();
     await screen.findByTestId('drawer-header');
 
     // Open the Filters popover that lives in the drawer's timeline toolbar
@@ -124,11 +127,34 @@ describe('AgentDrawer', () => {
     await user.click(await screen.findByRole('button', { name: /open timeline filters/i }));
     expect(await screen.findByText('Conversation')).toBeInTheDocument();
 
-    // Clicking outside the popover lands on the drawer backdrop. The popover
-    // dismisses, but the drawer must NOT navigate away.
-    await user.click(screen.getByTestId('drawer-backdrop'));
+    // Esc dismisses only the top layer (the popover). Because the drawer is a
+    // Radix Dialog, the layer below stays open — no manual overlay guard.
+    await user.keyboard('{Escape}');
+    await waitFor(() => expect(screen.queryByText('Conversation')).not.toBeInTheDocument());
+    expect(onOpenChange).not.toHaveBeenCalled();
 
-    expect(window.location.hash).toBe('#/agent/KAN-1');
-    expect(screen.getByTestId('drawer-header')).toBeInTheDocument();
+    // A second Esc, now that the popover is gone, closes the drawer.
+    await user.keyboard('{Escape}');
+    await waitFor(() => expect(onOpenChange).toHaveBeenCalledWith(false));
+  });
+
+  it('keeps the drawer open when clicking the overlay to dismiss the popover (CREW-232)', async () => {
+    const user = userEvent.setup();
+    const onOpenChange = renderDrawer();
+    await screen.findByTestId('drawer-header');
+
+    await user.click(await screen.findByRole('button', { name: /open timeline filters/i }));
+    expect(await screen.findByText('Conversation')).toBeInTheDocument();
+
+    // Click the drawer overlay (to the side of the panel). Because the popover
+    // is `modal`, this outside-pointer dismiss is consumed by the popover layer
+    // alone — the Dialog layer's handler is gated off, so the drawer stays open.
+    await user.click(screen.getByTestId('drawer-backdrop'));
+    await waitFor(() => expect(screen.queryByText('Conversation')).not.toBeInTheDocument());
+    expect(onOpenChange).not.toHaveBeenCalled();
+
+    // With the popover gone, an overlay click now closes the drawer.
+    await user.click(screen.getByTestId('drawer-backdrop'));
+    await waitFor(() => expect(onOpenChange).toHaveBeenCalledWith(false));
   });
 });
