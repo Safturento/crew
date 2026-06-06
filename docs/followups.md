@@ -27,6 +27,7 @@ Organization: Active is grouped by topic (not chronology) since the dominant acc
     - [2026-05-16 — figma-snapshot `resolvedStylesFor` text-color heuristic picks the first TEXT descendant](#2026-05-16--figma-snapshot-resolvedstylesfor-text-color-heuristic-picks-the-first-text-descendant)
     - [2026-05-15 — `crew fix-pr` does not refresh `.mcp.json` — chrome wiring goes stale on resume](#2026-05-15--crew-fix-pr-does-not-refresh-mcpjson--chrome-wiring-goes-stale-on-resume)
   - [Dashboard UI](#dashboard-ui)
+    - [2026-06-05 — Drawer `liveMode` + section-collapse leak across an in-place agent switch](#2026-06-05--drawer-livemode--section-collapse-leak-across-an-in-place-agent-switch)
     - [2026-06-05 — Dashboard has no cancel action; CLI kill never notifies the daemon](#2026-06-05--dashboard-has-no-cancel-action-cli-kill-never-notifies-the-daemon)
     - [2026-06-04 — New Run modal step 2 is a text entry, not the Figma open-ticket picker](#2026-06-04--new-run-modal-step-2-is-a-text-entry-not-the-figma-open-ticket-picker)
     - [2026-06-03 — CREW-137 modal composites unverified until wired into a screen](#2026-06-03--crew-137-modal-composites-unverified-until-wired-into-a-screen)
@@ -338,6 +339,18 @@ Organization: Active is grouped by topic (not chronology) since the dominant acc
 **Open questions:** Does `fix-pr` resume into a worktree fresh enough that re-asserting `.mcp.json` is always safe? Should `browsing` skill re-injection ride along?
 
 ### Dashboard UI
+
+#### 2026-06-05 — Drawer `liveMode` + section-collapse leak across an in-place agent switch
+
+**What:** `AgentDrawer` is rendered without a React `key` (`packages/dashboard/src/App.tsx:130`: `{route.kind === 'agent-drawer' && <AgentDrawer agentKey={route.key} />}`), so navigating from one agent route to another (browser back/forward between two `#/agent/:key` URLs, or any future "next agent" affordance) reuses the same `Timeline` instance — the `agentKey` prop changes but the component is not remounted. CREW-232 fixed this for the persisted filter + search state by re-seeding during render, but `liveMode` (seeded from `agentState` per the `isLiveByDefault` default) and the section-collapse `Record` still keep the *previous* agent's values across such a switch. So back/forward between a finished agent and a running one can show the wrong live-mode default, and collapsed sections from agent A bleed into agent B.
+
+**Why noticed:** 2026-06-05 CREW-232 implementation. Verifying filter persistence in the running app via SPA hash navigation (not `page.goto`, which full-reloads and hides the reuse) surfaced that the unkeyed drawer reuses `Timeline`. The filter/search half was in scope and got the render-time re-seed; `liveMode`/collapse were left as-is because they aren't persisted and the dominant UX path (close drawer → `#/` unmounts → open another) remounts cleanly. The gap only bites the direct agent→agent navigation paths.
+
+**Anchors:** `packages/dashboard/src/App.tsx:130` (the unkeyed `<AgentDrawer>`); `packages/dashboard/src/components/Timeline/Timeline.tsx` (the `seededFor !== agentKey` render-time re-seed added by CREW-232 — the pattern to extend; `liveMode` `useState(() => isLiveByDefault(agentState))` and `collapsed` `useState<Record<string, boolean>>({})` are the two that still don't reset). 
+
+**What's been considered:** Two clean options — (1) add `key={route.key}` to `<AgentDrawer>` in `App.tsx`, remounting the whole drawer subtree per agent so *all* state resets for free (simplest; minor cost is a re-fetch/animation on each agent→agent nav, which is arguably desirable); or (2) extend the in-`Timeline` render-time re-seed to also reset `liveMode` and `collapsed` when `agentKey` changes (keeps the fix local, no remount). Option 1 is the holistic fix and also covers any other latent reuse-staleness in the drawer subtree; option 2 is narrower. Either is small.
+
+**Shape of work:** XS — one-line `key` add, or a few lines extending the existing re-seed block, plus a Timeline rerender-without-remount test for `liveMode`/collapse (mirror the CREW-232 `re-seeds filters when the agent key changes without a remount` test).
 
 #### 2026-06-05 — Dashboard has no cancel action; CLI kill never notifies the daemon
 
