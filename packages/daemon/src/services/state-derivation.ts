@@ -61,6 +61,11 @@ export function currentStateFromTransitions(
   transitions: ReadonlyArray<{ to: TransitionTarget; ts: number }>,
 ): AgentState {
   if (transitions.length === 0) return 'initializing';
+  // On a `ts` tie this keeps the last element in input order (`>=`). The
+  // AgentsService callers never hit that path — they pre-select exactly one row
+  // in SQL (`ORDER BY ts DESC, id DESC LIMIT 1`) and hand it over as a
+  // single-element array — but a future caller feeding a real multi-row slice
+  // should order it by (ts, id) first to match the DB's tie-break.
   const latest = transitions.reduce((a, b) => (b.ts >= a.ts ? b : a));
   return TRANSITION_TO_AGENT_STATE[latest.to];
 }
