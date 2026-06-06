@@ -5,7 +5,7 @@ import { join, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createDb, runMigrations, type DaemonDatabase } from '../db.js';
 import type { Kysely } from 'kysely';
-import { AgentsService } from './AgentsService.js';
+import { AgentsService, type AgentsServiceDeps } from './AgentsService.js';
 import { TimelineService } from './TimelineService.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -33,6 +33,7 @@ async function makeAgent(
     worktreePath: string;
     branch: string;
     prUrl: string | null;
+    appUrl: string | null;
   }> = {},
 ): Promise<void> {
   await db
@@ -44,6 +45,7 @@ async function makeAgent(
       worktree_path: overrides.worktreePath ?? `/x/${key}`,
       branch: overrides.branch ?? key,
       pr_url: overrides.prUrl ?? null,
+      app_url: overrides.appUrl ?? null,
       created_at: '2026-04-29T12:00:00Z',
     })
     .execute();
@@ -664,6 +666,72 @@ describe('AgentsService.getByKey', () => {
       expect(detail?.app_url).toBeNull();
       // jira_url still composes — it only depends on the site, which is always present.
       expect(detail?.jira_url).toBe('https://safturento.atlassian.net/browse/KAN-23');
+    } finally {
+      await db.destroy();
+    }
+  });
+
+  // CREW-233: a stored per-worktree app_url wins over the static config value.
+  it('prefers the stored per-worktree app_url over deriveAppUrl(cfg)', async () => {
+    const db = await freshDb();
+    try {
+      await makeAgent(db, 'KAN-23', {
+        projectName: 'kanban-api',
+        appUrl: 'http://localhost:51234',
+      });
+      await makeRun(db, 'KAN-23', 's1');
+      const projectsDir = makeProjectsDir({ 'kanban-api': KANBAN_TOML });
+      const detail = await new AgentsService({ db, projectsDir }).getByKey('KAN-23');
+      // KANBAN_TOML's playwright.app_url is :7421, but the stored value wins.
+      expect(detail?.app_url).toBe('http://localhost:51234');
+    } finally {
+      await db.destroy();
+    }
+  });
+
+  it('falls back to deriveAppUrl(cfg) when the stored app_url is null', async () => {
+    const db = await freshDb();
+    try {
+      await makeAgent(db, 'KAN-23', { projectName: 'kanban-api', appUrl: null });
+      await makeRun(db, 'KAN-23', 's1');
+      const projectsDir = makeProjectsDir({ 'kanban-api': KANBAN_TOML });
+      const detail = await new AgentsService({ db, projectsDir }).getByKey('KAN-23');
+      expect(detail?.app_url).toBe('http://localhost:7421');
+    } finally {
+      await db.destroy();
+    }
+  });
+
+  it('still surfaces the stored app_url even when the project config is missing', async () => {
+    const db = await freshDb();
+    try {
+      await makeAgent(db, 'KAN-23', {
+        projectName: 'kanban-api',
+        appUrl: 'http://localhost:51234',
+      });
+      await makeRun(db, 'KAN-23', 's1');
+      const projectsDir = makeProjectsDir(); // empty — config load throws
+      const detail = await new AgentsService({ db, projectsDir }).getByKey('KAN-23');
+      expect(detail?.app_url).toBe('http://localhost:51234');
+    } finally {
+      await db.destroy();
+    }
+  });
+
+  it('logs (not swallows) a project-config load failure', async () => {
+    const db = await freshDb();
+    try {
+      await makeAgent(db, 'KAN-23', { projectName: 'kanban-api', appUrl: null });
+      await makeRun(db, 'KAN-23', 's1');
+      const warnings: Array<{ obj: unknown; msg: string }> = [];
+      const logger = {
+        warn: (obj: unknown, msg: string) => warnings.push({ obj, msg }),
+      } as unknown as AgentsServiceDeps['logger'];
+      const projectsDir = makeProjectsDir(); // empty — config load throws
+      const detail = await new AgentsService({ db, projectsDir, logger }).getByKey('KAN-23');
+      expect(detail?.app_url).toBeNull();
+      expect(warnings).toHaveLength(1);
+      expect(warnings[0]?.msg).toMatch(/config/i);
     } finally {
       await db.destroy();
     }
