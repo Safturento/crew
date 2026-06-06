@@ -344,6 +344,8 @@ Organization: Active is grouped by topic (not chronology) since the dominant acc
 
 #### 2026-06-06 — `dialog` / `popover` animation classes are inert (no tailwindcss-animate plugin)
 
+**Ticket:** [CREW-237](https://safturento.atlassian.net/browse/CREW-237)
+
 **What:** `packages/dashboard/src/components/ui/dialog.tsx` and `popover.tsx` carry `data-[state=open]:animate-in`, `fade-in-0`, `zoom-in-95`, `slide-in-from-*`, etc. — the standard shadcn animation classes. But the project has **no** `tailwindcss-animate` (Tailwind v3) or `tw-animate-css` (Tailwind v4) plugin installed and no `@plugin`/`@import` for one in `index.css`, so those utilities don't exist and the classes are dead no-ops. The Modal/AlertModal/Popover surfaces currently pop in/out with no animation.
 
 **Why noticed:** Building the CREW-232 `Drawer` composite (PR for the Radix-Dialog drawer migration), I went to reuse `slide-in-from-right` for the drawer's enter/exit and found the utility undefined. Worked around it by defining custom `drawer-in`/`drawer-out`/`overlay-in`/`overlay-out` keyframes + `--animate-*` theme vars in `index.css` (matching the existing `att-pulse` pattern) — so the drawer animates, but the broader dead-class problem remains for the other overlays.
@@ -1298,6 +1300,8 @@ Auto-detect is most user-friendly; the flag is the cheapest first step.
 ### Architecture & Config
 
 #### 2026-05-24 — `CREW_STARTUP_EVENTS_DIR` bypasses `DaemonConfig` and reads `process.env` directly inside `app.ts`
+
+**Ticket:** [CREW-236](https://safturento.atlassian.net/browse/CREW-236)
 
 **What:** The onReady hook in `packages/daemon/src/app.ts:112` reads `process.env.CREW_STARTUP_EVENTS_DIR ?? join(homedir(), '.crew', 'startup')` directly, instead of going through `parseDaemonConfig` like `CREW_CONFIG_DIR` and `CREW_DB_FILE` do. Every test that builds the app via `buildApp` has to either (a) accept that the chokidar watcher will scan the developer's real `~/.crew/startup` and replay historical startup events into the EventBus, or (b) set the env var manually around its `setupApp`. The route-level `events.test.ts` was hit by (a) until 2026-05-24 — a fresh subscriber received a leaked startup event instead of the one the test had just published (UUID mismatch). Worked around in-test; the architectural fix is to fold `startupEventsDir` into `DaemonConfig` so `parseDaemonConfig({ CREW_STARTUP_EVENTS_DIR: ... })` is the single source of truth and tests just override it the way they already override config/db paths.
 
