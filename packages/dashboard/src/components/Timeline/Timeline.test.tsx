@@ -469,6 +469,43 @@ describe('Timeline', () => {
     expect(screen.getAllByTestId('transcript-row')).toHaveLength(1);
   });
 
+  it('CREW-231 follow-up: a Skill tool_result lives under Skills, not Tools', async () => {
+    // The Skill tool_use is coalesced into Skills; its paired tool_result must
+    // follow it. With only Tools on the Skill result is hidden; with only
+    // Skills on it is shown.
+    const skillToolUse: TranscriptEvent = {
+      type: 'assistant',
+      uuid: 'uuid-sk-use',
+      timestamp: '2026-04-29T12:00:01Z',
+      message: {
+        role: 'assistant',
+        content: [{ type: 'tool_use', id: 'sk1', name: 'Skill', input: {} }],
+        usage: { output_tokens: 0 },
+      },
+    } as unknown as TranscriptEvent;
+    mockUseTimeline.mockReturnValue(
+      timelineResult({
+        data: {
+          events: [skillToolUse, userToolResult(2, 'sk1', 'Launching skill: …')],
+        },
+        isSuccess: true,
+        status: 'success',
+      }),
+    );
+    render(<Timeline agentKey="KAN-1" />);
+    await openFilters();
+    // Default: Tools on, Skills off. Both Skill rows hidden (tool_use is in
+    // Skills, tool_result now follows it).
+    expect(screen.queryAllByTestId('transcript-row')).toHaveLength(0);
+    // Turn Skills on — both the Skill invocation and its result appear.
+    await userEvent.click(screen.getByLabelText('Skills'));
+    const rows = screen.getAllByTestId('transcript-row');
+    expect(rows).toHaveLength(2);
+    for (const row of rows) {
+      expect(row).toHaveAttribute('data-category', 'hooks-and-skills');
+    }
+  });
+
   it('non-tool events stay visible regardless of tool exclusions', async () => {
     mockUseTimeline.mockReturnValue(
       timelineResult({

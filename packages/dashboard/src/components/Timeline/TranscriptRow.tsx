@@ -69,17 +69,26 @@ function useIsClamped(ref: RefObject<HTMLElement | null>): boolean {
 
 interface TranscriptRowProps {
   event: TranscriptEvent;
+  /**
+   * tool_use_id → tool name map (from `buildToolNameMap`). Lets a user
+   * `tool_result` resolve its originating tool so a Skill result renders in
+   * the skills lens alongside its invocation (CREW-231 follow-up). Optional;
+   * defaults to empty so tool_results fall back to the generic Result row.
+   */
+  toolNameById?: ReadonlyMap<string, string>;
 }
 
-export function TranscriptRow({ event }: TranscriptRowProps) {
+export function TranscriptRow({ event, toolNameById = EMPTY_TOOL_NAME_MAP }: TranscriptRowProps) {
   return (
     <>
-      {specsForEvent(event).map((spec, idx) => (
+      {specsForEvent(event, toolNameById).map((spec, idx) => (
         <Row key={idx} spec={spec} />
       ))}
     </>
   );
 }
+
+const EMPTY_TOOL_NAME_MAP: ReadonlyMap<string, string> = new Map();
 
 function Row({ spec }: { spec: RowSpec }) {
   const [open, setOpen] = useState(false);
@@ -165,12 +174,15 @@ function Row({ spec }: { spec: RowSpec }) {
   );
 }
 
-function specsForEvent(event: TranscriptEvent): RowSpec[] {
+function specsForEvent(
+  event: TranscriptEvent,
+  toolNameById: ReadonlyMap<string, string>,
+): RowSpec[] {
   switch (event.type) {
     case 'assistant':
       return specsForAssistant(event);
     case 'user':
-      return specsForUser(event);
+      return specsForUser(event, toolNameById);
     case 'system':
       return [specForSystem(event)];
     case 'attachment':
@@ -250,7 +262,7 @@ function specForAssistantBlock(event: AssistantEvent, block: AssistantContent): 
   return specForUnknownBlock(event, block);
 }
 
-function specsForUser(event: UserEvent): RowSpec[] {
+function specsForUser(event: UserEvent, toolNameById: ReadonlyMap<string, string>): RowSpec[] {
   const content = event.message.content;
   if (typeof content === 'string') {
     return [
@@ -268,12 +280,31 @@ function specsForUser(event: UserEvent): RowSpec[] {
   if (!Array.isArray(content) || content.length === 0) {
     return [specForFallback(event)];
   }
-  return content.map((block) => specForUserBlock(event, block));
+  return content.map((block) => specForUserBlock(event, block, toolNameById));
 }
 
-function specForUserBlock(event: UserEvent, block: UserContent): RowSpec {
+function specForUserBlock(
+  event: UserEvent,
+  block: UserContent,
+  toolNameById: ReadonlyMap<string, string>,
+): RowSpec {
   if (isToolResult(block)) {
     const body = stringifyResultContent(block.content);
+    // A Skill tool_result is coalesced into the Skills lens alongside its
+    // tool_use (CREW-231 follow-up). Render it like a skill attachment: the
+    // hooks-and-skills palette + a "Skill result" label mirroring the
+    // "Skill invoked" tag on the invocation.
+    if (toolNameById.get(block.tool_use_id) === 'Skill') {
+      return {
+        blockType: 'tool_result',
+        category: 'hooks-and-skills',
+        tone: block.is_error ? 'error' : 'default',
+        tagLabel: 'Skill result',
+        oneLiner: truncate(body),
+        timestamp: event.timestamp,
+        expanded: body || prettyJson(block),
+      };
+    }
     return {
       blockType: 'tool_result',
       category: 'tools',

@@ -117,7 +117,10 @@ export function isDroppedEvent(event: TranscriptEvent): boolean {
  * user events with mixed content (text + tool_use + thinking) classify
  * into every category their content blocks would.
  */
-export function eventCategories(event: TranscriptEvent): Set<CategoryId> {
+export function eventCategories(
+  event: TranscriptEvent,
+  toolNameById: ReadonlyMap<string, string> = new Map(),
+): Set<CategoryId> {
   const categories = new Set<CategoryId>();
   switch (event.type) {
     case 'assistant': {
@@ -142,12 +145,16 @@ export function eventCategories(event: TranscriptEvent): Set<CategoryId> {
       }
       if (Array.isArray(content)) {
         for (const block of content) {
-          // tool_result blocks have no tool name without the id→name map; they
-          // stay under `tools`. The paired tool_use already contributes
-          // `skills`, so a Skill invocation is still reachable via the Skills
-          // filter.
-          if (block.type === 'tool_result') categories.add('tools');
-          else if (block.type === 'text') categories.add('conversation');
+          // tool_result blocks resolve their tool name via the id→name map so a
+          // Skill result joins its tool_use in the Skills lens (CREW-231
+          // follow-up). Unresolvable ids fall back to `tools`.
+          if (block.type === 'tool_result') {
+            const name =
+              typeof block.tool_use_id === 'string'
+                ? toolNameById.get(block.tool_use_id)
+                : undefined;
+            categories.add(name === SKILL_TOOL_NAME ? 'skills' : 'tools');
+          } else if (block.type === 'text') categories.add('conversation');
           else categories.add('system');
         }
       }
