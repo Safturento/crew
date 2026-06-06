@@ -18,6 +18,14 @@ export interface AgentsTable {
   worktree_path: string;
   branch: string | null;
   pr_url: string | null;
+  /**
+   * Per-worktree app URL the agent actually runs on (CREW-233). Set from the
+   * CLI's materialized `env.toml` `APP_URL` at registerRun; null falls back to
+   * `deriveAppUrl(cfg)` in `AgentsService.getByKey` (canonical stack / legacy
+   * rows). Added by migration 0008 — `Generated` because the column has an
+   * implicit NULL default, so it stays optional on insert.
+   */
+  app_url: Generated<string | null>;
   created_at: string;
 }
 
