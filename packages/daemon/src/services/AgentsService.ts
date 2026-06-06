@@ -3,6 +3,7 @@ import { sql } from 'kysely';
 import { deriveAppUrl, deriveJiraUrl, loadProjectConfigByName } from 'crew-shared';
 import type { DaemonDatabase } from '../db.js';
 import type { TimelineService } from './TimelineService.js';
+import { currentStateFromTransitions, type TransitionTarget } from './state-derivation.js';
 
 /** Synthetic tool-row label for the model's own output tokens (CREW-191). */
 const ASSISTANT_TOOL_LABEL = 'Assistant';
@@ -141,11 +142,13 @@ export class AgentsService {
     // One row per agent. The `latest` join uses a correlated subquery to
     // pick the agent's highest run id among non-finish runs (autoincrement
     // → newest), so a `crew finish` run does not poison the latest-run
-    // signal that drives state derivation. `totals` aggregates token
-    // columns and computes two boolean flags across ALL of the agent's
-    // runs: whether any tool_call ever matched `gh pr create` (drives
-    // `pr_open`), and whether the LATEST non-finish run has any tool_calls
-    // (distinguishes `initializing` from `running` for an open run).
+    // signal that drives state derivation. `totals` aggregates token columns
+    // and a single flag — whether the LATEST non-finish run has any tool_calls
+    // (distinguishes `initializing` from `running` only for pre-0002 agents
+    // that have no transition log). `latest_to_state` is the agent's most
+    // recent `state_transitions.to_state` — the CREW-234 source of truth for
+    // the non-terminal badge (it follows IngestService's live `gh pr create`
+    // detection + the fix-pr `pr_open → running` cycle).
     // `finish_status.has_finish_completed_ok` rolls up whether any finish
     // run has completed cleanly — that's the signal that an agent is
     // `finished`.
@@ -171,13 +174,6 @@ export class AgentsService {
             'r.agent_key as agent_key',
             sql<number>`COALESCE(SUM(tc.output_tokens), 0) + COALESCE(SUM(tc.input_tokens), 0) + COALESCE(SUM(tc.cache_read_tokens), 0) + COALESCE(SUM(tc.cache_creation_tokens), 0)`.as(
               'tokens',
-            ),
-            // Mirrors crew-shared `hasPrCreateInvocation`: `gh pr create` at the
-            // start of the summary OR after the ` ⏎ ` newline marker (agents cd
-            // into the worktree first, so it is rarely the first token). Keep in
-            // lock-step with that helper.
-            sql<number>`MAX(CASE WHEN tc.tool_name = 'Bash' AND (tc.input_summary LIKE 'gh pr create%' OR tc.input_summary LIKE '%⏎ gh pr create%') THEN 1 ELSE 0 END)`.as(
-              'has_pr_create',
             ),
             sql<number>`MAX(CASE WHEN tc.run_id = (SELECT id FROM runs r3 WHERE r3.agent_key = r.agent_key AND r3.command IN ('run', 'fix-pr') ORDER BY r3.id DESC LIMIT 1) THEN 1 ELSE 0 END)`.as(
               'latest_has_tool_calls',
@@ -226,10 +222,13 @@ export class AgentsService {
         'latest.completed_at as completedAt',
         'latest.exit_code as exitCode',
         'totals.tokens',
-        'totals.has_pr_create',
         'totals.latest_has_tool_calls',
         'finish_status.has_finish_completed_ok',
         'transition_status.pr_merged',
+        // CREW-234: latest transition's to_state — drives the non-terminal badge.
+        sql<TransitionTarget | null>`(SELECT st.to_state FROM state_transitions st WHERE st.agent_key = a.key ORDER BY st.ts DESC, st.id DESC LIMIT 1)`.as(
+          'latest_to_state',
+        ),
       ])
       .orderBy('a.key', 'asc')
       .execute();
@@ -240,7 +239,7 @@ export class AgentsService {
         completedAt: row.completedAt,
         exitCode: row.exitCode,
         latestHasToolCalls: Boolean(row.latest_has_tool_calls),
-        hasPrCreate: Boolean(row.has_pr_create),
+        currentState: latestToAgentState(row.latest_to_state),
         finishCompletedOk: Boolean(row.has_finish_completed_ok),
         prMerged: Boolean(row.pr_merged),
       });
@@ -261,8 +260,9 @@ export class AgentsService {
    * Single-agent detail. Returns null when no run exists for the key
    * (an agents row alone is not enough — a run is the signal that the
    * agent actually started). State derivation reuses the same machinery
-   * as `list()`: latest run's completion + cross-run `gh pr create`
-   * detection. The caller renders 404 on null.
+   * as `list()`: terminal guards (finish/error/pr_merged) over a
+   * non-terminal state projected from the `state_transitions` log
+   * (CREW-234). The caller renders 404 on null.
    */
   async getByKey(key: string): Promise<AgentDetail | null> {
     const runRows = await this.db
@@ -308,9 +308,6 @@ export class AgentsService {
         sql<number>`COALESCE(SUM(tc.cache_read_tokens), 0)`.as('cache_read'),
         sql<number>`COALESCE(SUM(tc.cache_creation_tokens), 0)`.as('cache_creation'),
         sql<number>`COUNT(*)`.as('tool_call_count'),
-        sql<number>`MAX(CASE WHEN tc.tool_name = 'Bash' AND tc.input_summary LIKE 'gh pr create%' THEN 1 ELSE 0 END)`.as(
-          'has_pr_create',
-        ),
       ])
       .where('r.agent_key', '=', key)
       .executeTakeFirst();
@@ -320,7 +317,6 @@ export class AgentsService {
     const cacheRead = totals?.cache_read ?? 0;
     const cacheCreation = totals?.cache_creation ?? 0;
     const toolCallCount = totals?.tool_call_count ?? 0;
-    const hasPrCreate = Boolean(totals?.has_pr_create);
 
     // Pick the latest non-finish run for state derivation: a `crew finish`
     // run does not represent the meaningful work of the agent, so it must
@@ -348,11 +344,22 @@ export class AgentsService {
       .executeTakeFirst();
     const prMerged = (prMergedRow?.n ?? 0) > 0;
 
+    // CREW-234: the non-terminal badge follows the transition log, not the
+    // cruder per-detail `gh pr create` SQL flag that used to disagree with
+    // list()'s ⏎-aware detection. One source of truth for list + drawer.
+    const latestTransition = await this.db
+      .selectFrom('state_transitions')
+      .select('to_state')
+      .where('agent_key', '=', key)
+      .orderBy('ts', 'desc')
+      .orderBy('id', 'desc')
+      .executeTakeFirst();
+
     const state = deriveState({
       completedAt: latest.completed_at,
       exitCode: latest.exit_code,
       latestHasToolCalls: (latestHasToolCalls?.n ?? 0) > 0,
-      hasPrCreate,
+      currentState: latestToAgentState(latestTransition?.to_state ?? null),
       finishCompletedOk,
       prMerged,
     });
@@ -565,21 +572,33 @@ export class AgentsService {
 interface DeriveStateInput {
   completedAt: string | null;
   exitCode: number | null;
+  /**
+   * Whether the latest non-finish run has any tool_calls. Only consulted as a
+   * fallback for pre-0002 agents that have no transition log at all — for
+   * everyone else `currentState` carries the running/initializing distinction.
+   */
   latestHasToolCalls: boolean;
-  hasPrCreate: boolean;
+  /**
+   * CREW-234: the non-terminal state projected from the `state_transitions`
+   * log (`currentStateFromTransitions`). `initializing` when the agent has no
+   * transitions. This replaces the forever-true `gh pr create` SQL flag and is
+   * what lets the badge follow the fix-pr `pr_open → running` cycle and agree
+   * with the timeline. The terminal guards below still take precedence because
+   * the CREW-96 backfill never wrote `finished`/`error`/`pr_merged` for
+   * historical agents.
+   */
+  currentState: AgentState;
   /**
    * Whether any `crew finish` run for this agent has completed cleanly
-   * (`exit_code = 0`). When true, the agent is `finished` regardless of
-   * whether `gh pr create` was ever observed — the original `crew run`
-   * makes `hasPrCreate` true forever, so this flag is the only signal that
-   * the agent is past its merged-PR state. Drives CREW-116 acceptance.
+   * (`exit_code = 0`). When true, the agent is `finished` — authoritative over
+   * the log because a pre-CREW-116 finish left no `finished` transition.
+   * Drives CREW-116 acceptance.
    */
   finishCompletedOk: boolean;
   /**
-   * CREW-202: PrPoller writes a `pr_merged` transition when GitHub reports
-   * the PR is no longer OPEN. Tool-call data alone can't tell us this —
-   * `hasPrCreate` stays true forever once `gh pr create` ran. When this is
-   * true (and finish hasn't completed yet) the agent is `pr_merged`.
+   * CREW-202: PrPoller writes a `pr_merged` transition when GitHub reports the
+   * PR is no longer OPEN. Kept as an explicit guard (rather than relying solely
+   * on the log) so the merged state is honored even for historical agents.
    */
   prMerged: boolean;
 }
@@ -588,17 +607,31 @@ function emptyBucket(): TokenCategoryBucket {
   return { input: 0, output: 0, cacheCreation: 0, cacheRead: 0 };
 }
 
+/** Map a raw `state_transitions.to_state` (or null when none) to `AgentState`. */
+function latestToAgentState(toState: TransitionTarget | null): AgentState {
+  return currentStateFromTransitions(toState ? [{ to: toState, ts: 0 }] : []);
+}
+
+/**
+ * The agent-state badge (CREW-234). Authoritative terminal signals win first —
+ * a completed `crew finish`, then a non-zero exit, then a merged PR — because
+ * the CREW-96 transition backfill never wrote those terminal states for
+ * historical agents, so a raw log projection would regress them. The remaining
+ * `initializing`/`running`/`pr_open` distinction comes from the transition log
+ * (`currentState`), which follows IngestService's live `gh pr create` detection
+ * and the fix-pr `pr_open → running` cycle — fixing both the stuck-PR-Open and
+ * false-Finished symptoms. The tool-call heuristic is only a last resort for
+ * pre-0002 agents whose log is empty.
+ */
 function deriveState(input: DeriveStateInput): AgentState {
   if (input.finishCompletedOk) return 'finished';
   if (input.completedAt === null) {
+    if (input.currentState !== 'initializing') return input.currentState;
     return input.latestHasToolCalls ? 'running' : 'initializing';
   }
   if (input.exitCode !== null && input.exitCode !== 0) return 'error';
-  // pr_merged supersedes pr_open: PrPoller's transition wins over the
-  // forever-true hasPrCreate signal. Checked before pr_open so a merged
-  // PR doesn't get re-stamped as open by tool-call derivation alone.
   if (input.prMerged) return 'pr_merged';
-  if (input.hasPrCreate) return 'pr_open';
+  if (input.currentState !== 'initializing') return input.currentState;
   return 'finished';
 }
 

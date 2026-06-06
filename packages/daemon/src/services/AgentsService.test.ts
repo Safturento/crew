@@ -259,7 +259,11 @@ describe('AgentsService.list', () => {
     }
   });
 
-  it('returns pr_open when latest run is completed=0 AND any tool_call matches gh pr create', async () => {
+  // CREW-234: the badge now follows the transition log. IngestService's
+  // ⏎-aware live detection writes the pr_open transition (incl. the cd-prefixed
+  // `gh pr create` variant — covered by IngestService/parser tests); list()
+  // just projects it.
+  it('returns pr_open when the transition log records pr_open for a completed run', async () => {
     const db = await freshDb();
     try {
       await makeAgent(db, 'KAN-3');
@@ -272,31 +276,10 @@ describe('AgentsService.list', () => {
         summary: 'gh pr create --title hello',
         tokens: 1,
       });
+      await makeStateTransition(db, 'KAN-3', 'running', 1000, 'init');
+      await makeStateTransition(db, 'KAN-3', 'pr_open', 2000, 'running');
       const svc = new AgentsService({ db });
       expect((await svc.list())[0]).toMatchObject({ key: 'KAN-3', state: 'pr_open' });
-    } finally {
-      await db.destroy();
-    }
-  });
-
-  it('returns pr_open when gh pr create ran on its own line after a cd prefix', async () => {
-    // Regression: agents cd into the worktree before `gh pr create`, so the
-    // summary is `cd /path ⏎ gh pr create …`. The old `LIKE 'gh pr create%'`
-    // prefix match missed it and the agent slid to `finished`.
-    const db = await freshDb();
-    try {
-      await makeAgent(db, 'KAN-CD');
-      const runId = await makeRun(db, 'KAN-CD', 's-cd', {
-        completedAt: '2026-04-29T13:00:00Z',
-        exitCode: 0,
-      });
-      await makeToolCall(db, runId, {
-        tool: 'Bash',
-        summary: 'cd /home/me/Repos/crew-KAN-CD ⏎ gh pr create --base main --head KAN-CD',
-        tokens: 1,
-      });
-      const svc = new AgentsService({ db });
-      expect((await svc.list())[0]).toMatchObject({ key: 'KAN-CD', state: 'pr_open' });
     } finally {
       await db.destroy();
     }
@@ -455,10 +438,63 @@ describe('AgentsService.list', () => {
         summary: 'gh pr create --title hi',
         tokens: 1,
       });
+      await makeStateTransition(db, 'KAN-8', 'running', 1000, 'init');
+      await makeStateTransition(db, 'KAN-8', 'pr_open', 2000, 'running');
       // Open finish run with no tool_calls.
       await makeRun(db, 'KAN-8', `finish-KAN-8-${'b'.repeat(8)}`, { command: 'finish' });
       const agents = await new AgentsService({ db }).list();
       expect(agents[0]).toMatchObject({ key: 'KAN-8', state: 'pr_open' });
+    } finally {
+      await db.destroy();
+    }
+  });
+
+  // CREW-234: the in-flight crew fix-pr face. The transition log re-flips
+  // pr_open → running on the new run's first tool_call (CREW-198), so the badge
+  // must read 'running' even though `gh pr create` ran earlier and the
+  // forever-true has_pr_create flag would have kept it stuck on pr_open.
+  it('reflects the in-flight fix-pr running phase from the transition log', async () => {
+    const db = await freshDb();
+    try {
+      await makeAgent(db, 'KAN-FIXPR', { prUrl: 'https://github.com/x/y/pull/9' });
+      const original = await makeRun(db, 'KAN-FIXPR', 's-orig', {
+        completedAt: '2026-04-29T13:00:00Z',
+        exitCode: 0,
+      });
+      await makeToolCall(db, original, {
+        tool: 'Bash',
+        summary: 'gh pr create --title hi',
+        tokens: 1,
+      });
+      // In-flight fix-pr run (not completed) with a tool_call.
+      const fixPr = await makeRun(db, 'KAN-FIXPR', 's-fixpr', { command: 'fix-pr' });
+      await makeToolCall(db, fixPr, { tool: 'Read', tokens: 1 });
+      await makeStateTransition(db, 'KAN-FIXPR', 'running', 1000, 'init');
+      await makeStateTransition(db, 'KAN-FIXPR', 'pr_open', 2000, 'running');
+      await makeStateTransition(db, 'KAN-FIXPR', 'running', 3000, 'pr_open');
+      const agents = await new AgentsService({ db }).list();
+      expect(agents[0]).toMatchObject({ key: 'KAN-FIXPR', state: 'running' });
+    } finally {
+      await db.destroy();
+    }
+  });
+
+  // CREW-234: the false-Finished face. A completed run that opened a PR but
+  // whose summary the cruder SQL flag missed used to fall through to
+  // 'finished'. The transition log holds pr_open, so the badge reads pr_open.
+  it('reads pr_open from the transition log for a completed run that opened a PR', async () => {
+    const db = await freshDb();
+    try {
+      await makeAgent(db, 'KAN-FALSEFIN', { prUrl: 'https://github.com/x/y/pull/10' });
+      const r1 = await makeRun(db, 'KAN-FALSEFIN', 's-ff', {
+        completedAt: '2026-04-29T13:00:00Z',
+        exitCode: 0,
+      });
+      await makeToolCall(db, r1, { tool: 'Read', tokens: 1 });
+      await makeStateTransition(db, 'KAN-FALSEFIN', 'running', 1000, 'init');
+      await makeStateTransition(db, 'KAN-FALSEFIN', 'pr_open', 2000, 'running');
+      const agents = await new AgentsService({ db }).list();
+      expect(agents[0]).toMatchObject({ key: 'KAN-FALSEFIN', state: 'pr_open' });
     } finally {
       await db.destroy();
     }
@@ -522,6 +558,8 @@ describe('AgentsService.getByKey', () => {
         cacheCreationTokens: 0,
         occurredAt: '2026-04-29T14:00:01Z',
       });
+      await makeStateTransition(db, 'KAN-1', 'running', 1000, 'init');
+      await makeStateTransition(db, 'KAN-1', 'pr_open', 2000, 'running');
 
       const svc = new AgentsService({ db });
       const detail = await svc.getByKey('KAN-1');
@@ -612,9 +650,65 @@ describe('AgentsService.getByKey', () => {
         summary: 'gh pr create --title hi',
         tokens: 1,
       });
+      await makeStateTransition(db, 'KAN-FIN-2', 'running', 1000, 'init');
+      await makeStateTransition(db, 'KAN-FIN-2', 'pr_open', 2000, 'running');
       await makeRun(db, 'KAN-FIN-2', `finish-KAN-FIN-2-1`, { command: 'finish' });
       const detail = await new AgentsService({ db }).getByKey('KAN-FIN-2');
       expect(detail?.state).toBe('pr_open');
+    } finally {
+      await db.destroy();
+    }
+  });
+
+  // CREW-234: the false-Finished face on the detail endpoint. getByKey's crude
+  // `LIKE 'gh pr create%'` flag missed the `cd … ⏎ gh pr create` summary and
+  // fell through to 'finished'. The transition log (written by IngestService's
+  // ⏎-aware live detection) holds pr_open, so the drawer now reads pr_open and
+  // agrees with the list.
+  it('reads pr_open from the transition log when the cd-prefixed PR summary would be missed', async () => {
+    const db = await freshDb();
+    try {
+      await makeAgent(db, 'KAN-FF-G', { prUrl: 'https://github.com/x/y/pull/11' });
+      const r1 = await makeRun(db, 'KAN-FF-G', 's-ff-g', {
+        completedAt: '2026-04-29T13:00:00Z',
+        exitCode: 0,
+      });
+      await makeToolCall(db, r1, {
+        tool: 'Bash',
+        summary: 'cd /home/me/Repos/crew-KAN-FF-G ⏎ gh pr create --base main --head KAN-FF-G',
+        tokens: 1,
+      });
+      await makeStateTransition(db, 'KAN-FF-G', 'running', 1000, 'init');
+      await makeStateTransition(db, 'KAN-FF-G', 'pr_open', 2000, 'running');
+      const detail = await new AgentsService({ db }).getByKey('KAN-FF-G');
+      expect(detail?.state).toBe('pr_open');
+    } finally {
+      await db.destroy();
+    }
+  });
+
+  // CREW-234: in-flight fix-pr on the detail endpoint — log re-flipped to
+  // running, so the drawer badge reads running, not the stuck pr_open.
+  it('reflects the in-flight fix-pr running phase from the transition log (single-agent endpoint)', async () => {
+    const db = await freshDb();
+    try {
+      await makeAgent(db, 'KAN-FIXPR-G', { prUrl: 'https://github.com/x/y/pull/12' });
+      const original = await makeRun(db, 'KAN-FIXPR-G', 's-orig-g', {
+        completedAt: '2026-04-29T13:00:00Z',
+        exitCode: 0,
+      });
+      await makeToolCall(db, original, {
+        tool: 'Bash',
+        summary: 'gh pr create --title hi',
+        tokens: 1,
+      });
+      const fixPr = await makeRun(db, 'KAN-FIXPR-G', 's-fixpr-g', { command: 'fix-pr' });
+      await makeToolCall(db, fixPr, { tool: 'Read', tokens: 1 });
+      await makeStateTransition(db, 'KAN-FIXPR-G', 'running', 1000, 'init');
+      await makeStateTransition(db, 'KAN-FIXPR-G', 'pr_open', 2000, 'running');
+      await makeStateTransition(db, 'KAN-FIXPR-G', 'running', 3000, 'pr_open');
+      const detail = await new AgentsService({ db }).getByKey('KAN-FIXPR-G');
+      expect(detail?.state).toBe('running');
     } finally {
       await db.destroy();
     }

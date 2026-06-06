@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { deriveStateFromToolCalls } from './state-derivation.js';
+import { currentStateFromTransitions, deriveStateFromToolCalls } from './state-derivation.js';
 
 describe('deriveStateFromToolCalls', () => {
   it('returns init for an empty slice', () => {
@@ -55,5 +55,43 @@ describe('deriveStateFromToolCalls', () => {
 
   it('treats a null input_summary as no PR-create signal', () => {
     expect(deriveStateFromToolCalls([{ tool_name: 'Bash', input_summary: null }])).toBe('running');
+  });
+});
+
+describe('currentStateFromTransitions', () => {
+  it('returns initializing when there are no transitions', () => {
+    expect(currentStateFromTransitions([])).toBe('initializing');
+  });
+
+  it('returns the latest transition target, mapped to AgentState', () => {
+    expect(
+      currentStateFromTransitions([
+        { to: 'init', ts: 1 },
+        { to: 'running', ts: 2 },
+        { to: 'pr_open', ts: 3 },
+        { to: 'running', ts: 4 }, // fix-pr cycle: badge must read running, not pr_open
+      ]),
+    ).toBe('running');
+  });
+
+  it('maps init → initializing', () => {
+    expect(currentStateFromTransitions([{ to: 'init', ts: 1 }])).toBe('initializing');
+  });
+
+  it('passes pr_open / pr_merged / finished / error through unchanged', () => {
+    expect(currentStateFromTransitions([{ to: 'pr_open', ts: 1 }])).toBe('pr_open');
+    expect(currentStateFromTransitions([{ to: 'pr_merged', ts: 1 }])).toBe('pr_merged');
+    expect(currentStateFromTransitions([{ to: 'finished', ts: 1 }])).toBe('finished');
+    expect(currentStateFromTransitions([{ to: 'error', ts: 1 }])).toBe('error');
+  });
+
+  it('picks the latest by ts regardless of input order', () => {
+    expect(
+      currentStateFromTransitions([
+        { to: 'pr_open', ts: 3000 },
+        { to: 'init', ts: 1000 },
+        { to: 'running', ts: 2000 },
+      ]),
+    ).toBe('pr_open');
   });
 });

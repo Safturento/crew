@@ -186,8 +186,11 @@ export function summarizeInput(toolName: string, input: Record<string, unknown>)
  * substring match is deliberately avoided: agents prefix the PR command with
  * `cd <worktree>` (or chain `git push && …`) so it is rarely the first token,
  * yet `echo "… gh pr create …"` must NOT count. Per-line "starts with"
- * satisfies both. The SQL `has_pr_create` aggregate in the daemon's
- * AgentsService mirrors this — keep the two in lock-step.
+ * satisfies both. The daemon's live state writer (`IngestService.computeNextState`)
+ * and the tool-call re-derivation (`state-derivation.ts` `deriveStateFromToolCalls`)
+ * both route through this predicate — keep them in lock-step. (CREW-234 retired
+ * the separate `has_pr_create` SQL aggregate in `AgentsService`; the badge now
+ * projects from the `state_transitions` log this predicate feeds.)
  */
 export function hasPrCreateInvocation(text: string | null | undefined): boolean {
   if (!text) return false;

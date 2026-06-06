@@ -146,6 +146,15 @@ describe('GET /api/agents/:key', () => {
           occurred_at: '2026-04-29T13:00:01Z',
         })
         .execute();
+      // CREW-234: the badge follows the transition log, so seed the pr_open
+      // transition IngestService writes live for this `gh pr create`.
+      await db
+        .insertInto('state_transitions')
+        .values([
+          { agent_key: 'KAN-1', from_state: 'init', to_state: 'running', ts: 1000 },
+          { agent_key: 'KAN-1', from_state: 'running', to_state: 'pr_open', ts: 2000 },
+        ])
+        .execute();
 
       const res = await app.inject({ method: 'GET', url: '/api/agents/KAN-1' });
       expect(res.statusCode).toBe(200);
