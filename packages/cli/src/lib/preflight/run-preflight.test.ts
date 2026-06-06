@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import type { ProjectConfig } from 'crew-shared';
@@ -77,6 +77,15 @@ describe('runPreflight (fail-fast adapter over lib/health)', () => {
       ...validConfig,
       bruno_smoke: { enabled: true, base_url: 'https://localhost:17253', collection_dir: 'bruno' },
     } as unknown as ProjectConfig;
+
+    // bruno-skeleton is ordered ahead of excluded-commands in the real registry,
+    // so the worktree must satisfy it (a bruno/bruno.json manifest) for
+    // excluded-commands to be the asserted first fail rather than bruno-skeleton.
+    await mkdir(path.join(worktree, 'bruno'), { recursive: true });
+    await writeFile(
+      path.join(worktree, 'bruno', 'bruno.json'),
+      JSON.stringify({ version: '1', name: 'demo', type: 'collection' }),
+    );
 
     // No .env (env-materialized ok), no .claude/settings.json (excluded-commands fail).
     await expect(runPreflight({ config, worktree })).rejects.toMatchObject({
