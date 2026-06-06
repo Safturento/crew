@@ -17,6 +17,10 @@ const RegisterRunBody = z.object({
   sessionId: z.string().min(1),
   command: RunCommand,
   startedAt: z.string().min(1),
+  // CREW-233: the materialized per-worktree APP_URL. Optional/nullable so
+  // legacy CLIs and non-docker projects (which never materialize one) still
+  // register; the upsert COALESCEs null against any existing stored value.
+  appUrl: z.string().nullable().optional(),
 });
 
 const RegisterRunResponse = z.object({
@@ -96,6 +100,7 @@ export async function registerRunsRoutes(app: DaemonApp): Promise<void> {
           worktree_path: body.worktreePath,
           branch: body.branch,
           pr_url: null,
+          app_url: body.appUrl ?? null,
           created_at: new Date().toISOString(),
         })
         .onConflict((oc) =>
@@ -104,6 +109,9 @@ export async function registerRunsRoutes(app: DaemonApp): Promise<void> {
             worktree_path: (eb) => eb.ref('excluded.worktree_path'),
             branch: (eb) => eb.ref('excluded.branch'),
             ticket_title: sql`COALESCE(NULLIF(excluded.ticket_title, ''), agents.ticket_title)`,
+            // CREW-233: preserve the run's stored APP_URL when a later fix-pr
+            // registration omits it (mirrors the ticket_title COALESCE pattern).
+            app_url: sql`COALESCE(excluded.app_url, agents.app_url)`,
           }),
         )
         .execute();

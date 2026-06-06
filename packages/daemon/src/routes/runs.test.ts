@@ -87,6 +87,71 @@ describe('POST /api/agents/runs', () => {
     }
   });
 
+  // CREW-233: the CLI passes the materialized per-worktree APP_URL so the
+  // drawer's app pill links to the agent's actual running port.
+  it('stores the per-worktree appUrl on the agent row', async () => {
+    const { app, db } = await setupApp();
+    try {
+      const res = await app.inject({
+        method: 'POST',
+        url: '/api/agents/runs',
+        payload: { ...validBody, appUrl: 'http://localhost:51234' },
+      });
+      expect(res.statusCode).toBe(201);
+      const agent = await db
+        .selectFrom('agents')
+        .select('app_url')
+        .where('key', '=', 'KAN-1')
+        .executeTakeFirst();
+      expect(agent?.app_url).toBe('http://localhost:51234');
+    } finally {
+      await app.close();
+      await db.destroy();
+    }
+  });
+
+  it('preserves a stored appUrl when a later registration omits it (COALESCE)', async () => {
+    const { app, db } = await setupApp();
+    try {
+      await app.inject({
+        method: 'POST',
+        url: '/api/agents/runs',
+        payload: { ...validBody, appUrl: 'http://localhost:51234' },
+      });
+      // fix-pr re-registration with no appUrl must not clobber the run's value.
+      await app.inject({
+        method: 'POST',
+        url: '/api/agents/runs',
+        payload: { ...validBody, sessionId: 's2', command: 'fix-pr' },
+      });
+      const agent = await db
+        .selectFrom('agents')
+        .select('app_url')
+        .where('key', '=', 'KAN-1')
+        .executeTakeFirst();
+      expect(agent?.app_url).toBe('http://localhost:51234');
+    } finally {
+      await app.close();
+      await db.destroy();
+    }
+  });
+
+  it('leaves app_url null when no appUrl is provided', async () => {
+    const { app, db } = await setupApp();
+    try {
+      await app.inject({ method: 'POST', url: '/api/agents/runs', payload: validBody });
+      const agent = await db
+        .selectFrom('agents')
+        .select('app_url')
+        .where('key', '=', 'KAN-1')
+        .executeTakeFirst();
+      expect(agent?.app_url).toBeNull();
+    } finally {
+      await app.close();
+      await db.destroy();
+    }
+  });
+
   it('returns 409 on duplicate session_id', async () => {
     const { app, db } = await setupApp();
     try {
