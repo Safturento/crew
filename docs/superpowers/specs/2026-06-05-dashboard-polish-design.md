@@ -185,7 +185,8 @@ S–M. Bounded by the schema + CLI registration change if path (a) is chosen.
 ### Symptoms
 
 1. **Badge stuck:** running `crew fix-pr <KEY>` on a `pr_open` agent doesn't flip the dashboard to "Running" while the fix-pr run is in flight; it stays "PR Open."
-2. **Lifecycle not shown:** the timeline doesn't present the ticket's full history as distinct lifecycle segments across runs.
+2. **False "Finished":** the inverse face of the same bug — CREW-226 and CREW-227 display as **Finished** when they're actually **PR Open**. `deriveState`'s final fallback `return 'finished'` fires when a run completed exit 0, isn't merged, and `hasPrCreate` is false — i.e. the `gh pr create` SQL detection missed the PR. Corroborating: the detail path (`getByKey`, `AgentsService.ts:311`) only matches `LIKE 'gh pr create%'`, lacking the `⏎`-prefixed variant the list query (`:179`) was fixed to catch, so list and detail can disagree for one agent. The transition-log-driven badge removes this whole class; whether CREW-226/227 self-heal depends on whether their `state_transitions` log already holds the `pr_open` row (the Task 6 spike checks this — if not, the shared `hasPrCreateInvocation` detection has a gap and the existing rows need a backfill).
+3. **Lifecycle not shown:** the timeline doesn't present the ticket's full history as distinct lifecycle segments across runs.
 
 ### What's established (from code reading)
 
