@@ -1,7 +1,7 @@
 ---
 name: dispatch
 description: crew run prompt-build, skills injection, verification gates
-last_updated: 2026-06-03
+last_updated: 2026-06-05
 covers:
   - 'packages/cli/src/lib/run/**'
   - 'packages/cli/src/lib/prompts/**'
@@ -9,6 +9,7 @@ covers:
   - 'packages/cli/src/lib/startup-events/**'
   - '.claude/skills/**'
   - 'packages/cli/src/lib/preflight/**'
+  - 'packages/cli/src/lib/health/**'
   - 'packages/cli/src/lib/figma-snapshot/**'
 ---
 
@@ -28,7 +29,7 @@ The companion commands `crew fix-pr` (resume from PR feedback) and the gate-driv
 4. **GH token copy.** Read-only source at `<repo>/.claude/secrets/gh-token` → `<worktree>/.claude/secrets/gh-token` (chmod 0600). Passed as `GH_TOKEN` env to the agent's claude process — never written into the prompt.
 5. **Env materialization.** `bringUpWorktreeEnv()` in `commands/run.ts`. Prefers `env.toml` via `env-spec/` (`loadEnvSpec` → `materialize` → `emit`); falls back to legacy `writeDockerEnv` when no `env.toml` exists. Output is `<worktree>/.env` consumed by docker-compose; the resolved `base` map is also returned for downstream URL resolution.
 6. **Bruno env write.** When `[bruno_smoke].enabled`, `writeBrunoEnvFile()` writes `bruno/environments/crew-<key-lower>.bru` with `baseUrl` (resolved from `APP_URL` / docker ports) and (if configured) a `smokeUser` block. `CREW_BRUNO_ENV` is passed to the agent's env.
-7. **`prepareAgentEnvironment` (fresh mode).** In `lib/run/agent-environment.ts`. Resolves the playwright app URL, starts docker bringup blocking-await in fresh mode (`startDockerBringup` → `await proc`), runs `npm install` in the worktree via `installNodeModules` (worktrees are bare — see step 8), installs Chromium via `installPlaywrightBrowsers`, then runs `runPreflight(buildPreflightChecks(config))` — see Preflight below. The `npm install` and Chromium install steps both gate on `playwrightEnabled(config)`; the npm step runs first because `npx playwright install chromium` silently no-ops in a bare worktree without `node_modules` to resolve the project-pinned Playwright version (CREW-183).
+7. **`prepareAgentEnvironment` (fresh mode).** In `lib/run/agent-environment.ts`. Resolves the playwright app URL, starts docker bringup blocking-await in fresh mode (`startDockerBringup` → `await proc`), runs `npm install` in the worktree via `installNodeModules` (worktrees are bare — see step 8), installs Chromium via `installPlaywrightBrowsers`, then runs `runPreflight({ config, worktree, dockerPorts, envVars })` — see Preflight below. The `npm install` and Chromium install steps both gate on `playwrightEnabled(config)`; the npm step runs first because `npx playwright install chromium` silently no-ops in a bare worktree without `node_modules` to resolve the project-pinned Playwright version (CREW-183).
 8. **MCP file write.** `writeMcpFile(worktree, { playwright?, chrome?, warn })` writes `<worktree>/.mcp.json` when `[playwright]` is enabled and smoke is on, **or** when `[visual_fidelity]` is configured (chrome-only is a valid configuration). The file carries a `playwright` server entry (when playwright wiring is on), a `chrome` server entry (when `[visual_fidelity]` is set — resolved from the `superpowers-chrome` plugin cache via `resolveSuperpowersChrome`, code under `lib/mcp-config/`), or both. A missing `superpowers-chrome` plugin emits exactly one yellow warning and omits the `chrome` entry; the dispatch continues. Order matters: write happens **after** `prepareAgentEnvironment` so the Chromium binary is on disk before `--executable-path` is resolved (CREW-70 regression bug — earlier writes captured a non-existent path and MCP silently fell back to system Chrome). Immediately after, `writeMcpDiagnosticLog` records the dispatcher's intent + the resolved paths + any warnings + the `.mcp.json` contents to `/tmp/crew-mcp-<KEY>.log` (CREW-184); a chrome MCP missing from the agent's tool inventory is debugged from this log rather than by re-running the dispatch.
 9. **Skill injection.** `runSkillInjection(...)` copies dispatcher-managed skills (`<repo>/.claude/skills/<name>/`) into `<worktree>/.claude/skills/<name>/`. See Skills below.
 10. **Build prompt.** `buildTicketPrompt({ key, githubRepo, jiraSite, playwright, brunoSmoke, visualFidelity, userMessage, dockerUnavailable })`. See Prompts below.
@@ -39,20 +40,26 @@ The companion commands `crew fix-pr` (resume from PR feedback) and the gate-driv
 
 The Figma snapshot is **not** a dispatch step — it is a committed artifact (see Figma snapshot below).
 
-`crew fix-pr` skips steps 3–6 (worktree already exists), runs the slim `runResumePreflight` (only `verify-excluded-commands`), and dispatches via `spawnClaudeResume` instead of a fresh launch. The `runVerifyGate` resume path uses the same shape.
+`crew fix-pr` skips steps 3–6 (worktree already exists), runs the slim `runResumePreflight` (only the `excluded-commands` health check), and dispatches via `spawnClaudeResume` instead of a fresh launch. The `runVerifyGate` resume path uses the same shape.
 
 ## Preflight
 
-`buildPreflightChecks(config)` in `lib/preflight/build-checks.ts` is the dispatch table. Two checks today:
+The dispatch gate is `runPreflight(...)` in `lib/preflight/run-preflight.ts` — a thin **fail-fast adapter** over the shared health-check registry in `lib/health/` (CREW-226). It runs every `scope: 'project'` check via `runHealth(checksFor('project'), ctx)` (collect-all), then throws `PreflightError` for the first `fail` so the calling command renders structured remediation and exits 1. `warn` and `ok` do not gate. "Healthy" is defined once in `lib/health/` and consumed by both this gate and (eventually) `crew doctor` — see `docs/superpowers/specs/2026-06-05-crew-init-doctor-design.md`.
 
-| Check                  | When                                                      | What it does                                                                                                                                                                                                                                      | Failure mode                                                      |
-| ---------------------- | --------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
-| `app-url-reachability` | `[docker]` + (`[playwright]` ∨ `[bruno_smoke]`)           | `probeUrl()` retries with exponential backoff against the resolved `app_url` / `base_url`.                                                                                                                                                        | Throws `PreflightError`; renders structured remediation; exits 1. |
-| `excluded-commands`    | `[bruno_smoke].enabled` ∨ `[playwright].authored.enabled` | Compares `<worktree>/.claude/settings.json`'s `sandbox.excludedCommands` against required entries: `npm run bruno:smoke*`, `<test_command>*`, `docker compose*`. Exact string equality on the _committed_ entry vs the canonical `command*` form. | Throws `PreflightError`.                                          |
+The project-scope checks the gate runs today, in registry order:
 
-The `command*` glob shape is verified — `npm run test:e2e --workspace=...` and `... 2>&1 \| tail` both stay matched because `*` is a leading-substring rule. **Wrappers** (`cd ... &&`, `sh -c`, `npm --prefix`) break the match; the prompt's sandbox-network block (below) warns the agent about this.
+| Check               | When it acts                                                                                      | What it does                                                                                                                                                                              | Failure                                                                                                                                    |
+| ------------------- | ------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| `config-valid`      | always                                                                                            | re-parses the loaded config through the shared zod schema.                                                                                                                                | `fail` — benign no-op in real dispatch (config was already schema-loaded).                                                                 |
+| `env-materialized`  | `env.toml` present                                                                                | confirms `.env` is materialized (or `envVars` was supplied).                                                                                                                              | `fail` (`fixable`) — benign in real dispatch (env is materialized upstream).                                                               |
+| `excluded-commands` | `[bruno_smoke].enabled` ∨ `[playwright].authored.enabled` ∨ `[docker]`                            | diffs `<worktree>/.claude/settings.json`'s `sandbox.excludedCommands` against required `npm run bruno:smoke*`, `<test_command>*`, `docker compose*`. Exact string on the `command*` form. | `fail` (`fixable` — `fix()` array-merges via the `lib/init` settings writer).                                                              |
+| `app-url-resolves`  | (`[docker]` + `[playwright]` smoke/authored, no `start_command`) ∨ (`[docker]` + `[bruno_smoke]`) | resolves the `app_url` / `base_url` template, then `probeUrl()` retries it with exponential backoff.                                                                                      | `fail` — unresolved `${VAR}`/`{port}` ⇒ env.toml remediation; unreachable ⇒ "docker stack failed to come up" + `crew restart` remediation. |
 
-In resume mode (`runResumePreflight`), only `verify-excluded-commands` runs and failures are warnings — Step 0 of the resume prompt re-rebases on `origin/main`, which pulls in any current `settings.json` and self-heals stale-worktree drift.
+`config-valid` / `env-materialized` were not gate checks before CREW-226, and the whole registry now runs on every fresh `crew run` **and** `crew resume` (both flow through `prepareAgentEnvironment`). In practice they are no-ops when healthy — the config was already schema-loaded, and `.env` persists in the worktree — so real dispatch outcomes are unchanged. Two narrow new failure paths exist by design (and are arguably more correct than the old gaps): a **docker-only** project with neither bruno-smoke nor authored-playwright now has its `docker compose*` entry verified (the old gate skipped it), and `crew resume` on a worktree whose `.env` was deleted now fails `env-materialized` fast rather than dying obscurely downstream. The gate **never** auto-fixes a `fixable` fail — that is `crew doctor --fix`'s job; the gate only throws.
+
+The check definitions live in `lib/health/checks/`; `lib/preflight/` is now just the gate adapter (`run-preflight.ts`), the slim resume variant (`run-resume-preflight.ts`), `PreflightError`, and the remediation renderer (`render-error.ts`). The `command*` glob shape is verified — `npm run test:e2e --workspace=...` and `... 2>&1 \| tail` both stay matched because `*` is a leading-substring rule. **Wrappers** (`cd ... &&`, `sh -c`, `npm --prefix`) break the match; the prompt's sandbox-network block (below) warns the agent about this.
+
+In resume mode (`runResumePreflight`), only the `excluded-commands` check runs and failures are warnings — Step 0 of the resume prompt re-rebases on `origin/main`, which pulls in any current `settings.json` and self-heals stale-worktree drift.
 
 ## Prompt builder
 
@@ -161,6 +168,7 @@ The daemon side lives in `IngestService.watchStartupEvents` (chokidar) + `mergeS
 Historical context — read when the above isn't enough:
 
 - `docs/superpowers/specs/2026-05-03-agent-dispatch-preflight-design.md` — original preflight + structured-error design.
+- `docs/superpowers/specs/2026-06-05-crew-init-doctor-design.md` — the shared `lib/health/` registry the gate now adapts (CREW-226); `crew doctor`/`init` are the other consumers.
 - `docs/superpowers/specs/2026-05-07-sandbox-limitations-and-docker-compose-exclusion-design.md` — `excludedCommands` glob shape, the empirical probe matrix, wrapper-defeated matches.
 - `docs/superpowers/specs/2026-04-28-dynamic-skill-discovery-design.md` — the original dynamic-discovery design (`discoverSkills` / `renderDiscoveredSkillsBlock`). Superseded: that prompt-rendering half was removed once Claude Code's native `.claude/skills/` discovery was confirmed; see `docs/superpowers/specs/2026-05-15-skill-storage-and-agents-autoload-design.md`.
 - `docs/superpowers/specs/2026-05-12-agent-visual-verification-design.md` — visual-fidelity-check skill + pre-dispatch snapshot pipeline.

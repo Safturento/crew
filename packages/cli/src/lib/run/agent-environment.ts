@@ -10,7 +10,6 @@ import {
   type DockerPorts,
 } from '../mcp-config/index.js';
 import { runPreflight } from '../preflight/index.js';
-import { buildPreflightChecks } from '../preflight/build-checks.js';
 import { agentNeedsAppRunning } from './app-lifecycle.js';
 import { installNodeModules } from './install-node-modules.js';
 import { bracketStartupPhase } from '../startup-events/index.js';
@@ -142,7 +141,6 @@ export async function prepareAgentEnvironment(
   await runPreflight({
     config,
     worktree,
-    checks: buildPreflightChecks(config),
     dockerPorts,
     envVars,
   });

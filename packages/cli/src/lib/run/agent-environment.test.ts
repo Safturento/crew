@@ -13,19 +13,24 @@ vi.mock('../mcp-config/install-browsers.js', () => ({
 vi.mock('./install-node-modules.js', () => ({
   installNodeModules: vi.fn(),
 }));
+// Mock the leaf so the barrel (`../preflight/index.js`) re-exports the stubbed
+// runPreflight while keeping the real PreflightError.
+vi.mock('../preflight/run-preflight.js', () => ({
+  runPreflight: vi.fn(),
+}));
 
 import { ensureStackRunning } from '../docker/ensure-stack-running.js';
 import { startDockerBringup } from '../docker/start-bringup.js';
 import { installPlaywrightBrowsers } from '../mcp-config/install-browsers.js';
 import { installNodeModules } from './install-node-modules.js';
-import * as buildChecksModule from '../preflight/build-checks.js';
-import { PreflightError } from '../preflight/index.js';
+import { runPreflight, PreflightError } from '../preflight/index.js';
 import { prepareAgentEnvironment } from './agent-environment.js';
 
 const ensureMock = vi.mocked(ensureStackRunning);
 const startBringupMock = vi.mocked(startDockerBringup);
 const installMock = vi.mocked(installPlaywrightBrowsers);
 const npmInstallMock = vi.mocked(installNodeModules);
+const runPreflightMock = vi.mocked(runPreflight);
 
 function baseConfig(): ProjectConfig {
   return {
@@ -69,7 +74,8 @@ describe('prepareAgentEnvironment — fresh mode', () => {
     npmInstallMock.mockReset();
     npmInstallMock.mockResolvedValue({ rc: 0, logPath: '/tmp/crew-npm-install-KAN-1.log' });
     vi.spyOn(console, 'log').mockImplementation(() => {});
-    vi.spyOn(buildChecksModule, 'buildPreflightChecks').mockReturnValue([]);
+    runPreflightMock.mockReset();
+    runPreflightMock.mockResolvedValue(undefined);
   });
 
   it('delegates docker bringup to startDockerBringup and returns the handle', async () => {
@@ -166,7 +172,8 @@ describe('prepareAgentEnvironment — resume mode docker step', () => {
     npmInstallMock.mockReset();
     npmInstallMock.mockResolvedValue({ rc: 0, logPath: '/tmp/crew-npm-install-KAN-1.log' });
     vi.spyOn(console, 'log').mockImplementation(() => {});
-    vi.spyOn(buildChecksModule, 'buildPreflightChecks').mockReturnValue([]);
+    runPreflightMock.mockReset();
+    runPreflightMock.mockResolvedValue(undefined);
   });
 
   it('calls ensureStackRunning when agent needs app and [docker] is set', async () => {
@@ -276,7 +283,8 @@ describe('prepareAgentEnvironment — playwright steps', () => {
     npmInstallMock.mockReset();
     npmInstallMock.mockResolvedValue({ rc: 0, logPath: '/tmp/crew-npm-install-KAN-1.log' });
     vi.spyOn(console, 'log').mockImplementation(() => {});
-    vi.spyOn(buildChecksModule, 'buildPreflightChecks').mockReturnValue([]);
+    runPreflightMock.mockReset();
+    runPreflightMock.mockResolvedValue(undefined);
   });
 
   it('resolves playwright.app_url against dockerPorts when enabled', async () => {
@@ -423,7 +431,8 @@ describe('prepareAgentEnvironment — preflight integration', () => {
     npmInstallMock.mockReset();
     npmInstallMock.mockResolvedValue({ rc: 0, logPath: '/tmp/crew-npm-install-KAN-1.log' });
     vi.spyOn(console, 'log').mockImplementation(() => {});
-    vi.spyOn(buildChecksModule, 'buildPreflightChecks').mockReturnValue([]);
+    runPreflightMock.mockReset();
+    runPreflightMock.mockResolvedValue(undefined);
   });
 
   it('runs preflight after docker bringup completes', async () => {
@@ -434,14 +443,9 @@ describe('prepareAgentEnvironment — preflight integration', () => {
       return Promise.resolve({ exitCode: 0 }) as unknown as ReturnType<typeof startDockerBringup>;
     });
 
-    vi.spyOn(buildChecksModule, 'buildPreflightChecks').mockReturnValue([
-      {
-        name: 'fake',
-        run: async () => {
-          events.push('preflight-ran');
-        },
-      },
-    ]);
+    runPreflightMock.mockImplementation(async () => {
+      events.push('preflight-ran');
+    });
 
     await prepareAgentEnvironment({
       config: configWithDocker(),
@@ -459,14 +463,7 @@ describe('prepareAgentEnvironment — preflight integration', () => {
       Promise.resolve({ exitCode: 0 }) as unknown as ReturnType<typeof startDockerBringup>,
     );
 
-    vi.spyOn(buildChecksModule, 'buildPreflightChecks').mockReturnValue([
-      {
-        name: 'fail',
-        run: async () => {
-          throw new PreflightError('fail', 'forced failure', 'fix it');
-        },
-      },
-    ]);
+    runPreflightMock.mockRejectedValue(new PreflightError('fail', 'forced failure', 'fix it'));
 
     await expect(
       prepareAgentEnvironment({
