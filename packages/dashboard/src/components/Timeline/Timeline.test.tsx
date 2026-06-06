@@ -370,6 +370,9 @@ describe('Timeline', () => {
     ]) {
       if (isCategoryChecked(label)) await userEvent.click(screen.getByLabelText(label));
     }
+    // The Filters popover is modal, so the timeline body is aria-hidden behind
+    // it. Close the popover before asserting on the empty-state controls.
+    await userEvent.keyboard('{Escape}');
     expect(screen.getByText(/No events match your filters/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Show all/i })).toBeInTheDocument();
     expect(screen.queryAllByTestId('transcript-row')).toHaveLength(0);
@@ -387,6 +390,8 @@ describe('Timeline', () => {
     await openFilters();
     await userEvent.click(screen.getByLabelText('Conversation'));
     await userEvent.click(screen.getByLabelText('Tools'));
+    // Close the modal Filters popover before reaching the empty-state behind it.
+    await userEvent.keyboard('{Escape}');
     expect(screen.getByText(/No events match your filters/i)).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: /Show all/i }));
     await openFilters();

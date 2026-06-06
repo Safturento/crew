@@ -56,6 +56,17 @@ function AppContent({ client }: { client: DaemonClient }) {
   const attention = useAttention(agents);
   useFaviconBadge(attention.count);
 
+  // CREW-232: the agent drawer is a Radix Dialog whose `open` is derived from
+  // the route. We retain the last agentKey while `open` is false so the
+  // slide-out animation still has a body to render as it animates closed
+  // (Radix keeps the content mounted until the close animation ends). The
+  // setState-during-render mirrors Timeline's `seededFor` re-seed pattern.
+  const drawerOpen = route.kind === 'agent-drawer';
+  const [drawerKey, setDrawerKey] = useState<string | null>(null);
+  if (drawerOpen && route.key !== drawerKey) {
+    setDrawerKey(route.key);
+  }
+
   // CREW-217: the action layer. `useActionToasts` surfaces the runner's
   // launch outcome (failed/launched) over SSE; `useRunnerStatus` drives the
   // no-runner degradation; `onAgentAction` finally backs the QuickAction
@@ -127,7 +138,15 @@ function AppContent({ client }: { client: DaemonClient }) {
         projects={projects}
         onConfirm={({ project, ticketKey }) => enqueue.mutate({ kind: 'run', project, ticketKey })}
       />
-      {route.kind === 'agent-drawer' && <AgentDrawer agentKey={route.key} />}
+      {drawerKey !== null && (
+        <AgentDrawer
+          agentKey={drawerKey}
+          open={drawerOpen}
+          onOpenChange={(open) => {
+            if (!open) navigate('/');
+          }}
+        />
+      )}
       {fixPrAgent && (
         <FixPrModal
           agentKey={fixPrAgent.key}

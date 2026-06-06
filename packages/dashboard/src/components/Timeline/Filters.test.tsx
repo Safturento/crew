@@ -3,7 +3,6 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
 import type { AgentDetailTokensByTool } from '../../data/types.js';
-import { OverlayGuardContext } from '../../routes/overlay-guard.js';
 import { Filters } from './Filters.js';
 import { defaultTimelineFilterState, type TimelineFilterState } from './filter-state.js';
 
@@ -163,16 +162,5 @@ describe('Filters (inclusion-tree)', () => {
     await userEvent.click(screen.getByRole('button', { name: /open timeline filters/i }));
     await userEvent.click(screen.getByTestId('tools-disclosure'));
     expect(screen.getByText(/no tool usage yet/i)).toBeInTheDocument();
-  });
-
-  it('reports overlay open through the guard when the popover opens (CREW-232)', async () => {
-    const setOverlayOpen = vi.fn<(open: boolean) => void>();
-    render(
-      <OverlayGuardContext.Provider value={{ setOverlayOpen, isOverlayOpen: () => false }}>
-        <Filters state={defaultTimelineFilterState} onChange={() => {}} tokensByTool={[]} />
-      </OverlayGuardContext.Provider>,
-    );
-    await userEvent.click(screen.getByRole('button', { name: /open timeline filters/i }));
-    expect(setOverlayOpen).toHaveBeenCalledWith(true);
   });
 });

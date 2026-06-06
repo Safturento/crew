@@ -2,7 +2,6 @@ import { ChevronDown, ChevronRight, Filter } from 'lucide-react';
 import { Fragment, useMemo, useState } from 'react';
 
 import type { AgentDetailTokensByTool } from '../../data/types.js';
-import { useOverlayGuard } from '../../routes/overlay-guard.js';
 import { aggregateByAlias } from '../../format/tool-alias.js';
 import { Button } from '../ui/button.js';
 import { Checkbox } from '../ui/checkbox.js';
@@ -29,7 +28,6 @@ interface FiltersProps {
 }
 
 export function Filters({ state, onChange, tokensByTool }: FiltersProps) {
-  const guard = useOverlayGuard();
   const [open, setOpen] = useState(false);
   const [toolsExpanded, setToolsExpanded] = useState(false);
 
@@ -55,18 +53,13 @@ export function Filters({ state, onChange, tokensByTool }: FiltersProps) {
     : 0;
 
   return (
-    <Popover
-      open={open}
-      onOpenChange={(next) => {
-        setOpen(next);
-        // Tell the drawer backdrop an overlay is open. On close, defer flipping
-        // the flag to the next tick: Radix dismisses on `pointerdown`, so the
-        // backdrop's synchronous `click` still needs to see `true` to skip its
-        // navigate. Verified empirically against the running drawer.
-        if (next) guard.setOverlayOpen(true);
-        else setTimeout(() => guard.setOverlayOpen(false), 0);
-      }}
-    >
+    // `modal` is load-bearing inside the drawer (a Radix Dialog). Radix routes
+    // Escape to only the top layer, but *outside-pointer* dismissal is per-layer
+    // for non-modal layers — so a click on the drawer's overlay would dismiss
+    // both this popover AND the drawer. Going modal sets disableOutsidePointerEvents,
+    // which gates off the Dialog layer's outside-pointer handler while the popover
+    // is open, so the dismissing click pops only the popover. See components/Drawer.tsx.
+    <Popover open={open} onOpenChange={setOpen} modal>
       <PopoverTrigger asChild>
         <Button
           color="idle"
