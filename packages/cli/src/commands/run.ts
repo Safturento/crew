@@ -358,6 +358,9 @@ export async function runRun(key: string, opts: RunOptions): Promise<never> {
       materializedAppUrl = env.appUrl;
     } else {
       envVars = result.base;
+      // May be undefined for an env-spec project whose env.toml defines no
+      // APP_URL — the `?? null` at the registerRun site then lets the daemon
+      // fall back to deriveAppUrl(cfg). (The legacy branch always has a URL.)
       materializedAppUrl = envVars.APP_URL;
       console.log(pc.dim(`→ materialized ${join(worktree, '.env')} from env.toml`));
       if (envVars.APP_URL) {
