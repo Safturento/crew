@@ -49,6 +49,68 @@ This is **Phase 3** of the plan (`docs/superpowers/plans/2026-06-05-crew-init-do
 - **`apt-deps` skips gracefully off-apt** — returns `ok` with a note when `apt-get` isn't on PATH
   (spec §8 lean). Never runs `sudo` non-interactively; fix is report-only.
 
+## Open questions
+
+- [ ] **BLOCKED: cannot rebase `CREW-227` onto `origin/main` inside this dispatched worktree —
+      `.claude/settings.json` is a read-only bind mount that `origin/main` has diverged.**
+      A fix-pr session was asked to rebase onto `origin/main` (which gained T3 / CREW-226 PR #327
+      and the doc-parity-gate cleanup PR #323) and apply review feedback. The rebase cannot run:
+  - `origin/main` (commit `ea78680`, PR #323) **removed 4 lines** from `.claude/settings.json`
+    (the `doc-parity-gate.sh` hook registration). Rebasing therefore requires git to rewrite the
+    worktree's `.claude/settings.json`.
+  - In this worktree, `.claude/settings.json` is a **read-only bind mount** (`/proc/mounts`:
+    `/dev/sdd … .claude/settings.json ext4 ro,…`). Any `unlink`/replace of it fails with
+    `Device or resource busy`, so `git rebase` aborts at the "detach HEAD" checkout.
+  - Workarounds attempted and ruled out: `git update-index --skip-worktree` (dropped when rebase
+    resets the index to `origin/main`, so the write is re-attempted); `sparse-checkout` (enabling
+    it must itself remove the mounted file → same `unlink` failure); a secondary writable worktree
+    (the final step still has to move _this_ live worktree's `settings.json` → same RO-mount write).
+    Every rebase/merge path requires materializing `origin/main`'s `settings.json` into the worktree,
+    which the RO mount forbids. This is a **crew-setup gap**, not a code conflict — aborted cleanly,
+    nothing pushed, no review feedback applied (there was no inline feedback beyond "rebase and push").
+  - **The only real content conflict is `registry.ts`** — and the rebase is otherwise clean.
+    **Verified** on 2026-06-05 by replaying all 10 branch commits onto `origin/main` (`ebbac6f`) in a
+    throwaway worktree under `/tmp` (where `settings.json` is writable). Result: `registry.ts` was the
+    _only_ conflict (once per check commit); `git diff origin/main..rebased` is exactly this branch's
+    15 files (+888/−2, no cross-contamination); and on the rebased tree **`npm run lint` ✓,
+    `npm run typecheck` ✓, and `crew-cli` tests pass 831/1-skip (all 14 `health/` files, 75 tests)**.
+    Rebased tip in that throwaway worktree was `213fcaf` (worktree since removed; ref not moved).
+  - **The resolved `registry.ts` (the union to apply during the local rebase):**
+
+    ```ts
+    import type { HealthCheck } from './types.js';
+    import { configValid } from './checks/config-valid.js';
+    import { envMaterialized } from './checks/env-materialized.js';
+    import { excludedCommands } from './checks/excluded-commands.js'; // from T3 (CREW-226)
+    import { appUrlResolves } from './checks/app-url-resolves.js'; // from T3 (CREW-226)
+    import { playwrightConfig } from './checks/playwright-config.js';
+    import { brunoSkeleton } from './checks/bruno-skeleton.js';
+    import { baselinePresent } from './checks/baseline-present.js';
+    import { dockerSocket } from './checks/docker-socket.js';
+    import { aptDeps } from './checks/apt-deps.js';
+    import { chromiumInstalled } from './checks/chromium-installed.js';
+
+    const ALL: HealthCheck[] = [
+      configValid,
+      envMaterialized,
+      excludedCommands,
+      appUrlResolves,
+      playwrightConfig,
+      brunoSkeleton,
+      baselinePresent,
+      dockerSocket,
+      aptDeps,
+      chromiumInstalled,
+    ];
+    ```
+
+  - **Resolution for the user / harness (pick one):** (a) rebase `CREW-227` onto `origin/main`
+    locally outside the sandbox, apply the `registry.ts` union above, and `git push --force-with-lease`
+    (verified clean — should be a 2-minute mechanical resolution); or (b) have the fix-pr harness
+    mount `.claude/settings.json` read-write (or skip mounting it) when the target branch has diverged
+    that file; or (c) have the harness refresh the mounted `settings.json` to `origin/main`'s content
+    before dispatch so the rebase is a no-op for it.
+
 ## Notes
 
 - Blocked-by T1 (registry core) — merged into base. T2 scaffolders — merged into base.
