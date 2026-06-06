@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { UseQueryResult } from '@tanstack/react-query';
 
-import { Timeline } from './Timeline.js';
+import { Timeline, eventKey } from './Timeline.js';
 import { useStateHistory, useTimeline } from '../../data/queries.js';
 import type {
   AgentDetailTokensByTool,
@@ -643,5 +643,29 @@ describe('Timeline', () => {
     expect(toggles[0]).toHaveAttribute('aria-expanded', 'false');
     expect(toggles[1]).toHaveAttribute('aria-expanded', 'true');
     expect(toggles[2]).toHaveAttribute('aria-expanded', 'true');
+  });
+});
+
+describe('eventKey', () => {
+  it('is stable across calls for a startup event (no uuid/timestamp, has startedAt)', () => {
+    const startupEvent = {
+      type: 'system',
+      subtype: 'crew_startup_docker',
+      status: 'completed',
+      startedAt: '2026-06-05T12:00:00.000Z',
+      summary: 'docker up',
+    } as unknown as TranscriptEvent;
+    expect(eventKey(startupEvent, 3)).toBe(eventKey(startupEvent, 3));
+    expect(eventKey(startupEvent, 3)).toBe('2026-06-05T12:00:00.000Z');
+  });
+
+  it('prefers uuid, then timestamp, then startedAt', () => {
+    expect(eventKey({ uuid: 'u1', timestamp: 't1' } as unknown as TranscriptEvent, 0)).toBe('u1');
+    expect(eventKey({ timestamp: 't1' } as unknown as TranscriptEvent, 0)).toBe('t1');
+    expect(eventKey({ startedAt: 's1' } as unknown as TranscriptEvent, 0)).toBe('s1');
+  });
+
+  it('falls back to a deterministic type:index key when no id field exists', () => {
+    expect(eventKey({ type: 'unknown' } as unknown as TranscriptEvent, 7)).toBe('unknown:7');
   });
 });

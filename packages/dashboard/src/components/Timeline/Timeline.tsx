@@ -228,8 +228,8 @@ export function Timeline({ agentKey, agentState, tokensByTool = [] }: TimelinePr
                       isOpen={isOpen}
                       onToggle={() => toggleSection(key)}
                     >
-                      {s.events.map((event) => (
-                        <TranscriptRow key={eventKey(event)} event={event} />
+                      {s.events.map((event, evIdx) => (
+                        <TranscriptRow key={eventKey(event, evIdx)} event={event} />
                       ))}
                     </TimelineSection>
                   </div>
@@ -324,9 +324,21 @@ function TimelineToolbar({
   );
 }
 
-function eventKey(event: TranscriptEvent): string {
-  const r = event as unknown as { uuid?: string; timestamp?: string };
-  return r.uuid ?? r.timestamp ?? Math.random().toString(36).slice(2);
+/**
+ * Stable React key for a transcript row. Falls back through every id-ish field
+ * an event might carry — `crew_startup_*` events have only `startedAt`, so
+ * omitting it (the old `Math.random()` path) gave them a fresh key every render,
+ * remounting the row on each 1s active-section tick and wiping its expand state.
+ * The final `${type}:${index}` keeps keys deterministic for id-less events.
+ */
+export function eventKey(event: TranscriptEvent, index: number): string {
+  const r = event as unknown as {
+    uuid?: string;
+    timestamp?: string;
+    startedAt?: string;
+    type?: string;
+  };
+  return r.uuid ?? r.timestamp ?? r.startedAt ?? `${r.type ?? 'event'}:${index}`;
 }
 
 function matchesFilters(
