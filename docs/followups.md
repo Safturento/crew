@@ -232,6 +232,8 @@ Organization: Active is grouped by topic (not chronology) since the dominant acc
 
 #### 2026-06-06 — figma-snapshot committed baseline predates content-scoped freshness (full re-enrich needed)
 
+**Ticket:** [CREW-238](https://safturento.atlassian.net/browse/CREW-238)
+
 **What:** The committed `.crew/figma-snapshot/meta.json` is from 2026-05-22 and only carries `figmaFileVersion` + `capturedAt` — no `nodeHashes`. `crew figma-snapshot --check` therefore can't do content-scoped freshness and bails with "snapshot predates content-scoped freshness … Run the figma-snapshot-refresh skill to regenerate the baseline." A clean baseline needs a full re-export + re-enrich of every tracked node.
 
 **Why noticed:** During the pill/button hover-states change (2026-06-06) I ran the figma-snapshot-refresh producer gate after adding a Figma "Hover states" reference frame. `--check` reported the pre-format baseline; a full refresh turned out to be a 44-node migration unrelated to the hover work, so it was pulled back out (baseline restored via `git checkout .crew/figma-snapshot/`) and parked here.
