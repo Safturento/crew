@@ -32,4 +32,31 @@ describe('pillSurfaceClasses', () => {
     const cls = pillSurfaceClasses('white', 'mid');
     expect(cls).toBe('text-foreground bg-white/5 border border-white/10');
   });
+
+  describe('hover (interactive pills only)', () => {
+    it('omits hover classes when hover is not requested', () => {
+      expect(pillSurfaceClasses('running', 'muted')).not.toContain('hover:');
+      expect(pillSurfaceClasses('running', 'ghost', undefined, false)).not.toContain('hover:');
+    });
+
+    it('ghost: acquires the muted surface on hover (filter no-ops on transparent)', () => {
+      const cls = pillSurfaceClasses('running', 'ghost', undefined, true);
+      expect(cls).toBe('text-slate-400 bg-transparent hover:bg-slate-1050 hover:brightness-130');
+    });
+
+    it('muted: brightens the existing surface on hover', () => {
+      const cls = pillSurfaceClasses('running', 'muted', undefined, true);
+      expect(cls).toBe('text-slate-400 bg-slate-1050 hover:brightness-125');
+    });
+
+    it('mid: brightens the existing surface on hover', () => {
+      const cls = pillSurfaceClasses('running', 'mid', undefined, true);
+      expect(cls).toBe('text-slate-400 bg-slate-1050 border border-slate-500 hover:brightness-125');
+    });
+
+    it('loud: brightens the solid surface on hover (gentler, dark-on-light)', () => {
+      const cls = pillSurfaceClasses('running', 'loud', undefined, true);
+      expect(cls).toBe('text-slate-950 bg-slate-400 border border-slate-400 hover:brightness-110');
+    });
+  });
 });

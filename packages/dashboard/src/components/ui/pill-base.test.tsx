@@ -86,6 +86,41 @@ describe('PillBase', () => {
     expect(el.className).toContain('text-slate-400');
   });
 
+  it('static span pills get no hover/cursor/transition (not interactive)', () => {
+    render(
+      <PillBase color="running" intensity="mid" shape="h-5 px-2">
+        static
+      </PillBase>,
+    );
+    const el = screen.getByText('static');
+    expect(el.className).not.toContain('hover:');
+    expect(el.className).not.toContain('cursor-pointer');
+    expect(el.className).not.toContain('transition');
+  });
+
+  it('button pills get hover surface + cursor-pointer + transition', () => {
+    render(
+      <PillBase as="button" color="running" intensity="mid" shape="h-8 px-3">
+        go
+      </PillBase>,
+    );
+    const el = screen.getByText('go');
+    expect(el.className).toContain('hover:brightness-125');
+    expect(el.className).toContain('cursor-pointer');
+    expect(el.className).toContain('transition');
+  });
+
+  it('asChild pills are interactive and get the hover surface', () => {
+    render(
+      <PillBase asChild color="running" intensity="ghost" shape="h-6 px-2">
+        <a href="/x">link</a>
+      </PillBase>,
+    );
+    const link = screen.getByRole('link', { name: 'link' });
+    expect(link.className).toContain('hover:bg-slate-1050');
+    expect(link.className).toContain('cursor-pointer');
+  });
+
   it('asChild composes icon slot + class string onto the wrapped child element', () => {
     render(
       <PillBase asChild shape="h-6 px-2" icon={<svg data-testid="icon" />}>

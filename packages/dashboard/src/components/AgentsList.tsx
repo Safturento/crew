@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useId, useState } from 'react';
 
 import type { Agent, Project } from '../data/types.js';
 import { sortAgentsByPriority } from '../data/state-meta.js';
 import { MetricsTrendWidget } from './MetricsTrendWidget.js';
 import { ProjectSection } from './ProjectSection.js';
 import type { QuickActionKind } from './AgentRow.js';
+import { Switch } from './ui/switch.js';
 
 const HIDE_FINISHED_KEY = 'crew.dashboard.hideFinished';
 
@@ -37,13 +38,11 @@ export function AgentsList({
   runnerOnline = true,
 }: AgentsListProps) {
   const [hideFinished, setHideFinished] = useState<boolean>(readHideFinished);
+  const hideFinishedId = useId();
 
-  const toggleHideFinished = () => {
-    setHideFinished((prev) => {
-      const next = !prev;
-      writeHideFinished(next);
-      return next;
-    });
+  const handleHideFinishedChange = (next: boolean) => {
+    setHideFinished(next);
+    writeHideFinished(next);
   };
 
   const visibleAgents = hideFinished ? agents.filter((a) => a.state !== 'finished') : agents;
@@ -59,21 +58,20 @@ export function AgentsList({
     <div className="mx-auto flex w-full max-w-7xl flex-col gap-4 p-6">
       <MetricsTrendWidget />
       <div className="flex items-center justify-end">
-        <button
-          type="button"
-          role="switch"
-          aria-checked={hideFinished}
-          aria-label="Hide finished"
-          onClick={toggleHideFinished}
-          className={[
-            'inline-flex h-6 items-center gap-1.5 rounded-full border px-2 font-mono text-xs leading-none transition-opacity hover:opacity-80',
-            hideFinished
-              ? 'border-white/30 bg-white/10 text-foreground'
-              : 'border-white/10 bg-transparent text-muted-foreground',
-          ].join(' ')}
-        >
-          Hide finished
-        </button>
+        <span className="inline-flex items-center gap-1.5">
+          <Switch
+            id={hideFinishedId}
+            aria-label="Hide finished"
+            checked={hideFinished}
+            onCheckedChange={handleHideFinishedChange}
+          />
+          <label
+            htmlFor={hideFinishedId}
+            className="cursor-pointer select-none font-mono text-xs leading-none text-muted-foreground"
+          >
+            Hide finished
+          </label>
+        </span>
       </div>
       <div className="flex flex-col gap-7">
         {projects

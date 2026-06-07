@@ -67,20 +67,41 @@ const TOOL_PILL_TOKENS = Object.fromEntries(
   ]),
 ) as Record<ToolColorKey, PillTokens>;
 
+// Hover lift. A brightness filter is color-agnostic, so it works across all 8
+// colors + the tool palette with no new tokens. It no-ops on a transparent
+// surface, so `ghost` instead *acquires* the muted surface on hover. `loud` is
+// dark-text-on-light so it gets a gentler value than the dark translucent tiers.
+// Applied only when the pill renders an interactive element (see PillBase).
+function hoverClasses(t: PillTokens, intensity: PillIntensity): string {
+  switch (intensity) {
+    case 'ghost':
+      // Ghost has no resting surface, so the filter would no-op — it acquires
+      // the muted surface on hover, then brightens it for a more pronounced lift.
+      return ` hover:${t.bg} hover:brightness-130`;
+    case 'muted':
+    case 'mid':
+      return ' hover:brightness-125';
+    case 'loud':
+      return ' hover:brightness-110';
+  }
+}
+
 export function pillSurfaceClasses(
   color: PillColor,
   intensity: PillIntensity,
   toolColor?: ToolColorKey,
+  hover = false,
 ): string {
   const t = toolColor ? TOOL_PILL_TOKENS[toolColor] : PILL_TOKENS[color];
+  const h = hover ? hoverClasses(t, intensity) : '';
   switch (intensity) {
     case 'ghost':
-      return `${t.text} bg-transparent`;
+      return `${t.text} bg-transparent${h}`;
     case 'muted':
-      return `${t.text} ${t.bg}`;
+      return `${t.text} ${t.bg}${h}`;
     case 'mid':
-      return `${t.text} ${t.bg} border ${t.border}`;
+      return `${t.text} ${t.bg} border ${t.border}${h}`;
     case 'loud':
-      return `${t.textOnSolid} ${t.solidBg} border ${t.solidBorder}`;
+      return `${t.textOnSolid} ${t.solidBg} border ${t.solidBorder}${h}`;
   }
 }
