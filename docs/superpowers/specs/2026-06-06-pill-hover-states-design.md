@@ -13,7 +13,7 @@ they are interactable. The lift must read cleanly against the dark theme.
 
 ## Mechanism — no new public API
 
-Hover is *derived*, not configured. `PillBase` already renders an interactive element for
+Hover is _derived_, not configured. `PillBase` already renders an interactive element for
 interactable pills (`as="button"`) and the asChild slot for links/custom triggers, vs a plain
 `span` for static pills. That distinction **is** "interactable":
 
@@ -37,17 +37,17 @@ The only call site is `PillBase`; `pill-variants.test.ts` is the only other refe
 The intensity surfaces are solid custom dark hex shades (`--color-slate-1050: #1c2538`, etc.),
 not opacity overlays. The lift is a CSS brightness filter, which is color-agnostic — it works on
 all 8 colors (7 states + `white`) and the tool-color palette without any new tokens. `hover:` is
-prefixed onto the existing token strings where a surface needs to *appear*.
+prefixed onto the existing token strings where a surface needs to _appear_.
 
-| intensity | resting               | hover                                   |
-| --------- | --------------------- | --------------------------------------- |
-| ghost     | `text` + transparent  | acquires the muted surface (`hover:` + `t.bg`) |
-| muted     | `text` + `t.bg`       | `hover:brightness-125`                  |
-| mid       | `text` + `t.bg` + border | `hover:brightness-125`               |
-| loud      | `textOnSolid` + solid `-400` | `hover:brightness-110` (tune/invert live) |
+| intensity | resting                      | hover                                          |
+| --------- | ---------------------------- | ---------------------------------------------- |
+| ghost     | `text` + transparent         | acquires the muted surface (`hover:` + `t.bg`) |
+| muted     | `text` + `t.bg`              | `hover:brightness-125`                         |
+| mid       | `text` + `t.bg` + border     | `hover:brightness-125`                         |
+| loud      | `textOnSolid` + solid `-400` | `hover:brightness-110` (tune/invert live)      |
 
 Why ghost differs: a brightness filter no-ops on a transparent surface (nothing to brighten), so
-ghost instead *gains* the muted surface on hover.
+ghost instead _gains_ the muted surface on hover.
 
 Interactive elements also get `transition-[filter,background-color] duration-100` and
 `cursor-pointer`. These apply only when `interactive` is true.

@@ -27,10 +27,16 @@ export function PillBase({
   children,
   ...rest
 }: PillBaseProps) {
+  // "Interactable" = the pill renders an interactive element (a <button> or an
+  // asChild trigger/link). Only those get hover styling — static <span> pills
+  // don't. No separate prop: the markup already encodes interactivity.
+  const interactive = as === 'button' || asChild;
+
   const mergedClassName = cn(
     'inline-flex w-fit items-center whitespace-nowrap',
     shape,
-    pillSurfaceClasses(color, intensity, toolColor),
+    pillSurfaceClasses(color, intensity, toolColor, interactive),
+    interactive && 'cursor-pointer transition-[filter,background-color] duration-100',
     className,
   );
 

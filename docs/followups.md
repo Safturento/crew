@@ -18,6 +18,7 @@ Organization: Active is grouped by topic (not chronology) since the dominant acc
     - [2026-05-11 — `idle` and `waiting` agent states not reachable from daemon fixtures](#2026-05-11--idle-and-waiting-agent-states-not-reachable-from-daemon-fixtures)
     - [2026-05-09 — Crew Dashboard Screens: 3 remaining ad-hoc modal frames need DS Modal swap + semantic-token bindings](#2026-05-09--crew-dashboard-screens-3-remaining-ad-hoc-modal-frames-need-ds-modal-swap--semantic-token-bindings)
   - [Visual Fidelity Tooling](#visual-fidelity-tooling)
+    - [2026-06-06 — figma-snapshot committed baseline predates content-scoped freshness (full re-enrich needed)](#2026-06-06--figma-snapshot-committed-baseline-predates-content-scoped-freshness-full-re-enrich-needed)
     - [2026-06-04 — chrome MCP browser fails to auto-start on port 9223 in crew dispatches](#2026-06-04--chrome-mcp-browser-fails-to-auto-start-on-port-9223-in-crew-dispatches)
     - [2026-06-03 — No live render surface for caller-less DS primitives (visual-fidelity Step 5 gap)](#2026-06-03--no-live-render-surface-for-caller-less-ds-primitives-visual-fidelity-step-5-gap)
     - [2026-05-18 — visual-fidelity-check: per-fixture snapshot copy vs committed artifact + Step 4 path-vocab drift](#2026-05-18--visual-fidelity-check-per-fixture-snapshot-copy-vs-committed-artifact--step-4-path-vocab-drift)
@@ -228,6 +229,27 @@ Organization: Active is grouped by topic (not chronology) since the dominant acc
 - [ ] Padding/gap/radius FLOAT bindings in the same pass, or deferred?
 
 ### Visual Fidelity Tooling
+
+#### 2026-06-06 — figma-snapshot committed baseline predates content-scoped freshness (full re-enrich needed)
+
+**What:** The committed `.crew/figma-snapshot/meta.json` is from 2026-05-22 and only carries `figmaFileVersion` + `capturedAt` — no `nodeHashes`. `crew figma-snapshot --check` therefore can't do content-scoped freshness and bails with "snapshot predates content-scoped freshness … Run the figma-snapshot-refresh skill to regenerate the baseline." A clean baseline needs a full re-export + re-enrich of every tracked node.
+
+**Why noticed:** During the pill/button hover-states change (2026-06-06) I ran the figma-snapshot-refresh producer gate after adding a Figma "Hover states" reference frame. `--check` reported the pre-format baseline; a full refresh turned out to be a 44-node migration unrelated to the hover work, so it was pulled back out (baseline restored via `git checkout .crew/figma-snapshot/`) and parked here.
+
+**Anchors:**
+
+- `.crew/figma-snapshot/meta.json` — old-format baseline (no `nodeHashes`)
+- `.claude/skills/figma-snapshot-refresh/` — the full-refresh procedure (REST export → per-node enrich via `use_figma` → merge → verify)
+- `crew figma-snapshot --check` — the staleness reporter that flags it
+
+**What's been considered:**
+
+- The full refresh exports **44 nodes**, not just DS components: it sweeps in brainstorm scratch frames (`660:859`, `665:864` — 55 nested instances) and every Dashboard Screen, because `[visual_fidelity].figma_pages` includes the whole "Composites" + "Dashboard Screens" pages. The brainstorm frames are scratch artifacts that arguably shouldn't be tracked at all — worth scoping the export (or excluding scratch frames) as part of this.
+- Enrichment is a manual round-trip (each batch's JSON hand-merged into per-node files) — error-prone and token-heavy. A CLI-side `--enrich` would remove the hand-merge entirely (overlaps the existing 2026-05-12 "Move PAGE_DIR_MAP into project config" tooling cleanup).
+
+**Shape of work:** one focused session: optionally scope the export to exclude scratch frames, then run the figma-snapshot-refresh full procedure end-to-end and commit the regenerated baseline. Possibly a small CLI change to automate enrichment.
+
+**Open questions:** Should brainstorm/scratch frames be excluded from the snapshot scope before regenerating, or enriched as-is?
 
 #### 2026-06-04 — chrome MCP browser fails to auto-start on port 9223 in crew dispatches
 
@@ -519,6 +541,8 @@ Organization: Active is grouped by topic (not chronology) since the dominant acc
 **Shape of work:** ~15min: confirm with design owner whether the toggle stays in code (add to Figma) or comes out of code (remove). Easy decision once asked.
 
 **Open questions:** Which way does the user want to reconcile?
+
+**2026-06-06 update — half reconciled:** decision is "keep it." The bespoke outlined-pill toggle (with its own `hover:opacity-80`) was replaced with the DS `Switch` component (`AgentsList.tsx`, mirrors `LiveModeToggle`) during the pill/button hover-states change. The control now has a DS basis that exists in Figma (`Switch` set `335:242`), resolving the "scope drift / no DS reference" half. **Remaining:** the Figma AgentsList _screen_ (`1:2`) still doesn't depict the toggle — add a `Switch` instance there for screen-level parity, then this can move to Resolved.
 
 #### 2026-05-10 — Wire dashboard QuickAction buttons (Resume / Finish / Inspect / Provide input) to daemon endpoints
 
