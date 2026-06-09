@@ -1,5 +1,29 @@
 {
   "skillListingBudgetFraction": 0.02,
+  "permissions": {
+    "allow": [
+      "Bash(npm run test:run)",
+      "Bash(npm run test:run *)",
+      "Bash(npm run typecheck)",
+      "Bash(npm run typecheck *)",
+      "Bash(npm run lint)",
+      "Bash(npm run lint *)",
+      "Bash(npm run test)",
+      "Bash(npm run test *)",
+      "Bash(npm run format:check)",
+      "Bash(npm run format:check *)",
+      "Bash(npm run lint:agents)",
+      "Bash(npm run lint:agents *)",
+      "mcp__atlassian__jira_get_issue",
+      "mcp__atlassian__jira_get_transitions",
+      "mcp__atlassian__jira_search",
+      "mcp__claude_ai_Atlassian_Rovo__searchJiraIssuesUsingJql",
+      "mcp__claude_ai_Atlassian_Rovo__getTransitionsForJiraIssue",
+      "mcp__playwright__browser_take_screenshot",
+      "mcp__playwright__browser_snapshot",
+      "mcp__playwright__browser_console_messages"
+    ]
+  },
   "sandbox": {
     "enabled": true,
     "allowUnsandboxedCommands": false,
