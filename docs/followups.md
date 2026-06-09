@@ -28,7 +28,7 @@ Organization: Active is grouped by topic (not chronology) since the dominant acc
     - [2026-05-16 — figma-snapshot `resolvedStylesFor` text-color heuristic picks the first TEXT descendant](#2026-05-16--figma-snapshot-resolvedstylesfor-text-color-heuristic-picks-the-first-text-descendant)
     - [2026-05-15 — `crew fix-pr` does not refresh `.mcp.json` — chrome wiring goes stale on resume](#2026-05-15--crew-fix-pr-does-not-refresh-mcpjson--chrome-wiring-goes-stale-on-resume)
   - [Dashboard UI](#dashboard-ui)
-    - [2026-06-06 — `dialog` / `popover` animation classes are inert (no tailwindcss-animate plugin)](#2026-06-06--dialog--popover-animation-classes-are-inert-no-tailwindcss-animate-plugin)
+    - [2026-06-08 — Filters popover open inside the agent drawer makes the drawer click-dead (trigger/outside click dismisses the drawer)](#2026-06-08--filters-popover-open-inside-the-agent-drawer-makes-the-drawer-click-dead-triggeroutside-click-dismisses-the-drawer)
     - [2026-06-05 — Drawer `liveMode` + section-collapse leak across an in-place agent switch](#2026-06-05--drawer-livemode--section-collapse-leak-across-an-in-place-agent-switch)
     - [2026-06-05 — Dashboard has no cancel action; CLI kill never notifies the daemon](#2026-06-05--dashboard-has-no-cancel-action-cli-kill-never-notifies-the-daemon)
     - [2026-06-04 — New Run modal step 2 is a text entry, not the Figma open-ticket picker](#2026-06-04--new-run-modal-step-2-is-a-text-entry-not-the-figma-open-ticket-picker)
@@ -94,6 +94,7 @@ Organization: Active is grouped by topic (not chronology) since the dominant acc
   - [2026-05-08 — Surface `crew finish` step results in the dashboard](#2026-05-08--surface-crew-finish-step-results-in-the-dashboard)
   - [2026-06-08 — Hook command paths in settings.json were relative, breaking on cwd drift](#2026-06-08--hook-command-paths-in-settingsjson-were-relative-breaking-on-cwd-drift)
   - [2026-05-24 — `CREW_STARTUP_EVENTS_DIR` bypasses `DaemonConfig` and reads `process.env` directly inside `app.ts`](#2026-05-24--crew_startup_events_dir-bypasses-daemonconfig-and-reads-processenv-directly-inside-appts)
+  - [2026-06-06 — `dialog` / `popover` animation classes are inert (no tailwindcss-animate plugin)](#2026-06-06--dialog--popover-animation-classes-are-inert-no-tailwindcss-animate-plugin)
   - [2026-06-05 — Preflight fail-fast order surfaces `bruno-skeleton` before `excluded-commands` (red test on main)](#2026-06-05--preflight-fail-fast-order-surfaces-bruno-skeleton-before-excluded-commands-red-test-on-main)
   - [2026-06-04 — Daemon test suite flakes under full-parallel `test:run`](#2026-06-04--daemon-test-suite-flakes-under-full-parallel-testrun)
   - [2026-06-05 — Global doc-parity hook double-warns in crew (two parity warnings per commit)](#2026-06-05--global-doc-parity-hook-double-warns-in-crew-two-parity-warnings-per-commit)
@@ -368,19 +369,19 @@ Organization: Active is grouped by topic (not chronology) since the dominant acc
 
 ### Dashboard UI
 
-#### 2026-06-06 — `dialog` / `popover` animation classes are inert (no tailwindcss-animate plugin)
+#### 2026-06-08 — Filters popover open inside the agent drawer makes the drawer click-dead (trigger/outside click dismisses the drawer)
 
-**Ticket:** [CREW-237](https://safturento.atlassian.net/browse/CREW-237)
+**What:** When the Timeline **Filters** popover is open inside the agent drawer, Radix's `react-dismissable-layer` sets inline `pointer-events: none` on `document.body` **and on the drawer's `Dialog.Content`** (only the top-most layer — the popover content — gets `pointer-events: auto`). The drawer is a modal `Dialog` (`disableOutsidePointerEvents`), and the non-modal popover layering above it leaves the whole drawer subtree non-interactive. Consequences while the popover is open: (a) the Filters **trigger** itself computes `pointer-events: none`, so a click on it hit-tests through to the `drawer-backdrop` behind the content; clicking the backdrop is an outside-interaction that can dismiss the drawer; (b) anything else in the drawer body (e.g. the empty-state "Show all" CTA) is likewise click-dead until the popover closes. Escape still closes just the popover. The Drawer's own doc comment asserts the intended contract — _"a Popover opened inside dismisses on its own without closing the drawer"_ — which this violates.
 
-**What:** `packages/dashboard/src/components/ui/dialog.tsx` and `popover.tsx` carry `data-[state=open]:animate-in`, `fade-in-0`, `zoom-in-95`, `slide-in-from-*`, etc. — the standard shadcn animation classes. But the project has **no** `tailwindcss-animate` (Tailwind v3) or `tw-animate-css` (Tailwind v4) plugin installed and no `@plugin`/`@import` for one in `index.css`, so those utilities don't exist and the classes are dead no-ops. The Modal/AlertModal/Popover surfaces currently pop in/out with no animation.
+**Why noticed:** CREW-237 (adopt `tw-animate-css`). The e2e test `agent-drawer.spec.ts > "empty filter state — show empty copy + Show all link, then recover"` fails in the crew worktree container: it opens Filters, toggles every category off, then clicks the trigger to close the popover — that click lands on the backdrop and the drawer ends up dismissed, so the subsequent `getByRole('button', {name: /open timeline filters/i})` times out (30s) against a closed drawer. Confirmed **pre-existing and animation-independent**: the failure reproduces identically with the pre-CREW-237 source (popover animations inert, custom drawer keyframes), because the `pointer-events: none` is set by Radix JS, not by any CSS animation class. It is timing-sensitive (a probe-delayed reproduction keeps the drawer open), which is likely why it passes in faster/slower environments and had not been caught.
 
-**Why noticed:** Building the CREW-232 `Drawer` composite (PR for the Radix-Dialog drawer migration), I went to reuse `slide-in-from-right` for the drawer's enter/exit and found the utility undefined. Worked around it by defining custom `drawer-in`/`drawer-out`/`overlay-in`/`overlay-out` keyframes + `--animate-*` theme vars in `index.css` (matching the existing `att-pulse` pattern) — so the drawer animates, but the broader dead-class problem remains for the other overlays.
+**Anchors:** `packages/dashboard/src/components/Drawer.tsx` (modal `Dialog.Content` + `drawer-backdrop` overlay; the doc comment claiming nested-popover safety); `packages/dashboard/src/components/Timeline/Filters.tsx` (the popover); `packages/dashboard/tests/e2e/agent-drawer.spec.ts:118` (the failing test); `radix-ui` `react-dismissable-layer` branch-pointer-events logic. Repro: open `#/agent/<key>`, open Filters, click the Filters trigger again — observe the backdrop is the hit-target at the trigger's centre (`document.elementFromPoint`).
 
-**Anchors:** `packages/dashboard/src/components/ui/dialog.tsx`, `packages/dashboard/src/components/ui/popover.tsx`, `packages/dashboard/src/index.css` (`@theme` `--animate-*`, `@keyframes`), `packages/dashboard/package.json` (no animate dep).
+**What's been considered:** Likely fixes — (a) make the Filters `Popover` **modal** so it owns the top dismissable layer cleanly; (b) guard the drawer's `onPointerDownOutside` / `onInteractOutside` to ignore interactions originating from the Filters trigger or popover; (c) give the drawer overlay `pointer-events-none` and rely on content-level dismissal. Each needs a verify pass against all drawer+popover interactions (the drawer also hosts other popovers/menus). Not done here — out of scope for the animation ticket, and a modality change is broad enough to warrant its own focused change + e2e hardening.
 
-**What's been considered:** Two clean directions — (a) adopt `tw-animate-css` (the Tailwind v4 successor) via `@import 'tw-animate-css'` in `index.css`, which lights up every existing `animate-in`/`slide-*` class at once (so all modals/popovers start animating — a visual change to audit); or (b) strip the dead classes and define only the handful of custom keyframes actually wanted, per-surface (the path the Drawer took). (a) is less code but a broader behavior change; (b) is explicit but more verbose.
+**Shape of work:** small-to-medium — one Radix prop/guard change in `Drawer.tsx` and/or `Filters.tsx`, plus making the `agent-drawer.spec.ts` empty-state test deterministic (it currently encodes the buggy "click trigger to close" path). Worth a dedicated ticket.
 
-**Shape of work:** small — one decision (adopt-plugin vs strip-and-define) plus the follow-through. If (a), audit the now-live modal/popover animations for jank. Out of scope for the drawer PR, which only needed its own keyframes.
+**Open questions:** Is making the Filters popover `modal` the right global default for popovers hosted inside the drawer, or should the drawer instead be hardened to never dismiss on interactions that originate from a descendant layer? Are other in-drawer popovers/menus (if any) affected the same way?
 
 #### 2026-06-05 — Drawer `liveMode` + section-collapse leak across an in-place agent switch
 
@@ -1561,6 +1562,20 @@ The SSE shape feels right — matches slice 1c's "live updates" feel.
 **Why noticed:** Debugging the pre-existing `events.test.ts > streams a published event with correct id/event/data framing` failure during a "address the test failures agents keep mentioning in PRs" sweep. Conversation 2026-05-24; the test fix landed in `fix/daemon-events-test-isolation`, but the root cause is that one env var escaped the config layer.
 
 **Anchors:** `packages/daemon/src/app.ts:105-118` (onReady hook), `packages/daemon/src/config.ts` (`parseDaemonConfig` — needs the new field), `packages/daemon/src/services/IngestService.ts` (`watchStartupEvents` consumer), `packages/daemon/src/routes/events.test.ts` (current workaround at `setupApp`).
+
+### 2026-06-06 — `dialog` / `popover` animation classes are inert (no tailwindcss-animate plugin)
+
+**Resolved 2026-06-08:** Adopted `tw-animate-css` (the Tailwind v4 successor to `tailwindcss-animate`) — added the dep to `packages/dashboard` and `@import 'tw-animate-css';` after the Tailwind import in `index.css`, lighting up every existing `animate-in` / `fade-in-0` / `zoom-in-95` / `slide-*` class at once. Dialog, popover, and alert-dialog now visibly animate (verified the utilities emit into the built CSS — they were dead no-ops before). `Drawer.tsx` migrated off its bespoke `animate-drawer-*` / `animate-overlay-*` classes onto the standard `slide-in-from-right` / `slide-out-to-right` (panel) + `fade-in-0` / `fade-out-0` (overlay), preserving the prior 300ms-in / 200ms-out timing and decelerating easing; the custom `drawer-*` / `overlay-*` keyframes + `--animate-*` vars were removed from `index.css` (`att-pulse` kept). (CREW-237)
+
+**What:** `packages/dashboard/src/components/ui/dialog.tsx` and `popover.tsx` carry `data-[state=open]:animate-in`, `fade-in-0`, `zoom-in-95`, `slide-in-from-*`, etc. — the standard shadcn animation classes. But the project has **no** `tailwindcss-animate` (Tailwind v3) or `tw-animate-css` (Tailwind v4) plugin installed and no `@plugin`/`@import` for one in `index.css`, so those utilities don't exist and the classes are dead no-ops. The Modal/AlertModal/Popover surfaces currently pop in/out with no animation.
+
+**Why noticed:** Building the CREW-232 `Drawer` composite (PR for the Radix-Dialog drawer migration), I went to reuse `slide-in-from-right` for the drawer's enter/exit and found the utility undefined. Worked around it by defining custom `drawer-in`/`drawer-out`/`overlay-in`/`overlay-out` keyframes + `--animate-*` theme vars in `index.css` (matching the existing `att-pulse` pattern) — so the drawer animates, but the broader dead-class problem remains for the other overlays.
+
+**Anchors:** `packages/dashboard/src/components/ui/dialog.tsx`, `packages/dashboard/src/components/ui/popover.tsx`, `packages/dashboard/src/index.css` (`@theme` `--animate-*`, `@keyframes`), `packages/dashboard/package.json` (no animate dep).
+
+**What's been considered:** Two clean directions — (a) adopt `tw-animate-css` (the Tailwind v4 successor) via `@import 'tw-animate-css'` in `index.css`, which lights up every existing `animate-in`/`slide-*` class at once (so all modals/popovers start animating — a visual change to audit); or (b) strip the dead classes and define only the handful of custom keyframes actually wanted, per-surface (the path the Drawer took). (a) is less code but a broader behavior change; (b) is explicit but more verbose.
+
+**Shape of work:** small — one decision (adopt-plugin vs strip-and-define) plus the follow-through. If (a), audit the now-live modal/popover animations for jank. Out of scope for the drawer PR, which only needed its own keyframes.
 
 ### 2026-06-05 — Preflight fail-fast order surfaces `bruno-skeleton` before `excluded-commands` (red test on main)
 
