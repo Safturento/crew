@@ -26,6 +26,18 @@ const daemonConfigSchema = z.object({
   // mounts ${HOME}/.crew/runner into the container at /root/.crew/runner:ro,
   // so os.homedir() == /root inside the daemon resolves to the same place.
   CREW_RUNNER_LOG_DIR: z.string().default(() => join(homedir(), '.crew', 'runner')),
+  // CREW-201: directory holding the CLI's startup-event JSONL stream,
+  // tailed by a chokidar watcher in app.ts onReady. Defaults to
+  // `~/.crew/startup` (the path the CLI writes to); docker-compose mounts
+  // ${HOME}/.crew/startup into the container at /root/.crew/startup, so
+  // os.homedir() == /root inside the daemon resolves to the same place.
+  // The default factory also consults process.env so the package-level
+  // vitest setup (src/test/setup.ts), which pins this var to an empty temp
+  // dir as a blanket watcher safety net, still flows through for tests that
+  // build config from a partial env object without naming this key.
+  CREW_STARTUP_EVENTS_DIR: z
+    .string()
+    .default(() => process.env.CREW_STARTUP_EVENTS_DIR ?? join(homedir(), '.crew', 'startup')),
 });
 
 export interface DaemonConfig {
@@ -39,6 +51,8 @@ export interface DaemonConfig {
   transcriptsHome: string | undefined;
   /** Directory holding the runner's `runner.log` (GET /api/runner/logs). */
   runnerLogDir: string;
+  /** Directory holding the CLI's startup-event JSONL stream (watched on boot). */
+  startupEventsDir: string;
 }
 
 /**
@@ -59,5 +73,6 @@ export function parseDaemonConfig(
     logFile: parsed.CREW_LOG_FILE,
     transcriptsHome: parsed.CREW_TRANSCRIPTS_HOME === '' ? undefined : parsed.CREW_TRANSCRIPTS_HOME,
     runnerLogDir: parsed.CREW_RUNNER_LOG_DIR,
+    startupEventsDir: parsed.CREW_STARTUP_EVENTS_DIR,
   };
 }

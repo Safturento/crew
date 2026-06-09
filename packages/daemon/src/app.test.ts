@@ -26,6 +26,9 @@ async function buildTestApp(opts: { dashboardDistDir?: string } = {}) {
       logFile: '/tmp/daemon.log',
       transcriptsHome: undefined,
       runnerLogDir: '/tmp/does-not-matter/runner',
+      // Pinned to the package-level empty temp dir (src/test/setup.ts) so the
+      // onReady startup-event watcher's initial scan is a clean no-op.
+      startupEventsDir: process.env.CREW_STARTUP_EVENTS_DIR ?? '/tmp/does-not-matter/startup',
     },
     logger: createLogger(),
     db,
