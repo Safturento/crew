@@ -35,7 +35,7 @@ function Drawer({ open, onOpenChange, title, className, children }: DrawerProps)
       <DialogPrimitive.Portal>
         <DialogPrimitive.Overlay
           data-testid="drawer-backdrop"
-          className="fixed inset-0 z-50 bg-black/40 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=open]:fade-in-0 data-[state=closed]:fade-out-0 data-[state=open]:duration-200 data-[state=closed]:duration-150"
+          className="fixed inset-0 z-50 bg-black/40 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=open]:fade-in-0 data-[state=closed]:fade-out-0 data-[state=open]:duration-200 data-[state=closed]:duration-150 data-[state=open]:ease-out data-[state=closed]:ease-in"
         />
         <DialogPrimitive.Content
           aria-describedby={undefined}
