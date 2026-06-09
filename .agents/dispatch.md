@@ -1,7 +1,7 @@
 ---
 name: dispatch
 description: crew run prompt-build, skills injection, verification gates
-last_updated: 2026-06-05
+last_updated: 2026-06-08
 covers:
   - 'packages/cli/src/lib/run/**'
   - 'packages/cli/src/lib/prompts/**'
@@ -129,6 +129,8 @@ Regeneration — the REST export **plus** Plugin-API enrichment (component prope
 ## Verification gates
 
 **Pre-PR (visual-fidelity-pr-gate hook).** `packages/cli/scripts/hooks/visual-fidelity-pr-gate.sh`, wired into `<repo>/.claude/settings.json` as a `PreToolUse` hook on `Bash`. Fires only on `gh pr create*`. Walks the active session transcript for a `Skill` tool_use whose `input.skill` is `visual-fidelity-check`; blocks the PR if absent **and** the project has `.crew/visual-fidelity.json` (or `[visual_fidelity]` in any `.crew/*.toml`). Fail-closed: missing transcript / unreadable cwd → exit 2, surface warning. Edit when changing the visual-fidelity gating contract.
+
+> **Hook command paths must be absolute via `$CLAUDE_PROJECT_DIR`** — e.g. `$CLAUDE_PROJECT_DIR/packages/cli/scripts/hooks/visual-fidelity-pr-gate.sh`, never a `./`-relative path. Claude Code resolves a hook `command` against the shell's *current working directory*, not the project root, so a relative path silently breaks (`/bin/sh: …: not found` — a non-blocking exit 127) the moment a session's cwd drifts out of the worktree root, which also disables the gate it was guarding. Applies to every hook registered in `.claude/settings.json`, including the `Edit|Write` `update-config-reminder` hook.
 
 **Post-PR (e2e gate, `maybeRunE2eGate`).** When `[playwright].authored.verify_after_run = true`, after the agent's stream resolves, the host runs `<test_command>` from the worktree (`runVerifyGate` → `runTestCommand`). On non-zero exit, `runVerifyGateLoop` resumes the agent with the captured output (`spawnClaudeResume` + `buildFixPrPrompt`) up to `verify_max_attempts` retries. Pre-dispatch baseline check: `checkE2eBaseline` compares `~/.cache/crew/baselines/<project>` to `origin/<default_branch>` — gate disables if baseline is non-green, because a red baseline can't distinguish "agent broke it" from "main is broken".
 

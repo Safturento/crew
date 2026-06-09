@@ -92,6 +92,7 @@ Organization: Active is grouped by topic (not chronology) since the dominant acc
     - [2026-05-15 — `.agents/` topic-doc system vs native `.claude/rules/` and agents.md alignment](#2026-05-15--agents-topic-doc-system-vs-native-clauderules-and-agentsmd-alignment)
     - [2026-05-12 — Rethink followup-tracking system (priority tier + Jira backlog sync)](#2026-05-12--rethink-followup-tracking-system-priority-tier--jira-backlog-sync)
 - [Resolved](#resolved)
+  - [2026-06-08 — Hook command paths in settings.json were relative, breaking on cwd drift](#2026-06-08--hook-command-paths-in-settingsjson-were-relative-breaking-on-cwd-drift)
   - [2026-06-05 — Preflight fail-fast order surfaces `bruno-skeleton` before `excluded-commands` (red test on main)](#2026-06-05--preflight-fail-fast-order-surfaces-bruno-skeleton-before-excluded-commands-red-test-on-main)
   - [2026-06-04 — Daemon test suite flakes under full-parallel `test:run`](#2026-06-04--daemon-test-suite-flakes-under-full-parallel-testrun)
   - [2026-06-05 — Global doc-parity hook double-warns in crew (two parity warnings per commit)](#2026-06-05--global-doc-parity-hook-double-warns-in-crew-two-parity-warnings-per-commit)
@@ -1537,6 +1538,16 @@ The other two open questions (sandbox config drift, Phase 2 + Phase 3 separation
 - Should priority on the markdown side map directly to Jira priority, or stay a separate signal?
 
 ## Resolved
+
+### 2026-06-08 — Hook command paths in settings.json were relative, breaking on cwd drift
+
+**Resolved 2026-06-08:** Changed both `PreToolUse` hook commands in `.claude/settings.json` from `./packages/cli/scripts/hooks/<name>.sh` to `$CLAUDE_PROJECT_DIR/packages/cli/scripts/hooks/<name>.sh`, and documented the absolute-path convention in `.agents/dispatch.md` (§Verification gates) so future hook registrations follow it. Shipped in this same PR. (#351)
+
+**What:** Both crew `PreToolUse` hooks — `visual-fidelity-pr-gate.sh` (matcher `Bash`) and `update-config-reminder.sh` (matcher `Edit|Write`) — were registered with `./`-relative command paths. Claude Code resolves a hook `command` against the shell's *current working directory*, not the project root, so the moment a session's cwd drifts out of the worktree root the path stops resolving: `/bin/sh: 1: ./packages/cli/scripts/hooks/visual-fidelity-pr-gate.sh: not found` (exit 127, non-blocking). The gate silently no-ops — i.e. the visual-fidelity PR gate is *disabled* exactly when cwd has wandered. The script's own header comment already flagged the subdir-failure case; this makes the registration robust to it.
+
+**Why noticed:** A `gh pr create` for an unrelated `~/dotfiles` change surfaced a `PreToolUse:Bash hook error` line in chat. The session's Bash cwd had drifted to `~/dotfiles` (a persistent `cd` earlier in the session), so crew's relative-path gate resolved against dotfiles and 127'd. Ironically the non-blocking failure let the dotfiles PR through unchecked; with cwd at the crew root the same gate would have fired (and correctly blocked, since no `visual-fidelity-check` ran). Confirmed the cause empirically: `pwd` returned `/home/safturento/dotfiles` mid-session.
+
+**Anchors:** `.claude/settings.json` (PreToolUse hooks); `packages/cli/scripts/hooks/visual-fidelity-pr-gate.sh` + `update-config-reminder.sh`; `.agents/dispatch.md` §Verification gates; Claude Code hook env var `$CLAUDE_PROJECT_DIR`. Sibling resolved entry: "2026-06-05 — Global doc-parity hook double-warns in crew".
 
 ### 2026-06-05 — Preflight fail-fast order surfaces `bruno-skeleton` before `excluded-commands` (red test on main)
 
