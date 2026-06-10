@@ -202,7 +202,7 @@ export function Timeline({ agentKey, agentState, tokensByTool = [] }: TimelinePr
   };
 
   return (
-    <div className="relative flex h-full min-h-0 flex-col">
+    <div className="relative flex min-h-0 flex-col">
       <TimelineToolbar
         data-testid="timeline-toolbar"
         className="shrink-0 bg-card"

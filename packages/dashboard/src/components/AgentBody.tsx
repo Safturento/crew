@@ -34,7 +34,7 @@ export function AgentBody({ agentKey, mode, onClose }: AgentBodyProps) {
   }
 
   return (
-    <div data-testid="agent-body" className="flex h-full min-h-0 flex-col">
+    <div data-testid="agent-body" className="flex h-full min-h-0 flex-col overflow-y-auto">
       <DrawerHeader
         detail={data}
         showCloseButton={mode === 'drawer'}
