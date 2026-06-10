@@ -1,9 +1,9 @@
-import { render, screen } from '@testing-library/react';
+import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { UseQueryResult } from '@tanstack/react-query';
 
-import { Timeline, eventKey } from './Timeline.js';
+import { PINNED_CHROME_PX, Timeline, eventKey } from './Timeline.js';
 import { useStateHistory, useTimeline } from '../../data/queries.js';
 import type {
   AgentDetailTokensByTool,
@@ -722,6 +722,98 @@ describe('Timeline', () => {
     );
     render(<Timeline agentKey="KAN-1" agentState="running" />);
     expect(screen.queryByTestId('minimap-stripe')).not.toBeInTheDocument();
+  });
+
+  it('wraps the minimap in a zero-height sticky anchor pinned below the chrome', () => {
+    mockUseTimeline.mockReturnValue(
+      timelineResult({
+        data: { events: [evt(1)] },
+        isSuccess: true,
+        status: 'success',
+      }),
+    );
+    render(<Timeline agentKey="KAN-1" agentState="running" />);
+    const stripe = screen.getByTestId('minimap-stripe');
+    const anchor = stripe.parentElement?.parentElement;
+    expect(anchor?.className).toContain('sticky');
+    expect(anchor?.className).toContain('h-0');
+    expect(anchor?.style.top).toBe(`${PINNED_CHROME_PX}px`);
+  });
+
+  it('sizes the stripe to the scroll container height minus pinned chrome', () => {
+    mockUseTimeline.mockReturnValue(
+      timelineResult({
+        data: { events: [evt(1)] },
+        isSuccess: true,
+        status: 'success',
+      }),
+    );
+
+    const observed: Element[] = [];
+    let fireResize: (height: number) => void = () => {};
+    class CapturingResizeObserver {
+      private readonly cb: ResizeObserverCallback;
+      constructor(cb: ResizeObserverCallback) {
+        this.cb = cb;
+        fireResize = (height: number) =>
+          this.cb(
+            [{ contentRect: { height } } as ResizeObserverEntry],
+            this as unknown as ResizeObserver,
+          );
+      }
+      observe(el: Element): void {
+        observed.push(el);
+      }
+      unobserve(): void {}
+      disconnect(): void {}
+    }
+    vi.stubGlobal('ResizeObserver', CapturingResizeObserver);
+
+    const scrollRef = { current: null as HTMLDivElement | null };
+    render(
+      <div
+        ref={(el) => {
+          scrollRef.current = el;
+        }}
+      >
+        <Timeline agentKey="KAN-1" agentState="running" scrollContainerRef={scrollRef} />
+      </div>,
+    );
+    expect(observed).toContain(scrollRef.current);
+
+    act(() => fireResize(800));
+    const stripe = screen.getByTestId('minimap-stripe');
+    expect(stripe.parentElement?.style.height).toBe(`${800 - PINNED_CHROME_PX}px`);
+
+    vi.unstubAllGlobals();
+  });
+
+  it('minimap section-jump scrolls the outer container, offset by the pinned chrome', async () => {
+    mockUseTimeline.mockReturnValue(
+      timelineResult({
+        data: { events: [evt(1)] },
+        isSuccess: true,
+        status: 'success',
+      }),
+    );
+
+    const scrollRef = { current: null as HTMLDivElement | null };
+    render(
+      <div
+        ref={(el) => {
+          scrollRef.current = el;
+        }}
+      >
+        <Timeline agentKey="KAN-1" agentState="running" scrollContainerRef={scrollRef} />
+      </div>,
+    );
+    const scrollTo = vi.fn();
+    scrollRef.current!.scrollTo = scrollTo as unknown as typeof scrollRef.current.scrollTo;
+
+    await userEvent.click(screen.getAllByTestId('minimap-segment')[0]);
+    // The prototype-level getBoundingClientRect stub returns top: 0 for every
+    // element and scrollTop is 0, so the expected offset is -PINNED_CHROME_PX.
+    expect(scrollTo).toHaveBeenCalledWith({ top: -PINNED_CHROME_PX, behavior: 'smooth' });
   });
 
   it('breaks live mode when a minimap segment is clicked', async () => {
