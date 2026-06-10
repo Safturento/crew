@@ -1,5 +1,4 @@
 import { existsSync } from 'node:fs';
-import { homedir } from 'node:os';
 import { join } from 'node:path';
 import Fastify, {
   type FastifyError,
@@ -124,7 +123,7 @@ export async function buildApp({
     // writes to); docker-compose mounts ${HOME}/.crew/startup into the
     // container at /root/.crew/startup, so os.homedir() == /root inside
     // the daemon resolves to the same place.
-    const startupDir = process.env.CREW_STARTUP_EVENTS_DIR ?? join(homedir(), '.crew', 'startup');
+    const startupDir = config.startupEventsDir;
     try {
       await ingest.watchStartupEvents(startupDir);
     } catch (err) {
