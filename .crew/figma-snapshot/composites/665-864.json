@@ -1,0 +1,1605 @@
+{
+  "id": "665:864",
+  "name": "Brainstorm — Timeline Filter Rework (Option B)",
+  "type": "FRAME",
+  "page": "Composites",
+  "raw": {
+    "id": "665:864",
+    "name": "Brainstorm — Timeline Filter Rework (Option B)",
+    "type": "FRAME",
+    "scrollBehavior": "SCROLLS",
+    "blendMode": "PASS_THROUGH",
+    "clipsContent": true,
+    "background": [
+      {
+        "blendMode": "NORMAL",
+        "type": "SOLID",
+        "color": {
+          "r": 0.00800000037997961,
+          "g": 0.024000000208616257,
+          "b": 0.09000000357627869,
+          "a": 1
+        }
+      }
+    ],
+    "fills": [
+      {
+        "blendMode": "NORMAL",
+        "type": "SOLID",
+        "color": {
+          "r": 0.00800000037997961,
+          "g": 0.024000000208616257,
+          "b": 0.09000000357627869,
+          "a": 1
+        }
+      }
+    ],
+    "strokes": [],
+    "strokeWeight": 1,
+    "strokeAlign": "INSIDE",
+    "backgroundColor": {
+      "r": 0.00800000037997961,
+      "g": 0.024000000208616257,
+      "b": 0.09000000357627869,
+      "a": 1
+    },
+    "layoutMode": "VERTICAL",
+    "paddingLeft": 48,
+    "paddingRight": 48,
+    "paddingTop": 48,
+    "paddingBottom": 48,
+    "itemSpacing": 24,
+    "layoutWrap": "NO_WRAP",
+    "absoluteBoundingBox": {
+      "x": 3700,
+      "y": 0,
+      "width": 1312,
+      "height": 633
+    },
+    "absoluteRenderBounds": {
+      "x": 3700,
+      "y": 0,
+      "width": 1312,
+      "height": 633
+    },
+    "constraints": {
+      "vertical": "TOP",
+      "horizontal": "LEFT"
+    },
+    "layoutSizingHorizontal": "HUG",
+    "layoutSizingVertical": "HUG",
+    "effects": [],
+    "interactions": [],
+    "complexStrokeProperties": {
+      "strokeType": "BASIC"
+    }
+  },
+  "enrichment": {
+    "source": "plugin-api",
+    "capturedAt": "2026-06-10T02:12:35.708Z",
+    "componentProperties": null,
+    "mainComponent": null,
+    "boundVariables": [],
+    "componentInstances": [
+      {
+        "id": "665:870",
+        "name": "Pill",
+        "path": [
+          "Variants row",
+          "Frame",
+          "Pill"
+        ],
+        "mainComponentSetId": "272:120",
+        "variantOverrides": "type=button-sm, color=idle, intensity=mid, font=sans",
+        "componentPropertyOverrides": {
+          "Icon": "lucide/filter",
+          "Has Icon": true,
+          "Label": "Filters",
+          "type": "button-sm",
+          "color": "idle",
+          "intensity": "mid",
+          "font": "sans"
+        },
+        "resolvedStyles": {
+          "fills": [
+            {
+              "hex": "#172134",
+              "tokenAlias": "slate-1100",
+              "opacity": 1
+            }
+          ],
+          "strokes": [
+            {
+              "hex": "#475569",
+              "tokenAlias": "slate/600",
+              "opacity": 1
+            }
+          ],
+          "textColor": {
+            "hex": "#64748B",
+            "tokenAlias": "state/idle"
+          }
+        }
+      },
+      {
+        "id": "665:878",
+        "name": "Pill",
+        "path": [
+          "Variants row",
+          "Frame",
+          "popover",
+          "header",
+          "Pill"
+        ],
+        "mainComponentSetId": "272:120",
+        "variantOverrides": "type=button-xs, color=idle, intensity=ghost, font=sans",
+        "componentPropertyOverrides": {
+          "Has Icon": false,
+          "Icon": "lucide/git-pull-request",
+          "Label": "Select all",
+          "type": "button-xs",
+          "color": "idle",
+          "intensity": "ghost",
+          "font": "sans"
+        },
+        "resolvedStyles": {
+          "fills": [],
+          "strokes": [],
+          "textColor": {
+            "hex": "#64748B",
+            "tokenAlias": "state/idle"
+          }
+        }
+      },
+      {
+        "id": "665:883",
+        "name": "Pill",
+        "path": [
+          "Variants row",
+          "Frame",
+          "popover",
+          "header",
+          "Pill"
+        ],
+        "mainComponentSetId": "272:120",
+        "variantOverrides": "type=button-xs, color=idle, intensity=ghost, font=sans",
+        "componentPropertyOverrides": {
+          "Has Icon": false,
+          "Icon": "lucide/git-pull-request",
+          "Label": "Clear",
+          "type": "button-xs",
+          "color": "idle",
+          "intensity": "ghost",
+          "font": "sans"
+        },
+        "resolvedStyles": {
+          "fills": [],
+          "strokes": [],
+          "textColor": {
+            "hex": "#64748B",
+            "tokenAlias": "state/idle"
+          }
+        }
+      },
+      {
+        "id": "665:890",
+        "name": "Checkbox",
+        "path": [
+          "Variants row",
+          "Frame",
+          "popover",
+          "body",
+          "row-Conversation",
+          "Checkbox"
+        ],
+        "mainComponentSetId": "663:869",
+        "variantOverrides": "state=on",
+        "componentPropertyOverrides": {
+          "Label": "Conversation",
+          "state": "on"
+        },
+        "resolvedStyles": {
+          "fills": [],
+          "strokes": [],
+          "textColor": {
+            "hex": "#020617",
+            "tokenAlias": "background"
+          }
+        }
+      },
+      {
+        "id": "665:895",
+        "name": "Checkbox",
+        "path": [
+          "Variants row",
+          "Frame",
+          "popover",
+          "body",
+          "row-Tools",
+          "Checkbox"
+        ],
+        "mainComponentSetId": "663:869",
+        "variantOverrides": "state=on",
+        "componentPropertyOverrides": {
+          "Label": "Tools",
+          "state": "on"
+        },
+        "resolvedStyles": {
+          "fills": [],
+          "strokes": [],
+          "textColor": {
+            "hex": "#020617",
+            "tokenAlias": "background"
+          }
+        }
+      },
+      {
+        "id": "665:902",
+        "name": "Checkbox",
+        "path": [
+          "Variants row",
+          "Frame",
+          "popover",
+          "body",
+          "row-Thinking",
+          "Checkbox"
+        ],
+        "mainComponentSetId": "663:869",
+        "variantOverrides": "state=on",
+        "componentPropertyOverrides": {
+          "Label": "Thinking",
+          "state": "on"
+        },
+        "resolvedStyles": {
+          "fills": [],
+          "strokes": [],
+          "textColor": {
+            "hex": "#020617",
+            "tokenAlias": "background"
+          }
+        }
+      },
+      {
+        "id": "665:907",
+        "name": "Checkbox",
+        "path": [
+          "Variants row",
+          "Frame",
+          "popover",
+          "body",
+          "row-Hooks",
+          "Checkbox"
+        ],
+        "mainComponentSetId": "663:869",
+        "variantOverrides": "state=on",
+        "componentPropertyOverrides": {
+          "Label": "Hooks",
+          "state": "on"
+        },
+        "resolvedStyles": {
+          "fills": [],
+          "strokes": [],
+          "textColor": {
+            "hex": "#020617",
+            "tokenAlias": "background"
+          }
+        }
+      },
+      {
+        "id": "665:912",
+        "name": "Checkbox",
+        "path": [
+          "Variants row",
+          "Frame",
+          "popover",
+          "body",
+          "row-Skills",
+          "Checkbox"
+        ],
+        "mainComponentSetId": "663:869",
+        "variantOverrides": "state=on",
+        "componentPropertyOverrides": {
+          "Label": "Skills",
+          "state": "on"
+        },
+        "resolvedStyles": {
+          "fills": [],
+          "strokes": [],
+          "textColor": {
+            "hex": "#020617",
+            "tokenAlias": "background"
+          }
+        }
+      },
+      {
+        "id": "665:917",
+        "name": "Checkbox",
+        "path": [
+          "Variants row",
+          "Frame",
+          "popover",
+          "body",
+          "row-System",
+          "Checkbox"
+        ],
+        "mainComponentSetId": "663:869",
+        "variantOverrides": "state=on",
+        "componentPropertyOverrides": {
+          "Label": "System",
+          "state": "on"
+        },
+        "resolvedStyles": {
+          "fills": [],
+          "strokes": [],
+          "textColor": {
+            "hex": "#020617",
+            "tokenAlias": "background"
+          }
+        }
+      },
+      {
+        "id": "665:922",
+        "name": "Checkbox",
+        "path": [
+          "Variants row",
+          "Frame",
+          "popover",
+          "body",
+          "row-Startup",
+          "Checkbox"
+        ],
+        "mainComponentSetId": "663:869",
+        "variantOverrides": "state=on",
+        "componentPropertyOverrides": {
+          "Label": "Startup",
+          "state": "on"
+        },
+        "resolvedStyles": {
+          "fills": [],
+          "strokes": [],
+          "textColor": {
+            "hex": "#020617",
+            "tokenAlias": "background"
+          }
+        }
+      },
+      {
+        "id": "666:888",
+        "name": "Pill",
+        "path": [
+          "Variants row",
+          "Frame",
+          "Pill"
+        ],
+        "mainComponentSetId": "272:120",
+        "variantOverrides": "type=button-sm, color=idle, intensity=mid, font=sans",
+        "componentPropertyOverrides": {
+          "Icon": "lucide/filter",
+          "Has Icon": true,
+          "Label": "Filters",
+          "type": "button-sm",
+          "color": "idle",
+          "intensity": "mid",
+          "font": "sans"
+        },
+        "resolvedStyles": {
+          "fills": [
+            {
+              "hex": "#172134",
+              "tokenAlias": "slate-1100",
+              "opacity": 1
+            }
+          ],
+          "strokes": [
+            {
+              "hex": "#475569",
+              "tokenAlias": "slate/600",
+              "opacity": 1
+            }
+          ],
+          "textColor": {
+            "hex": "#64748B",
+            "tokenAlias": "state/idle"
+          }
+        }
+      },
+      {
+        "id": "666:896",
+        "name": "Pill",
+        "path": [
+          "Variants row",
+          "Frame",
+          "popover",
+          "header",
+          "Pill"
+        ],
+        "mainComponentSetId": "272:120",
+        "variantOverrides": "type=button-xs, color=idle, intensity=ghost, font=sans",
+        "componentPropertyOverrides": {
+          "Has Icon": false,
+          "Icon": "lucide/git-pull-request",
+          "Label": "Select all",
+          "type": "button-xs",
+          "color": "idle",
+          "intensity": "ghost",
+          "font": "sans"
+        },
+        "resolvedStyles": {
+          "fills": [],
+          "strokes": [],
+          "textColor": {
+            "hex": "#64748B",
+            "tokenAlias": "state/idle"
+          }
+        }
+      },
+      {
+        "id": "666:901",
+        "name": "Pill",
+        "path": [
+          "Variants row",
+          "Frame",
+          "popover",
+          "header",
+          "Pill"
+        ],
+        "mainComponentSetId": "272:120",
+        "variantOverrides": "type=button-xs, color=idle, intensity=ghost, font=sans",
+        "componentPropertyOverrides": {
+          "Has Icon": false,
+          "Icon": "lucide/git-pull-request",
+          "Label": "Clear",
+          "type": "button-xs",
+          "color": "idle",
+          "intensity": "ghost",
+          "font": "sans"
+        },
+        "resolvedStyles": {
+          "fills": [],
+          "strokes": [],
+          "textColor": {
+            "hex": "#64748B",
+            "tokenAlias": "state/idle"
+          }
+        }
+      },
+      {
+        "id": "666:908",
+        "name": "Checkbox",
+        "path": [
+          "Variants row",
+          "Frame",
+          "popover",
+          "body",
+          "row-Conversation",
+          "Checkbox"
+        ],
+        "mainComponentSetId": "663:869",
+        "variantOverrides": "state=on",
+        "componentPropertyOverrides": {
+          "Label": "Conversation",
+          "state": "on"
+        },
+        "resolvedStyles": {
+          "fills": [],
+          "strokes": [],
+          "textColor": {
+            "hex": "#020617",
+            "tokenAlias": "background"
+          }
+        }
+      },
+      {
+        "id": "666:913",
+        "name": "Checkbox",
+        "path": [
+          "Variants row",
+          "Frame",
+          "popover",
+          "body",
+          "row-Tools",
+          "Checkbox"
+        ],
+        "mainComponentSetId": "663:869",
+        "variantOverrides": "state=on",
+        "componentPropertyOverrides": {
+          "Label": "Tools",
+          "state": "on"
+        },
+        "resolvedStyles": {
+          "fills": [],
+          "strokes": [],
+          "textColor": {
+            "hex": "#020617",
+            "tokenAlias": "background"
+          }
+        }
+      },
+      {
+        "id": "666:920",
+        "name": "Checkbox",
+        "path": [
+          "Variants row",
+          "Frame",
+          "popover",
+          "body",
+          "row-Bash",
+          "Checkbox"
+        ],
+        "mainComponentSetId": "663:869",
+        "variantOverrides": "state=on",
+        "componentPropertyOverrides": {
+          "Label": "Bash",
+          "state": "on"
+        },
+        "resolvedStyles": {
+          "fills": [],
+          "strokes": [],
+          "textColor": {
+            "hex": "#020617",
+            "tokenAlias": "background"
+          }
+        }
+      },
+      {
+        "id": "666:925",
+        "name": "Checkbox",
+        "path": [
+          "Variants row",
+          "Frame",
+          "popover",
+          "body",
+          "row-Edit",
+          "Checkbox"
+        ],
+        "mainComponentSetId": "663:869",
+        "variantOverrides": "state=on",
+        "componentPropertyOverrides": {
+          "Label": "Edit",
+          "state": "on"
+        },
+        "resolvedStyles": {
+          "fills": [],
+          "strokes": [],
+          "textColor": {
+            "hex": "#020617",
+            "tokenAlias": "background"
+          }
+        }
+      },
+      {
+        "id": "666:930",
+        "name": "Checkbox",
+        "path": [
+          "Variants row",
+          "Frame",
+          "popover",
+          "body",
+          "row-Read",
+          "Checkbox"
+        ],
+        "mainComponentSetId": "663:869",
+        "variantOverrides": "state=on",
+        "componentPropertyOverrides": {
+          "Label": "Read",
+          "state": "on"
+        },
+        "resolvedStyles": {
+          "fills": [],
+          "strokes": [],
+          "textColor": {
+            "hex": "#020617",
+            "tokenAlias": "background"
+          }
+        }
+      },
+      {
+        "id": "666:935",
+        "name": "Checkbox",
+        "path": [
+          "Variants row",
+          "Frame",
+          "popover",
+          "body",
+          "row-MCP:Jira",
+          "Checkbox"
+        ],
+        "mainComponentSetId": "663:869",
+        "variantOverrides": "state=on",
+        "componentPropertyOverrides": {
+          "Label": "MCP:Jira",
+          "state": "on"
+        },
+        "resolvedStyles": {
+          "fills": [],
+          "strokes": [],
+          "textColor": {
+            "hex": "#020617",
+            "tokenAlias": "background"
+          }
+        }
+      },
+      {
+        "id": "666:940",
+        "name": "Checkbox",
+        "path": [
+          "Variants row",
+          "Frame",
+          "popover",
+          "body",
+          "row-MCP:Figma",
+          "Checkbox"
+        ],
+        "mainComponentSetId": "663:869",
+        "variantOverrides": "state=on",
+        "componentPropertyOverrides": {
+          "Label": "MCP:Figma",
+          "state": "on"
+        },
+        "resolvedStyles": {
+          "fills": [],
+          "strokes": [],
+          "textColor": {
+            "hex": "#020617",
+            "tokenAlias": "background"
+          }
+        }
+      },
+      {
+        "id": "666:945",
+        "name": "Checkbox",
+        "path": [
+          "Variants row",
+          "Frame",
+          "popover",
+          "body",
+          "row-Thinking",
+          "Checkbox"
+        ],
+        "mainComponentSetId": "663:869",
+        "variantOverrides": "state=on",
+        "componentPropertyOverrides": {
+          "Label": "Thinking",
+          "state": "on"
+        },
+        "resolvedStyles": {
+          "fills": [],
+          "strokes": [],
+          "textColor": {
+            "hex": "#020617",
+            "tokenAlias": "background"
+          }
+        }
+      },
+      {
+        "id": "666:950",
+        "name": "Checkbox",
+        "path": [
+          "Variants row",
+          "Frame",
+          "popover",
+          "body",
+          "row-Hooks",
+          "Checkbox"
+        ],
+        "mainComponentSetId": "663:869",
+        "variantOverrides": "state=on",
+        "componentPropertyOverrides": {
+          "Label": "Hooks",
+          "state": "on"
+        },
+        "resolvedStyles": {
+          "fills": [],
+          "strokes": [],
+          "textColor": {
+            "hex": "#020617",
+            "tokenAlias": "background"
+          }
+        }
+      },
+      {
+        "id": "666:955",
+        "name": "Checkbox",
+        "path": [
+          "Variants row",
+          "Frame",
+          "popover",
+          "body",
+          "row-Skills",
+          "Checkbox"
+        ],
+        "mainComponentSetId": "663:869",
+        "variantOverrides": "state=on",
+        "componentPropertyOverrides": {
+          "Label": "Skills",
+          "state": "on"
+        },
+        "resolvedStyles": {
+          "fills": [],
+          "strokes": [],
+          "textColor": {
+            "hex": "#020617",
+            "tokenAlias": "background"
+          }
+        }
+      },
+      {
+        "id": "666:960",
+        "name": "Checkbox",
+        "path": [
+          "Variants row",
+          "Frame",
+          "popover",
+          "body",
+          "row-System",
+          "Checkbox"
+        ],
+        "mainComponentSetId": "663:869",
+        "variantOverrides": "state=on",
+        "componentPropertyOverrides": {
+          "Label": "System",
+          "state": "on"
+        },
+        "resolvedStyles": {
+          "fills": [],
+          "strokes": [],
+          "textColor": {
+            "hex": "#020617",
+            "tokenAlias": "background"
+          }
+        }
+      },
+      {
+        "id": "666:965",
+        "name": "Checkbox",
+        "path": [
+          "Variants row",
+          "Frame",
+          "popover",
+          "body",
+          "row-Startup",
+          "Checkbox"
+        ],
+        "mainComponentSetId": "663:869",
+        "variantOverrides": "state=on",
+        "componentPropertyOverrides": {
+          "Label": "Startup",
+          "state": "on"
+        },
+        "resolvedStyles": {
+          "fills": [],
+          "strokes": [],
+          "textColor": {
+            "hex": "#020617",
+            "tokenAlias": "background"
+          }
+        }
+      },
+      {
+        "id": "666:971",
+        "name": "Pill",
+        "path": [
+          "Variants row",
+          "Frame",
+          "Pill"
+        ],
+        "mainComponentSetId": "272:120",
+        "variantOverrides": "type=button-sm, color=idle, intensity=mid, font=sans",
+        "componentPropertyOverrides": {
+          "Icon": "lucide/filter",
+          "Has Icon": true,
+          "Label": "Filters  7 / 11",
+          "type": "button-sm",
+          "color": "idle",
+          "intensity": "mid",
+          "font": "sans"
+        },
+        "resolvedStyles": {
+          "fills": [
+            {
+              "hex": "#172134",
+              "tokenAlias": "slate-1100",
+              "opacity": 1
+            }
+          ],
+          "strokes": [
+            {
+              "hex": "#475569",
+              "tokenAlias": "slate/600",
+              "opacity": 1
+            }
+          ],
+          "textColor": {
+            "hex": "#64748B",
+            "tokenAlias": "state/idle"
+          }
+        }
+      },
+      {
+        "id": "666:978",
+        "name": "Pill",
+        "path": [
+          "Variants row",
+          "Frame",
+          "popover",
+          "header",
+          "Pill"
+        ],
+        "mainComponentSetId": "272:120",
+        "variantOverrides": "type=button-xs, color=idle, intensity=ghost, font=sans",
+        "componentPropertyOverrides": {
+          "Has Icon": false,
+          "Icon": "lucide/git-pull-request",
+          "Label": "Select all",
+          "type": "button-xs",
+          "color": "idle",
+          "intensity": "ghost",
+          "font": "sans"
+        },
+        "resolvedStyles": {
+          "fills": [],
+          "strokes": [],
+          "textColor": {
+            "hex": "#64748B",
+            "tokenAlias": "state/idle"
+          }
+        }
+      },
+      {
+        "id": "666:982",
+        "name": "Pill",
+        "path": [
+          "Variants row",
+          "Frame",
+          "popover",
+          "header",
+          "Pill"
+        ],
+        "mainComponentSetId": "272:120",
+        "variantOverrides": "type=button-xs, color=idle, intensity=ghost, font=sans",
+        "componentPropertyOverrides": {
+          "Has Icon": false,
+          "Icon": "lucide/git-pull-request",
+          "Label": "Clear",
+          "type": "button-xs",
+          "color": "idle",
+          "intensity": "ghost",
+          "font": "sans"
+        },
+        "resolvedStyles": {
+          "fills": [],
+          "strokes": [],
+          "textColor": {
+            "hex": "#64748B",
+            "tokenAlias": "state/idle"
+          }
+        }
+      },
+      {
+        "id": "666:989",
+        "name": "Checkbox",
+        "path": [
+          "Variants row",
+          "Frame",
+          "popover",
+          "body",
+          "row-Conversation",
+          "Checkbox"
+        ],
+        "mainComponentSetId": "663:869",
+        "variantOverrides": "state=on",
+        "componentPropertyOverrides": {
+          "Label": "Conversation",
+          "state": "on"
+        },
+        "resolvedStyles": {
+          "fills": [],
+          "strokes": [],
+          "textColor": {
+            "hex": "#020617",
+            "tokenAlias": "background"
+          }
+        }
+      },
+      {
+        "id": "666:994",
+        "name": "Checkbox",
+        "path": [
+          "Variants row",
+          "Frame",
+          "popover",
+          "body",
+          "row-Tools",
+          "Checkbox"
+        ],
+        "mainComponentSetId": "663:869",
+        "variantOverrides": "state=off",
+        "componentPropertyOverrides": {
+          "Label": "Tools",
+          "state": "off"
+        },
+        "resolvedStyles": {
+          "fills": [],
+          "strokes": [],
+          "textColor": {
+            "hex": "#E2E8F0",
+            "tokenAlias": "foreground"
+          }
+        }
+      },
+      {
+        "id": "666:1001",
+        "name": "Checkbox",
+        "path": [
+          "Variants row",
+          "Frame",
+          "popover",
+          "body",
+          "row-Bash",
+          "Checkbox"
+        ],
+        "mainComponentSetId": "663:869",
+        "variantOverrides": "state=off",
+        "componentPropertyOverrides": {
+          "Label": "Bash",
+          "state": "off"
+        },
+        "resolvedStyles": {
+          "fills": [],
+          "strokes": [],
+          "textColor": {
+            "hex": "#E2E8F0",
+            "tokenAlias": "foreground"
+          }
+        }
+      },
+      {
+        "id": "666:1005",
+        "name": "Checkbox",
+        "path": [
+          "Variants row",
+          "Frame",
+          "popover",
+          "body",
+          "row-Edit",
+          "Checkbox"
+        ],
+        "mainComponentSetId": "663:869",
+        "variantOverrides": "state=on",
+        "componentPropertyOverrides": {
+          "Label": "Edit",
+          "state": "on"
+        },
+        "resolvedStyles": {
+          "fills": [],
+          "strokes": [],
+          "textColor": {
+            "hex": "#020617",
+            "tokenAlias": "background"
+          }
+        }
+      },
+      {
+        "id": "666:1010",
+        "name": "Checkbox",
+        "path": [
+          "Variants row",
+          "Frame",
+          "popover",
+          "body",
+          "row-Read",
+          "Checkbox"
+        ],
+        "mainComponentSetId": "663:869",
+        "variantOverrides": "state=on",
+        "componentPropertyOverrides": {
+          "Label": "Read",
+          "state": "on"
+        },
+        "resolvedStyles": {
+          "fills": [],
+          "strokes": [],
+          "textColor": {
+            "hex": "#020617",
+            "tokenAlias": "background"
+          }
+        }
+      },
+      {
+        "id": "666:1015",
+        "name": "Checkbox",
+        "path": [
+          "Variants row",
+          "Frame",
+          "popover",
+          "body",
+          "row-MCP:Jira",
+          "Checkbox"
+        ],
+        "mainComponentSetId": "663:869",
+        "variantOverrides": "state=on",
+        "componentPropertyOverrides": {
+          "Label": "MCP:Jira",
+          "state": "on"
+        },
+        "resolvedStyles": {
+          "fills": [],
+          "strokes": [],
+          "textColor": {
+            "hex": "#020617",
+            "tokenAlias": "background"
+          }
+        }
+      },
+      {
+        "id": "666:1020",
+        "name": "Checkbox",
+        "path": [
+          "Variants row",
+          "Frame",
+          "popover",
+          "body",
+          "row-MCP:Figma",
+          "Checkbox"
+        ],
+        "mainComponentSetId": "663:869",
+        "variantOverrides": "state=off",
+        "componentPropertyOverrides": {
+          "Label": "MCP:Figma",
+          "state": "off"
+        },
+        "resolvedStyles": {
+          "fills": [],
+          "strokes": [],
+          "textColor": {
+            "hex": "#E2E8F0",
+            "tokenAlias": "foreground"
+          }
+        }
+      },
+      {
+        "id": "666:1024",
+        "name": "Checkbox",
+        "path": [
+          "Variants row",
+          "Frame",
+          "popover",
+          "body",
+          "row-Thinking",
+          "Checkbox"
+        ],
+        "mainComponentSetId": "663:869",
+        "variantOverrides": "state=off",
+        "componentPropertyOverrides": {
+          "Label": "Thinking",
+          "state": "off"
+        },
+        "resolvedStyles": {
+          "fills": [],
+          "strokes": [],
+          "textColor": {
+            "hex": "#E2E8F0",
+            "tokenAlias": "foreground"
+          }
+        }
+      },
+      {
+        "id": "666:1028",
+        "name": "Checkbox",
+        "path": [
+          "Variants row",
+          "Frame",
+          "popover",
+          "body",
+          "row-Hooks",
+          "Checkbox"
+        ],
+        "mainComponentSetId": "663:869",
+        "variantOverrides": "state=on",
+        "componentPropertyOverrides": {
+          "Label": "Hooks",
+          "state": "on"
+        },
+        "resolvedStyles": {
+          "fills": [],
+          "strokes": [],
+          "textColor": {
+            "hex": "#020617",
+            "tokenAlias": "background"
+          }
+        }
+      },
+      {
+        "id": "666:1033",
+        "name": "Checkbox",
+        "path": [
+          "Variants row",
+          "Frame",
+          "popover",
+          "body",
+          "row-Skills",
+          "Checkbox"
+        ],
+        "mainComponentSetId": "663:869",
+        "variantOverrides": "state=on",
+        "componentPropertyOverrides": {
+          "Label": "Skills",
+          "state": "on"
+        },
+        "resolvedStyles": {
+          "fills": [],
+          "strokes": [],
+          "textColor": {
+            "hex": "#020617",
+            "tokenAlias": "background"
+          }
+        }
+      },
+      {
+        "id": "666:1038",
+        "name": "Checkbox",
+        "path": [
+          "Variants row",
+          "Frame",
+          "popover",
+          "body",
+          "row-System",
+          "Checkbox"
+        ],
+        "mainComponentSetId": "663:869",
+        "variantOverrides": "state=off",
+        "componentPropertyOverrides": {
+          "Label": "System",
+          "state": "off"
+        },
+        "resolvedStyles": {
+          "fills": [],
+          "strokes": [],
+          "textColor": {
+            "hex": "#E2E8F0",
+            "tokenAlias": "foreground"
+          }
+        }
+      },
+      {
+        "id": "666:1042",
+        "name": "Checkbox",
+        "path": [
+          "Variants row",
+          "Frame",
+          "popover",
+          "body",
+          "row-Startup",
+          "Checkbox"
+        ],
+        "mainComponentSetId": "663:869",
+        "variantOverrides": "state=on",
+        "componentPropertyOverrides": {
+          "Label": "Startup",
+          "state": "on"
+        },
+        "resolvedStyles": {
+          "fills": [],
+          "strokes": [],
+          "textColor": {
+            "hex": "#020617",
+            "tokenAlias": "background"
+          }
+        }
+      },
+      {
+        "id": "666:1048",
+        "name": "Pill",
+        "path": [
+          "Variants row",
+          "Frame",
+          "Pill"
+        ],
+        "mainComponentSetId": "272:120",
+        "variantOverrides": "type=button-sm, color=idle, intensity=mid, font=sans",
+        "componentPropertyOverrides": {
+          "Icon": "lucide/filter",
+          "Has Icon": true,
+          "Label": "Filters  6 / 11",
+          "type": "button-sm",
+          "color": "idle",
+          "intensity": "mid",
+          "font": "sans"
+        },
+        "resolvedStyles": {
+          "fills": [
+            {
+              "hex": "#172134",
+              "tokenAlias": "slate-1100",
+              "opacity": 1
+            }
+          ],
+          "strokes": [
+            {
+              "hex": "#475569",
+              "tokenAlias": "slate/600",
+              "opacity": 1
+            }
+          ],
+          "textColor": {
+            "hex": "#64748B",
+            "tokenAlias": "state/idle"
+          }
+        }
+      },
+      {
+        "id": "666:1055",
+        "name": "Pill",
+        "path": [
+          "Variants row",
+          "Frame",
+          "popover",
+          "header",
+          "Pill"
+        ],
+        "mainComponentSetId": "272:120",
+        "variantOverrides": "type=button-xs, color=idle, intensity=ghost, font=sans",
+        "componentPropertyOverrides": {
+          "Has Icon": false,
+          "Icon": "lucide/git-pull-request",
+          "Label": "Select all",
+          "type": "button-xs",
+          "color": "idle",
+          "intensity": "ghost",
+          "font": "sans"
+        },
+        "resolvedStyles": {
+          "fills": [],
+          "strokes": [],
+          "textColor": {
+            "hex": "#64748B",
+            "tokenAlias": "state/idle"
+          }
+        }
+      },
+      {
+        "id": "666:1059",
+        "name": "Pill",
+        "path": [
+          "Variants row",
+          "Frame",
+          "popover",
+          "header",
+          "Pill"
+        ],
+        "mainComponentSetId": "272:120",
+        "variantOverrides": "type=button-xs, color=idle, intensity=ghost, font=sans",
+        "componentPropertyOverrides": {
+          "Has Icon": false,
+          "Icon": "lucide/git-pull-request",
+          "Label": "Clear",
+          "type": "button-xs",
+          "color": "idle",
+          "intensity": "ghost",
+          "font": "sans"
+        },
+        "resolvedStyles": {
+          "fills": [],
+          "strokes": [],
+          "textColor": {
+            "hex": "#64748B",
+            "tokenAlias": "state/idle"
+          }
+        }
+      },
+      {
+        "id": "666:1066",
+        "name": "Checkbox",
+        "path": [
+          "Variants row",
+          "Frame",
+          "popover",
+          "body",
+          "row-Conversation",
+          "Checkbox"
+        ],
+        "mainComponentSetId": "663:869",
+        "variantOverrides": "state=on",
+        "componentPropertyOverrides": {
+          "Label": "Conversation",
+          "state": "on"
+        },
+        "resolvedStyles": {
+          "fills": [],
+          "strokes": [],
+          "textColor": {
+            "hex": "#020617",
+            "tokenAlias": "background"
+          }
+        }
+      },
+      {
+        "id": "666:1071",
+        "name": "Checkbox",
+        "path": [
+          "Variants row",
+          "Frame",
+          "popover",
+          "body",
+          "row-Tools",
+          "Checkbox"
+        ],
+        "mainComponentSetId": "663:869",
+        "variantOverrides": "state=off",
+        "componentPropertyOverrides": {
+          "Label": "Tools",
+          "state": "off"
+        },
+        "resolvedStyles": {
+          "fills": [],
+          "strokes": [],
+          "textColor": {
+            "hex": "#E2E8F0",
+            "tokenAlias": "foreground"
+          }
+        }
+      },
+      {
+        "id": "666:1077",
+        "name": "Checkbox",
+        "path": [
+          "Variants row",
+          "Frame",
+          "popover",
+          "body",
+          "row-Bash",
+          "Checkbox"
+        ],
+        "mainComponentSetId": "663:869",
+        "variantOverrides": "state=disabled",
+        "componentPropertyOverrides": {
+          "Label": "Bash",
+          "state": "disabled"
+        },
+        "resolvedStyles": {
+          "fills": [],
+          "strokes": [],
+          "textColor": {
+            "hex": "#E2E8F0",
+            "tokenAlias": "foreground"
+          }
+        }
+      },
+      {
+        "id": "666:1081",
+        "name": "Checkbox",
+        "path": [
+          "Variants row",
+          "Frame",
+          "popover",
+          "body",
+          "row-Edit",
+          "Checkbox"
+        ],
+        "mainComponentSetId": "663:869",
+        "variantOverrides": "state=disabled",
+        "componentPropertyOverrides": {
+          "Label": "Edit",
+          "state": "disabled"
+        },
+        "resolvedStyles": {
+          "fills": [],
+          "strokes": [],
+          "textColor": {
+            "hex": "#E2E8F0",
+            "tokenAlias": "foreground"
+          }
+        }
+      },
+      {
+        "id": "666:1085",
+        "name": "Checkbox",
+        "path": [
+          "Variants row",
+          "Frame",
+          "popover",
+          "body",
+          "row-Read",
+          "Checkbox"
+        ],
+        "mainComponentSetId": "663:869",
+        "variantOverrides": "state=disabled",
+        "componentPropertyOverrides": {
+          "Label": "Read",
+          "state": "disabled"
+        },
+        "resolvedStyles": {
+          "fills": [],
+          "strokes": [],
+          "textColor": {
+            "hex": "#E2E8F0",
+            "tokenAlias": "foreground"
+          }
+        }
+      },
+      {
+        "id": "666:1089",
+        "name": "Checkbox",
+        "path": [
+          "Variants row",
+          "Frame",
+          "popover",
+          "body",
+          "row-MCP:Jira",
+          "Checkbox"
+        ],
+        "mainComponentSetId": "663:869",
+        "variantOverrides": "state=disabled",
+        "componentPropertyOverrides": {
+          "Label": "MCP:Jira",
+          "state": "disabled"
+        },
+        "resolvedStyles": {
+          "fills": [],
+          "strokes": [],
+          "textColor": {
+            "hex": "#E2E8F0",
+            "tokenAlias": "foreground"
+          }
+        }
+      },
+      {
+        "id": "666:1093",
+        "name": "Checkbox",
+        "path": [
+          "Variants row",
+          "Frame",
+          "popover",
+          "body",
+          "row-MCP:Figma",
+          "Checkbox"
+        ],
+        "mainComponentSetId": "663:869",
+        "variantOverrides": "state=disabled",
+        "componentPropertyOverrides": {
+          "Label": "MCP:Figma",
+          "state": "disabled"
+        },
+        "resolvedStyles": {
+          "fills": [],
+          "strokes": [],
+          "textColor": {
+            "hex": "#E2E8F0",
+            "tokenAlias": "foreground"
+          }
+        }
+      },
+      {
+        "id": "666:1097",
+        "name": "Checkbox",
+        "path": [
+          "Variants row",
+          "Frame",
+          "popover",
+          "body",
+          "row-Thinking",
+          "Checkbox"
+        ],
+        "mainComponentSetId": "663:869",
+        "variantOverrides": "state=on",
+        "componentPropertyOverrides": {
+          "Label": "Thinking",
+          "state": "on"
+        },
+        "resolvedStyles": {
+          "fills": [],
+          "strokes": [],
+          "textColor": {
+            "hex": "#020617",
+            "tokenAlias": "background"
+          }
+        }
+      },
+      {
+        "id": "666:1102",
+        "name": "Checkbox",
+        "path": [
+          "Variants row",
+          "Frame",
+          "popover",
+          "body",
+          "row-Hooks",
+          "Checkbox"
+        ],
+        "mainComponentSetId": "663:869",
+        "variantOverrides": "state=on",
+        "componentPropertyOverrides": {
+          "Label": "Hooks",
+          "state": "on"
+        },
+        "resolvedStyles": {
+          "fills": [],
+          "strokes": [],
+          "textColor": {
+            "hex": "#020617",
+            "tokenAlias": "background"
+          }
+        }
+      },
+      {
+        "id": "666:1107",
+        "name": "Checkbox",
+        "path": [
+          "Variants row",
+          "Frame",
+          "popover",
+          "body",
+          "row-Skills",
+          "Checkbox"
+        ],
+        "mainComponentSetId": "663:869",
+        "variantOverrides": "state=on",
+        "componentPropertyOverrides": {
+          "Label": "Skills",
+          "state": "on"
+        },
+        "resolvedStyles": {
+          "fills": [],
+          "strokes": [],
+          "textColor": {
+            "hex": "#020617",
+            "tokenAlias": "background"
+          }
+        }
+      },
+      {
+        "id": "666:1112",
+        "name": "Checkbox",
+        "path": [
+          "Variants row",
+          "Frame",
+          "popover",
+          "body",
+          "row-System",
+          "Checkbox"
+        ],
+        "mainComponentSetId": "663:869",
+        "variantOverrides": "state=on",
+        "componentPropertyOverrides": {
+          "Label": "System",
+          "state": "on"
+        },
+        "resolvedStyles": {
+          "fills": [],
+          "strokes": [],
+          "textColor": {
+            "hex": "#020617",
+            "tokenAlias": "background"
+          }
+        }
+      },
+      {
+        "id": "666:1117",
+        "name": "Checkbox",
+        "path": [
+          "Variants row",
+          "Frame",
+          "popover",
+          "body",
+          "row-Startup",
+          "Checkbox"
+        ],
+        "mainComponentSetId": "663:869",
+        "variantOverrides": "state=on",
+        "componentPropertyOverrides": {
+          "Label": "Startup",
+          "state": "on"
+        },
+        "resolvedStyles": {
+          "fills": [],
+          "strokes": [],
+          "textColor": {
+            "hex": "#020617",
+            "tokenAlias": "background"
+          }
+        }
+      }
+    ],
+    "depthWarnings": []
+  }
+}

@@ -1,0 +1,100 @@
+{
+  "id": "699:1039",
+  "name": "Hover states — reference",
+  "type": "FRAME",
+  "page": "Composites",
+  "raw": {
+    "id": "699:1039",
+    "name": "Hover states — reference",
+    "type": "FRAME",
+    "scrollBehavior": "SCROLLS",
+    "blendMode": "PASS_THROUGH",
+    "clipsContent": true,
+    "background": [
+      {
+        "blendMode": "NORMAL",
+        "type": "SOLID",
+        "color": {
+          "r": 0.05882352963089943,
+          "g": 0.09019608050584793,
+          "b": 0.16470588743686676,
+          "a": 1
+        }
+      }
+    ],
+    "fills": [
+      {
+        "blendMode": "NORMAL",
+        "type": "SOLID",
+        "color": {
+          "r": 0.05882352963089943,
+          "g": 0.09019608050584793,
+          "b": 0.16470588743686676,
+          "a": 1
+        }
+      }
+    ],
+    "strokes": [
+      {
+        "opacity": 0.07999999821186066,
+        "blendMode": "NORMAL",
+        "type": "SOLID",
+        "color": {
+          "r": 1,
+          "g": 1,
+          "b": 1,
+          "a": 1
+        }
+      }
+    ],
+    "cornerRadius": 8,
+    "cornerSmoothing": 0,
+    "strokeWeight": 1,
+    "strokeAlign": "INSIDE",
+    "backgroundColor": {
+      "r": 0.05882352963089943,
+      "g": 0.09019608050584793,
+      "b": 0.16470588743686676,
+      "a": 1
+    },
+    "layoutMode": "VERTICAL",
+    "paddingLeft": 24,
+    "paddingRight": 24,
+    "paddingTop": 20,
+    "paddingBottom": 22,
+    "itemSpacing": 14,
+    "layoutWrap": "NO_WRAP",
+    "absoluteBoundingBox": {
+      "x": 2150,
+      "y": 500,
+      "width": 293,
+      "height": 257
+    },
+    "absoluteRenderBounds": {
+      "x": 2150,
+      "y": 500,
+      "width": 293,
+      "height": 257
+    },
+    "constraints": {
+      "vertical": "TOP",
+      "horizontal": "LEFT"
+    },
+    "layoutSizingHorizontal": "HUG",
+    "layoutSizingVertical": "HUG",
+    "effects": [],
+    "interactions": [],
+    "complexStrokeProperties": {
+      "strokeType": "BASIC"
+    }
+  },
+  "enrichment": {
+    "source": "plugin-api",
+    "capturedAt": "2026-06-10T01:11:37.756Z",
+    "componentProperties": null,
+    "mainComponent": null,
+    "boundVariables": [],
+    "componentInstances": [],
+    "depthWarnings": []
+  }
+}

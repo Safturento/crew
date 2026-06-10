@@ -131,7 +131,7 @@
   },
   "enrichment": {
     "source": "plugin-api",
-    "capturedAt": "2026-05-22T15:38:53.578Z",
+    "capturedAt": "2026-06-10T02:10:45.542Z",
     "componentProperties": null,
     "mainComponent": null,
     "boundVariables": [
@@ -237,9 +237,28 @@
     ],
     "depthWarnings": [
       {
-        "underInstance": "root",
-        "count": 4,
-        "sampleName": "Container"
+        "depthExceeded": true,
+        "depth": 7,
+        "atNodeId": "23:34",
+        "atName": "Container"
+      },
+      {
+        "depthExceeded": true,
+        "depth": 7,
+        "atNodeId": "23:41",
+        "atName": "Container"
+      },
+      {
+        "depthExceeded": true,
+        "depth": 7,
+        "atNodeId": "23:49",
+        "atName": "Heading 2"
+      },
+      {
+        "depthExceeded": true,
+        "depth": 7,
+        "atNodeId": "23:51",
+        "atName": "Section"
       }
     ]
   }

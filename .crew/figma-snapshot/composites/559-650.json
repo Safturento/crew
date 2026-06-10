@@ -11,7 +11,7 @@
     "componentPropertyDefinitions": {
       "meta#559:0": {
         "type": "TEXT",
-        "defaultValue": "8m 12s \u00b7 14 events \u00b7 24k tokens"
+        "defaultValue": "8m 12s · 14 events · 24k tokens"
       },
       "timestamp#559:8": {
         "type": "TEXT",
@@ -74,7 +74,7 @@
   },
   "enrichment": {
     "source": "plugin-api",
-    "capturedAt": "2026-05-22T15:32:32.101Z",
+    "capturedAt": "2026-06-10T01:13:50.031Z",
     "componentProperties": null,
     "mainComponent": null,
     "boundVariables": [],

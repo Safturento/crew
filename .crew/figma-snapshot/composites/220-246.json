@@ -94,26 +94,25 @@
     },
     "layoutMode": "VERTICAL",
     "counterAxisSizingMode": "FIXED",
-    "primaryAxisSizingMode": "FIXED",
     "layoutWrap": "NO_WRAP",
     "absoluteBoundingBox": {
       "x": 1000,
       "y": 4855,
-      "width": 720,
-      "height": 540
+      "width": 686,
+      "height": 1026.7850341796875
     },
     "absoluteRenderBounds": {
       "x": 1000,
       "y": 4855,
-      "width": 720,
-      "height": 540
+      "width": 686,
+      "height": 1026.78515625
     },
     "constraints": {
       "vertical": "TOP",
       "horizontal": "LEFT"
     },
     "layoutSizingHorizontal": "FIXED",
-    "layoutSizingVertical": "FIXED",
+    "layoutSizingVertical": "HUG",
     "effects": [],
     "interactions": [],
     "complexStrokeProperties": {
@@ -122,7 +121,7 @@
   },
   "enrichment": {
     "source": "plugin-api",
-    "capturedAt": "2026-05-22T15:34:37.220Z",
+    "capturedAt": "2026-06-10T01:11:37.175Z",
     "componentProperties": null,
     "mainComponent": null,
     "boundVariables": [
@@ -193,6 +192,7 @@
         "mainComponentSetId": "577:643",
         "variantOverrides": null,
         "componentPropertyOverrides": {
+          "totalCost": "$0.06",
           "total": "48k"
         },
         "resolvedStyles": {
@@ -249,7 +249,7 @@
         "variantOverrides": "state=initializing",
         "componentPropertyOverrides": {
           "timestamp": "14:30:02",
-          "meta": "22s \u00b7 2 events \u00b7 150 tokens",
+          "meta": "22s · 2 events · 150 tokens",
           "state": "initializing"
         },
         "resolvedStyles": {
@@ -280,7 +280,7 @@
         "variantOverrides": "state=running",
         "componentPropertyOverrides": {
           "timestamp": "14:30:24",
-          "meta": "8m 12s \u00b7 14 events \u00b7 24k tokens",
+          "meta": "8m 12s · 14 events · 24k tokens",
           "state": "running"
         },
         "resolvedStyles": {
@@ -311,7 +311,7 @@
         "variantOverrides": "state=waiting",
         "componentPropertyOverrides": {
           "timestamp": "14:38:36",
-          "meta": "1m 4s \u00b7 1 event \u00b7 800 tokens",
+          "meta": "1m 4s · 1 event · 800 tokens",
           "state": "waiting"
         },
         "resolvedStyles": {
@@ -342,7 +342,7 @@
         "variantOverrides": "state=pr-open",
         "componentPropertyOverrides": {
           "timestamp": "14:47:19",
-          "meta": "live \u00b7 18s \u00b7 0 events \u00b7 0 tokens",
+          "meta": "live · 18s · 0 events · 0 tokens",
           "state": "pr-open"
         },
         "resolvedStyles": {

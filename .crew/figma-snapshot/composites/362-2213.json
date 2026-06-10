@@ -56,7 +56,7 @@
   },
   "enrichment": {
     "source": "plugin-api",
-    "capturedAt": "2026-05-22T15:32:33.066Z",
+    "capturedAt": "2026-06-10T01:11:37.698Z",
     "componentProperties": null,
     "mainComponent": null,
     "boundVariables": [],
@@ -93,7 +93,7 @@
         "componentPropertyOverrides": {
           "Icon": "lucide/git-pull-request",
           "Has Icon": false,
-          "Label": "\u2190 Back",
+          "Label": "← Back",
           "type": "button-sm",
           "color": "running",
           "intensity": "mid",
@@ -132,7 +132,7 @@
         "componentPropertyOverrides": {
           "Icon": "lucide/git-pull-request",
           "Has Icon": false,
-          "Label": "Spawn agent \u2192",
+          "Label": "Spawn agent →",
           "type": "button-sm",
           "color": "white",
           "intensity": "loud",
@@ -141,21 +141,15 @@
         "resolvedStyles": {
           "fills": [
             {
-              "hex": "#1C2538",
-              "tokenAlias": "slate-1050",
+              "hex": "#FAFAFA",
+              "tokenAlias": "zinc/50",
               "opacity": 1
             }
           ],
-          "strokes": [
-            {
-              "hex": "#64748B",
-              "tokenAlias": "slate/500",
-              "opacity": 1
-            }
-          ],
+          "strokes": [],
           "textColor": {
-            "hex": "#94A3B8",
-            "tokenAlias": "state/running"
+            "hex": "#09090B",
+            "tokenAlias": "zinc/950"
           }
         }
       }
