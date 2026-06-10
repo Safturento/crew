@@ -808,7 +808,7 @@ describe('Timeline', () => {
       </div>,
     );
     const scrollTo = vi.fn();
-    scrollRef.current!.scrollTo = scrollTo as unknown as typeof scrollRef.current.scrollTo;
+    scrollRef.current!.scrollTo = scrollTo as unknown as HTMLDivElement['scrollTo'];
 
     await userEvent.click(screen.getAllByTestId('minimap-segment')[0]);
     // The prototype-level getBoundingClientRect stub returns top: 0 for every
