@@ -42,3 +42,17 @@ if (typeof globalThis.ResizeObserver === 'undefined') {
   (globalThis as unknown as { ResizeObserver: typeof ResizeObserver }).ResizeObserver =
     NoopResizeObserver as unknown as typeof ResizeObserver;
 }
+
+// jsdom doesn't ship IntersectionObserver either. AgentBody observes a
+// sentinel to toggle the condensed header; tests that assert that behavior
+// install their own controllable mock via vi.stubGlobal.
+if (typeof globalThis.IntersectionObserver === 'undefined') {
+  class NoopIntersectionObserver {
+    observe(): void {}
+    unobserve(): void {}
+    disconnect(): void {}
+  }
+  (
+    globalThis as unknown as { IntersectionObserver: typeof IntersectionObserver }
+  ).IntersectionObserver = NoopIntersectionObserver as unknown as typeof IntersectionObserver;
+}
