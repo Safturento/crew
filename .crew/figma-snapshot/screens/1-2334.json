@@ -135,7 +135,7 @@
   },
   "enrichment": {
     "source": "plugin-api",
-    "capturedAt": "2026-05-22T15:34:37.050Z",
+    "capturedAt": "2026-06-10T02:15:16.333Z",
     "componentProperties": null,
     "mainComponent": null,
     "boundVariables": [
@@ -386,9 +386,10 @@
     ],
     "depthWarnings": [
       {
-        "underInstance": "root",
-        "count": 1,
-        "sampleName": "Background+HorizontalBorder"
+        "depthExceeded": true,
+        "depth": 7,
+        "atNodeId": "1:2372",
+        "atName": "Background+HorizontalBorder"
       }
     ]
   }

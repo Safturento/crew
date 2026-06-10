@@ -131,7 +131,7 @@
   },
   "enrichment": {
     "source": "plugin-api",
-    "capturedAt": "2026-05-22T15:30:31.750Z",
+    "capturedAt": "2026-06-10T02:15:16.564Z",
     "componentProperties": null,
     "mainComponent": null,
     "boundVariables": [
@@ -280,9 +280,34 @@
     ],
     "depthWarnings": [
       {
-        "underInstance": "root",
-        "count": 5,
-        "sampleName": "Background+HorizontalBorder"
+        "depthExceeded": true,
+        "depth": 7,
+        "atNodeId": "1:2687",
+        "atName": "Background+HorizontalBorder"
+      },
+      {
+        "depthExceeded": true,
+        "depth": 7,
+        "atNodeId": "1:2698",
+        "atName": "HorizontalBorder"
+      },
+      {
+        "depthExceeded": true,
+        "depth": 7,
+        "atNodeId": "1:2713",
+        "atName": "HorizontalBorder"
+      },
+      {
+        "depthExceeded": true,
+        "depth": 7,
+        "atNodeId": "1:2728",
+        "atName": "HorizontalBorder"
+      },
+      {
+        "depthExceeded": true,
+        "depth": 7,
+        "atNodeId": "1:2743",
+        "atName": "Container"
       }
     ]
   }

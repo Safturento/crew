@@ -1,31 +1,13 @@
 {
-  "id": "350:236",
-  "name": "ModalSelectionRow",
+  "id": "706:1059",
+  "name": "CondensedHeader",
   "type": "COMPONENT",
   "page": "Composites",
   "raw": {
-    "id": "350:236",
-    "name": "ModalSelectionRow",
+    "id": "706:1059",
+    "name": "CondensedHeader",
     "type": "COMPONENT",
     "scrollBehavior": "SCROLLS",
-    "componentPropertyDefinitions": {
-      "Primary#350:0": {
-        "type": "TEXT",
-        "defaultValue": "kanban-api"
-      },
-      "Secondary#350:1": {
-        "type": "TEXT",
-        "defaultValue": "~/code/kanban-api"
-      },
-      "Meta#350:2": {
-        "type": "TEXT",
-        "defaultValue": "KAN"
-      },
-      "Show Badge#350:3": {
-        "type": "BOOLEAN",
-        "defaultValue": true
-      }
-    },
     "boundVariables": {
       "fills": [
         {
@@ -41,7 +23,7 @@
       ]
     },
     "blendMode": "PASS_THROUGH",
-    "clipsContent": false,
+    "clipsContent": true,
     "background": [
       {
         "blendMode": "NORMAL",
@@ -96,9 +78,13 @@
         }
       }
     ],
-    "cornerRadius": 6,
-    "cornerSmoothing": 0,
-    "strokeWeight": 1,
+    "strokeWeight": 0,
+    "individualStrokeWeights": {
+      "top": 0,
+      "right": 0,
+      "bottom": 1,
+      "left": 0
+    },
     "strokeAlign": "INSIDE",
     "backgroundColor": {
       "r": 0.05882352963089943,
@@ -109,24 +95,23 @@
     "layoutMode": "HORIZONTAL",
     "primaryAxisSizingMode": "FIXED",
     "counterAxisAlignItems": "CENTER",
-    "primaryAxisAlignItems": "SPACE_BETWEEN",
-    "paddingLeft": 16,
+    "paddingLeft": 24,
     "paddingRight": 16,
-    "paddingTop": 10,
-    "paddingBottom": 10,
-    "itemSpacing": 12,
+    "paddingTop": 6,
+    "paddingBottom": 6,
+    "itemSpacing": 8,
     "layoutWrap": "NO_WRAP",
     "absoluteBoundingBox": {
-      "x": 1120,
-      "y": 1480,
-      "width": 514,
-      "height": 38
+      "x": 850,
+      "y": 7338,
+      "width": 686,
+      "height": 44
     },
     "absoluteRenderBounds": {
-      "x": 1120,
-      "y": 1480,
-      "width": 514,
-      "height": 38
+      "x": 850,
+      "y": 7338,
+      "width": 686,
+      "height": 44
     },
     "constraints": {
       "vertical": "TOP",
@@ -142,7 +127,7 @@
   },
   "enrichment": {
     "source": "plugin-api",
-    "capturedAt": "2026-06-10T01:11:37.617Z",
+    "capturedAt": "2026-06-10T02:10:44.753Z",
     "componentProperties": null,
     "mainComponent": null,
     "boundVariables": [
@@ -170,36 +155,64 @@
     ],
     "componentInstances": [
       {
-        "id": "350:242",
-        "name": "badge",
+        "id": "706:1042",
+        "name": "Pill",
         "path": [
-          "right",
-          "badge"
+          "Pill"
         ],
         "mainComponentSetId": "272:120",
-        "variantOverrides": "type=tag, color=running, intensity=muted, font=mono",
+        "variantOverrides": "type=pill, color=waiting, intensity=mid, font=mono",
         "componentPropertyOverrides": {
-          "Icon": "lucide/git-pull-request",
-          "Has Icon": false,
-          "Label": "4 active",
-          "type": "tag",
-          "color": "running",
-          "intensity": "muted",
+          "Icon": "lucide/circle",
+          "Has Icon": true,
+          "Label": "Waiting",
+          "type": "pill",
+          "color": "waiting",
+          "intensity": "mid",
           "font": "mono"
         },
         "resolvedStyles": {
           "fills": [
             {
-              "hex": "#1C2538",
-              "tokenAlias": "slate-1050",
+              "hex": "#26282A",
+              "tokenAlias": "amber-1050",
               "opacity": 1
             }
           ],
-          "strokes": [],
+          "strokes": [
+            {
+              "hex": "#F59E0B",
+              "tokenAlias": "amber/500",
+              "opacity": 1
+            }
+          ],
           "textColor": {
-            "hex": "#94A3B8",
-            "tokenAlias": "state/running"
+            "hex": "#FBBF24",
+            "tokenAlias": "state/waiting"
           }
+        }
+      },
+      {
+        "id": "706:1052",
+        "name": "Pill",
+        "path": [
+          "Pill"
+        ],
+        "mainComponentSetId": "272:120",
+        "variantOverrides": "type=button-icon-sm, color=running, intensity=ghost, font=sans",
+        "componentPropertyOverrides": {
+          "Label": "Label",
+          "Has Icon": true,
+          "Icon": "lucide/x",
+          "type": "button-icon-sm",
+          "color": "running",
+          "intensity": "ghost",
+          "font": "sans"
+        },
+        "resolvedStyles": {
+          "fills": [],
+          "strokes": [],
+          "textColor": null
         }
       }
     ],

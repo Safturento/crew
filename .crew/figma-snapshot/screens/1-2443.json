@@ -134,7 +134,7 @@
   },
   "enrichment": {
     "source": "plugin-api",
-    "capturedAt": "2026-05-22T15:30:31.872Z",
+    "capturedAt": "2026-06-10T02:10:45.339Z",
     "componentProperties": null,
     "mainComponent": null,
     "boundVariables": [
@@ -252,9 +252,16 @@
     ],
     "depthWarnings": [
       {
-        "underInstance": "root",
-        "count": 2,
-        "sampleName": "Heading 2"
+        "depthExceeded": true,
+        "depth": 7,
+        "atNodeId": "1:2490",
+        "atName": "Heading 2"
+      },
+      {
+        "depthExceeded": true,
+        "depth": 7,
+        "atNodeId": "1:2492",
+        "atName": "Section"
       }
     ]
   }

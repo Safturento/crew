@@ -1,21 +1,25 @@
 {
-  "id": "378:462",
-  "name": "Stepper",
+  "id": "663:869",
+  "name": "Checkbox",
   "type": "COMPONENT_SET",
   "page": "Composites",
   "raw": {
-    "id": "378:462",
-    "name": "Stepper",
+    "id": "663:869",
+    "name": "Checkbox",
     "type": "COMPONENT_SET",
     "scrollBehavior": "SCROLLS",
     "componentPropertyDefinitions": {
-      "active": {
+      "Label#663:0": {
+        "type": "TEXT",
+        "defaultValue": "Label"
+      },
+      "state": {
         "type": "VARIANT",
-        "defaultValue": "1",
+        "defaultValue": "on",
         "variantOptions": [
-          "1",
-          "2",
-          "3"
+          "on",
+          "off",
+          "disabled"
         ]
       }
     },
@@ -34,26 +38,35 @@
       "b": 0,
       "a": 0
     },
+    "layoutMode": "HORIZONTAL",
+    "paddingLeft": 16,
+    "paddingRight": 16,
+    "paddingTop": 16,
+    "paddingBottom": 16,
+    "itemSpacing": 16,
+    "layoutWrap": "NO_WRAP",
     "strokeDashes": [
       10,
       5
     ],
     "absoluteBoundingBox": {
-      "x": 1444,
-      "y": 551,
-      "width": 605,
-      "height": 16
+      "x": 1230,
+      "y": 620,
+      "width": 238,
+      "height": 48
     },
     "absoluteRenderBounds": {
-      "x": 1444,
-      "y": 551,
-      "width": 605,
-      "height": 16
+      "x": 1230,
+      "y": 620,
+      "width": 238,
+      "height": 48
     },
     "constraints": {
       "vertical": "TOP",
       "horizontal": "LEFT"
     },
+    "layoutSizingHorizontal": "HUG",
+    "layoutSizingVertical": "HUG",
     "effects": [],
     "interactions": [],
     "complexStrokeProperties": {
@@ -62,7 +75,7 @@
   },
   "enrichment": {
     "source": "plugin-api",
-    "capturedAt": "2026-06-10T01:11:37.724Z",
+    "capturedAt": "2026-06-10T01:11:37.752Z",
     "componentProperties": null,
     "mainComponent": null,
     "boundVariables": [],

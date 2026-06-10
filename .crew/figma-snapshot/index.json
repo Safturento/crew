@@ -202,6 +202,48 @@
     "screenshotPath": "composites/594-803.png",
     "metadataPath": "composites/594-803.json"
   },
+  "660:859": {
+    "name": "Brainstorm — Timeline Filter Rework (Option B)",
+    "type": "FRAME",
+    "page": "Composites",
+    "screenshotPath": "composites/660-859.png",
+    "metadataPath": "composites/660-859.json"
+  },
+  "663:869": {
+    "name": "Checkbox",
+    "type": "COMPONENT_SET",
+    "page": "Composites",
+    "screenshotPath": "composites/663-869.png",
+    "metadataPath": "composites/663-869.json"
+  },
+  "665:864": {
+    "name": "Brainstorm — Timeline Filter Rework (Option B)",
+    "type": "FRAME",
+    "page": "Composites",
+    "screenshotPath": "composites/665-864.png",
+    "metadataPath": "composites/665-864.json"
+  },
+  "699:1039": {
+    "name": "Hover states — reference",
+    "type": "FRAME",
+    "page": "Composites",
+    "screenshotPath": "composites/699-1039.png",
+    "metadataPath": "composites/699-1039.json"
+  },
+  "706:1059": {
+    "name": "CondensedHeader",
+    "type": "COMPONENT",
+    "page": "Composites",
+    "screenshotPath": "composites/706-1059.png",
+    "metadataPath": "composites/706-1059.json"
+  },
+  "707:1044": {
+    "name": "Brainstorm — Drawer sticky headers (pinned state)",
+    "type": "FRAME",
+    "page": "Composites",
+    "screenshotPath": "composites/707-1044.png",
+    "metadataPath": "composites/707-1044.json"
+  },
   "1:2": {
     "name": "Agents List (/)",
     "type": "FRAME",

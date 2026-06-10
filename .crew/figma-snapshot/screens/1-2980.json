@@ -131,7 +131,7 @@
   },
   "enrichment": {
     "source": "plugin-api",
-    "capturedAt": "2026-05-22T15:34:37.348Z",
+    "capturedAt": "2026-06-10T02:15:16.680Z",
     "componentProperties": null,
     "mainComponent": null,
     "boundVariables": [
@@ -212,7 +212,7 @@
         "componentPropertyOverrides": {
           "Show Open Button": true,
           "Repo Path": "~/code/kanban-api",
-          "Count Summary": "3 active \u00b7 4 total",
+          "Count Summary": "3 active · 4 total",
           "Project Name": "kanban-api"
         },
         "resolvedStyles": {
@@ -240,7 +240,7 @@
         "componentPropertyOverrides": {
           "Show Open Button": true,
           "Repo Path": "~/code/crew",
-          "Count Summary": "1 active \u00b7 2 total",
+          "Count Summary": "1 active · 2 total",
           "Project Name": "crew"
         },
         "resolvedStyles": {
@@ -268,7 +268,7 @@
         "componentPropertyOverrides": {
           "Show Open Button": true,
           "Repo Path": "~/code/lighthouse",
-          "Count Summary": "1 active \u00b7 1 total",
+          "Count Summary": "1 active · 1 total",
           "Project Name": "lighthouse"
         },
         "resolvedStyles": {
@@ -296,7 +296,7 @@
         "componentPropertyOverrides": {
           "Show Open Button": true,
           "Repo Path": "~/code/mailer-svc",
-          "Count Summary": "1 active \u00b7 1 total",
+          "Count Summary": "1 active · 1 total",
           "Project Name": "mailer-svc"
         },
         "resolvedStyles": {
@@ -348,9 +348,28 @@
     ],
     "depthWarnings": [
       {
-        "underInstance": "root",
-        "count": 4,
-        "sampleName": "Container"
+        "depthExceeded": true,
+        "depth": 7,
+        "atNodeId": "1:3024",
+        "atName": "Container"
+      },
+      {
+        "depthExceeded": true,
+        "depth": 7,
+        "atNodeId": "1:3183",
+        "atName": "Container"
+      },
+      {
+        "depthExceeded": true,
+        "depth": 7,
+        "atNodeId": "1:3265",
+        "atName": "Container"
+      },
+      {
+        "depthExceeded": true,
+        "depth": 7,
+        "atNodeId": "1:3315",
+        "atName": "Container"
       }
     ]
   }

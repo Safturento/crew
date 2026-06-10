@@ -56,7 +56,7 @@
   },
   "enrichment": {
     "source": "plugin-api",
-    "capturedAt": "2026-05-22T15:34:36.854Z",
+    "capturedAt": "2026-06-10T02:08:44.408Z",
     "componentProperties": null,
     "mainComponent": null,
     "boundVariables": [],
@@ -92,7 +92,7 @@
         "componentPropertyOverrides": {
           "Icon": "lucide/search",
           "Has Icon": true,
-          "Placeholder": "Filter open tickets\u2026"
+          "Placeholder": "Filter open tickets…"
         },
         "resolvedStyles": {
           "fills": [
@@ -307,7 +307,7 @@
         "componentPropertyOverrides": {
           "Icon": "lucide/git-pull-request",
           "Has Icon": false,
-          "Label": "\u2190 Back",
+          "Label": "← Back",
           "type": "button-sm",
           "color": "running",
           "intensity": "mid",
