@@ -101,7 +101,9 @@ test.describe('Drawer sticky headers (CREW-239)', () => {
     await expect(condensed.getByRole('button', { name: 'Close drawer' })).toBeVisible();
 
     // The toolbar is pinned at the condensed header's bottom edge — its
-    // filters/search stay usable without scrolling back up.
+    // filters/search stay usable without scrolling back up. 44 mirrors
+    // CONDENSED_HEADER_PX (not imported: the component module would drag
+    // React/lucide into the Playwright node transform).
     const toolbarTop = await page
       .getByTestId('timeline-toolbar')
       .evaluate(

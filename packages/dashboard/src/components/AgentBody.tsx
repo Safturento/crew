@@ -62,6 +62,7 @@ export function AgentBody({ agentKey, mode, onClose }: AgentBodyProps) {
         ref={scrollRef}
         data-testid="agent-scroll-container"
         className="flex min-h-0 flex-1 flex-col overflow-y-auto"
+        style={{ scrollbarGutter: 'stable' }}
       >
         <DrawerHeader
           detail={data}

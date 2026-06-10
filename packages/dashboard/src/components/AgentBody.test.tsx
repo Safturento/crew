@@ -1,4 +1,4 @@
-import { act, render, screen } from '@testing-library/react';
+import { act, render, screen, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { AgentBody } from './AgentBody.js';
@@ -97,7 +97,10 @@ describe('AgentBody condensed header', () => {
 
     rerender(<AgentBody agentKey="kanban-api/KAN-23" mode="drawer" />);
     act(() => lastObserver().fire(false));
-    // Both the full DrawerHeader and the condensed header render one
-    expect(screen.getAllByRole('button', { name: 'Close drawer' }).length).toBeGreaterThan(0);
+    expect(
+      within(screen.getByTestId('condensed-header')).getByRole('button', {
+        name: 'Close drawer',
+      }),
+    ).toBeInTheDocument();
   });
 });

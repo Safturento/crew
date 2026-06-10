@@ -189,6 +189,9 @@ describe('Timeline', () => {
 
   afterEach(() => {
     vi.clearAllMocks();
+    // Tests that stub ResizeObserver (e.g. the stripe-sizing test) must not
+    // leak their stub into later tests even when an assertion fails mid-body.
+    vi.unstubAllGlobals();
   });
 
   it('renders one TranscriptRow per event from useTimeline', () => {
@@ -784,8 +787,6 @@ describe('Timeline', () => {
     act(() => fireResize(800));
     const stripe = screen.getByTestId('minimap-stripe');
     expect(stripe.parentElement?.style.height).toBe(`${800 - PINNED_CHROME_PX}px`);
-
-    vi.unstubAllGlobals();
   });
 
   it('minimap section-jump scrolls the outer container, offset by the pinned chrome', async () => {

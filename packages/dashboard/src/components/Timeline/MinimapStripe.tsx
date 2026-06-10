@@ -27,8 +27,9 @@ interface MinimapStripeProps {
  * Compressed full-timeline minimap. Always fills `stripeHeight` regardless of
  * scroll content. Each segment is proportional to its section's pixel height,
  * clamped to `MIN_SEG_PX` for clickability, then normalized so the sum equals
- * `stripeHeight`. No viewport indicator — the native scrollbar thumb (just to
- * the right of the stripe) handles "you are here".
+ * `stripeHeight`. No viewport indicator — the drawer body's native scrollbar
+ * thumb (at the drawer's right edge, outside the timeline padding) handles
+ * "you are here".
  */
 export function MinimapStripe({ sections, stripeHeight, onSectionJump }: MinimapStripeProps) {
   const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
