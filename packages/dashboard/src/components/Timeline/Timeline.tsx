@@ -1,9 +1,11 @@
 import { ListCollapse } from 'lucide-react';
 import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
+import type { CSSProperties, RefObject } from 'react';
 
 import { useStateHistory, useTimeline } from '../../data/queries.js';
 import type { AgentDetailTokensByTool, AgentState, TranscriptEvent } from '../../data/types.js';
 import { cn } from '../../lib/utils.js';
+import { CONDENSED_HEADER_PX } from '../CondensedHeader.js';
 import { Button } from '../ui/button.js';
 import { Filters, defaultTimelineFilterState, type TimelineFilterState } from './Filters.js';
 import { loadFilters, saveFilters } from './filter-persistence.js';
@@ -23,6 +25,11 @@ import { TimelineSection } from './TimelineSection.js';
 import { TranscriptRow } from './TranscriptRow.js';
 import { useSectionHeights } from './useSectionHeights.js';
 
+/** Enforced height of the pinned toolbar row (`h-12`). */
+export const TOOLBAR_PX = 48;
+/** Total pinned chrome above the scrolling timeline content. */
+export const PINNED_CHROME_PX = CONDENSED_HEADER_PX + TOOLBAR_PX;
+
 interface TimelineProps {
   agentKey: string;
   /**
@@ -38,6 +45,12 @@ interface TimelineProps {
    * empty so the component renders standalone in tests.
    */
   tokensByTool?: AgentDetailTokensByTool[];
+  /**
+   * The drawer-body scroll container (owned by AgentBody). Drives live-mode
+   * autoscroll, minimap section-jump, and minimap viewport sizing. Optional so
+   * the component can be rendered standalone in tests.
+   */
+  scrollContainerRef?: RefObject<HTMLElement | null>;
 }
 
 const isLiveByDefault = (state?: AgentState): boolean => state !== 'finished' && state !== 'error';
@@ -58,7 +71,12 @@ function eventTokens(e: TranscriptEvent): number {
   );
 }
 
-export function Timeline({ agentKey, agentState, tokensByTool = [] }: TimelineProps) {
+export function Timeline({
+  agentKey,
+  agentState,
+  tokensByTool = [],
+  scrollContainerRef,
+}: TimelineProps) {
   const { data: timelineData, isLoading } = useTimeline(agentKey);
   const { data: historyData } = useStateHistory(agentKey);
   // Seed filter + search from any per-agent state persisted in a prior drawer
@@ -126,33 +144,33 @@ export function Timeline({ agentKey, agentState, tokensByTool = [] }: TimelinePr
     return () => window.clearInterval(id);
   }, [hasActiveSection]);
 
-  const scrollRef = useRef<HTMLDivElement | null>(null);
   const lastSeenVisibleLengthRef = useRef<number>(filteredEvents.length);
   useEffect(() => {
     const prev = lastSeenVisibleLengthRef.current;
     const next = filteredEvents.length;
-    if (liveMode && next > prev && scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    const el = scrollContainerRef?.current;
+    if (liveMode && next > prev && el) {
+      el.scrollTop = el.scrollHeight;
     }
     lastSeenVisibleLengthRef.current = next;
-  }, [filteredEvents.length, liveMode]);
+  }, [filteredEvents.length, liveMode, scrollContainerRef]);
 
   const { heights: sectionHeights, refFor: sectionRefFor } = useSectionHeights(sections.length);
   const [stripeHeight, setStripeHeight] = useState(0);
 
-  // Observe the scroll viewport's clientHeight so the stripe matches it.
-  // Depends on `isLoading` so we re-attach once the loading branch unmounts
-  // and the real scroll viewport (with `scrollRef`) appears in the DOM.
+  // Observe the drawer-body scroll container's height so the stripe matches
+  // the visible viewport below the pinned chrome. Depends on `isLoading` so we
+  // re-attach once the loading branch unmounts and the timeline content mounts.
   useEffect(() => {
     if (isLoading) return;
-    const el = scrollRef.current;
+    const el = scrollContainerRef?.current;
     if (!el || typeof ResizeObserver === 'undefined') return;
     const ro = new ResizeObserver(([entry]) => {
-      setStripeHeight(entry.contentRect.height);
+      setStripeHeight(Math.max(0, entry.contentRect.height - PINNED_CHROME_PX));
     });
     ro.observe(el);
     return () => ro.disconnect();
-  }, [isLoading]);
+  }, [isLoading, scrollContainerRef]);
 
   const minimapSections = useMemo(
     () =>
@@ -167,22 +185,28 @@ export function Timeline({ agentKey, agentState, tokensByTool = [] }: TimelinePr
 
   const onSectionJump = useCallback(
     (idx: number) => {
-      const viewport = scrollRef.current;
+      // Jumping is manual navigation — break live-follow even if the
+      // scroll container isn't wired (standalone test renders).
+      if (liveMode) setLiveMode(false);
+      const viewport = scrollContainerRef?.current;
       if (!viewport) return;
       const sectionEls = viewport.querySelectorAll<HTMLElement>('[data-testid="timeline-section"]');
       const target = sectionEls[idx];
       if (!target) return;
-      // The toolbar now lives outside the scroll viewport, so the section's
-      // own offset within the viewport is the scroll target directly.
-      const top = target.offsetTop;
+      // Position relative to the scroll container, minus the pinned chrome so
+      // the section header lands just below the sticky toolbar.
+      const top =
+        target.getBoundingClientRect().top -
+        viewport.getBoundingClientRect().top +
+        viewport.scrollTop -
+        PINNED_CHROME_PX;
       if (typeof viewport.scrollTo === 'function') {
         viewport.scrollTo({ top, behavior: 'smooth' });
       } else {
         viewport.scrollTop = top;
       }
-      if (liveMode) setLiveMode(false);
     },
-    [liveMode],
+    [liveMode, scrollContainerRef],
   );
 
   if (isLoading) {
@@ -205,7 +229,8 @@ export function Timeline({ agentKey, agentState, tokensByTool = [] }: TimelinePr
     <div className="relative flex min-h-0 flex-col">
       <TimelineToolbar
         data-testid="timeline-toolbar"
-        className="shrink-0 bg-card"
+        className="sticky z-10 h-12 bg-card"
+        style={{ top: CONDENSED_HEADER_PX }}
         filterState={filterState}
         onFilterStateChange={setFilterState}
         tokensByTool={tokensByTool}
@@ -216,61 +241,61 @@ export function Timeline({ agentKey, agentState, tokensByTool = [] }: TimelinePr
         onCollapseAll={collapseAll}
         canCollapseAll={sections.length > 0}
       />
-      <div className="relative flex min-h-0 flex-1 flex-col">
-        <div
-          ref={scrollRef}
-          className="relative flex min-h-0 flex-1 flex-col overflow-y-auto"
-          style={{ scrollbarGutter: 'stable' }}
-        >
-          {events.length === 0 ? (
-            <div
-              data-testid="timeline-empty"
-              className="flex flex-1 items-center justify-center p-6 text-sm text-muted-foreground"
-            >
-              No timeline events yet.
-            </div>
-          ) : filteredEvents.length === 0 ? (
-            <FilterEmptyState onShowAll={resetFilters} />
-          ) : (
-            // pr-6 reserves a gutter so content clears the MinimapStripe
-            // (right: SCROLLBAR_GUTTER 14px + width STRIPE_WIDTH 8px).
-            <div className="flex flex-col gap-2 py-1 pl-1 pr-6">
-              {sections.map((s, i) => {
-                const key = sectionKey(s, i);
-                const isOpen = !collapsed[key];
-                const elapsedMs = (s.endedAt ?? now) - s.startedAt;
-                const tokenSum = s.events.reduce((sum, e) => sum + eventTokens(e), 0);
-                return (
-                  <div key={key} ref={sectionRefFor(i)}>
-                    <TimelineSection
-                      state={s.state}
-                      startedAt={s.startedAt}
-                      elapsedMs={elapsedMs}
-                      eventCount={s.events.length}
-                      tokenSum={tokenSum}
-                      isOpen={isOpen}
-                      onToggle={() => toggleSection(key)}
-                    >
-                      {s.events.map((event, evIdx) => (
-                        <TranscriptRow
-                          key={eventKey(event, evIdx)}
-                          event={event}
-                          toolNameById={toolNameById}
-                        />
-                      ))}
-                    </TimelineSection>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
+      <div className="relative">
         {filteredEvents.length > 0 && sections.length > 0 && (
-          <MinimapStripe
-            sections={minimapSections}
-            stripeHeight={stripeHeight}
-            onSectionJump={onSectionJump}
-          />
+          /* Zero-height sticky anchor that pins the minimap stripe just below
+             the pinned chrome while the timeline content scrolls past. */
+          <div className="sticky z-10 h-0" style={{ top: PINNED_CHROME_PX }}>
+            <div className="relative" style={{ height: stripeHeight }}>
+              <MinimapStripe
+                sections={minimapSections}
+                stripeHeight={stripeHeight}
+                onSectionJump={onSectionJump}
+              />
+            </div>
+          </div>
+        )}
+        {events.length === 0 ? (
+          <div
+            data-testid="timeline-empty"
+            className="flex flex-1 items-center justify-center p-6 text-sm text-muted-foreground"
+          >
+            No timeline events yet.
+          </div>
+        ) : filteredEvents.length === 0 ? (
+          <FilterEmptyState onShowAll={resetFilters} />
+        ) : (
+          // pr-6 reserves a gutter so content clears the MinimapStripe
+          // (right: SCROLLBAR_GUTTER 14px + width STRIPE_WIDTH 8px).
+          <div className="flex flex-col gap-2 py-1 pl-1 pr-6">
+            {sections.map((s, i) => {
+              const key = sectionKey(s, i);
+              const isOpen = !collapsed[key];
+              const elapsedMs = (s.endedAt ?? now) - s.startedAt;
+              const tokenSum = s.events.reduce((sum, e) => sum + eventTokens(e), 0);
+              return (
+                <div key={key} ref={sectionRefFor(i)}>
+                  <TimelineSection
+                    state={s.state}
+                    startedAt={s.startedAt}
+                    elapsedMs={elapsedMs}
+                    eventCount={s.events.length}
+                    tokenSum={tokenSum}
+                    isOpen={isOpen}
+                    onToggle={() => toggleSection(key)}
+                  >
+                    {s.events.map((event, evIdx) => (
+                      <TranscriptRow
+                        key={eventKey(event, evIdx)}
+                        event={event}
+                        toolNameById={toolNameById}
+                      />
+                    ))}
+                  </TimelineSection>
+                </div>
+              );
+            })}
+          </div>
         )}
       </div>
     </div>
@@ -310,6 +335,7 @@ interface TimelineToolbarProps {
   onCollapseAll: () => void;
   canCollapseAll: boolean;
   className?: string;
+  style?: CSSProperties;
   'data-testid'?: string;
 }
 
@@ -324,11 +350,13 @@ function TimelineToolbar({
   onCollapseAll,
   canCollapseAll,
   className,
+  style,
   'data-testid': testId,
 }: TimelineToolbarProps) {
   return (
     <div
       data-testid={testId}
+      style={style}
       className={cn(
         'flex items-center gap-2 border-b border-white/10 px-3 py-2 text-xs text-muted-foreground',
         className,

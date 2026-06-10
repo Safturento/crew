@@ -628,7 +628,21 @@ describe('Timeline', () => {
     }
   });
 
-  it('renders the toolbar outside the scroll viewport and not sticky', () => {
+  it('pins the toolbar with position: sticky below the condensed header', () => {
+    mockUseTimeline.mockReturnValue(
+      timelineResult({
+        data: { events: [evt(1)] },
+        isSuccess: true,
+        status: 'success',
+      }),
+    );
+    render(<Timeline agentKey="KAN-1" agentState="running" />);
+    const toolbar = screen.getByTestId('timeline-toolbar');
+    expect(toolbar.className).toContain('sticky');
+    expect(toolbar.className).toContain('bg-card');
+  });
+
+  it('owns no scroll viewport — the drawer body is the single scroll container', () => {
     mockUseTimeline.mockReturnValue(
       timelineResult({
         data: { events: [evt(1)] },
@@ -637,13 +651,44 @@ describe('Timeline', () => {
       }),
     );
     const { container } = render(<Timeline agentKey="KAN-1" agentState="running" />);
-    const toolbar = screen.getByTestId('timeline-toolbar');
-    expect(toolbar.className).not.toMatch(/\bsticky\b/);
-    const scroll = container.querySelector('[class*="overflow-y-auto"]');
-    expect(scroll?.contains(toolbar)).toBe(false);
+    expect(container.querySelectorAll('[class*="overflow-y-auto"]').length).toBe(0);
   });
 
-  it('keeps exactly one scroll viewport with the toolbar lifted above it', () => {
+  it('live mode autoscrolls the outer scroll container when new events arrive', () => {
+    mockUseTimeline.mockReturnValue(
+      timelineResult({
+        data: { events: [evt(1)] },
+        isSuccess: true,
+        status: 'success',
+      }),
+    );
+
+    const scrollRef = { current: null as HTMLDivElement | null };
+    // Factory, not a shared element — rerendering an identical element
+    // reference makes React bail out of the subtree.
+    const ui = () => (
+      <div
+        ref={(el) => {
+          scrollRef.current = el;
+        }}
+        style={{ overflowY: 'auto', height: 800 }}
+      >
+        <Timeline agentKey="KAN-1" agentState="running" scrollContainerRef={scrollRef} />
+      </div>
+    );
+
+    const { rerender } = render(ui());
+    const el = scrollRef.current!;
+    Object.defineProperty(el, 'scrollHeight', { configurable: true, get: () => 4000 });
+    let scrollTop = 0;
+    Object.defineProperty(el, 'scrollTop', {
+      configurable: true,
+      get: () => scrollTop,
+      set: (v: number) => {
+        scrollTop = v;
+      },
+    });
+
     mockUseTimeline.mockReturnValue(
       timelineResult({
         data: { events: [evt(1), evt(2)] },
@@ -651,11 +696,8 @@ describe('Timeline', () => {
         status: 'success',
       }),
     );
-    const { container } = render(<Timeline agentKey="KAN-1" agentState="running" />);
-    const scrollables = container.querySelectorAll('[class*="overflow-y-auto"]');
-    expect(scrollables.length).toBe(1);
-    // Toolbar is a sibling above the viewport, not inside it.
-    expect(scrollables[0].contains(screen.getByTestId('timeline-toolbar'))).toBe(false);
+    rerender(ui());
+    expect(scrollTop).toBe(4000);
   });
 
   it('mounts MinimapStripe alongside the scroll viewport when there are sections', () => {
