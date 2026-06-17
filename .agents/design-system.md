@@ -1,7 +1,7 @@
 ---
 name: design-system
 description: Crew Figma DS + token bindings + Pill primitive contract
-last_updated: 2026-06-06
+last_updated: 2026-06-16
 covers:
   - 'packages/dashboard/src/components/**'
   - '*.figma.tsx'
@@ -204,6 +204,42 @@ What this means in practice:
 - CREW-125's "all 7 primitives have a `.figma.tsx` file authored" is the Definition of Done; the "publish + Inspect panel returns shadcn JSX" criterion is dropped.
 
 The decision is reversible — the file structure stays compatible with future publish if the team plan changes.
+
+### Authoring a `.figma.tsx` — the file anatomy
+
+Every code-shipped composite/primitive gets a sibling `<Component>.figma.tsx` in the same directory as its `.tsx`. They're inert (not published — see above) but **are typechecked** by the dashboard `tsc`, so they must import the real component and compile. Author the mapping *alongside* the component — never before it exists (the import won't resolve, and the typecheck breaks). Copy the canonical shape below rather than re-deriving it from another file:
+
+```tsx
+import { figma } from '@figma/code-connect';
+import { Component } from '@/components/...';
+
+figma.connect(
+  Component,
+  'https://www.figma.com/design/9FeJPriqdsdA4n9R5Xsrr8/Crew?node-id=<NODE-ID>',
+  {
+    props: {
+      // map Figma properties → code props with the figma.* helpers below
+    },
+    example: (props) => <Component {...props} />,
+  },
+);
+```
+
+**The URL** is the Crew file key `9FeJPriqdsdA4n9R5Xsrr8` + the node id in **hyphen** form (`node-id=272-120`) — even though the Plugin API uses the colon form (`272:120`). Node ids are in the mappings table below and the DS-structure section above.
+
+**Prop-mapping helpers** — the string argument is always the **Figma** property name exactly as it appears in the component's `componentPropertyDefinitions` (e.g. `'Label'`, `'Has Icon'`, the variant axis `'color'`):
+
+| Helper | Maps | Example |
+| --- | --- | --- |
+| `figma.string('Prop')` | a TEXT property → string | `label: figma.string('Label')` |
+| `figma.enum('Axis', { figmaVal: codeVal })` | a VARIANT axis → a code union. **Keys are Figma's values, values are the code's** — this is where Figma's kebab (`pr-open`) bridges to code's snake (`pr_open`), and where renames like `type`→`size` happen | `size: figma.enum('type', { 'button-sm': 'sm' })` |
+| `figma.boolean('Prop', { true: …, false: … })` | a BOOLEAN property → a value or rendered children | `icon: figma.boolean('Has Icon', { true: <Icon />, false: undefined })` |
+| `figma.instance('Slot')` | an INSTANCE_SWAP slot → a nested mapped component | `icon: figma.instance('Icon')` |
+| `figma.children(['Layer'])` | nested instances → rendered children | content-slot composites |
+
+`example` is a single render function returning the canonical JSX with the mapped `props` — document *one* representative usage, not every variant.
+
+**When to skip a `.figma.tsx`** (don't author one): radix/shadcn plumbing whose mapping rides on the composite that uses it (`alert-dialog` → `AlertModal`); internal-only anatomy (`pill-base`); glyph/util primitives with no Figma counterpart (`state-icon`, `meta-list`, `popover`); and feature modals that compose a designed primitive but aren't themselves a DS composite (`FixPrModal`). See the `components/ui/` notes above.
 
 ### Existing Code Connect mappings
 
