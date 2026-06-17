@@ -102,7 +102,11 @@ describe('RunnerCommandsService.claimPending', () => {
   it('claims the oldest pending command, flips it to claimed, and emits', async () => {
     const { service, events, db } = await setup();
     try {
-      const first = await service.enqueue({ agentKey: 'CREW-231', kind: 'cancel_soft', payload: null });
+      const first = await service.enqueue({
+        agentKey: 'CREW-231',
+        kind: 'cancel_soft',
+        payload: null,
+      });
       await service.enqueue({ agentKey: 'CREW-232', kind: 'cancel_soft', payload: null });
 
       const claimed = await service.claimPending();
@@ -116,7 +120,9 @@ describe('RunnerCommandsService.claimPending', () => {
         .executeTakeFirstOrThrow();
       expect(row.status).toBe('claimed');
 
-      const claimEvents = events.filter(isCommandChanged).filter((e) => e.data.status === 'claimed');
+      const claimEvents = events
+        .filter(isCommandChanged)
+        .filter((e) => e.data.status === 'claimed');
       expect(claimEvents).toHaveLength(1);
       expect(claimEvents[0].data).toMatchObject({ id: first.id, status: 'claimed' });
     } finally {
@@ -138,7 +144,11 @@ describe('RunnerCommandsService.claimPending', () => {
   it('never hands the same row to two concurrent claims', async () => {
     const { service, db } = await setup();
     try {
-      const only = await service.enqueue({ agentKey: 'CREW-231', kind: 'cancel_hard', payload: null });
+      const only = await service.enqueue({
+        agentKey: 'CREW-231',
+        kind: 'cancel_hard',
+        payload: null,
+      });
       const [a, b] = await Promise.all([service.claimPending(), service.claimPending()]);
       const claimedIds = [a, b].filter((x) => x !== null).map((x) => x!.id);
       expect(claimedIds).toEqual([only.id]);
@@ -152,7 +162,11 @@ describe('RunnerCommandsService.reportResult', () => {
   it('moves a claimed command to applied and emits', async () => {
     const { service, events, db } = await setup();
     try {
-      const cmd = await service.enqueue({ agentKey: 'CREW-231', kind: 'cancel_hard', payload: null });
+      const cmd = await service.enqueue({
+        agentKey: 'CREW-231',
+        kind: 'cancel_hard',
+        payload: null,
+      });
       await service.claimPending();
       await service.reportResult(cmd.id, 'applied');
 
