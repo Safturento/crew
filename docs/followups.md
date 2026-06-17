@@ -47,6 +47,7 @@ Organization: Active is grouped by topic (not chronology) since the dominant acc
     - [2026-04-28 — Dashboard New Run modal + projects route view](#2026-04-28--dashboard-new-run-modal--projects-route-view)
     - [2026-04-28 — `useAttention.clear()` snapshot semantic isn't directly tested](#2026-04-28--useattentionclear-snapshot-semantic-isnt-directly-tested)
   - [Daemon, CLI & Dispatch](#daemon-cli--dispatch)
+    - [2026-06-16 — `hasPrCreateInvocation` still misses `gh pr create` chained on one line with `&&`](#2026-06-16--hasprcreateinvocation-still-misses-gh-pr-create-chained-on-one-line-with-)
     - [2026-06-05 — `bruno-skeleton` fix() defaults the scaffolded port instead of deriving it from config](#2026-06-05--bruno-skeleton-fix-defaults-the-scaffolded-port-instead-of-deriving-it-from-config)
     - [2026-06-04 — `finish_steps` table accumulates across `crew finish` re-runs (no run scoping)](#2026-06-04--finish_steps-table-accumulates-across-crew-finish-re-runs-no-run-scoping)
     - [2026-06-04 — Runner pidfile has no liveness identity (recycled-PID false positive)](#2026-06-04--runner-pidfile-has-no-liveness-identity-recycled-pid-false-positive)
@@ -713,6 +714,22 @@ The "synthetic Unregistered section" feels right — single render path, no extr
 **Shape of work:** Tiny cleanup. Add 2–3 RTL test cases. Bundle into the cva-cleanup ticket above or stand alone.
 
 ### Daemon, CLI & Dispatch
+
+#### 2026-06-16 — `hasPrCreateInvocation` still misses `gh pr create` chained on one line with `&&`
+
+**What:** `hasPrCreateInvocation` (`packages/shared/src/transcripts/parser.ts`) detects the PR-create signal by splitting on `\n`/`⏎` and testing each line with `startsWith('gh pr create')`. A command that chains the push and the PR on a single line — `git push -u origin FOO && gh pr create …` — produces one line that starts with `git push`, so the predicate returns false and the agent never transitions to `pr_open`. The predicate's own doc comment explicitly claims it tolerates this `git push && …` form, but it does not; only the newline-separated form is actually handled (and that's the only chain case the parser tests cover).
+
+**Why noticed:** While fixing the CREW-237/CREW-241 stuck-in-`running` bug (detection was running against the 140-char truncated summary instead of the raw command — fixed by feeding `toolUse.input.command` into the predicate). The raw-command fix resolves the heredoc case that actually bit those two tickets, but reading the predicate surfaced this adjacent gap: even with the raw command in hand, a single-line `&&` chain still slips through. Not what stranded CREW-237/241 (both used heredoc-then-`gh pr create`-on-its-own-line), so it's deferred rather than folded into that fix.
+
+**Anchors:**
+
+- `packages/shared/src/transcripts/parser.ts` — `hasPrCreateInvocation` (per-line `startsWith`) + its misleading `git push && …` comment
+- `packages/shared/src/transcripts/parser.test.ts` — `hasPrCreateInvocation` cases (only newline-separated chain covered)
+- `packages/daemon/src/services/IngestService.ts` — `computeNextState` + `pendingPrCreates` gate, the two callers
+
+**What's been considered:** Either (a) widen the per-line tokenization to also split on `&&` / `;` / `|` shell separators before the `startsWith` test, or (b) switch to a word-boundary regex anchored to a command position (`(^|&&|;|\n|⏎)\s*gh pr create\b`) — (b) keeps the `echo "… gh pr create …"` carve-out the per-line approach was built for. Either way, also correct the doc comment to match reality.
+
+**Open questions:** Are there real agent transcripts using the single-line `&&` form, or do crew's prompts always emit `gh pr create` on its own line? If the latter, this may be doc-comment-only cleanup rather than a behavior fix — worth a quick grep across `~/.claude/projects` before sizing.
 
 #### 2026-06-05 — `bruno-skeleton` fix() defaults the scaffolded port instead of deriving it from config
 

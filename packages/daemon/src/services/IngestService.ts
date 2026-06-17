@@ -474,7 +474,14 @@ export class IngestService {
     const inserted = (result?.numInsertedOrUpdatedRows ?? 0n) > 0n;
     if (!inserted) return;
 
-    if (toolUse.name === 'Bash' && hasPrCreateInvocation(summary)) {
+    // Detect `gh pr create` against the RAW command, not the 140-char display
+    // summary stored above. Agents build the PR with a heredoc body first
+    // (`cat > body <<EOF … EOF; gh pr create --body-file`), which pushes the
+    // `gh pr create` line hundreds of chars past the summary truncation —
+    // detecting off `summary` silently missed it and stranded the agent in
+    // `running` with the PR already open (CREW-237/CREW-241).
+    const bashCommand = toolUse.name === 'Bash' ? String(toolUse.input.command ?? '') : '';
+    if (toolUse.name === 'Bash' && hasPrCreateInvocation(bashCommand)) {
       this.pendingPrCreates.set(toolUse.id, { runId, agentKey });
     }
 
@@ -484,7 +491,7 @@ export class IngestService {
       agentKey,
       runId,
       toolName: toolUse.name,
-      summary,
+      bashCommand,
       tsIso: event.timestamp,
     });
   }
@@ -532,12 +539,15 @@ export class IngestService {
     agentKey: string;
     runId: number;
     toolName: string;
-    summary: string;
+    /** Raw Bash command (not the truncated display summary) so `gh pr create`
+     *  detection survives a long heredoc body preceding it. Empty for non-Bash
+     *  tools, which never drive the PR-create transition. */
+    bashCommand: string;
     tsIso: string;
   }): Promise<void> {
     const previous = await this.getCachedAgentState(input.agentKey);
     const lastSeenRunId = this.lastRunIdCache.get(input.agentKey);
-    const next = computeNextState(previous, input.toolName, input.summary, {
+    const next = computeNextState(previous, input.toolName, input.bashCommand, {
       currentRunId: input.runId,
       lastSeenRunId,
     });
@@ -686,7 +696,7 @@ interface ComputeContext {
 function computeNextState(
   previous: TransitionState,
   toolName: string,
-  summary: string,
+  bashCommand: string,
   ctx: ComputeContext,
 ): TransitionState {
   if (previous === 'finished') return 'finished';
@@ -705,7 +715,7 @@ function computeNextState(
     return 'running';
   }
   if (previous === 'pr_open') return 'pr_open';
-  if (toolName === 'Bash' && hasPrCreateInvocation(summary)) return 'pr_open';
+  if (toolName === 'Bash' && hasPrCreateInvocation(bashCommand)) return 'pr_open';
   return 'running';
 }
 

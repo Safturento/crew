@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { setTimeout as delay } from 'node:timers/promises';
 import { pino, type Logger } from 'pino';
 import type { Kysely } from 'kysely';
-import type { TranscriptEvent } from 'crew-shared';
+import { summarizeInput, type TranscriptEvent } from 'crew-shared';
 import { createDb, runMigrations, type DaemonDatabase } from '../db.js';
 import { useTmpDir } from '../test/tmpdir.js';
 import { EventBus, type SseEvent } from './EventBus.js';
@@ -372,6 +372,47 @@ describe('IngestService.processEventForTest — state_transitions + agent.state_
       expect(rows.map((r) => r.to_state)).toEqual(['running', 'pr_open']);
       expect(rows.map((r) => r.from_state)).toEqual(['init', 'running']);
       expect(seen.filter((e) => e.type === 'agent.state_changed')).toHaveLength(2);
+    } finally {
+      await db.destroy();
+    }
+  });
+
+  it('detects pr_open + captures pr_url when gh pr create trails a long heredoc body (past the summary window)', async () => {
+    const { db, runId, agentKey } = await setup();
+    try {
+      const bus = new EventBus({ bufferSize: 10 });
+      const svc = new IngestService({ db, logger: silentLogger, eventBus: bus });
+
+      // Real-world shape (CREW-237/CREW-241): write the PR body to a file via a
+      // heredoc, THEN call gh pr create --body-file. The `gh pr create` line
+      // lands far past the 140-char Bash input summary, so detecting off the
+      // summary misses it — detection must run against the raw command.
+      const longBody = 'x'.repeat(300);
+      const command = `cat > body.md <<'EOF'\n## Summary\n${longBody}\nEOF\ngh pr create --base main --head FOO --body-file body.md`;
+      expect(summarizeInput('Bash', { command })).not.toContain('gh pr create');
+
+      await svc.processEventForTest({
+        runId,
+        agentKey,
+        event: makeBashToolUse({ id: 'tu_pr', command, ts: '2026-04-29T12:00:00Z' }),
+      });
+      await svc.processEventForTest({
+        runId,
+        agentKey,
+        event: makeToolResult({
+          tool_use_id: 'tu_pr',
+          content: 'Creating pull request...\nhttps://github.com/x/y/pull/99\n',
+          ts: '2026-04-29T12:00:01Z',
+        }),
+      });
+
+      expect(await getLatestState(db, agentKey)).toBe('pr_open');
+      const row = await db
+        .selectFrom('agents')
+        .where('key', '=', agentKey)
+        .select('pr_url')
+        .executeTakeFirst();
+      expect(row?.pr_url).toBe('https://github.com/x/y/pull/99');
     } finally {
       await db.destroy();
     }
