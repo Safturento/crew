@@ -42,8 +42,14 @@ function launchDetached(
   child.unref();
   return new Promise((resolve, reject) => {
     child.once('spawn', () => {
-      const pid = child.pid ?? -1;
-      resolve({ pid, pgid: pid });
+      // A spawned child always has a pid; guard anyway — registering a bogus
+      // pid would later make `kill(-pgid)` target the wrong group. No pid →
+      // report a failed launch instead of tracking a phantom.
+      if (child.pid === undefined) {
+        reject(new Error('spawned process has no pid'));
+        return;
+      }
+      resolve({ pid: child.pid, pgid: child.pid });
     });
     child.once('error', (err) => reject(err));
   });

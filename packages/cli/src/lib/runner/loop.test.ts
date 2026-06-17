@@ -210,6 +210,32 @@ describe('runLoop', () => {
 
     expect(d.client.claimPendingCommand).toHaveBeenCalled();
   });
+
+  it('applies a queued command even while the action long-poll is blocked', async () => {
+    const controller = new AbortController();
+    const kill = vi.fn();
+    const d = runLoopDeps({ signal: controller.signal, registry: trackedRegistry(), kill });
+    // Model an idle 25s action long-poll: it never returns until we abort. The
+    // command drain must NOT be gated behind it.
+    d.client.claimPendingAction.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          controller.signal.addEventListener('abort', () => resolve({ action: null }), {
+            once: true,
+          });
+        }),
+    );
+    d.client.claimPendingCommand
+      .mockResolvedValueOnce({ command: makeCommand({ id: 9, kind: 'cancel_soft' }) })
+      .mockResolvedValue({ command: null });
+
+    const loop = runLoop(d);
+    await vi.waitFor(() => expect(kill).toHaveBeenCalledWith(-10, 'SIGTERM'));
+    controller.abort();
+    await loop;
+
+    expect(d.client.reportCommandResult).toHaveBeenCalledWith(9, 'applied');
+  });
 });
 
 describe('drainCommands', () => {

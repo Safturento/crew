@@ -117,6 +117,13 @@ export interface RunLoopDeps extends RunnerLoopDeps {
    * single dropped heartbeat can't flap the dashboard chip offline.
    */
   heartbeatMs?: number;
+  /**
+   * Command-drain cadence; fires once immediately on start. Default 2s. Runs on
+   * its own timer — **not** gated behind the action long-poll — so a queued
+   * `cancel` applies within ~2s even when the action queue is idle (the action
+   * `claimPendingAction` poll otherwise blocks the main loop for up to 25s).
+   */
+  commandDrainMs?: number;
   /** Delay after a poll error before re-polling, so a downed daemon doesn't busy-spin. Default 2s. */
   errorBackoffMs?: number;
   /** Injectable sleep (abortable in production); defaults to a timer. */
@@ -146,10 +153,41 @@ function startHeartbeat(
 }
 
 /**
- * The runner's main loop: heartbeat on an interval while repeatedly draining
- * the action queue via {@link runOnce}. Idle iterations re-poll immediately (the
- * long-poll itself paces them); a transport error backs off first. Exits cleanly
- * once `signal` aborts.
+ * Start a command-drain loop that applies queued operator control commands
+ * immediately and then every `intervalMs`, until `signal` aborts. Runs on its
+ * own timer so cancel latency is decoupled from the action long-poll. An
+ * in-flight guard skips a tick while the previous drain is still running, so a
+ * slow daemon can't stack overlapping drains. Returns a stop fn (idempotent).
+ */
+function startCommandDrain(
+  deps: DrainCommandsDeps,
+  intervalMs: number,
+  signal: AbortSignal,
+): () => void {
+  let draining = false;
+  const tick = async (): Promise<void> => {
+    if (draining) return;
+    draining = true;
+    try {
+      await drainCommands(deps);
+    } finally {
+      draining = false;
+    }
+  };
+  void tick();
+  const timer = setInterval(() => void tick(), intervalMs);
+  const stop = (): void => clearInterval(timer);
+  signal.addEventListener('abort', stop, { once: true });
+  return stop;
+}
+
+/**
+ * The runner's main loop: heartbeat and command-drain run on their own
+ * intervals while the loop repeatedly drains the action queue via
+ * {@link runOnce}. Idle iterations re-poll immediately (the long-poll itself
+ * paces them); a transport error backs off first. Exits cleanly once `signal`
+ * aborts. Command apply is on a dedicated timer — not gated behind the action
+ * long-poll — so a queued cancel doesn't wait out a 25s idle poll.
  */
 export async function runLoop(deps: RunLoopDeps): Promise<void> {
   const sleep = deps.sleep ?? defaultSleep;
@@ -159,22 +197,20 @@ export async function runLoop(deps: RunLoopDeps): Promise<void> {
     deps.heartbeatMs ?? 5_000,
     deps.signal,
   );
+  const stopCommandDrain = startCommandDrain(
+    { client: deps.client, registry: deps.registry, kill: deps.kill, log: deps.log },
+    deps.commandDrainMs ?? 2_000,
+    deps.signal,
+  );
   try {
     while (!deps.signal.aborted) {
       const outcome = await runOnce(deps);
-      // Apply any operator control commands queued since the last cycle —
-      // cancels, reaps — against the processes we're tracking.
-      await drainCommands({
-        client: deps.client,
-        registry: deps.registry,
-        kill: deps.kill,
-        log: deps.log,
-      });
       if (outcome === 'poll_error' && !deps.signal.aborted) {
         await sleep(deps.errorBackoffMs ?? 2_000);
       }
     }
   } finally {
     stopHeartbeat();
+    stopCommandDrain();
   }
 }
