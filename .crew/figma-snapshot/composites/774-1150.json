@@ -1,0 +1,147 @@
+{
+  "id": "774:1150",
+  "name": "ViewOutputContent",
+  "type": "COMPONENT",
+  "page": "Composites",
+  "raw": {
+    "id": "774:1150",
+    "name": "ViewOutputContent",
+    "type": "COMPONENT",
+    "scrollBehavior": "SCROLLS",
+    "componentPropertyDefinitions": {
+      "Check#774:0": {
+        "type": "TEXT",
+        "defaultValue": "✕ remote-repo-resolves"
+      },
+      "Headline#774:1": {
+        "type": "TEXT",
+        "defaultValue": "Remote ‘origin’ not found in project config"
+      },
+      "Remediation#774:2": {
+        "type": "TEXT",
+        "defaultValue": "set repo.remote in crew.toml"
+      }
+    },
+    "blendMode": "PASS_THROUGH",
+    "clipsContent": false,
+    "background": [],
+    "fills": [],
+    "strokes": [],
+    "strokeWeight": 1,
+    "strokeAlign": "INSIDE",
+    "backgroundColor": {
+      "r": 0,
+      "g": 0,
+      "b": 0,
+      "a": 0
+    },
+    "layoutMode": "VERTICAL",
+    "counterAxisSizingMode": "FIXED",
+    "paddingLeft": 20,
+    "paddingRight": 20,
+    "paddingTop": 16,
+    "paddingBottom": 20,
+    "itemSpacing": 16,
+    "layoutWrap": "NO_WRAP",
+    "absoluteBoundingBox": {
+      "x": 0,
+      "y": 8149.78515625,
+      "width": 560,
+      "height": 351
+    },
+    "absoluteRenderBounds": {
+      "x": 0,
+      "y": 8149.78515625,
+      "width": 560,
+      "height": 351
+    },
+    "constraints": {
+      "vertical": "TOP",
+      "horizontal": "LEFT"
+    },
+    "layoutSizingHorizontal": "FIXED",
+    "layoutSizingVertical": "HUG",
+    "effects": [],
+    "interactions": [],
+    "complexStrokeProperties": {
+      "strokeType": "BASIC"
+    }
+  },
+  "enrichment": {
+    "source": "plugin-api",
+    "capturedAt": "2026-06-17T01:48:16.757Z",
+    "componentProperties": null,
+    "mainComponent": null,
+    "boundVariables": [],
+    "componentInstances": [
+      {
+        "id": "774:1152",
+        "name": "command",
+        "path": [
+          "meta",
+          "command"
+        ],
+        "mainComponentSetId": "272:120",
+        "variantOverrides": "type=tag, color=idle, intensity=muted, font=mono",
+        "componentPropertyOverrides": {
+          "Icon": "lucide/git-pull-request",
+          "Has Icon": false,
+          "Label": "run",
+          "type": "tag",
+          "color": "idle",
+          "intensity": "muted",
+          "font": "mono"
+        },
+        "resolvedStyles": {
+          "fills": [
+            {
+              "hex": "#172134",
+              "tokenAlias": "slate-1100",
+              "opacity": 1
+            }
+          ],
+          "strokes": [],
+          "textColor": {
+            "hex": "#64748B",
+            "tokenAlias": "state/idle"
+          }
+        }
+      },
+      {
+        "id": "774:1175",
+        "name": "Pill",
+        "path": [
+          "output",
+          "output-head",
+          "Pill"
+        ],
+        "mainComponentSetId": "272:120",
+        "variantOverrides": "type=button-sm, color=idle, intensity=muted, font=sans",
+        "componentPropertyOverrides": {
+          "Has Icon": true,
+          "Icon": "lucide/copy",
+          "Label": "Copy",
+          "type": "button-sm",
+          "color": "idle",
+          "intensity": "muted",
+          "font": "sans"
+        },
+        "resolvedStyles": {
+          "fills": [
+            {
+              "hex": "#172134",
+              "tokenAlias": "slate-1100",
+              "opacity": 1
+            }
+          ],
+          "strokes": [],
+          "textColor": {
+            "hex": "#64748B",
+            "tokenAlias": "state/idle"
+          }
+        }
+      }
+    ],
+    "depthWarnings": []
+  }
+}

@@ -1,0 +1,271 @@
+{
+  "id": "789:1190",
+  "name": "SupervisorCard",
+  "type": "COMPONENT_SET",
+  "page": "Composites",
+  "raw": {
+    "id": "789:1190",
+    "name": "SupervisorCard",
+    "type": "COMPONENT_SET",
+    "scrollBehavior": "SCROLLS",
+    "componentPropertyDefinitions": {
+      "Meta#789:0": {
+        "type": "TEXT",
+        "defaultValue": "5s heartbeat · 4 workers · up 2h 14m · pid 48213"
+      },
+      "state": {
+        "type": "VARIANT",
+        "defaultValue": "running",
+        "variantOptions": [
+          "running",
+          "down"
+        ]
+      }
+    },
+    "blendMode": "PASS_THROUGH",
+    "clipsContent": true,
+    "background": [],
+    "fills": [],
+    "strokes": [],
+    "cornerRadius": 5,
+    "cornerSmoothing": 0,
+    "strokeWeight": 1,
+    "strokeAlign": "INSIDE",
+    "backgroundColor": {
+      "r": 0,
+      "g": 0,
+      "b": 0,
+      "a": 0
+    },
+    "layoutMode": "VERTICAL",
+    "itemSpacing": 24,
+    "layoutWrap": "NO_WRAP",
+    "strokeDashes": [
+      10,
+      5
+    ],
+    "absoluteBoundingBox": {
+      "x": 0,
+      "y": 8580.78515625,
+      "width": 900,
+      "height": 148
+    },
+    "absoluteRenderBounds": {
+      "x": 0,
+      "y": 8580.78515625,
+      "width": 900,
+      "height": 148
+    },
+    "constraints": {
+      "vertical": "TOP",
+      "horizontal": "LEFT"
+    },
+    "layoutSizingHorizontal": "HUG",
+    "layoutSizingVertical": "HUG",
+    "effects": [],
+    "interactions": [],
+    "complexStrokeProperties": {
+      "strokeType": "BASIC"
+    }
+  },
+  "enrichment": {
+    "source": "plugin-api",
+    "capturedAt": "2026-06-17T01:45:24.617Z",
+    "componentProperties": null,
+    "mainComponent": null,
+    "boundVariables": [],
+    "componentInstances": [
+      {
+        "id": "765:1125",
+        "name": "Pill",
+        "path": [
+          "state=running",
+          "left",
+          "state-slot",
+          "Pill"
+        ],
+        "mainComponentSetId": "272:120",
+        "variantOverrides": "type=pill, color=running, intensity=mid, font=mono",
+        "componentPropertyOverrides": {
+          "Icon": "lucide/git-pull-request",
+          "Has Icon": false,
+          "Label": "running",
+          "type": "pill",
+          "color": "running",
+          "intensity": "mid",
+          "font": "mono"
+        },
+        "resolvedStyles": {
+          "fills": [
+            {
+              "hex": "#1C2538",
+              "tokenAlias": "slate-1050",
+              "opacity": 1
+            }
+          ],
+          "strokes": [
+            {
+              "hex": "#64748B",
+              "tokenAlias": "slate/500",
+              "opacity": 1
+            }
+          ],
+          "textColor": {
+            "hex": "#94A3B8",
+            "tokenAlias": "state/running"
+          }
+        }
+      },
+      {
+        "id": "765:1138",
+        "name": "Pill",
+        "path": [
+          "state=running",
+          "controls",
+          "Pill"
+        ],
+        "mainComponentSetId": "272:120",
+        "variantOverrides": "type=button-sm, color=idle, intensity=muted, font=sans",
+        "componentPropertyOverrides": {
+          "Has Icon": false,
+          "Icon": "lucide/git-pull-request",
+          "Label": "Restart",
+          "type": "button-sm",
+          "color": "idle",
+          "intensity": "muted",
+          "font": "sans"
+        },
+        "resolvedStyles": {
+          "fills": [
+            {
+              "hex": "#172134",
+              "tokenAlias": "slate-1100",
+              "opacity": 1
+            }
+          ],
+          "strokes": [],
+          "textColor": {
+            "hex": "#64748B",
+            "tokenAlias": "state/idle"
+          }
+        }
+      },
+      {
+        "id": "765:1146",
+        "name": "Pill",
+        "path": [
+          "state=running",
+          "controls",
+          "Pill"
+        ],
+        "mainComponentSetId": "272:120",
+        "variantOverrides": "type=button-sm, color=error, intensity=muted, font=sans",
+        "componentPropertyOverrides": {
+          "Icon": "lucide/git-pull-request",
+          "Has Icon": false,
+          "Label": "Stop",
+          "type": "button-sm",
+          "color": "error",
+          "intensity": "muted",
+          "font": "sans"
+        },
+        "resolvedStyles": {
+          "fills": [
+            {
+              "hex": "#262031",
+              "tokenAlias": "red-1050",
+              "opacity": 1
+            }
+          ],
+          "strokes": [],
+          "textColor": {
+            "hex": "#F87171",
+            "tokenAlias": "state/error"
+          }
+        }
+      },
+      {
+        "id": "789:1158",
+        "name": "Pill",
+        "path": [
+          "state=down",
+          "left",
+          "state-slot",
+          "Pill"
+        ],
+        "mainComponentSetId": "272:120",
+        "variantOverrides": "type=pill, color=error, intensity=mid, font=mono",
+        "componentPropertyOverrides": {
+          "Has Icon": false,
+          "Icon": "lucide/git-pull-request",
+          "Label": "down",
+          "type": "pill",
+          "color": "error",
+          "intensity": "mid",
+          "font": "mono"
+        },
+        "resolvedStyles": {
+          "fills": [
+            {
+              "hex": "#262031",
+              "tokenAlias": "red-1050",
+              "opacity": 1
+            }
+          ],
+          "strokes": [
+            {
+              "hex": "#EF4444",
+              "tokenAlias": "red/500",
+              "opacity": 1
+            }
+          ],
+          "textColor": {
+            "hex": "#F87171",
+            "tokenAlias": "state/error"
+          }
+        }
+      },
+      {
+        "id": "789:1181",
+        "name": "Pill",
+        "path": [
+          "state=down",
+          "controls",
+          "Pill"
+        ],
+        "mainComponentSetId": "272:120",
+        "variantOverrides": "type=button-sm, color=running, intensity=mid, font=sans",
+        "componentPropertyOverrides": {
+          "Icon": "lucide/git-pull-request",
+          "Has Icon": false,
+          "Label": "Start",
+          "type": "button-sm",
+          "color": "running",
+          "intensity": "mid",
+          "font": "sans"
+        },
+        "resolvedStyles": {
+          "fills": [
+            {
+              "hex": "#1C2538",
+              "tokenAlias": "slate-1050",
+              "opacity": 1
+            }
+          ],
+          "strokes": [
+            {
+              "hex": "#64748B",
+              "tokenAlias": "slate/500",
+              "opacity": 1
+            }
+          ],
+          "textColor": {
+            "hex": "#94A3B8",
+            "tokenAlias": "state/running"
+          }
+        }
+      }
+    ],
+    "depthWarnings": []
+  }
+}
