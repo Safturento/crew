@@ -1,0 +1,258 @@
+{
+  "id": "777:3872",
+  "name": "Runner — View output modal",
+  "type": "INSTANCE",
+  "page": "Dashboard Screens",
+  "raw": {
+    "id": "777:3872",
+    "name": "Runner — View output modal",
+    "type": "INSTANCE",
+    "scrollBehavior": "SCROLLS",
+    "boundVariables": {
+      "fills": [
+        {
+          "type": "VARIABLE_ALIAS",
+          "id": "VariableID:217:213"
+        }
+      ],
+      "strokes": [
+        {
+          "type": "VARIABLE_ALIAS",
+          "id": "VariableID:217:224"
+        }
+      ]
+    },
+    "componentId": "355:238",
+    "componentProperties": {
+      "Show Close#355:1": {
+        "type": "BOOLEAN",
+        "value": true
+      },
+      "Content#364:0": {
+        "type": "INSTANCE_SWAP",
+        "value": "774:1150",
+        "preferredValues": []
+      },
+      "Title#355:0": {
+        "type": "TEXT",
+        "value": "Startup output — CREW-241"
+      }
+    },
+    "overrides": [
+      {
+        "id": "777:3872",
+        "overriddenFields": [
+          "height",
+          "name",
+          "width"
+        ]
+      },
+      {
+        "id": "I777:3872;364:375",
+        "overriddenFields": [
+          "name"
+        ]
+      }
+    ],
+    "blendMode": "PASS_THROUGH",
+    "clipsContent": false,
+    "background": [
+      {
+        "blendMode": "NORMAL",
+        "type": "SOLID",
+        "color": {
+          "r": 0.007843137718737125,
+          "g": 0.0235294122248888,
+          "b": 0.09019608050584793,
+          "a": 1
+        },
+        "boundVariables": {
+          "color": {
+            "type": "VARIABLE_ALIAS",
+            "id": "VariableID:217:213"
+          }
+        }
+      }
+    ],
+    "fills": [
+      {
+        "blendMode": "NORMAL",
+        "type": "SOLID",
+        "color": {
+          "r": 0.007843137718737125,
+          "g": 0.0235294122248888,
+          "b": 0.09019608050584793,
+          "a": 1
+        },
+        "boundVariables": {
+          "color": {
+            "type": "VARIABLE_ALIAS",
+            "id": "VariableID:217:213"
+          }
+        }
+      }
+    ],
+    "strokes": [
+      {
+        "blendMode": "NORMAL",
+        "type": "SOLID",
+        "color": {
+          "r": 0.11764705926179886,
+          "g": 0.16078431904315948,
+          "b": 0.23137255012989044,
+          "a": 1
+        },
+        "boundVariables": {
+          "color": {
+            "type": "VARIABLE_ALIAS",
+            "id": "VariableID:217:224"
+          }
+        }
+      }
+    ],
+    "cornerRadius": 14,
+    "cornerSmoothing": 0,
+    "strokeWeight": 1,
+    "strokeAlign": "INSIDE",
+    "backgroundColor": {
+      "r": 0.007843137718737125,
+      "g": 0.0235294122248888,
+      "b": 0.09019608050584793,
+      "a": 1
+    },
+    "layoutMode": "VERTICAL",
+    "counterAxisSizingMode": "FIXED",
+    "layoutWrap": "NO_WRAP",
+    "absoluteBoundingBox": {
+      "x": 5323,
+      "y": 0,
+      "width": 560,
+      "height": 411
+    },
+    "absoluteRenderBounds": {
+      "x": 5253,
+      "y": -40,
+      "width": 700,
+      "height": 551
+    },
+    "constraints": {
+      "vertical": "TOP",
+      "horizontal": "LEFT"
+    },
+    "layoutSizingHorizontal": "FIXED",
+    "layoutSizingVertical": "HUG",
+    "effects": [
+      {
+        "type": "DROP_SHADOW",
+        "visible": true,
+        "color": {
+          "r": 0,
+          "g": 0,
+          "b": 0,
+          "a": 0.699999988079071
+        },
+        "blendMode": "NORMAL",
+        "offset": {
+          "x": 0,
+          "y": 30
+        },
+        "radius": 80,
+        "spread": -10,
+        "showShadowBehindNode": false
+      }
+    ],
+    "interactions": [],
+    "complexStrokeProperties": {
+      "strokeType": "BASIC"
+    }
+  },
+  "enrichment": {
+    "source": "plugin-api",
+    "capturedAt": "2026-06-17T01:49:33.441Z",
+    "componentProperties": {
+      "Show Close": true,
+      "Content": {
+        "id": "774:1150",
+        "name": "ViewOutputContent"
+      },
+      "Title": "Startup output — CREW-241"
+    },
+    "mainComponent": {
+      "id": "355:238",
+      "name": "Modal",
+      "parentSetName": "Composites"
+    },
+    "boundVariables": [
+      {
+        "path": "fills[0].color",
+        "variableId": "VariableID:217:213",
+        "variableName": "background",
+        "resolvedAlias": "background -> slate/950",
+        "resolvedHex": "#020617"
+      },
+      {
+        "path": "strokes[0].color",
+        "variableId": "VariableID:217:224",
+        "variableName": "border",
+        "resolvedAlias": "border -> slate/800",
+        "resolvedHex": "#1E293B"
+      },
+      {
+        "path": "backgrounds[0].color",
+        "variableId": "VariableID:217:213",
+        "variableName": "background",
+        "resolvedAlias": "background -> slate/950",
+        "resolvedHex": "#020617"
+      }
+    ],
+    "componentInstances": [
+      {
+        "id": "I777:3872;355:241",
+        "name": "close",
+        "path": [
+          "header",
+          "close"
+        ],
+        "mainComponentSetId": "272:120",
+        "variantOverrides": "type=button-icon-sm, color=running, intensity=ghost, font=sans",
+        "componentPropertyOverrides": {
+          "Has Icon": false,
+          "Label": "Label",
+          "Icon": "lucide/x",
+          "type": "button-icon-sm",
+          "color": "running",
+          "intensity": "ghost",
+          "font": "sans"
+        },
+        "resolvedStyles": {
+          "fills": [],
+          "strokes": [],
+          "textColor": null
+        }
+      },
+      {
+        "id": "I777:3872;364:375",
+        "name": "content",
+        "path": [
+          "content"
+        ],
+        "mainComponentSetId": "774:1150",
+        "variantOverrides": null,
+        "componentPropertyOverrides": {
+          "Remediation": "set repo.remote in crew.toml",
+          "Headline": "Remote ‘origin’ not found in project config",
+          "Check": "✕ remote-repo-resolves"
+        },
+        "resolvedStyles": {
+          "fills": [],
+          "strokes": [],
+          "textColor": {
+            "hex": "#64748B",
+            "tokenAlias": "state/idle"
+          }
+        }
+      }
+    ],
+    "depthWarnings": []
+  }
+}

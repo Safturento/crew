@@ -320,5 +320,47 @@
     "page": "Dashboard Screens",
     "screenshotPath": "screens/23-2.png",
     "metadataPath": "screens/23-2.json"
+  },
+  "789:1190": {
+    "name": "SupervisorCard",
+    "type": "COMPONENT_SET",
+    "page": "Composites",
+    "screenshotPath": "composites/789-1190.png",
+    "metadataPath": "composites/789-1190.json"
+  },
+  "767:1179": {
+    "name": "ProcessRow",
+    "type": "COMPONENT_SET",
+    "page": "Composites",
+    "screenshotPath": "composites/767-1179.png",
+    "metadataPath": "composites/767-1179.json"
+  },
+  "771:1142": {
+    "name": "FailedStartCard",
+    "type": "COMPONENT",
+    "page": "Composites",
+    "screenshotPath": "composites/771-1142.png",
+    "metadataPath": "composites/771-1142.json"
+  },
+  "774:1150": {
+    "name": "ViewOutputContent",
+    "type": "COMPONENT",
+    "page": "Composites",
+    "screenshotPath": "composites/774-1150.png",
+    "metadataPath": "composites/774-1150.json"
+  },
+  "775:3715": {
+    "name": "Runner Page (/runner)",
+    "type": "FRAME",
+    "page": "Dashboard Screens",
+    "screenshotPath": "screens/775-3715.png",
+    "metadataPath": "screens/775-3715.json"
+  },
+  "777:3872": {
+    "name": "Runner — View output modal",
+    "type": "INSTANCE",
+    "page": "Dashboard Screens",
+    "screenshotPath": "screens/777-3872.png",
+    "metadataPath": "screens/777-3872.json"
   }
 }

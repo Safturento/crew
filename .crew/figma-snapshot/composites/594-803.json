@@ -16,6 +16,10 @@
       "Show close button#594:1": {
         "type": "BOOLEAN",
         "defaultValue": true
+      },
+      "Show Cancel#792:0": {
+        "type": "BOOLEAN",
+        "defaultValue": true
       }
     },
     "boundVariables": {
@@ -173,7 +177,7 @@
   },
   "enrichment": {
     "source": "plugin-api",
-    "capturedAt": "2026-06-10T02:10:44.442Z",
+    "capturedAt": "2026-06-17T01:45:24.491Z",
     "componentProperties": null,
     "mainComponent": null,
     "boundVariables": [
@@ -245,6 +249,40 @@
           "textColor": {
             "hex": "#020617",
             "tokenAlias": "state/foreground"
+          }
+        }
+      },
+      {
+        "id": "792:1165",
+        "name": "cancel-action",
+        "path": [
+          "Container",
+          "Container",
+          "cancel-action"
+        ],
+        "mainComponentSetId": "272:120",
+        "variantOverrides": "type=button-sm, color=error, intensity=muted, font=sans",
+        "componentPropertyOverrides": {
+          "Icon": "lucide/git-pull-request",
+          "Has Icon": false,
+          "Label": "Cancel",
+          "type": "button-sm",
+          "color": "error",
+          "intensity": "muted",
+          "font": "sans"
+        },
+        "resolvedStyles": {
+          "fills": [
+            {
+              "hex": "#262031",
+              "tokenAlias": "red-1050",
+              "opacity": 1
+            }
+          ],
+          "strokes": [],
+          "textColor": {
+            "hex": "#F87171",
+            "tokenAlias": "state/error"
           }
         }
       },

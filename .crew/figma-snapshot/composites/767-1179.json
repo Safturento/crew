@@ -1,0 +1,451 @@
+{
+  "id": "767:1179",
+  "name": "ProcessRow",
+  "type": "COMPONENT_SET",
+  "page": "Composites",
+  "raw": {
+    "id": "767:1179",
+    "name": "ProcessRow",
+    "type": "COMPONENT_SET",
+    "scrollBehavior": "SCROLLS",
+    "componentPropertyDefinitions": {
+      "AgentKey#767:0": {
+        "type": "TEXT",
+        "defaultValue": "CREW-231"
+      },
+      "Project#767:1": {
+        "type": "TEXT",
+        "defaultValue": "~/code/crew"
+      },
+      "Duration#767:2": {
+        "type": "TEXT",
+        "defaultValue": "12m 04s"
+      },
+      "state": {
+        "type": "VARIANT",
+        "defaultValue": "running",
+        "variantOptions": [
+          "running",
+          "cancelling",
+          "launching"
+        ]
+      }
+    },
+    "blendMode": "PASS_THROUGH",
+    "clipsContent": true,
+    "background": [],
+    "fills": [],
+    "strokes": [],
+    "cornerRadius": 5,
+    "cornerSmoothing": 0,
+    "strokeWeight": 1,
+    "strokeAlign": "INSIDE",
+    "backgroundColor": {
+      "r": 0,
+      "g": 0,
+      "b": 0,
+      "a": 0
+    },
+    "layoutMode": "VERTICAL",
+    "itemSpacing": 24,
+    "layoutWrap": "NO_WRAP",
+    "strokeDashes": [
+      10,
+      5
+    ],
+    "absoluteBoundingBox": {
+      "x": 0,
+      "y": 7692,
+      "width": 900,
+      "height": 228
+    },
+    "absoluteRenderBounds": {
+      "x": 0,
+      "y": 7692,
+      "width": 900,
+      "height": 228
+    },
+    "constraints": {
+      "vertical": "TOP",
+      "horizontal": "LEFT"
+    },
+    "layoutSizingHorizontal": "HUG",
+    "layoutSizingVertical": "HUG",
+    "effects": [],
+    "interactions": [],
+    "complexStrokeProperties": {
+      "strokeType": "BASIC"
+    }
+  },
+  "enrichment": {
+    "source": "plugin-api",
+    "capturedAt": "2026-06-17T01:48:16.256Z",
+    "componentProperties": null,
+    "mainComponent": null,
+    "boundVariables": [],
+    "componentInstances": [
+      {
+        "id": "766:1131",
+        "name": "Pill",
+        "path": [
+          "state=running",
+          "left",
+          "state-slot",
+          "Pill"
+        ],
+        "mainComponentSetId": "272:120",
+        "variantOverrides": "type=pill, color=running, intensity=mid, font=mono",
+        "componentPropertyOverrides": {
+          "Icon": "lucide/git-pull-request",
+          "Has Icon": false,
+          "Label": "running",
+          "type": "pill",
+          "color": "running",
+          "intensity": "mid",
+          "font": "mono"
+        },
+        "resolvedStyles": {
+          "fills": [
+            {
+              "hex": "#1C2538",
+              "tokenAlias": "slate-1050",
+              "opacity": 1
+            }
+          ],
+          "strokes": [
+            {
+              "hex": "#64748B",
+              "tokenAlias": "slate/500",
+              "opacity": 1
+            }
+          ],
+          "textColor": {
+            "hex": "#94A3B8",
+            "tokenAlias": "state/running"
+          }
+        }
+      },
+      {
+        "id": "766:1143",
+        "name": "command",
+        "path": [
+          "state=running",
+          "left",
+          "identity",
+          "meta",
+          "command"
+        ],
+        "mainComponentSetId": "272:120",
+        "variantOverrides": "type=tag, color=idle, intensity=muted, font=mono",
+        "componentPropertyOverrides": {
+          "Icon": "lucide/git-pull-request",
+          "Has Icon": false,
+          "Label": "run",
+          "type": "tag",
+          "color": "idle",
+          "intensity": "muted",
+          "font": "mono"
+        },
+        "resolvedStyles": {
+          "fills": [
+            {
+              "hex": "#172134",
+              "tokenAlias": "slate-1100",
+              "opacity": 1
+            }
+          ],
+          "strokes": [],
+          "textColor": {
+            "hex": "#64748B",
+            "tokenAlias": "state/idle"
+          }
+        }
+      },
+      {
+        "id": "766:1155",
+        "name": "Pill",
+        "path": [
+          "state=running",
+          "controls",
+          "Pill"
+        ],
+        "mainComponentSetId": "272:120",
+        "variantOverrides": "type=button-sm, color=idle, intensity=ghost, font=sans",
+        "componentPropertyOverrides": {
+          "Has Icon": false,
+          "Icon": "lucide/git-pull-request",
+          "Label": "Pause",
+          "type": "button-sm",
+          "color": "idle",
+          "intensity": "ghost",
+          "font": "sans"
+        },
+        "resolvedStyles": {
+          "fills": [],
+          "strokes": [],
+          "textColor": {
+            "hex": "#64748B",
+            "tokenAlias": "state/idle"
+          }
+        }
+      },
+      {
+        "id": "766:1163",
+        "name": "Pill",
+        "path": [
+          "state=running",
+          "controls",
+          "Pill"
+        ],
+        "mainComponentSetId": "272:120",
+        "variantOverrides": "type=button-sm, color=error, intensity=muted, font=sans",
+        "componentPropertyOverrides": {
+          "Icon": "lucide/git-pull-request",
+          "Has Icon": false,
+          "Label": "Cancel",
+          "type": "button-sm",
+          "color": "error",
+          "intensity": "muted",
+          "font": "sans"
+        },
+        "resolvedStyles": {
+          "fills": [
+            {
+              "hex": "#262031",
+              "tokenAlias": "red-1050",
+              "opacity": 1
+            }
+          ],
+          "strokes": [],
+          "textColor": {
+            "hex": "#F87171",
+            "tokenAlias": "state/error"
+          }
+        }
+      },
+      {
+        "id": "767:1139",
+        "name": "Pill",
+        "path": [
+          "state=cancelling",
+          "left",
+          "state-slot",
+          "Pill"
+        ],
+        "mainComponentSetId": "272:120",
+        "variantOverrides": "type=pill, color=waiting, intensity=mid, font=mono",
+        "componentPropertyOverrides": {
+          "Icon": "lucide/git-pull-request",
+          "Has Icon": false,
+          "Label": "cancelling",
+          "type": "pill",
+          "color": "waiting",
+          "intensity": "mid",
+          "font": "mono"
+        },
+        "resolvedStyles": {
+          "fills": [
+            {
+              "hex": "#26282A",
+              "tokenAlias": "amber-1050",
+              "opacity": 1
+            }
+          ],
+          "strokes": [
+            {
+              "hex": "#F59E0B",
+              "tokenAlias": "amber/500",
+              "opacity": 1
+            }
+          ],
+          "textColor": {
+            "hex": "#FBBF24",
+            "tokenAlias": "state/waiting"
+          }
+        }
+      },
+      {
+        "id": "767:1143",
+        "name": "command",
+        "path": [
+          "state=cancelling",
+          "left",
+          "identity",
+          "meta",
+          "command"
+        ],
+        "mainComponentSetId": "272:120",
+        "variantOverrides": "type=tag, color=idle, intensity=muted, font=mono",
+        "componentPropertyOverrides": {
+          "Icon": "lucide/git-pull-request",
+          "Has Icon": false,
+          "Label": "run",
+          "type": "tag",
+          "color": "idle",
+          "intensity": "muted",
+          "font": "mono"
+        },
+        "resolvedStyles": {
+          "fills": [
+            {
+              "hex": "#172134",
+              "tokenAlias": "slate-1100",
+              "opacity": 1
+            }
+          ],
+          "strokes": [],
+          "textColor": {
+            "hex": "#64748B",
+            "tokenAlias": "state/idle"
+          }
+        }
+      },
+      {
+        "id": "767:1170",
+        "name": "Pill",
+        "path": [
+          "state=cancelling",
+          "controls",
+          "Pill"
+        ],
+        "mainComponentSetId": "272:120",
+        "variantOverrides": "type=button-sm, color=error, intensity=loud, font=sans",
+        "componentPropertyOverrides": {
+          "Icon": "lucide/git-pull-request",
+          "Has Icon": false,
+          "Label": "Force kill",
+          "type": "button-sm",
+          "color": "error",
+          "intensity": "loud",
+          "font": "sans"
+        },
+        "resolvedStyles": {
+          "fills": [
+            {
+              "hex": "#F87171",
+              "tokenAlias": "state/error",
+              "opacity": 1
+            }
+          ],
+          "strokes": [],
+          "textColor": {
+            "hex": "#020617",
+            "tokenAlias": "state/foreground"
+          }
+        }
+      },
+      {
+        "id": "790:1162",
+        "name": "Pill",
+        "path": [
+          "state=launching",
+          "left",
+          "state-slot",
+          "Pill"
+        ],
+        "mainComponentSetId": "272:120",
+        "variantOverrides": "type=pill, color=initializing, intensity=mid, font=mono",
+        "componentPropertyOverrides": {
+          "Icon": "lucide/git-pull-request",
+          "Has Icon": false,
+          "Label": "launching",
+          "type": "pill",
+          "color": "initializing",
+          "intensity": "mid",
+          "font": "mono"
+        },
+        "resolvedStyles": {
+          "fills": [
+            {
+              "hex": "#17253F",
+              "tokenAlias": "blue-1050",
+              "opacity": 1
+            }
+          ],
+          "strokes": [
+            {
+              "hex": "#3B82F6",
+              "tokenAlias": "blue/500",
+              "opacity": 1
+            }
+          ],
+          "textColor": {
+            "hex": "#60A5FA",
+            "tokenAlias": "state/initializing"
+          }
+        }
+      },
+      {
+        "id": "790:1166",
+        "name": "command",
+        "path": [
+          "state=launching",
+          "left",
+          "identity",
+          "meta",
+          "command"
+        ],
+        "mainComponentSetId": "272:120",
+        "variantOverrides": "type=tag, color=idle, intensity=muted, font=mono",
+        "componentPropertyOverrides": {
+          "Icon": "lucide/git-pull-request",
+          "Has Icon": false,
+          "Label": "run",
+          "type": "tag",
+          "color": "idle",
+          "intensity": "muted",
+          "font": "mono"
+        },
+        "resolvedStyles": {
+          "fills": [
+            {
+              "hex": "#172134",
+              "tokenAlias": "slate-1100",
+              "opacity": 1
+            }
+          ],
+          "strokes": [],
+          "textColor": {
+            "hex": "#64748B",
+            "tokenAlias": "state/idle"
+          }
+        }
+      },
+      {
+        "id": "790:1193",
+        "name": "Pill",
+        "path": [
+          "state=launching",
+          "controls",
+          "Pill"
+        ],
+        "mainComponentSetId": "272:120",
+        "variantOverrides": "type=button-sm, color=error, intensity=muted, font=sans",
+        "componentPropertyOverrides": {
+          "Icon": "lucide/git-pull-request",
+          "Has Icon": false,
+          "Label": "Cancel",
+          "type": "button-sm",
+          "color": "error",
+          "intensity": "muted",
+          "font": "sans"
+        },
+        "resolvedStyles": {
+          "fills": [
+            {
+              "hex": "#262031",
+              "tokenAlias": "red-1050",
+              "opacity": 1
+            }
+          ],
+          "strokes": [],
+          "textColor": {
+            "hex": "#F87171",
+            "tokenAlias": "state/error"
+          }
+        }
+      }
+    ],
+    "depthWarnings": []
+  }
+}
