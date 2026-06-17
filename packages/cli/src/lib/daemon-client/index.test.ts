@@ -285,14 +285,12 @@ describe('CrewDaemonClient.heartbeat with a snapshot (CREW-243)', () => {
   });
 
   it('sends no body when called without a snapshot (legacy edge-only ping)', async () => {
-    const fetchSpy = vi
-      .spyOn(globalThis, 'fetch')
-      .mockResolvedValue(
-        new Response(JSON.stringify({ online: true, lastSeen: 1, processes: [] }), {
-          status: 200,
-          headers: { 'content-type': 'application/json' },
-        }),
-      );
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify({ online: true, lastSeen: 1, processes: [] }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      }),
+    );
     const client = new CrewDaemonClient({ baseUrl: 'http://localhost:7773' });
     await client.heartbeat();
     const init = fetchSpy.mock.calls[0]?.[1] as RequestInit;

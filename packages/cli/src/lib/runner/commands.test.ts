@@ -64,20 +64,14 @@ describe('applyCommand', () => {
 
   it('reap is applied even when nothing is tracked (orphan already gone)', async () => {
     const { deps: d, kill } = deps();
-    const result = await applyCommand(
-      command({ kind: 'reap', agentKey: 'CREW-ghost' }),
-      d,
-    );
+    const result = await applyCommand(command({ kind: 'reap', agentKey: 'CREW-ghost' }), d);
     expect(result).toEqual({ status: 'applied' });
     expect(kill).not.toHaveBeenCalled();
   });
 
   it('cancel_soft fails when no process is tracked for the key', async () => {
     const { deps: d, kill } = deps();
-    const result = await applyCommand(
-      command({ kind: 'cancel_soft', agentKey: 'CREW-ghost' }),
-      d,
-    );
+    const result = await applyCommand(command({ kind: 'cancel_soft', agentKey: 'CREW-ghost' }), d);
     expect(result.status).toBe('failed');
     if (result.status === 'failed') expect(result.error).toMatch(/no tracked process/i);
     expect(kill).not.toHaveBeenCalled();
