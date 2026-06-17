@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import type { ActionKind, ActionStatus, RunnerCommandStatus } from 'crew-shared';
+import type { ActionKind, ActionStatus, LiveProcess, RunnerCommandStatus } from 'crew-shared';
 
 /**
  * The hybrid event vocabulary the daemon emits over SSE:
@@ -26,6 +26,12 @@ export type SsePayload =
   // the first heartbeat). Carries state inline so the dashboard's runner
   // health chip updates without a refetch.
   | { type: 'runner.status_changed'; data: { online: boolean; lastSeen: number | null } }
+  // CREW-235: the live-process snapshot the host runner pushes on each
+  // heartbeat that carries one. Distinct from the edge-only
+  // `runner.status_changed` (online/offline) so the health chip's edge
+  // stream stays untouched while the Runner page gets a per-heartbeat
+  // snapshot feed for the live-process list.
+  | { type: 'runner.snapshot_changed'; data: { processes: LiveProcess[] } }
   // CREW-215: invalidation ping for a `crew finish` step — the dashboard
   // refetches `GET /api/agents/:key/finish-steps` for the named agent.
   | { type: 'finish_step.changed'; data: { key: string } }
