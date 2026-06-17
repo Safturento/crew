@@ -48,6 +48,8 @@ Organization: Active is grouped by topic (not chronology) since the dominant acc
     - [2026-04-28 — `useAttention.clear()` snapshot semantic isn't directly tested](#2026-04-28--useattentionclear-snapshot-semantic-isnt-directly-tested)
   - [Daemon, CLI & Dispatch](#daemon-cli--dispatch)
     - [2026-06-17 — `RunnerCommandsService.reportResult` silently 204s on an unknown command id (vs `ActionService.report`'s 404)](#2026-06-17--runnercommandsservicereportresult-silently-204s-on-an-unknown-command-id-vs-actionservicereports-404)
+    - [2026-06-17 — failed-start rows render as plain `error` agents in the main grid](#2026-06-17--failed-start-rows-render-as-plain-error-agents-in-the-main-grid)
+    - [2026-06-17 — only `PreflightError` becomes a structured failed-start; docker/npm/playwright init failures don't](#2026-06-17--only-preflighterror-becomes-a-structured-failed-start-dockernpmplaywright-init-failures-dont)
     - [2026-06-16 — `hasPrCreateInvocation` still misses `gh pr create` chained on one line with `&&`](#2026-06-16--hasprcreateinvocation-still-misses-gh-pr-create-chained-on-one-line-with-)
     - [2026-06-05 — `bruno-skeleton` fix() defaults the scaffolded port instead of deriving it from config](#2026-06-05--bruno-skeleton-fix-defaults-the-scaffolded-port-instead-of-deriving-it-from-config)
     - [2026-06-04 — `finish_steps` table accumulates across `crew finish` re-runs (no run scoping)](#2026-06-04--finish_steps-table-accumulates-across-crew-finish-re-runs-no-run-scoping)
@@ -733,6 +735,38 @@ The "synthetic Unregistered section" feels right — single render path, no extr
 **What's been considered:** One-line fix — change `if (!updated) return;` to `throw new NotFoundError(...)` mirroring `ActionService.report`, plus a service test asserting the throw and a Bruno unknown-id case. Caveat to weigh first: the runner-side caller (CREW-243's `applyCommand`/`drainCommands`) will need to tolerate a 404 on a result it reports for a command the daemon already pruned/superseded — confirm that path treats 404 as benign (never-throws client) before flipping the behavior, or the consistency fix could surface a spurious runner error.
 
 **Open questions:** Is a silent 204 actually the safer contract for a fire-and-forget runner result report (the runner can't usefully act on a 404), making this doc-comment-and-Bruno alignment rather than a behavior change? Decide alongside CREW-243.
+
+#### 2026-06-17 — failed-start rows render as plain `error` agents in the main grid
+
+**What:** CREW-244 makes a preflight death create a `runs` row with `status='failed-start'` (and a backing `agents` row). `AgentsService` derives the grid badge purely from `completed_at`/`exit_code`/transitions — it never reads the new `status` column — so a failed-start (`exit_code=1`) shows as a generic `error` agent and a `launching` placeholder as `initializing`. That's an acceptable interim ("make init failures visible"), but a pre-run failure isn't really an `error` agent, and an agent that only ever failed preflight now sits permanently in the main grid.
+
+**Why noticed:** Code review of the CREW-244 PR (the register-before-preflight ticket). The reviewer flagged that the change has a non-obvious effect on the primary agents view; the author confirmed the interim `error` rendering is intentional and parked the dedicated home here.
+
+**Anchors:**
+
+- `packages/daemon/src/services/AgentsService.ts` — `list()` `latest` correlated subquery (`command IN ('run','fix-pr')`, no `status` filter) + `deriveState`
+- `packages/daemon/src/services/RunFailureService.ts` — `recordFailedStart` upserts the `agents` row
+- `docs/tickets/CREW-244.md` — "Failed-start agents surface as `error`" decision
+
+**What's been considered:** Two options surfaced — (a) filter `status IN ('launching','failed-start')` out of the `latest`-run subqueries, or (b) give failed-starts a dedicated "Failed to start" Runner-page section and exclude them from the grid. (b) is the Epic's intended design and belongs to **CREW-245** (Runner page), which can decide grid exclusion holistically once it also has B's live-process snapshot. Filtering alone (a) isn't sufficient — the backing `agents` row still appears (as perpetual `initializing`), so the real fix is a grid-level exclusion of agents whose only runs are launching/failed-start.
+
+**Shape of work:** Fold into CREW-245 when the Runner page lands — one query-level exclusion in `AgentsService.list()` (+ test) plus the "Failed to start" section that reads failed-start rows directly.
+
+#### 2026-06-17 — only `PreflightError` becomes a structured failed-start; docker/npm/playwright init failures don't
+
+**What:** CREW-244's `runTrackedPreflight` converts the `launching` row into a structured `failed-start` **only** when `prepareAgentEnvironment` throws a `PreflightError` (the health-check gate). But that gate runs _last_ in `prepareAgentEnvironment`, after docker bringup, `npm install`, and the Chromium install — each of which throws a plain `Error`, not `PreflightError`. So the most common dispatch failure modes (docker stack won't come up, npm ci fails) fall through to the generic time-based reaper ~10 min later, surfacing as `failed-start` with the placeholder "Run never started" diagnosis instead of the real cause.
+
+**Why noticed:** Code review of the CREW-244 PR. Consistent with CREW-244's stated scope (`PreflightError` → structured capture; runner-executor stdout capture deferred to CREW-243), but the gap means the headline goal ("missing remote, failed health check") is covered while docker/npm — statistically the bigger failure surface — is not.
+
+**Anchors:**
+
+- `packages/cli/src/lib/run/agent-environment.ts` — docker/npm/chromium steps (plain `Error`) run before `runPreflight`
+- `packages/cli/src/lib/run/preflight-tracking.ts` — `runTrackedPreflight` only special-cases `instanceof PreflightError`
+- `packages/cli/src/lib/run/index.ts`, `packages/daemon/src/services/RunFailureService.ts` (`reapStuckLaunching` generic failure)
+
+**What's been considered:** Wrap the docker/npm/chromium throwers in a structured failure too — either widen `runTrackedPreflight` to catch any error and synthesize a `RunFailure` from the thrown message + the relevant `/tmp/crew-*-<KEY>.log` tail, or have each step throw a `PreflightError`-shaped error. The richer capture (reading the step's log tail for `failure_output`) overlaps CREW-243's per-run startup-log capture, so it's natural to wire when that executor work lands.
+
+**Shape of work:** Small change in `preflight-tracking.ts` (broaden the catch + map non-preflight errors to a generic `RunFailure`), or fold into CREW-243's startup-capture work for the log-tail-as-output version.
 
 #### 2026-06-16 — `hasPrCreateInvocation` still misses `gh pr create` chained on one line with `&&`
 

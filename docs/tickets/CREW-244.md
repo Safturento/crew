@@ -54,6 +54,16 @@ daemon — registration only happens after Claude spawns. This ticket:
   threshold with no completion is settled to `failed-start`
   ("process exited before registering"). This satisfies the acceptance
   criterion without depending on B's live-process snapshot.
+- **Failed-start agents surface as `error` in the main grid (intended,
+  interim).** `recordFailedStart` upserts an `agents` row so the failure is
+  attributable (key/project). `AgentsService` derives state purely from
+  `completed_at`/`exit_code`/transitions (it never reads `status`), so a
+  failed-start run (`exit_code=1`) projects as `error` and a `launching`
+  placeholder as `initializing` in the main agents grid. That is consistent
+  with this ticket's goal — _make init failures visible_ — and strictly better
+  than the prior zero-trace behavior. The dedicated "Failed to start" Runner-
+  page section + any grid exclusion is CREW-245's job; see followup
+  `2026-06-17 — failed-start rows render as plain error agents in the grid`.
 
 ## Ruled out / deferred (cross-ticket dependencies)
 

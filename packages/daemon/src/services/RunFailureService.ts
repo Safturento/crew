@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { sql, type Kysely } from 'kysely';
 import type { RunFailure } from 'crew-shared';
 import type { DaemonDatabase, RunsTable } from '../db.js';
@@ -92,9 +93,10 @@ export class RunFailureService {
         agent_key: input.key,
         command: input.command,
         // Synthesized session id: no transcript exists yet, but session_id is
-        // NOT NULL + unique-ish in practice. The launching row is a placeholder
-        // cleared on successful registration (onNewRunRegistered).
-        session_id: `launching:${input.key}:${Date.now()}`,
+        // NOT NULL UNIQUE. The random suffix keeps two same-key, same-ms
+        // pre-registers from colliding on the constraint. The launching row is
+        // a placeholder cleared on successful registration (onNewRunRegistered).
+        session_id: `launching:${input.key}:${Date.now()}:${randomUUID()}`,
         started_at: input.startedAt,
         completed_at: null,
         exit_code: null,
@@ -112,6 +114,9 @@ export class RunFailureService {
    */
   async recordFailedStart(input: RecordFailedStartInput): Promise<{ runId: number }> {
     const now = new Date().toISOString();
+    // Convert the most-recent launching placeholder for the key. The one-key-
+    // one-dispatch invariant means there's normally exactly one; if an earlier
+    // pre-register ever left an extra, the time-based reaper settles it.
     const launching = await this.db
       .selectFrom('runs')
       .select('id')
@@ -153,7 +158,7 @@ export class RunFailureService {
         .values({
           agent_key: input.key,
           command: input.command,
-          session_id: `failed-start:${input.key}:${Date.now()}`,
+          session_id: `failed-start:${input.key}:${Date.now()}:${randomUUID()}`,
           started_at: startedAt,
           completed_at: now,
           exit_code: 1,
