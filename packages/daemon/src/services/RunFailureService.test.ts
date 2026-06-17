@@ -92,7 +92,11 @@ describe('RunFailureService.recordFailedStart', () => {
     });
     // Same row, converted — not a second run.
     expect(result.runId).toBe(runId);
-    const runs = await db.selectFrom('runs').selectAll().where('agent_key', '=', 'CREW-2').execute();
+    const runs = await db
+      .selectFrom('runs')
+      .selectAll()
+      .where('agent_key', '=', 'CREW-2')
+      .execute();
     expect(runs).toHaveLength(1);
     expect(runs[0].status).toBe('failed-start');
     expect(runs[0].failure_check).toBe('git-remote');

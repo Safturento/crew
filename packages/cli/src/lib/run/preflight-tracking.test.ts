@@ -5,12 +5,12 @@ import { runTrackedPreflight } from './preflight-tracking.js';
 
 function makeDeps() {
   const calls: string[] = [];
-  const reportLaunching = vi.fn(async (_input: ReportLaunchingInput) => {
-    calls.push('reportLaunching');
+  const reportLaunching = vi.fn(async (input: ReportLaunchingInput) => {
+    calls.push(`reportLaunching:${input.key}`);
     return { ok: true as const, runId: 1 };
   });
-  const reportFailedStart = vi.fn(async (_input: ReportFailedStartInput) => {
-    calls.push('reportFailedStart');
+  const reportFailedStart = vi.fn(async (input: ReportFailedStartInput) => {
+    calls.push(`reportFailedStart:${input.key}`);
     return { ok: true as const, runId: 1 };
   });
   const daemonClient = { reportLaunching, reportFailedStart };
@@ -34,14 +34,19 @@ describe('runTrackedPreflight', () => {
       return 'ok';
     });
     expect(result).toBe('ok');
-    expect(calls).toEqual(['reportLaunching', 'prepare']);
+    expect(calls).toEqual(['reportLaunching:CREW-9', 'prepare']);
   });
 
   it('reports a structured failed-start when prepare throws a PreflightError', async () => {
     const { deps, reportFailedStart } = makeDeps();
-    const err = new PreflightError('git-remote', 'No git remote configured', 'Add an origin remote.', {
-      detail: 'fatal',
-    });
+    const err = new PreflightError(
+      'git-remote',
+      'No git remote configured',
+      'Add an origin remote.',
+      {
+        detail: 'fatal',
+      },
+    );
     await expect(
       runTrackedPreflight(deps, async () => {
         throw err;

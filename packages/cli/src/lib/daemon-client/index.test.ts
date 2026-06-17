@@ -286,14 +286,12 @@ const failure = {
 
 describe('CrewDaemonClient.reportLaunching', () => {
   it('POSTs to /api/runner/launching and returns the runId on 201', async () => {
-    const fetchSpy = vi
-      .spyOn(globalThis, 'fetch')
-      .mockResolvedValue(
-        new Response(JSON.stringify({ runId: 7 }), {
-          status: 201,
-          headers: { 'content-type': 'application/json' },
-        }),
-      );
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify({ runId: 7 }), {
+        status: 201,
+        headers: { 'content-type': 'application/json' },
+      }),
+    );
     const client = new CrewDaemonClient({ baseUrl: 'http://localhost:7773' });
     const result = await client.reportLaunching(launchingInput);
     expect(result.ok).toBe(true);
@@ -314,14 +312,12 @@ describe('CrewDaemonClient.reportLaunching', () => {
 
 describe('CrewDaemonClient.reportFailedStart', () => {
   it('POSTs the failure diagnosis to /api/runner/failed-start', async () => {
-    const fetchSpy = vi
-      .spyOn(globalThis, 'fetch')
-      .mockResolvedValue(
-        new Response(JSON.stringify({ runId: 8 }), {
-          status: 201,
-          headers: { 'content-type': 'application/json' },
-        }),
-      );
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify({ runId: 8 }), {
+        status: 201,
+        headers: { 'content-type': 'application/json' },
+      }),
+    );
     const client = new CrewDaemonClient({ baseUrl: 'http://localhost:7773' });
     const result = await client.reportFailedStart({
       key: 'KAN-9',
@@ -352,14 +348,12 @@ describe('CrewDaemonClient.reportFailedStart', () => {
 
 describe('CrewDaemonClient.acknowledgeRun', () => {
   it('POSTs to /api/runs/:key/acknowledge', async () => {
-    const fetchSpy = vi
-      .spyOn(globalThis, 'fetch')
-      .mockResolvedValue(
-        new Response(JSON.stringify({ acknowledged: 1 }), {
-          status: 200,
-          headers: { 'content-type': 'application/json' },
-        }),
-      );
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify({ acknowledged: 1 }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      }),
+    );
     const client = new CrewDaemonClient({ baseUrl: 'http://localhost:7773' });
     const result = await client.acknowledgeRun('KAN-9');
     expect(result.ok).toBe(true);
