@@ -141,6 +141,10 @@ describe('RunnerCommandsService.claimPending', () => {
     }
   });
 
+  // kysely-better-sqlite3 is a synchronous single-connection driver, so these
+  // two claims serialize rather than racing on OS threads — this asserts the
+  // re-asserted `WHERE status='pending'` yields exactly one winner under
+  // serialized claims, not true thread concurrency.
   it('never hands the same row to two concurrent claims', async () => {
     const { service, db } = await setup();
     try {
