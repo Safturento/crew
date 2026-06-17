@@ -23,8 +23,11 @@ type DrawerProps = {
  * background scroll-lock, and nested-layer dismissal (a Popover opened inside
  * dismisses on its own without closing the drawer — no manual overlay guard).
  *
- * Enter/exit slide is driven by the `drawer-in`/`drawer-out` keyframes in
- * index.css; Radix keeps the content mounted through the close animation.
+ * Enter/exit slide rides on `tw-animate-css`'s standard `slide-in-from-right`
+ * / `slide-out-to-right` (panel) and `fade-in-0` / `fade-out-0` (overlay)
+ * utilities; the durations + easing reproduce the prior bespoke keyframes
+ * (300ms in / 200ms out on a decelerating curve). Radix keeps the content
+ * mounted through the close animation.
  */
 function Drawer({ open, onOpenChange, title, className, children }: DrawerProps) {
   return (
@@ -32,13 +35,14 @@ function Drawer({ open, onOpenChange, title, className, children }: DrawerProps)
       <DialogPrimitive.Portal>
         <DialogPrimitive.Overlay
           data-testid="drawer-backdrop"
-          className="fixed inset-0 z-50 bg-black/40 data-[state=closed]:animate-overlay-out data-[state=open]:animate-overlay-in"
+          className="fixed inset-0 z-50 bg-black/40 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=open]:fade-in-0 data-[state=closed]:fade-out-0 data-[state=open]:duration-200 data-[state=closed]:duration-150 data-[state=open]:ease-out data-[state=closed]:ease-in"
         />
         <DialogPrimitive.Content
           aria-describedby={undefined}
           className={cn(
             'fixed inset-y-0 right-0 z-50 flex h-full w-full max-w-5xl flex-col bg-background shadow-2xl outline-none',
-            'data-[state=closed]:animate-drawer-out data-[state=open]:animate-drawer-in',
+            'data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=open]:slide-in-from-right data-[state=closed]:slide-out-to-right',
+            'data-[state=open]:duration-300 data-[state=closed]:duration-200 ease-[cubic-bezier(0.32,0.72,0,1)]',
             className,
           )}
         >
