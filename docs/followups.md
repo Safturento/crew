@@ -49,6 +49,7 @@ Organization: Active is grouped by topic (not chronology) since the dominant acc
     - [2026-04-28 — Dashboard New Run modal + projects route view](#2026-04-28--dashboard-new-run-modal--projects-route-view)
     - [2026-04-28 — `useAttention.clear()` snapshot semantic isn't directly tested](#2026-04-28--useattentionclear-snapshot-semantic-isnt-directly-tested)
   - [Daemon, CLI & Dispatch](#daemon-cli--dispatch)
+    - [2026-06-16 — Model Management Epic: per-dispatch model selection + resilient resume](#2026-06-16--model-management-epic-per-dispatch-model-selection--resilient-resume)
     - [2026-06-16 — `hasPrCreateInvocation` still misses `gh pr create` chained on one line with `&&`](#2026-06-16--hasprcreateinvocation-still-misses-gh-pr-create-chained-on-one-line-with-)
     - [2026-06-05 — `bruno-skeleton` fix() defaults the scaffolded port instead of deriving it from config](#2026-06-05--bruno-skeleton-fix-defaults-the-scaffolded-port-instead-of-deriving-it-from-config)
     - [2026-06-04 — `finish_steps` table accumulates across `crew finish` re-runs (no run scoping)](#2026-06-04--finish_steps-table-accumulates-across-crew-finish-re-runs-no-run-scoping)
@@ -777,6 +778,36 @@ The "synthetic Unregistered section" feels right — single render path, no extr
 **Shape of work:** Tiny cleanup. Add 2–3 RTL test cases. Bundle into the cva-cleanup ticket above or stand alone.
 
 ### Daemon, CLI & Dispatch
+
+#### 2026-06-16 — Model Management Epic: per-dispatch model selection + resilient resume
+
+**Ticket:** [CREW-250](https://safturento.atlassian.net/browse/CREW-250) — Epic; resolution gated on Epic completion (multiple concerns may fold in — don't resolve on an individual child PR).
+
+**What:** Crew has no model-management surface. Agents always run on the ambient Claude Code default, and resumed sessions silently reattach to whatever model the session was originally created with. Three concerns, increasing in ambition:
+
+1. **Resilient resume / model fallback.** `spawnClaudeResume` / `spawnClaudeFresh` (`packages/cli/src/lib/claude/spawn.ts`) pass no `--model` / `--fallback-model`. On `--resume`, claude reattaches to the session's _recorded_ model; if that model is unavailable (transient overload, or permanent decommission), the agent dies instantly with a synthetic "model unavailable" message and does zero work — while the runner still reports `launched`. Passing `--fallback-model <current default>` on resume would make resumes survive a dead/overloaded pinned model.
+2. **Per-ticket model selection.** A model dropdown on the New Run modal so a dispatch can pick the model for that ticket — threaded `action_request` → runner → `crew run`/`fix-pr` → claude spawn as `--model`.
+3. **Future: per-subtask model / subagent routing.** Different models + subagents for different subtasks within a run (cheaper models for mechanical steps, stronger for design/architecture). Research/design, defer.
+
+**Why noticed:** CREW-239 stuck in `pr_open` this session — user ran `crew fix-pr` to rebase+push; the runner logged `launched` but nothing ran. Root-caused empirically: the CREW-239 session was created 2026-06-10 on `claude-fable-5` (392 assistant events); Fable 5 was decommissioned ~last week; the 2026-06-17 resume reattached to the dead model and exited in ~6s (one `<synthetic>` "Fable 5 unavailable" event at `02:32:02Z`, no tool calls, no `pr_open → running` transition). User's verdict: permanent-decommission is a rare special case (not worth a one-off fix), but it generalizes to transient overload, so it graduates into a proper Model Management epic rather than a point patch.
+
+**Anchors:**
+
+- `packages/cli/src/lib/claude/spawn.ts` — `spawnClaudeResume` (line ~57) / `spawnClaudeFresh` (line ~86); neither passes a model flag.
+- `claude --model <m>` and `claude --fallback-model <m>` CLI flags (the latter explicitly documented "with --resume or --continue").
+- New Run modal (model-dropdown surface): `packages/dashboard/src/components/` (NewRunModal).
+- Dispatch plumbing the per-ticket model would thread through: `packages/daemon/src/services/ActionService.ts` (`action_requests`), `packages/cli/src/lib/runner/`, `crew run` / `crew fix-pr`.
+- CREW-239 incident transcript: `~/.claude/projects/-home-safturento-Repos-crew-CREW-239/5277a1ed-8cbe-4431-a412-5f76ab8f5207.jsonl` (tail shows the synthetic unavailable event).
+
+**What's been considered:** `--fallback-model` preserves session-model continuity (honors the original when alive) but survives unavailability — likely preferable to `--model` (which always overrides) for the resume path. The per-ticket dropdown needs a `model` field on the `action_request` schema + a sensible default. Where the fallback/default model is sourced (a `crew` TOML field vs `ANTHROPIC_MODEL` env vs a hardcoded current default) is an open design question.
+
+**Shape of work:** Epic. Concern 1 (spawn flag + config/default) is small and self-contained — could be a fast first child. Concern 2 spans daemon (schema) + dashboard (modal) + cli (threading) — medium. Concern 3 is research/design, defer.
+
+**Open questions:**
+
+- Where does the fallback/default model come from — a `crew` TOML field, `ANTHROPIC_MODEL`, or a hardcoded current default?
+- Should `fix-pr` resumes always force the current model (`--model`), or only fall back when the pinned one is unavailable (`--fallback-model`)?
+- **Related but distinct gap** — decide whether it folds into this epic or gets its own ticket: the runner reports `launched` on spawn success and never detects an agent that dies seconds later, so a "launched but immediately exited / no tool calls" run is indistinguishable from a healthy one on the dashboard.
 
 #### 2026-06-16 — `hasPrCreateInvocation` still misses `gh pr create` chained on one line with `&&`
 
