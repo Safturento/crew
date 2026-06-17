@@ -1,0 +1,44 @@
+meta {
+  name: POST /api/runner/failed-start
+  type: http
+  seq: 5
+}
+
+post {
+  url: {{baseUrl}}/api/runner/failed-start
+  body: json
+}
+
+body:json {
+  {
+    "key": "BRUNO-FAIL-1",
+    "projectName": "bruno-smoke",
+    "command": "run",
+    "failure": {
+      "check": "git-remote",
+      "headline": "No git remote configured",
+      "remediation": "Add an origin remote and retry.",
+      "output": "✗ preflight: No git remote configured"
+    }
+  }
+}
+
+assert {
+  res.status: eq 201
+  res.body.runId: isNumber
+}
+
+tests {
+  test("records a structured failed-start, converting the launching row", () => {
+    // post-launching.bru ran first and chained launchingRunId.
+    const launchingRunId = bru.getVar("launchingRunId");
+    expect(res.body.runId).to.equal(launchingRunId);
+  });
+}
+
+docs {
+  CREW-244: converts the launching placeholder for the key into a
+  `failed-start` carrying the structured RunFailure diagnosis
+  (check / headline / remediation / output). Same run id as the launching
+  row it converts.
+}

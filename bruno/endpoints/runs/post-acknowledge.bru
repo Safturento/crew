@@ -1,0 +1,30 @@
+meta {
+  name: POST /api/runs/:key/acknowledge
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/api/runs/BRUNO-FAIL-1/acknowledge
+  body: none
+}
+
+assert {
+  res.status: eq 200
+  res.body.acknowledged: eq 1
+}
+
+tests {
+  test("acknowledges the freshly-recorded failed-start", () => {
+    // post-failed-start.bru recorded exactly one new unacknowledged row;
+    // acknowledging it returns a count of 1. Idempotent on re-run.
+    expect(res.body.acknowledged).to.equal(1);
+  });
+}
+
+docs {
+  CREW-244: dismisses the key's unacknowledged failed-start rows and returns
+  how many were acknowledged. Only the row recorded by post-failed-start in
+  this smoke run is unacknowledged, so the count is deterministically 1
+  across repeated smoke runs.
+}

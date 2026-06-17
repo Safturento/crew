@@ -47,6 +47,9 @@ const CompleteRunBody = z.object({
 
 const CompleteRunParams = z.object({ runId: z.coerce.number().int().positive() });
 
+const AcknowledgeRunParams = z.object({ key: z.string().min(1) });
+const AcknowledgeRunResponse = z.object({ acknowledged: z.number() });
+
 /**
  * Run lifecycle endpoints. The CLI calls `POST /api/agents/runs` immediately
  * after spawning claude, then `POST .../runs/:runId/complete` when the
@@ -128,6 +131,11 @@ export async function registerRunsRoutes(app: DaemonApp): Promise<void> {
         })
         .returning(['id', 'agent_key', 'command', 'session_id', 'started_at'])
         .executeTakeFirstOrThrow();
+
+      // CREW-244: a fresh run supersedes any prior runner-failure state for the
+      // key — auto-acknowledge an unacknowledged failed-start and clear any
+      // lingering `launching` placeholder (this real run replaces it).
+      await req.diScope.resolve('runFailureService').onNewRunRegistered(body.key);
 
       const jsonlPath = join(claudeProjectDirFor(body.worktreePath), `${body.sessionId}.jsonl`);
       try {
@@ -222,6 +230,24 @@ export async function registerRunsRoutes(app: DaemonApp): Promise<void> {
       }
 
       return reply.code(204).send();
+    },
+  );
+
+  // CREW-244: explicitly acknowledge (dismiss) a key's failed-start rows.
+  // Idempotent — re-acknowledging returns `{ acknowledged: 0 }`.
+  app.post(
+    '/api/runs/:key/acknowledge',
+    {
+      schema: {
+        params: AcknowledgeRunParams,
+        response: { 200: AcknowledgeRunResponse },
+      },
+    },
+    async (req) => {
+      const acknowledged = await req.diScope
+        .resolve('runFailureService')
+        .acknowledge(req.params.key);
+      return { acknowledged };
     },
   );
 }

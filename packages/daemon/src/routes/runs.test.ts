@@ -565,3 +565,85 @@ describe('POST /api/agents/runs/:runId/complete', () => {
     }
   });
 });
+
+describe('POST /api/runs/:key/acknowledge', () => {
+  it('acknowledges a failed-start row and returns the count', async () => {
+    const { app, db } = await setupApp();
+    try {
+      // Seed a failed-start via the runner route.
+      await app.inject({
+        method: 'POST',
+        url: '/api/runner/failed-start',
+        payload: {
+          key: 'CREW-ACK-1',
+          projectName: 'crew',
+          command: 'run',
+          worktreePath: '/tmp/crew-ack-1',
+          branch: 'CREW-ACK-1',
+          failure: {
+            check: 'git-remote',
+            headline: 'No git remote configured',
+            remediation: 'Add an origin remote and retry.',
+            output: 'fatal',
+          },
+        },
+      });
+      const res = await app.inject({
+        method: 'POST',
+        url: '/api/runs/CREW-ACK-1/acknowledge',
+      });
+      expect(res.statusCode).toBe(200);
+      expect(res.json()).toEqual({ acknowledged: 1 });
+      const run = await db
+        .selectFrom('runs')
+        .selectAll()
+        .where('agent_key', '=', 'CREW-ACK-1')
+        .executeTakeFirstOrThrow();
+      expect(run.acknowledged).toBe(1);
+    } finally {
+      await app.close();
+      await db.destroy();
+    }
+  });
+});
+
+describe('register auto-acknowledges a prior failed-start', () => {
+  it('clears an unacknowledged failed-start when a fresh run registers', async () => {
+    const { app, db } = await setupApp();
+    try {
+      await app.inject({
+        method: 'POST',
+        url: '/api/runner/failed-start',
+        payload: {
+          key: 'CREW-AUTO-1',
+          projectName: 'demo',
+          command: 'run',
+          worktreePath: '/x',
+          branch: 'CREW-AUTO-1',
+          failure: {
+            check: 'git-remote',
+            headline: 'No git remote configured',
+            remediation: 'Add an origin remote and retry.',
+            output: 'fatal',
+          },
+        },
+      });
+      const res = await app.inject({
+        method: 'POST',
+        url: '/api/agents/runs',
+        payload: { ...validBody, key: 'CREW-AUTO-1', sessionId: 'auto-1' },
+      });
+      expect(res.statusCode).toBe(201);
+      const failedStart = await db
+        .selectFrom('runs')
+        .selectAll()
+        .where('agent_key', '=', 'CREW-AUTO-1')
+        .where('status', '=', 'failed-start')
+        .executeTakeFirstOrThrow();
+      expect(failedStart.acknowledged).toBe(1);
+    } finally {
+      await app.close();
+      await db.destroy();
+    }
+  });
+});

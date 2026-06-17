@@ -194,6 +194,80 @@ describe('runner command routes', () => {
   });
 });
 
+const FAILURE = {
+  check: 'git-remote',
+  headline: 'No git remote configured',
+  remediation: 'Add an origin remote and retry.',
+  output: '✗ preflight: No git remote configured',
+};
+
+describe('POST /api/runner/launching', () => {
+  it('pre-registers a launching run and returns its id', async () => {
+    const { app, close } = await setupApp();
+    try {
+      const res = await app.inject({
+        method: 'POST',
+        url: '/api/runner/launching',
+        payload: {
+          key: 'CREW-1',
+          projectName: 'crew',
+          command: 'run',
+          worktreePath: '/tmp/crew-1',
+          branch: 'CREW-1',
+          startedAt: '2026-06-17T00:00:00.000Z',
+        },
+      });
+      expect(res.statusCode).toBe(201);
+      expect(typeof res.json().runId).toBe('number');
+    } finally {
+      await close();
+    }
+  });
+});
+
+describe('POST /api/runner/failed-start', () => {
+  it('records a structured failed-start for a launching run', async () => {
+    const { app, close } = await setupApp();
+    try {
+      await app.inject({
+        method: 'POST',
+        url: '/api/runner/launching',
+        payload: {
+          key: 'CREW-2',
+          projectName: 'crew',
+          command: 'run',
+          worktreePath: '/tmp/crew-2',
+          branch: 'CREW-2',
+          startedAt: '2026-06-17T00:00:00.000Z',
+        },
+      });
+      const res = await app.inject({
+        method: 'POST',
+        url: '/api/runner/failed-start',
+        payload: { key: 'CREW-2', projectName: 'crew', command: 'run', failure: FAILURE },
+      });
+      expect(res.statusCode).toBe(201);
+      expect(typeof res.json().runId).toBe('number');
+    } finally {
+      await close();
+    }
+  });
+
+  it('rejects a body missing the failure diagnosis with 400', async () => {
+    const { app, close } = await setupApp();
+    try {
+      const res = await app.inject({
+        method: 'POST',
+        url: '/api/runner/failed-start',
+        payload: { key: 'CREW-2', projectName: 'crew', command: 'run' },
+      });
+      expect(res.statusCode).toBe(400);
+    } finally {
+      await close();
+    }
+  });
+});
+
 describe('GET /api/runner/logs', () => {
   it('returns an empty tail when the log file is absent', async () => {
     const { app, close } = await setupApp();
