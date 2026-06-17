@@ -51,12 +51,12 @@ describe('POST /api/runner/heartbeat', () => {
 });
 
 describe('GET /api/runner/status', () => {
-  it('reports offline before any heartbeat', async () => {
+  it('reports offline with an empty process list before any heartbeat', async () => {
     const { app, close } = await setupApp();
     try {
       const res = await app.inject({ method: 'GET', url: '/api/runner/status' });
       expect(res.statusCode).toBe(200);
-      expect(res.json()).toEqual({ online: false, lastSeen: null });
+      expect(res.json()).toEqual({ online: false, lastSeen: null, processes: [] });
     } finally {
       await close();
     }
@@ -68,6 +68,126 @@ describe('GET /api/runner/status', () => {
       await app.inject({ method: 'POST', url: '/api/runner/heartbeat' });
       const res = await app.inject({ method: 'GET', url: '/api/runner/status' });
       expect(res.json().online).toBe(true);
+    } finally {
+      await close();
+    }
+  });
+});
+
+const sampleProcess = {
+  agentKey: 'CREW-231',
+  command: 'run' as const,
+  pid: 4242,
+  pgid: 4242,
+  actionRequestId: null,
+  spawnedAt: '2026-06-16T00:00:00.000Z',
+  state: 'running' as const,
+  project: 'crew',
+};
+
+describe('POST /api/runner/heartbeat with a snapshot', () => {
+  it('stores the snapshot and surfaces it on GET /api/runner/status', async () => {
+    const { app, close } = await setupApp();
+    try {
+      const beat = await app.inject({
+        method: 'POST',
+        url: '/api/runner/heartbeat',
+        payload: { snapshot: { processes: [sampleProcess] } },
+      });
+      expect(beat.statusCode).toBe(200);
+      expect(beat.json().processes).toEqual([sampleProcess]);
+
+      const status = await app.inject({ method: 'GET', url: '/api/runner/status' });
+      expect(status.json().processes).toEqual([sampleProcess]);
+    } finally {
+      await close();
+    }
+  });
+
+  it('rejects a malformed snapshot with 400', async () => {
+    const { app, close } = await setupApp();
+    try {
+      const res = await app.inject({
+        method: 'POST',
+        url: '/api/runner/heartbeat',
+        payload: { snapshot: { processes: [{ ...sampleProcess, state: 'zombie' }] } },
+      });
+      expect(res.statusCode).toBe(400);
+    } finally {
+      await close();
+    }
+  });
+});
+
+describe('runner command routes', () => {
+  it('enqueues, claims, and reports a command through its lifecycle', async () => {
+    const { app, close } = await setupApp();
+    try {
+      // Enqueue → 201 pending.
+      const enq = await app.inject({
+        method: 'POST',
+        url: '/api/runner/commands',
+        payload: { agentKey: 'CREW-231', kind: 'cancel_soft', payload: null },
+      });
+      expect(enq.statusCode).toBe(201);
+      const command = enq.json();
+      expect(command.kind).toBe('cancel_soft');
+      expect(command.status).toBe('pending');
+      expect(command.agentKey).toBe('CREW-231');
+
+      // Claim → the oldest pending row, flipped to claimed.
+      const claim = await app.inject({ method: 'GET', url: '/api/runner/commands/pending' });
+      expect(claim.statusCode).toBe(200);
+      expect(claim.json().id).toBe(command.id);
+      expect(claim.json().status).toBe('claimed');
+
+      // Result → 204; the row is now applied.
+      const result = await app.inject({
+        method: 'POST',
+        url: `/api/runner/commands/${command.id}/result`,
+        payload: { status: 'applied' },
+      });
+      expect(result.statusCode).toBe(204);
+
+      // Nothing left pending → 200 with a null body.
+      const empty = await app.inject({ method: 'GET', url: '/api/runner/commands/pending' });
+      expect(empty.statusCode).toBe(200);
+      expect(empty.json()).toBeNull();
+    } finally {
+      await close();
+    }
+  });
+
+  it('rejects an unknown command kind with 400', async () => {
+    const { app, close } = await setupApp();
+    try {
+      const res = await app.inject({
+        method: 'POST',
+        url: '/api/runner/commands',
+        payload: { agentKey: 'CREW-231', kind: 'nuke' },
+      });
+      expect(res.statusCode).toBe(400);
+    } finally {
+      await close();
+    }
+  });
+
+  it('reports a failed apply with its error string', async () => {
+    const { app, close } = await setupApp();
+    try {
+      const enq = await app.inject({
+        method: 'POST',
+        url: '/api/runner/commands',
+        payload: { agentKey: null, kind: 'dequeue' },
+      });
+      const id = enq.json().id;
+      await app.inject({ method: 'GET', url: '/api/runner/commands/pending' });
+      const result = await app.inject({
+        method: 'POST',
+        url: `/api/runner/commands/${id}/result`,
+        payload: { status: 'failed', error: 'no such pending action' },
+      });
+      expect(result.statusCode).toBe(204);
     } finally {
       await close();
     }
