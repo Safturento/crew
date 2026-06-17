@@ -13,6 +13,7 @@ import { PrPoller } from './services/PrPoller.js';
 import { RunnerStatusService } from './services/RunnerStatusService.js';
 import { FinishStepsService } from './services/FinishStepsService.js';
 import { ActionService } from './services/ActionService.js';
+import { RunnerCommandsService } from './services/RunnerCommandsService.js';
 import { resolveJsonlPathForAgent } from './services/resolveJsonlPath.js';
 
 /**
@@ -40,6 +41,7 @@ export interface DaemonCradle {
   runnerStatusService: RunnerStatusService;
   finishStepsService: FinishStepsService;
   actionService: ActionService;
+  runnerCommandsService: RunnerCommandsService;
 }
 
 declare module '@fastify/awilix' {
@@ -129,6 +131,12 @@ export function buildContainer(deps: BuildContainerDeps): AwilixContainer<Daemon
     // per-request instance is fine and matches the other DB-backed services.
     actionService: asFunction(
       ({ db, eventBus }: DaemonCradle) => new ActionService({ db, eventBus }),
+    ).scoped(),
+    // CREW-241: reverse-command queue drained by the host runner. Scoped —
+    // like actionService, it carries no state of its own (the queue lives in
+    // SQLite + the singleton event bus), so a per-request instance is fine.
+    runnerCommandsService: asFunction(
+      ({ db, eventBus }: DaemonCradle) => new RunnerCommandsService({ db, eventBus }),
     ).scoped(),
   });
   return container;

@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import type { ActionKind, ActionStatus } from 'crew-shared';
+import type { ActionKind, ActionStatus, RunnerCommandStatus } from 'crew-shared';
 
 /**
  * The hybrid event vocabulary the daemon emits over SSE:
@@ -36,6 +36,10 @@ export type SsePayload =
       type: 'action.changed';
       data: { id: number; kind: ActionKind; key: string; status: ActionStatus };
     }
+  // CREW-241: a queued runner command changed status. The dashboard uses it
+  // to reflect a control action's progress (cancel/dequeue/...) without
+  // polling. Emitted on every lifecycle transition.
+  | { type: 'runner.command_changed'; data: { id: number; status: RunnerCommandStatus } }
   | { type: 'cache.miss'; data: Record<string, never> };
 
 /**
