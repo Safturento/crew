@@ -8,6 +8,7 @@ export * from './paths.js';
 export * from './skill-injection-step.js';
 export * from './preconditions.js';
 export * from './preflight.js';
+export * from './preflight-tracking.js';
 export * from './stream-transcript.js';
 export * from './verify-authored-e2e.js';
 export * from './worktree-state.js';
