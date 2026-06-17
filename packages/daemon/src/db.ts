@@ -9,7 +9,7 @@ import {
   type Generated,
   type MigrationResultSet,
 } from 'kysely';
-import type { ActionKind, ActionStatus } from 'crew-shared';
+import type { ActionKind, ActionStatus, RunnerCommandKind, RunnerCommandStatus } from 'crew-shared';
 
 export interface AgentsTable {
   key: string;
@@ -126,6 +126,23 @@ export interface ActionRequestsTable {
   updated_at: string;
 }
 
+/** CREW-241: reverse-command queue drained by the host runner, the control
+ *  half of runner parity (Epic CREW-235). Insert/transition path:
+ *  RunnerCommandsService (enqueue → claimPending → reportResult), each flip
+ *  publishing a `runner.command_changed` SSE event. `agent_key` is null for
+ *  queue-level kinds (`dequeue`); `payload` is an optional JSON envelope;
+ *  `error` is set only on the `failed` terminal status. See migration 0009. */
+export interface RunnerCommandsTable {
+  id: Generated<number>;
+  agent_key: string | null;
+  kind: RunnerCommandKind;
+  payload: string | null; // JSON RunnerCommandPayload or null
+  status: Generated<RunnerCommandStatus>; // DB default 'pending'
+  error: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface DaemonDatabase {
   agents: AgentsTable;
   runs: RunsTable;
@@ -134,6 +151,7 @@ export interface DaemonDatabase {
   startup_events: StartupEventsTable;
   finish_steps: FinishStepsTable;
   action_requests: ActionRequestsTable;
+  runner_commands: RunnerCommandsTable;
 }
 
 /**
