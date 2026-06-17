@@ -9,7 +9,13 @@ import {
   type Generated,
   type MigrationResultSet,
 } from 'kysely';
-import type { ActionKind, ActionStatus, RunnerCommandKind, RunnerCommandStatus } from 'crew-shared';
+import type {
+  ActionKind,
+  ActionStatus,
+  RunnerCommandKind,
+  RunnerCommandStatus,
+  RunStatus,
+} from 'crew-shared';
 
 export interface AgentsTable {
   key: string;
@@ -39,6 +45,16 @@ export interface RunsTable {
   pr_claim_input_tokens: number | null;
   parity_violations: number | null;
   baseline: Generated<number>; // 0 | 1; DB default 0
+  // CREW-244 (migration 0010): run lifecycle + failed-start diagnosis.
+  // `status` is null for legacy/normal runs (derivation unchanged); only the
+  // launching → failed-start path writes it. The four `failure_*` columns hold
+  // the `RunFailure` shape; `acknowledged` is the 0/1 dismissal flag.
+  status: RunStatus | null;
+  failure_check: string | null;
+  failure_headline: string | null;
+  failure_remediation: string | null;
+  failure_output: string | null;
+  acknowledged: Generated<number>; // 0 | 1; DB default 0
 }
 
 export interface ToolCallsTable {
