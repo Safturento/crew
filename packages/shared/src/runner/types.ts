@@ -38,6 +38,21 @@ export const LIVE_PROCESS_STATES = ['launching', 'running', 'cancelling', 'pause
 export type LiveProcessState = (typeof LIVE_PROCESS_STATES)[number];
 
 /**
+ * Lifecycle status persisted on a `runs` row (CREW-244). Additive on top of
+ * the older `completed_at`/`exit_code` derivation — legacy and normal runs
+ * leave `status` null. The launching → failed-start path is the only writer:
+ *
+ * - `launching` — pre-registered before preflight, no transcript yet.
+ * - `running`   — designed-for; reserved for the snapshot lane (B/C) that
+ *   promotes a launching row once Claude is live. Carried from day one so the
+ *   contract is stable.
+ * - `failed-start` — died during init/preflight; carries the `RunFailure`
+ *   diagnosis and surfaces on the Runner page's "Failed to start" section.
+ */
+export const RUN_STATUSES = ['launching', 'running', 'failed-start'] as const;
+export type RunStatus = (typeof RUN_STATUSES)[number];
+
+/**
  * One agent subprocess the runner is currently supervising. Ended processes
  * drop out of the next snapshot; "recently ended" history reads from `runs`.
  * Correlation key throughout the Epic is `agentKey`.
