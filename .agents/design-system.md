@@ -133,6 +133,7 @@ Figma node IDs below are in the live consolidated file (`9FeJPriqdsdA4n9R5Xsrr8`
 | `AgentsList`         | `220:227`                       | `packages/dashboard/src/components/AgentsList.tsx`               |
 | `AgentBody`          | `220:246`                       | `packages/dashboard/src/components/AgentBody.tsx`                |
 | `DrawerHeader`       | `594:803`                       | `packages/dashboard/src/components/DrawerHeader.tsx`             |
+| `CondensedHeader`    | `706:1059`                      | `packages/dashboard/src/components/CondensedHeader.tsx`          |
 | `TokenBarRow`        | `555:449`                       | `packages/dashboard/src/components/TokenBarRow.tsx`              |
 | `TokensByTool`       | `577:643`                       | `packages/dashboard/src/components/TokensByTool.tsx`             |
 | `FinishSteps`        | _(no Figma — feature-internal)_ | `packages/dashboard/src/components/FinishSteps.tsx`              |
