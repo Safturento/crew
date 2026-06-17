@@ -13,6 +13,28 @@ function collectStatusEvents(bus: EventBus): Array<{ online: boolean; lastSeen: 
   return seen;
 }
 
+/** Collect every runner.snapshot_changed event the bus publishes. */
+function collectSnapshotEvents(bus: EventBus): Array<{ processes: unknown[] }> {
+  const seen: Array<{ processes: unknown[] }> = [];
+  bus.subscribe({
+    onEvent: (e: SseEvent) => {
+      if (e.type === 'runner.snapshot_changed') seen.push(e.data);
+    },
+  });
+  return seen;
+}
+
+const sampleProcess = {
+  agentKey: 'CREW-231',
+  command: 'run' as const,
+  pid: 4242,
+  pgid: 4242,
+  actionRequestId: null,
+  spawnedAt: '2026-06-16T00:00:00.000Z',
+  state: 'running' as const,
+  project: 'crew',
+};
+
 /** A hand-cranked clock so staleness/edge behavior is deterministic. */
 function fakeClock(start = 1_000_000): { now: () => number; advance: (ms: number) => void } {
   let t = start;
@@ -86,8 +108,44 @@ describe('RunnerStatusService', () => {
     const svc = new RunnerStatusService({ eventBus: bus, staleMs: 15_000, now: clock.now });
 
     expect(svc.isOnline()).toBe(false);
-    expect(svc.status()).toEqual({ online: false, lastSeen: null });
+    expect(svc.status()).toEqual({ online: false, lastSeen: null, processes: [] });
     svc.checkStale(); // no heartbeat yet — nothing to fall from
     expect(events).toEqual([]);
+  });
+
+  it('stores and returns the latest live-process snapshot', () => {
+    const bus = new EventBus();
+    const svc = new RunnerStatusService({ eventBus: bus });
+
+    expect(svc.status().processes).toEqual([]);
+    svc.heartbeat({ processes: [sampleProcess] });
+    expect(svc.status().processes).toEqual([sampleProcess]);
+
+    // A later snapshot replaces the previous one wholesale.
+    svc.heartbeat({ processes: [] });
+    expect(svc.status().processes).toEqual([]);
+  });
+
+  it('publishes runner.snapshot_changed when a snapshot is supplied', () => {
+    const bus = new EventBus();
+    const snapshots = collectSnapshotEvents(bus);
+    const svc = new RunnerStatusService({ eventBus: bus });
+
+    svc.heartbeat({ processes: [sampleProcess] });
+
+    expect(snapshots).toEqual([{ processes: [sampleProcess] }]);
+  });
+
+  it('does not store or publish a snapshot for a bodyless heartbeat', () => {
+    const bus = new EventBus();
+    const snapshots = collectSnapshotEvents(bus);
+    const clock = fakeClock();
+    const svc = new RunnerStatusService({ eventBus: bus, staleMs: 15_000, now: clock.now });
+
+    svc.heartbeat({ processes: [sampleProcess] });
+    svc.heartbeat(); // bodyless — must not clobber the stored snapshot
+
+    expect(svc.status().processes).toEqual([sampleProcess]);
+    expect(snapshots).toHaveLength(1); // only the first heartbeat carried a snapshot
   });
 });

@@ -1,11 +1,46 @@
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { z } from 'zod';
+import {
+  RUNNER_COMMAND_KINDS,
+  RUNNER_COMMAND_STATUSES,
+  enqueueRunnerCommandSchema,
+  liveProcessSchema,
+  runnerCommandPayloadSchema,
+  runnerSnapshotSchema,
+} from 'crew-shared';
 import type { DaemonApp } from '../app.js';
 
 const RunnerStatusResponseSchema = z.object({
   online: z.boolean(),
   lastSeen: z.number().nullable(),
+  processes: z.array(liveProcessSchema),
+});
+
+/**
+ * Heartbeat body. Optional in full — the legacy runner pings with no body
+ * (online edge only), while the snapshot-aware runner carries its current
+ * live-process snapshot so the daemon can mirror it. `.nullish()` because a
+ * bodyless POST reaches the validator as `null`, not `undefined`.
+ */
+const HeartbeatBodySchema = z.object({ snapshot: runnerSnapshotSchema.optional() }).nullish();
+
+/** Wire shape of a `RunnerCommand` — the daemon's response on enqueue/claim. */
+const RunnerCommandSchema = z.object({
+  id: z.number(),
+  agentKey: z.string().nullable(),
+  kind: z.enum(RUNNER_COMMAND_KINDS),
+  payload: runnerCommandPayloadSchema.nullable(),
+  status: z.enum(RUNNER_COMMAND_STATUSES),
+  error: z.string().nullable(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+});
+
+const CommandResultParamsSchema = z.object({ id: z.coerce.number().int().positive() });
+const CommandResultBodySchema = z.object({
+  status: z.enum(['applied', 'failed']),
+  error: z.string().optional(),
 });
 
 const LogsQuerySchema = z.object({
@@ -44,18 +79,28 @@ async function tailLog(logPath: string, tail: number): Promise<string[]> {
  *
  * - `POST /api/runner/heartbeat` — the host runner pings this on an
  *   interval; flips online + emits `runner.status_changed` on the rising
- *   edge. Returns the current status.
- * - `GET  /api/runner/status`    — current online/offline + lastSeen, for
- *   the dashboard to seed its SSE-driven runner chip on mount.
+ *   edge. An optional `{ snapshot }` body carries the live-process snapshot,
+ *   mirrored on the service + emitted as `runner.snapshot_changed`. Returns
+ *   the current status (incl. `processes`).
+ * - `GET  /api/runner/status`    — current online/offline + lastSeen +
+ *   live processes, for the dashboard to seed its SSE-driven runner views.
  * - `GET  /api/runner/logs?tail=N` — tails the mounted `runner.log`.
+ * - `POST /api/runner/commands`            — enqueue a reverse-queue control
+ *   command (cancel / dequeue / reap / ...). Returns the new `pending` row.
+ * - `GET  /api/runner/commands/pending`    — the runner atomically claims the
+ *   oldest pending command each cycle (200 with the row, or `null`).
+ * - `POST /api/runner/commands/:id/result` — the runner reports the apply
+ *   outcome (`applied` / `failed`). 204.
+ *
+ * The command routes are thin wrappers over `RunnerCommandsService` (CREW-241).
  */
 export async function registerRunnerRoutes(app: DaemonApp): Promise<void> {
   app.post(
     '/api/runner/heartbeat',
-    { schema: { response: { 200: RunnerStatusResponseSchema } } },
+    { schema: { body: HeartbeatBodySchema, response: { 200: RunnerStatusResponseSchema } } },
     async (req) => {
       const svc = req.diScope.resolve('runnerStatusService');
-      svc.heartbeat();
+      svc.heartbeat(req.body?.snapshot);
       return svc.status();
     },
   );
@@ -81,6 +126,40 @@ export async function registerRunnerRoutes(app: DaemonApp): Promise<void> {
       const { runnerLogDir } = req.diScope.resolve('config');
       const lines = await tailLog(join(runnerLogDir, 'runner.log'), req.query.tail);
       return { lines };
+    },
+  );
+
+  app.post(
+    '/api/runner/commands',
+    { schema: { body: enqueueRunnerCommandSchema, response: { 201: RunnerCommandSchema } } },
+    async (req, reply) => {
+      const command = await req.diScope.resolve('runnerCommandsService').enqueue(req.body);
+      return reply.code(201).send(command);
+    },
+  );
+
+  app.get(
+    '/api/runner/commands/pending',
+    {
+      // 200 with the claimed row, or `null` when the queue is empty — a null
+      // body keeps the runner client a single `RunnerCommand | null` shape
+      // with no status-code branching, mirroring `GET /api/actions/pending`.
+      schema: { response: { 200: RunnerCommandSchema.nullable() } },
+    },
+    async (req, reply) => {
+      const command = await req.diScope.resolve('runnerCommandsService').claimPending();
+      return reply.code(200).send(command);
+    },
+  );
+
+  app.post(
+    '/api/runner/commands/:id/result',
+    { schema: { params: CommandResultParamsSchema, body: CommandResultBodySchema } },
+    async (req, reply) => {
+      await req.diScope
+        .resolve('runnerCommandsService')
+        .reportResult(req.params.id, req.body.status, req.body.error);
+      return reply.code(204).send();
     },
   );
 }

@@ -1,9 +1,12 @@
+import type { LiveProcess, RunnerSnapshot } from 'crew-shared';
 import type { EventBus } from './EventBus.js';
 
 export interface RunnerStatus {
   online: boolean;
   /** Epoch-ms of the last heartbeat, or null before the first one. */
   lastSeen: number | null;
+  /** The latest live-process snapshot the runner pushed (`[]` before any). */
+  processes: LiveProcess[];
 }
 
 export interface RunnerStatusServiceDeps {
@@ -43,6 +46,8 @@ export class RunnerStatusService {
   /** The last edge we published — guards against duplicate edge events. */
   private emittedOnline = false;
   private timer: NodeJS.Timeout | null = null;
+  /** Latest live-process snapshot; empty until a heartbeat carries one. */
+  private snapshot: RunnerSnapshot = { processes: [] };
 
   constructor(deps: RunnerStatusServiceDeps) {
     this.eventBus = deps.eventBus;
@@ -50,12 +55,23 @@ export class RunnerStatusService {
     this.now = deps.now ?? Date.now;
   }
 
-  /** Record a heartbeat; emit the rising edge if we were offline. */
-  heartbeat(): void {
+  /**
+   * Record a heartbeat; emit the rising edge if we were offline. When the
+   * runner carries a live-process `snapshot`, store it and emit a
+   * `runner.snapshot_changed` so the Runner page reflects the live processes
+   * without polling. A bodyless heartbeat refreshes only `lastSeen` — it
+   * leaves the previous snapshot intact and emits no snapshot event, so a
+   * legacy heartbeat never clobbers tracked processes with an empty list.
+   */
+  heartbeat(snapshot?: RunnerSnapshot): void {
     this.lastSeen = this.now();
     if (!this.emittedOnline) {
       this.emittedOnline = true;
       this.publish();
+    }
+    if (snapshot) {
+      this.snapshot = snapshot;
+      this.publishSnapshot();
     }
   }
 
@@ -65,7 +81,7 @@ export class RunnerStatusService {
   }
 
   status(): RunnerStatus {
-    return { online: this.isOnline(), lastSeen: this.lastSeen };
+    return { online: this.isOnline(), lastSeen: this.lastSeen, processes: this.snapshot.processes };
   }
 
   /**
@@ -97,6 +113,13 @@ export class RunnerStatusService {
     this.eventBus.publish({
       type: 'runner.status_changed',
       data: { online: this.emittedOnline, lastSeen: this.lastSeen },
+    });
+  }
+
+  private publishSnapshot(): void {
+    this.eventBus.publish({
+      type: 'runner.snapshot_changed',
+      data: { processes: this.snapshot.processes },
     });
   }
 }

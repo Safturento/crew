@@ -1,0 +1,30 @@
+meta {
+  name: GET /api/runner/commands/pending
+  type: http
+  seq: 6
+}
+
+get {
+  url: {{baseUrl}}/api/runner/commands/pending
+}
+
+assert {
+  res.status: eq 200
+  res.body.id: isNumber
+  res.body.status: eq claimed
+}
+
+tests {
+  test("the runner atomically claims the command enqueued by post-commands", () => {
+    expect(res.body.id).to.equal(bru.getVar("commandId"));
+    expect(res.body.status).to.equal("claimed");
+    expect(res.body.kind).to.equal("cancel_soft");
+  });
+}
+
+docs {
+  The host runner's per-cycle claim. Returns promptly here because
+  post-commands left a pending row; the daemon atomically flips the oldest
+  one `pending → claimed`. A null body (still 200) is the outcome when the
+  queue is empty.
+}

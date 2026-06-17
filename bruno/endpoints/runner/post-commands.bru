@@ -1,0 +1,44 @@
+meta {
+  name: POST /api/runner/commands
+  type: http
+  seq: 5
+}
+
+post {
+  url: {{baseUrl}}/api/runner/commands
+  body: json
+}
+
+body:json {
+  {
+    "agentKey": "BRUNO-RUNNER-1",
+    "kind": "cancel_soft",
+    "payload": null
+  }
+}
+
+vars:post-response {
+  commandId: res.body.id
+}
+
+assert {
+  res.status: eq 201
+  res.body.id: isNumber
+  res.body.kind: eq cancel_soft
+  res.body.status: eq pending
+}
+
+tests {
+  test("enqueue echoes the command as a pending row", () => {
+    expect(res.body.agentKey).to.equal("BRUNO-RUNNER-1");
+    expect(res.body.payload).to.equal(null);
+    expect(res.body.error).to.equal(null);
+  });
+}
+
+docs {
+  Enqueues a reverse-queue control command against the runner and chains the
+  new row's id forward as `commandId` for the claim / result steps. The
+  operator enqueues (cancel / dequeue / reap / ...); the host runner drains
+  the queue each heartbeat cycle.
+}

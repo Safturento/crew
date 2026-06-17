@@ -47,6 +47,7 @@ Organization: Active is grouped by topic (not chronology) since the dominant acc
     - [2026-04-28 — Dashboard New Run modal + projects route view](#2026-04-28--dashboard-new-run-modal--projects-route-view)
     - [2026-04-28 — `useAttention.clear()` snapshot semantic isn't directly tested](#2026-04-28--useattentionclear-snapshot-semantic-isnt-directly-tested)
   - [Daemon, CLI & Dispatch](#daemon-cli--dispatch)
+    - [2026-06-17 — `RunnerCommandsService.reportResult` silently 204s on an unknown command id (vs `ActionService.report`'s 404)](#2026-06-17--runnercommandsservicereportresult-silently-204s-on-an-unknown-command-id-vs-actionservicereports-404)
     - [2026-06-16 — `hasPrCreateInvocation` still misses `gh pr create` chained on one line with `&&`](#2026-06-16--hasprcreateinvocation-still-misses-gh-pr-create-chained-on-one-line-with-)
     - [2026-06-05 — `bruno-skeleton` fix() defaults the scaffolded port instead of deriving it from config](#2026-06-05--bruno-skeleton-fix-defaults-the-scaffolded-port-instead-of-deriving-it-from-config)
     - [2026-06-04 — `finish_steps` table accumulates across `crew finish` re-runs (no run scoping)](#2026-06-04--finish_steps-table-accumulates-across-crew-finish-re-runs-no-run-scoping)
@@ -715,6 +716,23 @@ The "synthetic Unregistered section" feels right — single render path, no extr
 **Shape of work:** Tiny cleanup. Add 2–3 RTL test cases. Bundle into the cva-cleanup ticket above or stand alone.
 
 ### Daemon, CLI & Dispatch
+
+#### 2026-06-17 — `RunnerCommandsService.reportResult` silently 204s on an unknown command id (vs `ActionService.report`'s 404)
+
+**What:** `RunnerCommandsService.reportResult` (`packages/daemon/src/services/RunnerCommandsService.ts`) does `if (!updated) return;` when the `UPDATE … RETURNING` matches no row — so reporting a result for an unknown/already-settled command id succeeds silently with a 204. Its sibling `ActionService.report` instead throws `NotFoundError` (→ 404), and the actions route doc explicitly advertises "404 on an unknown id." The asymmetry became newly _reachable over HTTP_ in CREW-242, which added `POST /api/runner/commands/:id/result` (`packages/daemon/src/routes/runner.ts`) as a thin wrapper over the unchanged CREW-241 service method.
+
+**Why noticed:** Code-review of CREW-242 (Epic CREW-235, Ticket B). The reviewer flagged the convention divergence as Minor/non-blocking: the defect lives in CREW-241's shipped service code, outside CREW-242's diff, and CREW-242 deliberately kept its footprint off the shared service to avoid colliding with parallel CREW-243 (runner registry + signalling, which also touches the runner-command path). Deferred rather than fixed inline.
+
+**Anchors:**
+
+- `packages/daemon/src/services/RunnerCommandsService.ts` — `reportResult` (`if (!updated) return;`)
+- `packages/daemon/src/services/ActionService.ts` — `report` (throws `NotFoundError` — the convention to match)
+- `packages/daemon/src/routes/runner.ts` — `POST /api/runner/commands/:id/result` (the new HTTP surface)
+- `bruno/endpoints/runner/post-command-result.bru` — doc string would advertise the 404 once aligned
+
+**What's been considered:** One-line fix — change `if (!updated) return;` to `throw new NotFoundError(...)` mirroring `ActionService.report`, plus a service test asserting the throw and a Bruno unknown-id case. Caveat to weigh first: the runner-side caller (CREW-243's `applyCommand`/`drainCommands`) will need to tolerate a 404 on a result it reports for a command the daemon already pruned/superseded — confirm that path treats 404 as benign (never-throws client) before flipping the behavior, or the consistency fix could surface a spurious runner error.
+
+**Open questions:** Is a silent 204 actually the safer contract for a fire-and-forget runner result report (the runner can't usefully act on a 404), making this doc-comment-and-Bruno alignment rather than a behavior change? Decide alongside CREW-243.
 
 #### 2026-06-16 — `hasPrCreateInvocation` still misses `gh pr create` chained on one line with `&&`
 

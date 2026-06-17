@@ -316,7 +316,7 @@ it('stores and returns the latest live-process snapshot', () => {
 
 - [ ] **Step 2: Run, fail.** `heartbeat()` takes no arg today.
 
-- [ ] **Step 3: Extend the service** — `heartbeat(snapshot?: RunnerSnapshot)` stores `this.snapshot = snapshot ?? { processes: [] }`; `status()` returns `{ online, lastSeen, processes }`; publish the snapshot on `runner.status_changed`. Keep the existing edge logic untouched.
+- [ ] **Step 3: Extend the service** — `heartbeat(snapshot?: RunnerSnapshot)` stores `this.snapshot = snapshot ?? { processes: [] }`; `status()` returns `{ online, lastSeen, processes }`; publish the snapshot on a **dedicated `runner.snapshot_changed`** SSE event (only when a snapshot body is supplied). Do **not** fold it into `runner.status_changed` — that event fires only on online/offline edges (guarded by `emittedOnline`, with edge tests asserting exactly-once emission and exact `{online, lastSeen}` equality), so a per-heartbeat snapshot would break edge semantics. Keep the existing edge logic untouched. _(Shipped this way in CREW-242; see `docs/tickets/CREW-242.md` for the full rationale.)_
 
 - [ ] **Step 4: Failing route tests** (mirror `runner.test.ts`) — `POST /api/runner/heartbeat` with a `{ snapshot }` body stores it; `GET /api/runner/status` returns `processes`; the new command routes enqueue/claim/result.
 
@@ -428,13 +428,13 @@ it('cancel_soft SIGTERMs the tracked pgid and completes the run cancelled', asyn
 **Files:**
 - Modify: `packages/dashboard/src/routing/parseRoute.ts` (+ test), `App.tsx`, `components/TopNav.tsx` (+ test)
 - Create: `packages/dashboard/src/routes/RunnerPage.tsx`, `components/runner/{SupervisorCard,FailedToStartSection,LiveProcessList,UnmanagedRuns,QueuedActions,RecentlyEnded,RunnerLogs}.tsx` (+ tests)
-- Modify: `packages/dashboard/src/data/` — `useRunnerStatus` (fetch `/api/runner/status` + subscribe to `runner.status_changed` SSE) and control-action mutation hooks (`useCancelRun`, `useForceKill`, `useReap`, `useDequeue`, `useArchiveFailedStart`).
+- Modify: `packages/dashboard/src/data/` — `useRunnerStatus` (fetch `/api/runner/status` for the initial seed + subscribe to **both** `runner.status_changed` (online/offline health-chip edge) **and** `runner.snapshot_changed` (the live-process list — CREW-242 shipped the snapshot on this dedicated event, not `runner.status_changed`)) and control-action mutation hooks (`useCancelRun`, `useForceKill`, `useReap`, `useDequeue`, `useArchiveFailedStart`).
 
 - [ ] **Step 1: Route test** — `parseRoute('#/runner')` → `{ kind: 'runner' }`. Implement the route kind + `navigate`.
 
 - [ ] **Step 2: TopNav test** — a Runner tab renders and is active on the runner route. Implement (`runnerActive = route.kind === 'runner'`; add the `NavTab`).
 
-- [ ] **Step 3: Data hook test** — `useRunnerStatus` returns the snapshot from a mocked API + updates on an SSE event. Implement following the existing runner-chip data pattern.
+- [ ] **Step 3: Data hook test** — `useRunnerStatus` returns the snapshot from a mocked API + updates the live-process list on a `runner.snapshot_changed` SSE event (and the online/offline state on `runner.status_changed`). Implement following the existing runner-chip data pattern.
 
 - [ ] **Step 4: Section components** — one test + component per section, each rendering from a fixture: SupervisorCard, FailedToStartSection (hidden when empty; Archive + View output), LiveProcessList (status slot, command badge, Pause/Cancel, cancelling→Force-kill), UnmanagedRuns (hidden when empty; Reap), QueuedActions (Dequeue), RecentlyEnded, RunnerLogs (reuse the existing `RunnerLogViewer` tail). Match the Figma reference (`739:1111`) and the DS `Pill`/`AgentRow` idioms.
 
