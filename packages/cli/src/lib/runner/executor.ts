@@ -1,7 +1,14 @@
-import type { ActionRequest } from 'crew-shared';
+import type { ActionRequest, LiveProcess } from 'crew-shared';
+import type { Registry } from './registry.js';
 
 /** Outcome of shelling an action's verb — the runner reports this to the daemon. */
 export type ExecutionResult = { status: 'launched' } | { status: 'failed'; error: string };
+
+/** The spawned process the runner now tracks: pid plus its process-group id. */
+export interface LaunchHandle {
+  pid: number;
+  pgid: number;
+}
 
 export interface ExecutorDeps {
   /**
@@ -12,17 +19,28 @@ export interface ExecutorDeps {
   exec: (file: string, args: string[], opts: { cwd: string }) => Promise<unknown>;
   /**
    * Launch a long-running agent verb (`crew run`/`fix-pr`/`finish`) in `cwd`,
-   * detached. Resolves once the process has spawned — "launched" means it
-   * started, not that the (minutes-long) agent run finished. Rejects on spawn
-   * failure (e.g. `crew` not on PATH).
+   * detached. Resolves with the spawned `{ pid, pgid }` once the process has
+   * started — "launched" means it spawned, not that the (minutes-long) agent
+   * run finished. Detached spawns get their own process group, so `pgid === pid`
+   * and signalling `-pgid` reaches the whole tree. Rejects on spawn failure
+   * (e.g. `crew` not on PATH).
    */
-  launch: (file: string, args: string[], opts: { cwd: string }) => Promise<unknown>;
+  launch: (file: string, args: string[], opts: { cwd: string }) => Promise<LaunchHandle>;
   /**
    * Resolve a project slug to its on-disk repo path. Throws when the project
    * has no registered config — the runner reports that as a `failed` launch
    * rather than blindly shelling in the wrong directory.
    */
   resolveRepoDir: (project: string) => string;
+  /** Live-process registry — the spawned process is recorded here on launch. */
+  registry: Registry;
+  /** Clock for the `spawnedAt` stamp; injectable for deterministic tests. */
+  now?: () => Date;
+}
+
+/** Map an `ActionKind` (`fix_pr`) to the `LiveProcess` command label (`fix-pr`). */
+function toCommand(kind: ActionRequest['kind']): LiveProcess['command'] {
+  return kind === 'fix_pr' ? 'fix-pr' : kind;
 }
 
 /**
@@ -49,19 +67,20 @@ export async function executeAction(
     return { status: 'failed', error: (err as Error).message };
   }
 
+  let handle: LaunchHandle;
   try {
     switch (action.kind) {
       case 'run':
-        await deps.launch('crew', ['run', action.ticketKey], { cwd });
+        handle = await deps.launch('crew', ['run', action.ticketKey], { cwd });
         break;
       case 'fix_pr': {
         const comment = action.payload.kind === 'fix_pr' ? action.payload.comment : '';
         await deps.exec('gh', ['pr', 'comment', action.ticketKey, '--body', comment], { cwd });
-        await deps.launch('crew', ['fix-pr', action.ticketKey, '--from-pr'], { cwd });
+        handle = await deps.launch('crew', ['fix-pr', action.ticketKey, '--from-pr'], { cwd });
         break;
       }
       case 'finish':
-        await deps.launch('crew', ['finish', action.ticketKey], { cwd });
+        handle = await deps.launch('crew', ['finish', action.ticketKey], { cwd });
         break;
       default:
         return {
@@ -72,6 +91,19 @@ export async function executeAction(
   } catch (err) {
     return { status: 'failed', error: (err as Error).message };
   }
+
+  // Track the spawned process so the heartbeat snapshot reflects it and the
+  // operator can signal it through the reverse-command queue.
+  deps.registry.add({
+    agentKey: action.ticketKey,
+    command: toCommand(action.kind),
+    pid: handle.pid,
+    pgid: handle.pgid,
+    actionRequestId: action.id,
+    spawnedAt: (deps.now?.() ?? new Date()).toISOString(),
+    state: 'running',
+    project: action.project,
+  });
 
   return { status: 'launched' };
 }

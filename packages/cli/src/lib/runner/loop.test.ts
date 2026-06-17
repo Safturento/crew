@@ -1,6 +1,43 @@
 import { describe, it, expect, vi } from 'vitest';
-import type { ActionRequest } from 'crew-shared';
-import { runOnce, runLoop, type RunnerLoopDeps, type RunLoopDeps } from './loop.js';
+import type { ActionRequest, RunnerCommand } from 'crew-shared';
+import {
+  runOnce,
+  runLoop,
+  drainCommands,
+  type DrainCommandsDeps,
+  type RunnerLoopDeps,
+  type RunLoopDeps,
+} from './loop.js';
+import { Registry } from './registry.js';
+
+function makeCommand(over: Partial<RunnerCommand> = {}): RunnerCommand {
+  return {
+    id: 1,
+    agentKey: 'CREW-231',
+    kind: 'cancel_soft',
+    payload: null,
+    status: 'claimed',
+    error: null,
+    createdAt: '2026-06-16T00:00:00.000Z',
+    updatedAt: '2026-06-16T00:00:00.000Z',
+    ...over,
+  };
+}
+
+function trackedRegistry(): Registry {
+  const r = new Registry();
+  r.add({
+    agentKey: 'CREW-231',
+    command: 'run',
+    pid: 10,
+    pgid: 10,
+    actionRequestId: 1,
+    spawnedAt: '2026-06-16T00:00:00.000Z',
+    state: 'running',
+    project: 'crew',
+  });
+  return r;
+}
 
 const claimed: ActionRequest = {
   id: 5,
@@ -94,11 +131,25 @@ function runLoopDeps(over: Partial<RunLoopDeps> = {}): RunLoopDeps & {
     claimPendingAction: ReturnType<typeof vi.fn>;
     reportActionResult: ReturnType<typeof vi.fn>;
     heartbeat: ReturnType<typeof vi.fn>;
+    claimPendingCommand: ReturnType<typeof vi.fn>;
+    reportCommandResult: ReturnType<typeof vi.fn>;
   };
 } {
   const base = loopDeps();
-  const client = { ...base.client, heartbeat: vi.fn().mockResolvedValue({ online: true }) };
-  return { ...base, client, signal: new AbortController().signal, ...over } as never;
+  const client = {
+    ...base.client,
+    heartbeat: vi.fn().mockResolvedValue({ online: true }),
+    claimPendingCommand: vi.fn().mockResolvedValue({ command: null }),
+    reportCommandResult: vi.fn().mockResolvedValue({ ok: true }),
+  };
+  return {
+    ...base,
+    client,
+    registry: new Registry(),
+    kill: vi.fn(),
+    signal: new AbortController().signal,
+    ...over,
+  } as never;
 }
 
 describe('runLoop', () => {
@@ -130,5 +181,104 @@ describe('runLoop', () => {
 
     expect(sleep).toHaveBeenCalledWith(1234);
     expect(d.client.claimPendingAction).toHaveBeenCalledTimes(1);
+  });
+
+  it('heartbeats with the registry snapshot, not a bare ping', async () => {
+    const controller = new AbortController();
+    const registry = trackedRegistry();
+    const d = runLoopDeps({ signal: controller.signal, registry });
+    d.client.claimPendingAction.mockImplementation(async () => {
+      controller.abort();
+      return { action: null };
+    });
+
+    await runLoop(d);
+
+    expect(d.client.heartbeat).toHaveBeenCalledWith(registry.toSnapshot());
+    expect(d.client.heartbeat.mock.calls[0][0].processes).toHaveLength(1);
+  });
+
+  it('drains pending commands each cycle', async () => {
+    const controller = new AbortController();
+    const d = runLoopDeps({ signal: controller.signal, registry: trackedRegistry() });
+    d.client.claimPendingAction.mockImplementation(async () => {
+      controller.abort();
+      return { action: null };
+    });
+
+    await runLoop(d);
+
+    expect(d.client.claimPendingCommand).toHaveBeenCalled();
+  });
+});
+
+describe('drainCommands', () => {
+  function drainDeps(over: Partial<DrainCommandsDeps> = {}): DrainCommandsDeps & {
+    client: {
+      claimPendingCommand: ReturnType<typeof vi.fn>;
+      reportCommandResult: ReturnType<typeof vi.fn>;
+    };
+    kill: ReturnType<typeof vi.fn>;
+    log: ReturnType<typeof vi.fn>;
+  } {
+    const client = {
+      claimPendingCommand: vi.fn().mockResolvedValue({ command: null }),
+      reportCommandResult: vi.fn().mockResolvedValue({ ok: true }),
+    };
+    const kill = vi.fn();
+    const log = vi.fn();
+    return {
+      client,
+      kill,
+      log,
+      registry: trackedRegistry(),
+      ...over,
+    } as never;
+  }
+
+  it('claims, applies, and reports each pending command until the queue drains', async () => {
+    const d = drainDeps();
+    d.client.claimPendingCommand
+      .mockResolvedValueOnce({ command: makeCommand({ id: 1, kind: 'cancel_soft' }) })
+      .mockResolvedValueOnce({ command: null });
+
+    await drainCommands(d);
+
+    expect(d.kill).toHaveBeenCalledWith(-10, 'SIGTERM');
+    expect(d.client.reportCommandResult).toHaveBeenCalledWith(1, 'applied');
+    // Claimed twice: once for the command, once to discover the empty queue.
+    expect(d.client.claimPendingCommand).toHaveBeenCalledTimes(2);
+  });
+
+  it('reports a failed apply with the error and keeps draining', async () => {
+    const d = drainDeps();
+    d.client.claimPendingCommand
+      .mockResolvedValueOnce({
+        command: makeCommand({ id: 2, kind: 'cancel_soft', agentKey: 'CREW-ghost' }),
+      })
+      .mockResolvedValueOnce({ command: null });
+
+    await drainCommands(d);
+
+    expect(d.client.reportCommandResult).toHaveBeenCalledWith(
+      2,
+      'failed',
+      expect.stringMatching(/no tracked process/i),
+    );
+  });
+
+  it('stops draining on a claim transport error without throwing', async () => {
+    const d = drainDeps();
+    d.client.claimPendingCommand.mockResolvedValue({ ok: false, reason: 'connect_error' });
+
+    await expect(drainCommands(d)).resolves.toBeUndefined();
+    expect(d.client.reportCommandResult).not.toHaveBeenCalled();
+  });
+
+  it('returns immediately when the queue is empty', async () => {
+    const d = drainDeps();
+    await drainCommands(d);
+    expect(d.client.claimPendingCommand).toHaveBeenCalledTimes(1);
+    expect(d.client.reportCommandResult).not.toHaveBeenCalled();
   });
 });

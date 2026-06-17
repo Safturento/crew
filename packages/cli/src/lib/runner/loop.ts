@@ -1,6 +1,8 @@
 import type { ActionRequest } from 'crew-shared';
 import type { CrewDaemonClient } from '../daemon-client/index.js';
+import { applyCommand } from './commands.js';
 import type { ExecutionResult } from './executor.js';
+import type { Registry } from './registry.js';
 
 /** The daemon surface a single poll iteration needs. */
 type ClaimReportClient = Pick<CrewDaemonClient, 'claimPendingAction' | 'reportActionResult'>;
@@ -59,8 +61,54 @@ export async function runOnce(deps: RunnerLoopDeps): Promise<PollOutcome> {
   }
 }
 
+/** The daemon surface one command-drain pass needs. */
+type CommandClient = Pick<CrewDaemonClient, 'claimPendingCommand' | 'reportCommandResult'>;
+
+export interface DrainCommandsDeps {
+  client: CommandClient;
+  /** The live-process registry the claimed command is applied against. */
+  registry: Registry;
+  /** Signal boundary forwarded to {@link applyCommand} (negative pid = group). */
+  kill: (target: number, signal: NodeJS.Signals) => void;
+  /** Structured log sink — one line per applied/failed command. */
+  log: (line: string) => void;
+}
+
+/**
+ * Claim and apply pending reverse-queue commands until the queue drains. Each
+ * claimed command is applied against the registry (signalling the tracked
+ * process group) and its outcome reported back to the daemon. A claim
+ * transport error ends the pass (the next cycle retries) rather than throwing
+ * — the worker runs under a respawning supervisor and a downed daemon must not
+ * churn it.
+ */
+export async function drainCommands(deps: DrainCommandsDeps): Promise<void> {
+  for (;;) {
+    const claim = await deps.client.claimPendingCommand();
+    if (!('command' in claim)) {
+      deps.log(`command poll error: ${claim.reason}`);
+      return;
+    }
+    const command = claim.command;
+    if (command === null) return;
+
+    const result = await applyCommand(command, { registry: deps.registry, kill: deps.kill });
+    if (result.status === 'applied') {
+      await deps.client.reportCommandResult(command.id, 'applied');
+      deps.log(`applied command ${command.id} (${command.kind} ${command.agentKey ?? '-'})`);
+    } else {
+      await deps.client.reportCommandResult(command.id, 'failed', result.error);
+      deps.log(`failed command ${command.id} (${command.kind}): ${result.error}`);
+    }
+  }
+}
+
 export interface RunLoopDeps extends RunnerLoopDeps {
-  client: ClaimReportClient & Pick<CrewDaemonClient, 'heartbeat'>;
+  client: ClaimReportClient & Pick<CrewDaemonClient, 'heartbeat'> & CommandClient;
+  /** The live-process registry: serialized into each heartbeat snapshot. */
+  registry: Registry;
+  /** Signal boundary for command apply (negative pid = process group). */
+  kill: (target: number, signal: NodeJS.Signals) => void;
   /** Aborting this signal stops the loop after the in-flight iteration. */
   signal: AbortSignal;
   /**
@@ -78,16 +126,20 @@ export interface RunLoopDeps extends RunnerLoopDeps {
 const defaultSleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms));
 
 /**
- * Start a heartbeat that pings the daemon immediately and then every
- * `intervalMs`, until `signal` aborts. Returns a stop fn (idempotent).
+ * Start a heartbeat that pushes the current live-process snapshot to the
+ * daemon immediately and then every `intervalMs`, until `signal` aborts. The
+ * snapshot is re-serialized from the registry on each tick so it always
+ * reflects the latest tracked processes. Returns a stop fn (idempotent).
  */
 function startHeartbeat(
   client: Pick<CrewDaemonClient, 'heartbeat'>,
+  registry: Registry,
   intervalMs: number,
   signal: AbortSignal,
 ): () => void {
-  void client.heartbeat();
-  const timer = setInterval(() => void client.heartbeat(), intervalMs);
+  const beat = (): void => void client.heartbeat(registry.toSnapshot());
+  beat();
+  const timer = setInterval(beat, intervalMs);
   const stop = (): void => clearInterval(timer);
   signal.addEventListener('abort', stop, { once: true });
   return stop;
@@ -101,10 +153,23 @@ function startHeartbeat(
  */
 export async function runLoop(deps: RunLoopDeps): Promise<void> {
   const sleep = deps.sleep ?? defaultSleep;
-  const stopHeartbeat = startHeartbeat(deps.client, deps.heartbeatMs ?? 5_000, deps.signal);
+  const stopHeartbeat = startHeartbeat(
+    deps.client,
+    deps.registry,
+    deps.heartbeatMs ?? 5_000,
+    deps.signal,
+  );
   try {
     while (!deps.signal.aborted) {
       const outcome = await runOnce(deps);
+      // Apply any operator control commands queued since the last cycle —
+      // cancels, reaps — against the processes we're tracking.
+      await drainCommands({
+        client: deps.client,
+        registry: deps.registry,
+        kill: deps.kill,
+        log: deps.log,
+      });
       if (outcome === 'poll_error' && !deps.signal.aborted) {
         await sleep(deps.errorBackoffMs ?? 2_000);
       }
