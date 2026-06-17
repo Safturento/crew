@@ -47,6 +47,7 @@ Organization: Active is grouped by topic (not chronology) since the dominant acc
     - [2026-04-28 — Dashboard New Run modal + projects route view](#2026-04-28--dashboard-new-run-modal--projects-route-view)
     - [2026-04-28 — `useAttention.clear()` snapshot semantic isn't directly tested](#2026-04-28--useattentionclear-snapshot-semantic-isnt-directly-tested)
   - [Daemon, CLI & Dispatch](#daemon-cli--dispatch)
+    - [2026-06-17 — Host runner can't apply `dequeue` (no daemon "drop pending action" route)](#2026-06-17--host-runner-cant-apply-dequeue-no-daemon-drop-pending-action-route)
     - [2026-06-17 — `RunnerCommandsService.reportResult` silently 204s on an unknown command id (vs `ActionService.report`'s 404)](#2026-06-17--runnercommandsservicereportresult-silently-204s-on-an-unknown-command-id-vs-actionservicereports-404)
     - [2026-06-17 — failed-start rows render as plain `error` agents in the main grid](#2026-06-17--failed-start-rows-render-as-plain-error-agents-in-the-main-grid)
     - [2026-06-17 — only `PreflightError` becomes a structured failed-start; docker/npm/playwright init failures don't](#2026-06-17--only-preflighterror-becomes-a-structured-failed-start-dockernpmplaywright-init-failures-dont)
@@ -718,6 +719,23 @@ The "synthetic Unregistered section" feels right — single render path, no extr
 **Shape of work:** Tiny cleanup. Add 2–3 RTL test cases. Bundle into the cva-cleanup ticket above or stand alone.
 
 ### Daemon, CLI & Dispatch
+
+#### 2026-06-17 — Host runner can't apply `dequeue` (no daemon "drop pending action" route)
+
+**What:** CREW-243's `applyCommand` (`packages/cli/src/lib/runner/commands.ts`) handles `cancel_soft`/`cancel_hard`/`reap` host-side, but reports `dequeue` as `failed` "not yet supported by the host runner." `dequeue` is meant to drop a still-_pending_ `action_request` that hasn't spawned a process yet — but there is no daemon route to delete/cancel a pending action (`ActionService` exposes only `enqueue`/`claimNextPending`/`report`; the routes are `POST /api/actions`, `GET /api/actions/pending`, `POST /api/actions/:id/result`). So an operator who enqueues a `dequeue` command gets a `failed` result and the pending action stays in the queue until a runner claims + launches it. `pause`/`resume`/`message` are likewise unsupported, but those are explicitly designed-for the CREW-248 fast-follow; `dequeue` was scoped as v1 in the Epic plan, so it's the real gap.
+
+**Why noticed:** Implementing CREW-243 (Epic CREW-235, Ticket C, host side). The Epic plan (Task 5, Step 5) specifies `dequeue` → "call the daemon to drop the pending action_request," but CREW-243 is explicitly host-side and the daemon routes were Ticket B (CREW-242), which didn't add an action-drop route. Adding one in C would overstep the ticket boundary, so the host runner reports `dequeue` as unsupported for now rather than silently no-op'ing it.
+
+**Anchors:**
+
+- `packages/cli/src/lib/runner/commands.ts` — `applyCommand` default branch (`'…' not yet supported`)
+- `packages/daemon/src/services/ActionService.ts` — no `drop`/`cancel` method
+- `packages/daemon/src/routes/actions.ts` — would host a `DELETE /api/actions/:id` (or `POST /api/actions/:id/cancel`)
+- `packages/cli/src/lib/runner/commands.test.ts` — the `it.each(['dequeue','pause','resume','message'])` "not yet supported" assertion to flip once wired
+
+**Shape of work:** small daemon addition — an `ActionService.cancelPending(id)` that transitions a `pending` row to a terminal/cancelled status (404/409 if already claimed), a thin route + Bruno endpoint, and a daemon-client `dequeueAction(id)` method. Then `applyCommand` grows a `dequeue` boundary the worker wires to it, and the "not yet supported" test for `dequeue` flips to an applied assertion.
+
+**Open questions:** does `dequeue` carry the `action_request` id (it isn't on `RunnerCommand` today — only `agentKey`), or does the daemon resolve "the pending action for this agentKey"? The command's `agentKey` is the natural key, but multiple pending actions could share one key — decide the targeting before wiring.
 
 #### 2026-06-17 — `RunnerCommandsService.reportResult` silently 204s on an unknown command id (vs `ActionService.report`'s 404)
 
