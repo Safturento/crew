@@ -139,12 +139,13 @@ Distinguish, rather than collapsing everything into `error`:
 Graduates to a **third top-level tab** (`Agents · Projects · Runner`); the existing `RunnerStatusChip` stays in the corner as a health glance that links into the page. Sections top-to-bottom (Figma `739:1111`):
 
 1. **Supervisor** — status pill (`running`), heartbeat / workers / uptime / pid, `Restart` + `Stop`.
-2. **Failed to start** *(attention queue; hidden when empty)* — pinned high because debugging startup failures is the #1 reason to visit. Each card: `failed` pill, `agentKey` + command + "failed to start · Nm ago", then the structured `check:` name, the headline, and the amber `→ remediation`; controls `Archive` + `View output`. Hint: *"Auto-clears when the ticket is re-run · or Archive to move it down to Recently ended."*
+2. **Failed to start** *(attention queue; hidden when empty)* — pinned high because debugging startup failures is the #1 reason to visit. Each card: `failed` pill, `agentKey` + command + "failed to start · Nm ago", the headline, and the amber `→ remediation` *(optional — generic non-health-check failures have none)*; controls `Archive` + `View output`. `View output` opens a **Diagnosis + Output modal** — the failed `check` name, the `details` map, and the raw captured startup output live there, not on the card face. Hint: *"Auto-clears when the ticket is re-run · or Archive to move it down to Recently ended."*
 3. **Live processes** *(supervisor-held)* — one row per tracked subprocess: status pill in a fixed **96px slot** (matches `AgentRow`, so identity columns align), `agentKey`, command badge, project, duration; controls `Pause`\* + `Cancel`. A row mid-cancel shows an amber `cancelling` pill and a single red `Force kill`.
 4. **⚠ Unmanaged runs** *(hidden when empty)* — amber-bordered: `running` in DB, **no live process**, "likely orphaned"; control `Reap`.
 5. **Queued actions** — pending `action_requests` not yet spawned: `queued` pill, command, "queued Nm ago"; control `Dequeue`.
-6. **Recently ended** — from `runs`: `finished`→PR link, `cancelled` "by operator", `error` "exit 1 mid-run" (→ `View logs`), plus acknowledged `failed-start` rows.
-7. **Logs** — a `Following` live tail of pre-agent logs (terminal panel, monospace, semantically colored). v1 is a dump.
+6. **Recently ended** — from `runs`: `finished`→PR link, `cancelled` "by operator", `error` "exit 1 mid-run", plus acknowledged `failed-start` rows.
+
+> **No global Logs section.** An earlier draft had a 7th `Logs` live-tail section (a global dump). It's **dropped** — superseded by a per-entity log-drawer model (each run row opens a drawer with *that run's* startup logs; the supervisor gets its own drawer for management logs). That's its own Epic ([CREW-249](https://safturento.atlassian.net/browse/CREW-249)); v1 ships **toward** it by (a) leaving the global Logs section out, (b) capturing per-run startup logs keyed by `agentKey` so the data exists, and (c) shipping the failed-start `View output` modal as a thin interim whose Diagnosis + Output content carries directly into the future run drawer. v1 rows should carry a hover/clickable affordance so row→drawer is a natural later add.
 
 \* `Pause` is the fast-follow; render it disabled/hidden in v1.
 
@@ -159,12 +160,13 @@ Graduates to a **third top-level tab** (`Agents · Projects · Runner`); the exi
 
 Every log produced for a ticket, from the moment it's dispatched (CLI **or** dashboard), surfaces somewhere relevant — split by **phase**:
 
-| Phase | Owns | Surface |
+| Phase | Owns | Surface (end state) |
 |---|---|---|
-| Pre-agent | supervisor, dispatch queue, **preflight/startup**, failure output | **Runner page** (Logs section; `View output` on a failed-start card) |
+| Per-run startup (pre-agent) | the `crew run`/`fix-pr` command's own stdout/stderr: env materialize, worktree, **preflight/startup**, failure output | **Run drawer**, keyed by `agentKey` (CREW-249) — *v1 interim:* the failed-start `View output` modal |
+| Supervisor | process-management: spawn / respawn / heartbeat / reap | **Supervisor drawer** (CREW-249) |
 | Agent execution | transcript, tool calls, agent stdout | **Agent drawer** (existing timeline) |
 
-**Handoff point = `registerRun`.** Everything from `crew run` invocation → preflight → registration is Runner-page territory; once the agent registers and starts streaming its transcript, ownership passes to the drawer. Logs are tagged with `agentKey` so a ticket's startup output can be sliced for `View output`, and so the Logs panel can later filter by ticket (Forward path).
+**Handoff point = `registerRun`.** Everything from `crew run` invocation → preflight → registration is the per-run startup phase (pre-agent); once the agent registers and starts streaming its transcript, ownership passes to the agent drawer. The runner **captures** the spawned command's startup output keyed by `agentKey` (it spawns detached + forgets today — that capture is new work in the failed-start ticket). In v1 only the failed-start slice surfaces (the `View output` modal); the full per-entity drawer model — clickable run rows → run drawer, supervisor drawer — is [CREW-249](https://safturento.atlassian.net/browse/CREW-249), which reads the same captured logs.
 
 ## Pause / resume / message (fast-follow)
 
@@ -230,6 +232,6 @@ The exact child groupings, dependency links, and the phase table live in the imp
 
 ## Forward path
 
-- **Logs filtering + search + per-ticket slicing** — the `agentKey` tagging here is the enabler; the v1 dump becomes a filterable view.
+- **Per-entity log drawers** ([CREW-249](https://safturento.atlassian.net/browse/CREW-249)) — clickable run rows → a run drawer showing diagnosis, PID, and that run's startup logs; a supervisor drawer for management logs. Absorbs the failed-start `View output` modal and replaces any notion of a global Logs panel. The per-run capture (keyed by `agentKey`) landed in v1 is the enabler.
 - **Pause / resume / message** — once the mid-turn interrupt spike proves out.
 - **Batch controls** — "cancel all", "archive all failed", select-multiple on the Live processes table.
