@@ -3,6 +3,7 @@ import { spawn, type ChildProcess } from 'node:child_process';
 import { mkdirSync, openSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 import pc from 'picocolors';
+import type { LiveProcess } from 'crew-shared';
 import {
   crewDaemonClientFromEnv,
   ensureRunnerLogDir,
@@ -102,22 +103,43 @@ function stopAction(env: Env = process.env): void {
   if (!result.stopped) console.log(pc.yellow('!'), 'runner not running');
 }
 
+/** Format an elapsed span the way `crew status` does (s / m s / h m). */
+function formatDuration(ms: number): string {
+  const totalSeconds = Math.max(0, Math.floor(ms / 1000));
+  if (totalSeconds < 60) return `${totalSeconds}s`;
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  if (minutes < 60) return seconds === 0 ? `${minutes}m` : `${minutes}m ${seconds}s`;
+  const hours = Math.floor(minutes / 60);
+  const remMinutes = minutes % 60;
+  return remMinutes === 0 ? `${hours}h` : `${hours}h ${remMinutes}m`;
+}
+
+/**
+ * Render the runner's live-process registry as a list of human lines: one row
+ * per tracked subprocess (key, command, pid, state, uptime), or a single
+ * "no live processes" line when nothing is running. Pure over `now` so the
+ * uptime column is deterministic in tests.
+ */
+export function renderLiveProcesses(processes: LiveProcess[], now: Date = new Date()): string[] {
+  if (processes.length === 0) return [pc.dim('  no live processes')];
+  return processes.map((p) => {
+    const uptime = formatDuration(now.getTime() - new Date(p.spawnedAt).getTime());
+    return `  ${p.agentKey}  ${pc.cyan(p.command)}  pid ${p.pid}  ${p.state}  ${pc.dim(uptime)}`;
+  });
+}
+
 async function statusAction(env: Env = process.env): Promise<void> {
   const paths = runnerPaths(env);
   const client = crewDaemonClientFromEnv(env);
+  // Read-only status fetch — GET /api/runner/status doesn't record a
+  // heartbeat, so rendering status never falsely flips the runner online.
+  const status = await client.getRunnerStatus();
+  const reachable = 'processes' in status;
   const report = await runnerStatus({
     readPid: () => readPidFile(paths.pidFile),
     isAlive: isProcessAlive,
-    // Read-only reachability probe — GET /api/runner/status doesn't record a
-    // heartbeat, so checking status never falsely flips the runner online.
-    checkDaemon: async () => {
-      try {
-        const res = await fetch(`${client.baseUrl}/api/runner/status`);
-        return res.ok;
-      } catch {
-        return false;
-      }
-    },
+    checkDaemon: async () => reachable,
   });
   console.log(
     report.running
@@ -127,6 +149,11 @@ async function statusAction(env: Env = process.env): Promise<void> {
   console.log(
     report.daemonReachable ? pc.green('✓ daemon reachable') : pc.yellow('! daemon unreachable'),
   );
+  if (reachable) {
+    const processes = status.processes;
+    console.log(pc.bold(`\nlive processes (${processes.length}):`));
+    for (const line of renderLiveProcesses(processes)) console.log(line);
+  }
 }
 
 function logsAction(opts: { lines?: string }, env: Env = process.env): void {
