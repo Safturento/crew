@@ -1,7 +1,29 @@
 import pc from 'picocolors';
-import type { ActionRequest, ActionStatus, FinishStepInput } from 'crew-shared';
+import type { ActionRequest, ActionStatus, FinishStepInput, RunFailure } from 'crew-shared';
 
 export type RunCommand = 'run' | 'fix-pr' | 'finish';
+
+export interface ReportLaunchingInput {
+  key: string;
+  projectName: string;
+  command: RunCommand;
+  worktreePath: string;
+  branch: string;
+  startedAt: string;
+  ticketTitle?: string;
+  appUrl?: string | null;
+}
+
+export interface ReportFailedStartInput {
+  key: string;
+  projectName: string;
+  command: RunCommand;
+  failure: RunFailure;
+  worktreePath?: string;
+  branch?: string;
+  ticketTitle?: string;
+  startedAt?: string;
+}
 
 export interface RegisterRunInput {
   key: string;
@@ -216,6 +238,79 @@ export class CrewDaemonClient {
       return { ok: true };
     } catch (err) {
       this.warn(`reportFinishStep: ${(err as Error).message}`);
+      return { ok: false, reason: 'connect_error' };
+    }
+  }
+
+  /**
+   * Pre-register a run as `launching` *before* preflight (CREW-244), so an
+   * init failure leaves a row to convert into a structured failed-start.
+   * Returns the new run id on success. Never throws — a downed daemon just
+   * means the run won't be tracked, exactly like `registerRun`.
+   */
+  async reportLaunching(
+    input: ReportLaunchingInput,
+  ): Promise<DaemonResult<{ ok: true; runId: number }>> {
+    try {
+      const res = await fetch(`${this.baseUrl}/api/runner/launching`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(input),
+      });
+      if (!res.ok) {
+        this.warn(`reportLaunching: HTTP ${res.status} (run will not be tracked)`);
+        return { ok: false, reason: `http_${res.status}` };
+      }
+      const body = (await res.json()) as { runId: number };
+      return { ok: true, runId: body.runId };
+    } catch (err) {
+      this.warn(
+        `reportLaunching: ${(err as Error).message} (daemon unreachable; run will not be tracked)`,
+      );
+      return { ok: false, reason: 'connect_error' };
+    }
+  }
+
+  /**
+   * Record a structured failed-start (CREW-244) — the run died during
+   * init/preflight. Converts the launching placeholder for the key when one
+   * exists; otherwise inserts a fresh failed-start row. Best-effort.
+   */
+  async reportFailedStart(
+    input: ReportFailedStartInput,
+  ): Promise<DaemonResult<{ ok: true; runId: number }>> {
+    try {
+      const res = await fetch(`${this.baseUrl}/api/runner/failed-start`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(input),
+      });
+      if (!res.ok) {
+        this.warn(`reportFailedStart: HTTP ${res.status}`);
+        return { ok: false, reason: `http_${res.status}` };
+      }
+      const body = (await res.json()) as { runId: number };
+      return { ok: true, runId: body.runId };
+    } catch (err) {
+      this.warn(`reportFailedStart: ${(err as Error).message}`);
+      return { ok: false, reason: 'connect_error' };
+    }
+  }
+
+  /** Acknowledge (dismiss) a key's failed-start rows. Best-effort. */
+  async acknowledgeRun(key: string): Promise<DaemonResult<{ ok: true; acknowledged: number }>> {
+    try {
+      const res = await fetch(`${this.baseUrl}/api/runs/${encodeURIComponent(key)}/acknowledge`, {
+        method: 'POST',
+      });
+      if (!res.ok) {
+        this.warn(`acknowledgeRun: HTTP ${res.status}`);
+        return { ok: false, reason: `http_${res.status}` };
+      }
+      const body = (await res.json()) as { acknowledged: number };
+      return { ok: true, acknowledged: body.acknowledged };
+    } catch (err) {
+      this.warn(`acknowledgeRun: ${(err as Error).message}`);
       return { ok: false, reason: 'connect_error' };
     }
   }

@@ -2,10 +2,12 @@ import { describe, expect, it } from 'vitest';
 import {
   RUNNER_COMMAND_KINDS,
   LIVE_PROCESS_STATES,
+  RUN_STATUSES,
   type LiveProcess,
   type RunnerCommand,
   type RunnerSnapshot,
   type RunFailure,
+  type RunStatus,
 } from './types.js';
 
 describe('runner constant tuples', () => {
@@ -23,6 +25,10 @@ describe('runner constant tuples', () => {
 
   it('enumerate the live-process states', () => {
     expect(LIVE_PROCESS_STATES).toEqual(['launching', 'running', 'cancelling', 'paused']);
+  });
+
+  it('enumerate the run-lifecycle statuses', () => {
+    expect(RUN_STATUSES).toEqual(['launching', 'running', 'failed-start']);
   });
 });
 
@@ -65,5 +71,10 @@ describe('runner type shapes', () => {
       output: 'fatal: No such remote',
     };
     expect(failure.check).toBe('git-remote');
+  });
+
+  it('a RunStatus is one of the lifecycle tuple values', () => {
+    const status: RunStatus = 'failed-start';
+    expect(RUN_STATUSES).toContain(status);
   });
 });

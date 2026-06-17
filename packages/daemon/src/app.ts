@@ -53,6 +53,10 @@ export type DaemonApp = FastifyInstance<
   ZodTypeProvider
 >;
 
+/** CREW-244: how often the launching reaper runs, and the stuck threshold. */
+const REAP_INTERVAL_MS = 60_000;
+const LAUNCHING_STUCK_MS = 10 * 60_000;
+
 function getValidation(err: Error): FastifyError['validation'] | undefined {
   const candidate = (err as { validation?: unknown }).validation;
   return Array.isArray(candidate) ? (candidate as FastifyError['validation']) : undefined;
@@ -110,6 +114,12 @@ export async function buildApp({
   // network side effects (unlike PrPoller), so it runs unconditionally —
   // without heartbeats `checkStale` is a no-op, so it's quiet in tests.
   const runnerStatusService = container.cradle.runnerStatusService;
+  // CREW-244: settle `launching` rows that never progressed (the launch
+  // process died before registering). Stateless service + a process-owned
+  // interval, mirroring runnerStatusService. The timer is unref'd so it never
+  // keeps the process alive on its own.
+  const runFailureService = container.cradle.runFailureService;
+  let reaperTimer: NodeJS.Timeout | null = null;
   // Tests build the app inside vitest, where shelling out to `gh` is both
   // noise (real network) and a source of flakiness (it can publish SSE
   // events mid-test). Vitest sets `VITEST=true`; CREW_PR_POLLER_DISABLED
@@ -134,10 +144,24 @@ export async function buildApp({
     if (!prPollerDisabled) prPoller.start();
     // CREW-215: start the runner-status staleness timer (falling edge).
     runnerStatusService.start();
+    // CREW-244: periodically reap stuck `launching` rows. Disabled under the
+    // same flag as PrPoller so vitest builds don't mutate the DB / emit SSE.
+    if (!prPollerDisabled) {
+      reaperTimer = setInterval(() => {
+        runFailureService
+          .reapStuckLaunching({ olderThanMs: LAUNCHING_STUCK_MS })
+          .catch((err: unknown) => logger.warn({ err }, 'launching reaper failed'));
+      }, REAP_INTERVAL_MS);
+      reaperTimer.unref();
+    }
   });
   app.addHook('onClose', async () => {
     if (!prPollerDisabled) prPoller.stop();
     runnerStatusService.stop();
+    if (reaperTimer) {
+      clearInterval(reaperTimer);
+      reaperTimer = null;
+    }
     await ingest.stop();
   });
 

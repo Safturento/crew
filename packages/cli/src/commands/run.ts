@@ -60,6 +60,7 @@ import {
   requireWorktreeAvailable,
   runLogPathFor,
   runSkillInjection,
+  runTrackedPreflight,
   runVerifyGate,
   streamTranscript,
   verifyGateLogPathFor,
@@ -388,16 +389,34 @@ export async function runRun(key: string, opts: RunOptions): Promise<never> {
     }
   }
 
-  const { dockerProcess, resolvedAppUrl } = await prepareAgentEnvironment({
-    config,
-    worktree,
-    key,
-    env: childEnv,
-    dockerPorts,
-    envVars,
-    mode: 'fresh',
-    skipDocker,
-  }).catch((err: unknown): never => {
+  // CREW-244: register the run as `launching` BEFORE preflight, so an init
+  // failure leaves a structured trace instead of exiting silently. The daemon
+  // client is created here (rather than after the transcript appears) so the
+  // pre-register + failed-start reports can happen around prepareAgentEnvironment.
+  const daemonClient = crewDaemonClientFromEnv(process.env);
+  const { dockerProcess, resolvedAppUrl } = await runTrackedPreflight(
+    {
+      daemonClient,
+      key,
+      projectName: config.name,
+      command: 'run',
+      worktreePath: worktree,
+      branch: key,
+      startedAt: new Date().toISOString(),
+      appUrl: materializedAppUrl ?? null,
+    },
+    () =>
+      prepareAgentEnvironment({
+        config,
+        worktree,
+        key,
+        env: childEnv,
+        dockerPorts,
+        envVars,
+        mode: 'fresh',
+        skipDocker,
+      }),
+  ).catch((err: unknown): never => {
     if (err instanceof PreflightError) {
       process.stderr.write(renderPreflightError(err) + '\n');
       process.exit(1);
@@ -632,7 +651,6 @@ export async function runRun(key: string, opts: RunOptions): Promise<never> {
   console.log();
 
   const sessionId = basename(transcriptPath, '.jsonl');
-  const daemonClient = crewDaemonClientFromEnv(process.env);
   const startedAt = new Date().toISOString();
   // Best-effort Jira title for the dashboard's agent rows. Returns '' on any
   // failure (missing creds, network, malformed payload); the daemon upserts

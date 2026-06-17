@@ -46,6 +46,11 @@ export type SsePayload =
   // to reflect a control action's progress (cancel/dequeue/...) without
   // polling. Emitted on every lifecycle transition.
   | { type: 'runner.command_changed'; data: { id: number; status: RunnerCommandStatus } }
+  // CREW-244: a run failed during init/preflight (or a stuck launching row was
+  // reaped). `key` is the ticket key; the dashboard's Runner page invalidates
+  // its "Failed to start" section. Also fires when a failed-start is
+  // acknowledged so the section clears without polling.
+  | { type: 'run.failed_start'; data: { key: string } }
   | { type: 'cache.miss'; data: Record<string, never> };
 
 /**

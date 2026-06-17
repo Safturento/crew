@@ -14,6 +14,7 @@ import { RunnerStatusService } from './services/RunnerStatusService.js';
 import { FinishStepsService } from './services/FinishStepsService.js';
 import { ActionService } from './services/ActionService.js';
 import { RunnerCommandsService } from './services/RunnerCommandsService.js';
+import { RunFailureService } from './services/RunFailureService.js';
 import { resolveJsonlPathForAgent } from './services/resolveJsonlPath.js';
 
 /**
@@ -42,6 +43,7 @@ export interface DaemonCradle {
   finishStepsService: FinishStepsService;
   actionService: ActionService;
   runnerCommandsService: RunnerCommandsService;
+  runFailureService: RunFailureService;
 }
 
 declare module '@fastify/awilix' {
@@ -137,6 +139,12 @@ export function buildContainer(deps: BuildContainerDeps): AwilixContainer<Daemon
     // SQLite + the singleton event bus), so a per-request instance is fine.
     runnerCommandsService: asFunction(
       ({ db, eventBus }: DaemonCradle) => new RunnerCommandsService({ db, eventBus }),
+    ).scoped(),
+    // CREW-244: register-before-preflight + failed-start capture. Scoped —
+    // stateless over SQLite + the singleton event bus (the periodic reaper is
+    // driven by the app lifecycle, not held here).
+    runFailureService: asFunction(
+      ({ db, eventBus }: DaemonCradle) => new RunFailureService({ db, eventBus }),
     ).scoped(),
   });
   return container;

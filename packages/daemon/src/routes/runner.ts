@@ -43,6 +43,41 @@ const CommandResultBodySchema = z.object({
   error: z.string().optional(),
 });
 
+const RunCommandSchema = z.enum(['run', 'fix-pr', 'finish']);
+
+/** The `RunFailure` diagnosis (mirrors the `crew-shared` shape). */
+const RunFailureSchema = z.object({
+  check: z.string().min(1),
+  headline: z.string().min(1),
+  remediation: z.string(),
+  output: z.string(),
+});
+
+const LaunchingBodySchema = z.object({
+  key: z.string().min(1),
+  projectName: z.string().min(1),
+  command: RunCommandSchema,
+  worktreePath: z.string().min(1),
+  branch: z.string(),
+  startedAt: z.string().min(1),
+  ticketTitle: z.string().optional(),
+  appUrl: z.string().nullable().optional(),
+});
+
+const FailedStartBodySchema = z.object({
+  key: z.string().min(1),
+  projectName: z.string().min(1),
+  command: RunCommandSchema,
+  failure: RunFailureSchema,
+  // Optional — only used on the insert-fresh path (no launching row).
+  worktreePath: z.string().optional(),
+  branch: z.string().optional(),
+  ticketTitle: z.string().optional(),
+  startedAt: z.string().optional(),
+});
+
+const RunIdResponseSchema = z.object({ runId: z.number() });
+
 const LogsQuerySchema = z.object({
   // Number of trailing lines to return. Coerced (querystrings are strings),
   // capped so a malicious `?tail=1e9` can't force the daemon to materialize
@@ -85,6 +120,10 @@ async function tailLog(logPath: string, tail: number): Promise<string[]> {
  * - `GET  /api/runner/status`    — current online/offline + lastSeen +
  *   live processes, for the dashboard to seed its SSE-driven runner views.
  * - `GET  /api/runner/logs?tail=N` — tails the mounted `runner.log`.
+ * - `POST /api/runner/launching` — CREW-244: pre-register a run as
+ *   `launching` *before* preflight, so an init failure has a row to convert.
+ * - `POST /api/runner/failed-start` — CREW-244: record a structured
+ *   failed-start (converting the launching placeholder when present).
  * - `POST /api/runner/commands`            — enqueue a reverse-queue control
  *   command (cancel / dequeue / reap / ...). Returns the new `pending` row.
  * - `GET  /api/runner/commands/pending`    — the runner atomically claims the
@@ -111,6 +150,26 @@ export async function registerRunnerRoutes(app: DaemonApp): Promise<void> {
     async (req) => {
       const svc = req.diScope.resolve('runnerStatusService');
       return svc.status();
+    },
+  );
+
+  app.post(
+    '/api/runner/launching',
+    { schema: { body: LaunchingBodySchema, response: { 201: RunIdResponseSchema } } },
+    async (req, reply) => {
+      const svc = req.diScope.resolve('runFailureService');
+      const { runId } = await svc.recordLaunching(req.body);
+      return reply.code(201).send({ runId });
+    },
+  );
+
+  app.post(
+    '/api/runner/failed-start',
+    { schema: { body: FailedStartBodySchema, response: { 201: RunIdResponseSchema } } },
+    async (req, reply) => {
+      const svc = req.diScope.resolve('runFailureService');
+      const { runId } = await svc.recordFailedStart(req.body);
+      return reply.code(201).send({ runId });
     },
   );
 
