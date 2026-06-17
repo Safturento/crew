@@ -267,3 +267,105 @@ describe('crewDaemonClientFromEnv', () => {
     expect(client.baseUrl).toBe('http://localhost:7773');
   });
 });
+
+const launchingInput = {
+  key: 'KAN-9',
+  projectName: 'demo',
+  command: 'run' as const,
+  worktreePath: '/x',
+  branch: 'KAN-9',
+  startedAt: '2026-06-17T12:00:00Z',
+};
+
+const failure = {
+  check: 'git-remote',
+  headline: 'No git remote configured',
+  remediation: 'Add an origin remote and retry.',
+  output: '✗ preflight: No git remote configured',
+};
+
+describe('CrewDaemonClient.reportLaunching', () => {
+  it('POSTs to /api/runner/launching and returns the runId on 201', async () => {
+    const fetchSpy = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValue(
+        new Response(JSON.stringify({ runId: 7 }), {
+          status: 201,
+          headers: { 'content-type': 'application/json' },
+        }),
+      );
+    const client = new CrewDaemonClient({ baseUrl: 'http://localhost:7773' });
+    const result = await client.reportLaunching(launchingInput);
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.runId).toBe(7);
+    expect(fetchSpy).toHaveBeenCalledWith(
+      'http://localhost:7773/api/runner/launching',
+      expect.objectContaining({ method: 'POST' }),
+    );
+  });
+
+  it('returns ok:false on connection error without throwing', async () => {
+    vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('ECONNREFUSED'));
+    const client = new CrewDaemonClient({ baseUrl: 'http://localhost:7773', warn: vi.fn() });
+    const result = await client.reportLaunching(launchingInput);
+    expect(result.ok).toBe(false);
+  });
+});
+
+describe('CrewDaemonClient.reportFailedStart', () => {
+  it('POSTs the failure diagnosis to /api/runner/failed-start', async () => {
+    const fetchSpy = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValue(
+        new Response(JSON.stringify({ runId: 8 }), {
+          status: 201,
+          headers: { 'content-type': 'application/json' },
+        }),
+      );
+    const client = new CrewDaemonClient({ baseUrl: 'http://localhost:7773' });
+    const result = await client.reportFailedStart({
+      key: 'KAN-9',
+      projectName: 'demo',
+      command: 'run',
+      failure,
+    });
+    expect(result.ok).toBe(true);
+    const body = JSON.parse((fetchSpy.mock.calls[0]?.[1] as RequestInit).body as string) as Record<
+      string,
+      unknown
+    >;
+    expect(body.failure).toEqual(failure);
+  });
+
+  it('returns ok:false on connection error without throwing', async () => {
+    vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('ECONNREFUSED'));
+    const client = new CrewDaemonClient({ baseUrl: 'http://localhost:7773', warn: vi.fn() });
+    const result = await client.reportFailedStart({
+      key: 'KAN-9',
+      projectName: 'demo',
+      command: 'run',
+      failure,
+    });
+    expect(result.ok).toBe(false);
+  });
+});
+
+describe('CrewDaemonClient.acknowledgeRun', () => {
+  it('POSTs to /api/runs/:key/acknowledge', async () => {
+    const fetchSpy = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValue(
+        new Response(JSON.stringify({ acknowledged: 1 }), {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        }),
+      );
+    const client = new CrewDaemonClient({ baseUrl: 'http://localhost:7773' });
+    const result = await client.acknowledgeRun('KAN-9');
+    expect(result.ok).toBe(true);
+    expect(fetchSpy).toHaveBeenCalledWith(
+      'http://localhost:7773/api/runs/KAN-9/acknowledge',
+      expect.objectContaining({ method: 'POST' }),
+    );
+  });
+});
