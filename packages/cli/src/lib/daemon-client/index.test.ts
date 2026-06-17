@@ -254,6 +254,175 @@ describe('CrewDaemonClient.heartbeat', () => {
   });
 });
 
+describe('CrewDaemonClient.heartbeat with a snapshot (CREW-243)', () => {
+  const snapshot = {
+    processes: [
+      {
+        agentKey: 'CREW-231',
+        command: 'run' as const,
+        pid: 10,
+        pgid: 10,
+        actionRequestId: 1,
+        spawnedAt: '2026-06-16T00:00:00.000Z',
+        state: 'running' as const,
+        project: 'crew',
+      },
+    ],
+  };
+
+  it('POSTs the snapshot in a { snapshot } body when one is supplied', async () => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify({ online: true, lastSeen: 123, processes: snapshot.processes }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      }),
+    );
+    const client = new CrewDaemonClient({ baseUrl: 'http://localhost:7773' });
+    await client.heartbeat(snapshot);
+    const init = fetchSpy.mock.calls[0]?.[1] as RequestInit;
+    expect(init.method).toBe('POST');
+    expect(JSON.parse(init.body as string)).toEqual({ snapshot });
+  });
+
+  it('sends no body when called without a snapshot (legacy edge-only ping)', async () => {
+    const fetchSpy = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValue(
+        new Response(JSON.stringify({ online: true, lastSeen: 1, processes: [] }), {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        }),
+      );
+    const client = new CrewDaemonClient({ baseUrl: 'http://localhost:7773' });
+    await client.heartbeat();
+    const init = fetchSpy.mock.calls[0]?.[1] as RequestInit;
+    expect(init.body).toBeUndefined();
+  });
+});
+
+describe('CrewDaemonClient.claimPendingCommand (CREW-243)', () => {
+  const row = {
+    id: 3,
+    agentKey: 'CREW-231',
+    kind: 'cancel_soft' as const,
+    payload: null,
+    status: 'claimed' as const,
+    error: null,
+    createdAt: '2026-06-16T00:00:00.000Z',
+    updatedAt: '2026-06-16T00:00:01.000Z',
+  };
+
+  it('GETs /api/runner/commands/pending and returns the claimed command', async () => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify(row), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      }),
+    );
+    const client = new CrewDaemonClient({ baseUrl: 'http://localhost:7773' });
+    const result = await client.claimPendingCommand();
+    expect('command' in result).toBe(true);
+    if ('command' in result) expect(result.command?.id).toBe(3);
+    expect(fetchSpy).toHaveBeenCalledWith(
+      'http://localhost:7773/api/runner/commands/pending',
+      expect.objectContaining({ method: 'GET' }),
+    );
+  });
+
+  it('returns command:null when the queue is empty (null body)', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response('null', { status: 200, headers: { 'content-type': 'application/json' } }),
+    );
+    const client = new CrewDaemonClient({ baseUrl: 'http://localhost:7773' });
+    const result = await client.claimPendingCommand();
+    expect('command' in result).toBe(true);
+    if ('command' in result) expect(result.command).toBeNull();
+  });
+
+  it('returns ok:false on connection error without throwing', async () => {
+    vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('ECONNREFUSED'));
+    const client = new CrewDaemonClient({ baseUrl: 'http://localhost:7773', warn: vi.fn() });
+    const result = await client.claimPendingCommand();
+    expect('command' in result).toBe(false);
+  });
+});
+
+describe('CrewDaemonClient.reportCommandResult (CREW-243)', () => {
+  it('POSTs the status+error to /api/runner/commands/:id/result on 204', async () => {
+    const fetchSpy = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValue(new Response(null, { status: 204 }));
+    const client = new CrewDaemonClient({ baseUrl: 'http://localhost:7773' });
+    const result = await client.reportCommandResult(3, 'failed', 'no tracked process');
+    expect(result.ok).toBe(true);
+    expect(fetchSpy).toHaveBeenCalledWith(
+      'http://localhost:7773/api/runner/commands/3/result',
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({ status: 'failed', error: 'no tracked process' }),
+      }),
+    );
+  });
+
+  it('omits error from the body when not provided', async () => {
+    const fetchSpy = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValue(new Response(null, { status: 204 }));
+    const client = new CrewDaemonClient({ baseUrl: 'http://localhost:7773' });
+    await client.reportCommandResult(3, 'applied');
+    const init = fetchSpy.mock.calls[0]?.[1] as RequestInit;
+    expect(JSON.parse(init.body as string)).toEqual({ status: 'applied' });
+  });
+
+  it('returns ok:false on connection error without throwing', async () => {
+    vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('ECONNREFUSED'));
+    const client = new CrewDaemonClient({ baseUrl: 'http://localhost:7773', warn: vi.fn() });
+    const result = await client.reportCommandResult(3, 'applied');
+    expect(result.ok).toBe(false);
+  });
+});
+
+describe('CrewDaemonClient.getRunnerStatus (CREW-243)', () => {
+  it('GETs /api/runner/status and returns the live-process snapshot', async () => {
+    const processes = [
+      {
+        agentKey: 'CREW-231',
+        command: 'run' as const,
+        pid: 10,
+        pgid: 10,
+        actionRequestId: 1,
+        spawnedAt: '2026-06-16T00:00:00.000Z',
+        state: 'running' as const,
+        project: 'crew',
+      },
+    ];
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify({ online: true, lastSeen: 99, processes }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      }),
+    );
+    const client = new CrewDaemonClient({ baseUrl: 'http://localhost:7773' });
+    const result = await client.getRunnerStatus();
+    expect('processes' in result).toBe(true);
+    if ('processes' in result) {
+      expect(result.online).toBe(true);
+      expect(result.processes).toHaveLength(1);
+    }
+    expect(fetchSpy).toHaveBeenCalledWith(
+      'http://localhost:7773/api/runner/status',
+      expect.objectContaining({ method: 'GET' }),
+    );
+  });
+
+  it('returns ok:false on connection error without throwing', async () => {
+    vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('ECONNREFUSED'));
+    const client = new CrewDaemonClient({ baseUrl: 'http://localhost:7773', warn: vi.fn() });
+    const result = await client.getRunnerStatus();
+    expect('processes' in result).toBe(false);
+  });
+});
+
 describe('crewDaemonClientFromEnv', () => {
   it('uses CREW_PORT when set', async () => {
     const { crewDaemonClientFromEnv } = await import('./index.js');

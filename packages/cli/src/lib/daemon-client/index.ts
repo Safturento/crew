@@ -1,5 +1,13 @@
 import pc from 'picocolors';
-import type { ActionRequest, ActionStatus, FinishStepInput, RunFailure } from 'crew-shared';
+import type {
+  ActionRequest,
+  ActionStatus,
+  FinishStepInput,
+  LiveProcess,
+  RunFailure,
+  RunnerCommand,
+  RunnerSnapshot,
+} from 'crew-shared';
 
 export type RunCommand = 'run' | 'fix-pr' | 'finish';
 
@@ -70,6 +78,13 @@ export interface AgentSummary {
   startedAt: string;
   tokens: number;
   prUrl?: string;
+}
+
+/** The daemon's runner status payload (`GET /api/runner/status`). */
+export interface RunnerStatus {
+  online: boolean;
+  lastSeen: number | null;
+  processes: LiveProcess[];
 }
 
 export type DaemonResult<T> = T | { ok: false; reason: string };
@@ -315,18 +330,95 @@ export class CrewDaemonClient {
     }
   }
 
-  /** Ping the daemon's runner heartbeat; flips the dashboard runner chip online. */
-  async heartbeat(): Promise<DaemonResult<{ online: boolean; lastSeen: number | null }>> {
+  /**
+   * Ping the daemon's runner heartbeat; flips the dashboard runner chip online.
+   * When a `snapshot` is supplied (CREW-243), it rides along in a `{ snapshot }`
+   * body — the daemon mirrors the live-process list and emits
+   * `runner.snapshot_changed`. A bodyless ping is the legacy online-edge-only
+   * heartbeat.
+   */
+  async heartbeat(snapshot?: RunnerSnapshot): Promise<DaemonResult<RunnerStatus>> {
     try {
-      const res = await fetch(`${this.baseUrl}/api/runner/heartbeat`, { method: 'POST' });
+      const init: RequestInit =
+        snapshot === undefined
+          ? { method: 'POST' }
+          : {
+              method: 'POST',
+              headers: { 'content-type': 'application/json' },
+              body: JSON.stringify({ snapshot }),
+            };
+      const res = await fetch(`${this.baseUrl}/api/runner/heartbeat`, init);
       if (!res.ok) {
         this.warn(`heartbeat: HTTP ${res.status}`);
         return { ok: false, reason: `http_${res.status}` };
       }
-      const body = (await res.json()) as { online: boolean; lastSeen: number | null };
-      return body;
+      return (await res.json()) as RunnerStatus;
     } catch (err) {
       this.warn(`heartbeat: ${(err as Error).message}`);
+      return { ok: false, reason: 'connect_error' };
+    }
+  }
+
+  /**
+   * Read-only runner status snapshot (`GET /api/runner/status`) — supervisor
+   * online/offline + the live-process list. Unlike {@link heartbeat} this does
+   * not record liveness, so `crew runner status` can render the registry
+   * without falsely flipping the runner online.
+   */
+  async getRunnerStatus(): Promise<DaemonResult<RunnerStatus>> {
+    try {
+      const res = await fetch(`${this.baseUrl}/api/runner/status`, { method: 'GET' });
+      if (!res.ok) {
+        this.warn(`getRunnerStatus: HTTP ${res.status}`);
+        return { ok: false, reason: `http_${res.status}` };
+      }
+      return (await res.json()) as RunnerStatus;
+    } catch (err) {
+      this.warn(`getRunnerStatus: ${(err as Error).message}`);
+      return { ok: false, reason: 'connect_error' };
+    }
+  }
+
+  /**
+   * Claim the oldest pending reverse-queue command (CREW-243). Mirrors
+   * {@link claimPendingAction}: returns `{ command }` (the claimed row or
+   * `null` when the queue is empty) on success, or `{ ok: false, reason }` so
+   * a downed daemon never crashes the drain loop — it just retries next cycle.
+   */
+  async claimPendingCommand(): Promise<DaemonResult<{ command: RunnerCommand | null }>> {
+    try {
+      const res = await fetch(`${this.baseUrl}/api/runner/commands/pending`, { method: 'GET' });
+      if (!res.ok) {
+        this.warn(`claimPendingCommand: HTTP ${res.status}`);
+        return { ok: false, reason: `http_${res.status}` };
+      }
+      const command = (await res.json()) as RunnerCommand | null;
+      return { command };
+    } catch (err) {
+      this.warn(`claimPendingCommand: ${(err as Error).message}`);
+      return { ok: false, reason: 'connect_error' };
+    }
+  }
+
+  /** Report the apply outcome of a claimed command (204 on success). Best-effort. */
+  async reportCommandResult(
+    id: number,
+    status: 'applied' | 'failed',
+    error?: string,
+  ): Promise<DaemonResult<{ ok: true }>> {
+    try {
+      const res = await fetch(`${this.baseUrl}/api/runner/commands/${id}/result`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(error === undefined ? { status } : { status, error }),
+      });
+      if (!res.ok) {
+        this.warn(`reportCommandResult: HTTP ${res.status}`);
+        return { ok: false, reason: `http_${res.status}` };
+      }
+      return { ok: true };
+    } catch (err) {
+      this.warn(`reportCommandResult: ${(err as Error).message}`);
       return { ok: false, reason: 'connect_error' };
     }
   }
