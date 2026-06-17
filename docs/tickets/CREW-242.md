@@ -34,7 +34,7 @@ The daemon side of the state + control path:
 - **Dedicated `runner.snapshot_changed` SSE event** instead of folding the snapshot into the
   existing `runner.status_changed` edge event. The plan's wording ("publish the snapshot on
   `runner.status_changed`") collides with its own hard constraint "keep the existing edge logic
-  untouched": `runner.status_changed` fires *only* on online/offline edges (guarded by
+  untouched": `runner.status_changed` fires _only_ on online/offline edges (guarded by
   `emittedOnline`), and the shipped edge tests assert exact-equality `{online, lastSeen}` and
   exactly-once emission. A snapshot pushed every 5s heartbeat would have to fire that event on
   every beat, breaking edge semantics. A separate per-heartbeat snapshot event keeps the health

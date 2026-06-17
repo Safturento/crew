@@ -1,9 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import {
-  enqueueRunnerCommandSchema,
-  liveProcessSchema,
-  runnerSnapshotSchema,
-} from './schema.js';
+import { enqueueRunnerCommandSchema, liveProcessSchema, runnerSnapshotSchema } from './schema.js';
 
 describe('liveProcessSchema', () => {
   const valid = {
@@ -47,7 +43,11 @@ describe('runnerSnapshotSchema', () => {
 describe('enqueueRunnerCommandSchema', () => {
   it('accepts a cancel command targeting an agent', () => {
     expect(
-      enqueueRunnerCommandSchema.parse({ agentKey: 'CREW-231', kind: 'cancel_soft', payload: null }),
+      enqueueRunnerCommandSchema.parse({
+        agentKey: 'CREW-231',
+        kind: 'cancel_soft',
+        payload: null,
+      }),
     ).toEqual({ agentKey: 'CREW-231', kind: 'cancel_soft', payload: null });
   });
 
@@ -73,6 +73,8 @@ describe('enqueueRunnerCommandSchema', () => {
   });
 
   it('rejects an unknown command kind', () => {
-    expect(() => enqueueRunnerCommandSchema.parse({ agentKey: 'CREW-231', kind: 'nuke' })).toThrow();
+    expect(() =>
+      enqueueRunnerCommandSchema.parse({ agentKey: 'CREW-231', kind: 'nuke' }),
+    ).toThrow();
   });
 });
