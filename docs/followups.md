@@ -37,10 +37,8 @@ Organization: Active is grouped by topic (not chronology) since the dominant acc
     - [2026-05-22 — Layer-1 RunMetrics widget loses its drawer home in the redesign — find it a new one](#2026-05-22--layer-1-runmetrics-widget-loses-its-drawer-home-in-the-redesign--find-it-a-new-one)
     - [2026-05-13 — TopNav BrandMark renders a different glyph than the Figma "crew" mark](#2026-05-13--topnav-brandmark-renders-a-different-glyph-than-the-figma-crew-mark)
     - [2026-05-13 — "Hide finished" toggle on Agents List has no Figma reference (scope drift either way — reconcile)](#2026-05-13--hide-finished-toggle-on-agents-list-has-no-figma-reference-scope-drift-either-way--reconcile)
-    - [2026-05-10 — Wire dashboard QuickAction buttons (Resume / Finish / Inspect / Provide input) to daemon endpoints](#2026-05-10--wire-dashboard-quickaction-buttons-resume--finish--inspect--provide-input-to-daemon-endpoints)
     - [2026-05-10 — Polish the CREW-119/CREW-117 Crew DS composites (skeleton-fidelity → pixel-fidelity)](#2026-05-10--polish-the-crew-119crew-117-crew-ds-composites-skeleton-fidelity--pixel-fidelity)
     - [2026-05-08 — Tool-name filtering in the timeline Filters dropdown](#2026-05-08--tool-name-filtering-in-the-timeline-filters-dropdown)
-    - [2026-05-08 — Surface `crew finish` step results in the dashboard](#2026-05-08--surface-crew-finish-step-results-in-the-dashboard)
     - [2026-05-05 — Dashboard silently drops agents whose project isn't in `/api/projects`](#2026-05-05--dashboard-silently-drops-agents-whose-project-isnt-in-apiprojects)
     - [2026-04-29 — Slice 1c agents continuation work](#2026-04-29--slice-1c-agents-continuation-work)
     - [2026-04-29 — CREW-25 cva-refactor cleanup leftovers](#2026-04-29--crew-25-cva-refactor-cleanup-leftovers)
@@ -91,6 +89,8 @@ Organization: Active is grouped by topic (not chronology) since the dominant acc
     - [2026-05-15 — `.agents/` topic-doc system vs native `.claude/rules/` and agents.md alignment](#2026-05-15--agents-topic-doc-system-vs-native-clauderules-and-agentsmd-alignment)
     - [2026-05-12 — Rethink followup-tracking system (priority tier + Jira backlog sync)](#2026-05-12--rethink-followup-tracking-system-priority-tier--jira-backlog-sync)
 - [Resolved](#resolved)
+  - [2026-05-10 — Wire dashboard QuickAction buttons (Resume / Finish / Inspect / Provide input) to daemon endpoints](#2026-05-10--wire-dashboard-quickaction-buttons-resume--finish--inspect--provide-input-to-daemon-endpoints)
+  - [2026-05-08 — Surface `crew finish` step results in the dashboard](#2026-05-08--surface-crew-finish-step-results-in-the-dashboard)
   - [2026-06-08 — Hook command paths in settings.json were relative, breaking on cwd drift](#2026-06-08--hook-command-paths-in-settingsjson-were-relative-breaking-on-cwd-drift)
   - [2026-05-24 — `CREW_STARTUP_EVENTS_DIR` bypasses `DaemonConfig` and reads `process.env` directly inside `app.ts`](#2026-05-24--crew_startup_events_dir-bypasses-daemonconfig-and-reads-processenv-directly-inside-appts)
   - [2026-06-05 — Preflight fail-fast order surfaces `bruno-skeleton` before `excluded-commands` (red test on main)](#2026-06-05--preflight-fail-fast-order-surfaces-bruno-skeleton-before-excluded-commands-red-test-on-main)
@@ -547,36 +547,6 @@ Organization: Active is grouped by topic (not chronology) since the dominant acc
 
 **2026-06-06 update — half reconciled:** decision is "keep it." The bespoke outlined-pill toggle (with its own `hover:opacity-80`) was replaced with the DS `Switch` component (`AgentsList.tsx`, mirrors `LiveModeToggle`) during the pill/button hover-states change. The control now has a DS basis that exists in Figma (`Switch` set `335:242`), resolving the "scope drift / no DS reference" half. **Remaining:** the Figma AgentsList _screen_ (`1:2`) still doesn't depict the toggle — add a `Switch` instance there for screen-level parity, then this can move to Resolved.
 
-#### 2026-05-10 — Wire dashboard QuickAction buttons (Resume / Finish / Inspect / Provide input) to daemon endpoints
-
-**Ticket:** [CREW-208](https://safturento.atlassian.net/browse/CREW-208) (Epic) — parked in Backlog; resolution gated on Epic completion (Epic exception).
-
-**What:** CREW-119 landed the v2 quick-action buttons in the agents list (`Resume + Finish` for `idle`, `Provide input` for `waiting`, `View PR + Finish` for `pr_open`, `Inspect` for `error`). The buttons fire an `onAction(kind, agent)` callback up through `AgentRow → ProjectSection → AgentsList`, but `App.tsx` currently does **not** mount a handler — clicks no-op. The visual contract is shipped; the functional contract is not. Each action needs a daemon endpoint and a mutation hook that the App-level handler dispatches.
-
-**Why noticed:** CREW-119 autonomous run on 2026-05-10. The original CREW-119 ticket scope was "visual fidelity sweep" — landing functional behavior for brand-new actions like `Resume` was out of scope (the daemon has no resume endpoint today), but landing the buttons visually wasn't.
-
-**Anchors:**
-
-- `packages/dashboard/src/components/AgentRow.tsx` — exports `QuickActionKind` (`resume | finish | view-pr | provide-input | inspect`)
-- `packages/dashboard/src/App.tsx` — `<AgentsList … />` mount; add an `onAgentAction` prop
-- `packages/daemon/src/routes/` — needs new endpoints (`POST /agents/:key/resume`, `/finish`, `/inspect`, `/answer`)
-- `bruno/endpoints/agents/` — would gain four new `.bru` files
-
-**What's been considered:**
-
-- **Wire up incrementally as endpoints land.** Start with `finish` (closest to existing transcript completion), then `provide-input` (already partially supported), then `resume` and `inspect`.
-- **Single `POST /agents/:key/action { kind }` endpoint** vs verb-per-action. Verb-per-action mirrors REST norms; single dispatcher centralizes permissions but loses semantic clarity.
-- **Route through `useMutation` from TanStack Query** so optimistic updates + invalidation are uniform with the existing list query.
-
-**Visual styling consistency note (added 2026-05-10):** the `Inspect` button on the latency row in frame `1:2` currently renders as solid red bg with dark text — drifted from the canonical pill pattern. When this ticket lands the dashboard handler, also pick a button styling pattern consistent with the StateBadge tinted-bg approach OR explicitly decide it should be a solid destructive shadcn `Button` variant.
-
-**Shape of work:** Likely two tickets — one daemon-side (add four endpoints + matching `.bru` files) and one dashboard-side (mount `onAgentAction` in `App.tsx`, wire each kind through TanStack `useMutation`, surface success/error toasts). Both can run in parallel after the endpoint contracts are settled.
-
-**Open questions:**
-
-- [ ] Does `inspect` need its own daemon-side action or is "open the agent drawer focused on the error transcript" enough?
-- [ ] Should `resume` from `idle` reuse the `crew run` codepath or be a separate "rehydrate" verb?
-
 #### 2026-05-10 — Polish the CREW-119/CREW-117 Crew DS composites (skeleton-fidelity → pixel-fidelity)
 
 **What:** CREW-119 + CREW-117 built ten Crew DS composites on the Composites page at **skeleton fidelity** — names, semantic-token bindings, and slot structure correct, but visual treatment intentionally minimal. `BrandMark` and `StateBadge` are now pixel-fidel after the 2026-05-10 frame migration polish. The other composites are placeholder boxes with sample text. They need a designer pass — type ramps tightened, padding/gap bound to Core `tw/space`, hover/focus states added, variant axes grown (`AgentRow.state`, `TopNav.route`, `ProjectSection.expanded`).
@@ -622,39 +592,6 @@ Lean toward search-inside-popover when this iteration ships.
 - Tool-name filters compose with type filters (AND), or alternative axis (OR)? Probably AND.
 - Tool aliases worth normalizing (e.g. `mcp__atlassian__jira_get_issue` → `Jira: get_issue`)? Raw is simplest.
 - Count next to each tool name live-updating or fixed at popover-open time? Fixed is much cheaper.
-
-#### 2026-05-08 — Surface `crew finish` step results in the dashboard
-
-**Ticket:** [CREW-208](https://safturento.atlassian.net/browse/CREW-208) (Epic) — parked in Backlog; resolution gated on Epic completion (Epic exception).
-
-**What:** `crew finish` from the CLI prints a structured checklist as it runs — `step()` (`packages/cli/src/commands/finish.ts:120-132`) wraps each cleanup operation and emits a green ✓ on success or yellow ! on skip/warn. None of this flows to the daemon. Once finish lands, the dashboard's only signal is the agent's terminal state — there's no record of which steps succeeded, which were skipped, or what failed and why. The drawer should expose a per-step checklist with the same success/skip/error semantics.
-
-**Why noticed:** 2026-05-08 conversation triaging finish-related bugs in CREW-94. While walking through "finish runs have no transcript by design", the user pointed out that finish _does_ have an observable surface — the CLI's structured output — it just isn't piped through the daemon.
-
-**Anchors:**
-
-- `packages/cli/src/commands/finish.ts:120-132` — `step()` helper, the natural emit point for per-step events
-- `packages/cli/src/commands/finish.ts:226-235, 301-315` — current daemon parity (registerRun + completeRun only)
-- `packages/daemon/src/services/EventBus.ts` — natural place to publish per-step events on the SSE firehose
-- `packages/dashboard/src/components/AgentBody.tsx` — where step results would render
-- `packages/shared/src/transcripts/` — schema would land here if finish steps are modeled as a new event type
-- [CREW-116](https://safturento.atlassian.net/browse/CREW-116) — prerequisite bug-fix ticket
-
-**What's been considered:**
-
-- **Per-step SSE events.** New `finish-step` event type in `crew-shared` with `{ runId, step, status, message? }`. CLI emits via existing daemon HTTP client; daemon publishes to EventBus → dashboard subscribes via slice-1c's `CrewEventStream`. Live-updating checklist. Most consistent with slice 1c.
-- **Per-step rows in a new `finish_steps` table.** CLI POSTs each step result; daemon writes a row; drawer queries at open time. Simpler. Doesn't stream live, but finish completes in tens of seconds.
-- **Bundled completion payload.** CLI accumulates results, sends all at once. Cheapest. If finish hangs mid-step, dashboard sees nothing until completion or timeout.
-
-The SSE shape feels right — matches slice 1c's "live updates" feel.
-
-**Shape of work:** One ticket, depends on CREW-116 so finish runs are correctly modeled before adding more surface. Author the new event type in `crew-shared`, add a daemon endpoint, emit from `finish.ts`'s `step()` helper, render in the drawer alongside the timeline.
-
-**Open questions:**
-
-- Drawer layout: inline (between StateHistoryBar and Timeline) vs dedicated panel?
-- Pre-existing finish runs in the DB will have no step data. Drawer should render nothing rather than an empty state.
-- Distinguish skip vs error in the schema (CLI uses `warn()` for both). Schema should have three states (success/skip/error).
 
 #### 2026-05-05 — Dashboard silently drops agents whose project isn't in `/api/projects`
 
@@ -1522,6 +1459,69 @@ The other two open questions (sandbox config drift, Phase 2 + Phase 3 separation
 - Should priority on the markdown side map directly to Jira priority, or stay a separate signal?
 
 ## Resolved
+
+### 2026-05-10 — Wire dashboard QuickAction buttons (Resume / Finish / Inspect / Provide input) to daemon endpoints
+
+**Resolved 2026-06-16:** Shipped under Epic [CREW-208](https://safturento.atlassian.net/browse/CREW-208). The dashboard action layer (CREW-217) mounts `onAgentAction` in `App.tsx` and dispatches each kind through TanStack mutations; the host runner (CREW-216) executes the bounded verb set; New Run / Fix PR / Finish surfaces landed in CREW-218/219/220. Quick-action clicks are now wired end-to-end rather than no-oping.
+
+**What:** CREW-119 landed the v2 quick-action buttons in the agents list (`Resume + Finish` for `idle`, `Provide input` for `waiting`, `View PR + Finish` for `pr_open`, `Inspect` for `error`). The buttons fire an `onAction(kind, agent)` callback up through `AgentRow → ProjectSection → AgentsList`, but `App.tsx` currently does **not** mount a handler — clicks no-op. The visual contract is shipped; the functional contract is not. Each action needs a daemon endpoint and a mutation hook that the App-level handler dispatches.
+
+**Why noticed:** CREW-119 autonomous run on 2026-05-10. The original CREW-119 ticket scope was "visual fidelity sweep" — landing functional behavior for brand-new actions like `Resume` was out of scope (the daemon has no resume endpoint today), but landing the buttons visually wasn't.
+
+**Anchors:**
+
+- `packages/dashboard/src/components/AgentRow.tsx` — exports `QuickActionKind` (`resume | finish | view-pr | provide-input | inspect`)
+- `packages/dashboard/src/App.tsx` — `<AgentsList … />` mount; add an `onAgentAction` prop
+- `packages/daemon/src/routes/` — needs new endpoints (`POST /agents/:key/resume`, `/finish`, `/inspect`, `/answer`)
+- `bruno/endpoints/agents/` — would gain four new `.bru` files
+
+**What's been considered:**
+
+- **Wire up incrementally as endpoints land.** Start with `finish` (closest to existing transcript completion), then `provide-input` (already partially supported), then `resume` and `inspect`.
+- **Single `POST /agents/:key/action { kind }` endpoint** vs verb-per-action. Verb-per-action mirrors REST norms; single dispatcher centralizes permissions but loses semantic clarity.
+- **Route through `useMutation` from TanStack Query** so optimistic updates + invalidation are uniform with the existing list query.
+
+**Visual styling consistency note (added 2026-05-10):** the `Inspect` button on the latency row in frame `1:2` currently renders as solid red bg with dark text — drifted from the canonical pill pattern. When this ticket lands the dashboard handler, also pick a button styling pattern consistent with the StateBadge tinted-bg approach OR explicitly decide it should be a solid destructive shadcn `Button` variant.
+
+**Shape of work:** Likely two tickets — one daemon-side (add four endpoints + matching `.bru` files) and one dashboard-side (mount `onAgentAction` in `App.tsx`, wire each kind through TanStack `useMutation`, surface success/error toasts). Both can run in parallel after the endpoint contracts are settled.
+
+**Open questions:**
+
+- [ ] Does `inspect` need its own daemon-side action or is "open the agent drawer focused on the error transcript" enough?
+- [ ] Should `resume` from `idle` reuse the `crew run` codepath or be a separate "rehydrate" verb?
+
+### 2026-05-08 — Surface `crew finish` step results in the dashboard
+
+**Resolved 2026-06-16:** Shipped under Epic [CREW-208](https://safturento.atlassian.net/browse/CREW-208). Finish-step contracts landed in CREW-213 (shared `finish-step` types/schemas), daemon intake in CREW-215 (finish-step HTTP path → EventBus → SSE), and emission + the drawer step checklist in CREW-220 — `finish.ts`'s `step()` helper now flows per-step ok/skip/error results through to the drawer.
+
+**What:** `crew finish` from the CLI prints a structured checklist as it runs — `step()` (`packages/cli/src/commands/finish.ts:120-132`) wraps each cleanup operation and emits a green ✓ on success or yellow ! on skip/warn. None of this flows to the daemon. Once finish lands, the dashboard's only signal is the agent's terminal state — there's no record of which steps succeeded, which were skipped, or what failed and why. The drawer should expose a per-step checklist with the same success/skip/error semantics.
+
+**Why noticed:** 2026-05-08 conversation triaging finish-related bugs in CREW-94. While walking through "finish runs have no transcript by design", the user pointed out that finish _does_ have an observable surface — the CLI's structured output — it just isn't piped through the daemon.
+
+**Anchors:**
+
+- `packages/cli/src/commands/finish.ts:120-132` — `step()` helper, the natural emit point for per-step events
+- `packages/cli/src/commands/finish.ts:226-235, 301-315` — current daemon parity (registerRun + completeRun only)
+- `packages/daemon/src/services/EventBus.ts` — natural place to publish per-step events on the SSE firehose
+- `packages/dashboard/src/components/AgentBody.tsx` — where step results would render
+- `packages/shared/src/transcripts/` — schema would land here if finish steps are modeled as a new event type
+- [CREW-116](https://safturento.atlassian.net/browse/CREW-116) — prerequisite bug-fix ticket
+
+**What's been considered:**
+
+- **Per-step SSE events.** New `finish-step` event type in `crew-shared` with `{ runId, step, status, message? }`. CLI emits via existing daemon HTTP client; daemon publishes to EventBus → dashboard subscribes via slice-1c's `CrewEventStream`. Live-updating checklist. Most consistent with slice 1c.
+- **Per-step rows in a new `finish_steps` table.** CLI POSTs each step result; daemon writes a row; drawer queries at open time. Simpler. Doesn't stream live, but finish completes in tens of seconds.
+- **Bundled completion payload.** CLI accumulates results, sends all at once. Cheapest. If finish hangs mid-step, dashboard sees nothing until completion or timeout.
+
+The SSE shape feels right — matches slice 1c's "live updates" feel.
+
+**Shape of work:** One ticket, depends on CREW-116 so finish runs are correctly modeled before adding more surface. Author the new event type in `crew-shared`, add a daemon endpoint, emit from `finish.ts`'s `step()` helper, render in the drawer alongside the timeline.
+
+**Open questions:**
+
+- Drawer layout: inline (between StateHistoryBar and Timeline) vs dedicated panel?
+- Pre-existing finish runs in the DB will have no step data. Drawer should render nothing rather than an empty state.
+- Distinguish skip vs error in the schema (CLI uses `warn()` for both). Schema should have three states (success/skip/error).
 
 ### 2026-06-08 — Hook command paths in settings.json were relative, breaking on cwd drift
 
