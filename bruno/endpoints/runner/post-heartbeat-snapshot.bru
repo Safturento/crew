@@ -1,0 +1,52 @@
+meta {
+  name: POST /api/runner/heartbeat (snapshot)
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{baseUrl}}/api/runner/heartbeat
+  body: json
+}
+
+body:json {
+  {
+    "snapshot": {
+      "processes": [
+        {
+          "agentKey": "BRUNO-RUNNER-1",
+          "command": "run",
+          "pid": 4242,
+          "pgid": 4242,
+          "actionRequestId": null,
+          "spawnedAt": "2026-06-16T00:00:00.000Z",
+          "state": "running",
+          "project": "crew"
+        }
+      ]
+    }
+  }
+}
+
+assert {
+  res.status: eq 200
+  res.body.online: eq true
+  res.body.processes: isArray
+}
+
+tests {
+  test("the heartbeat mirrors the pushed live-process snapshot", () => {
+    expect(res.body.processes).to.have.lengthOf(1);
+    expect(res.body.processes[0].agentKey).to.equal("BRUNO-RUNNER-1");
+    expect(res.body.processes[0].state).to.equal("running");
+  });
+}
+
+docs {
+  The snapshot-aware heartbeat. The host runner POSTs its live-process
+  snapshot on each beat; the daemon mirrors it in `RunnerStatusService` and
+  emits `runner.snapshot_changed`. The widened status response (and
+  `GET /api/runner/status`) carries the `processes` array. A bodyless
+  heartbeat (`post-heartbeat.bru`) still works — it refreshes only the
+  online edge and leaves the snapshot untouched.
+}

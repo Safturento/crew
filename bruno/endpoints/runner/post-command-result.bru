@@ -1,0 +1,27 @@
+meta {
+  name: POST /api/runner/commands/:id/result
+  type: http
+  seq: 7
+}
+
+post {
+  url: {{baseUrl}}/api/runner/commands/{{commandId}}/result
+  body: json
+}
+
+body:json {
+  {
+    "status": "applied"
+  }
+}
+
+assert {
+  res.status: eq 204
+}
+
+docs {
+  Records the apply outcome for the claimed command, closing the
+  enqueue → pending → claim → result lifecycle. Reports `applied` here; the
+  runner reports `failed` with an `error` string when the signal/completeRun
+  fails. Returns 204 (no body).
+}
