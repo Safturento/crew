@@ -778,7 +778,9 @@ export class IngestService {
     // Recognize the full target set (incl. `idle`/`waiting`, CREW-254) on
     // read-back so a concrete-event state survives a daemon restart instead of
     // collapsing to `init`.
-    const initial: TransitionTarget = isTransitionTarget(latest?.to_state) ? latest.to_state : 'init';
+    const initial: TransitionTarget = isTransitionTarget(latest?.to_state)
+      ? latest.to_state
+      : 'init';
     this.agentStateCache.set(agentKey, initial);
     return initial;
   }

@@ -1126,10 +1126,7 @@ describe('IngestService.watchStartupEvents', () => {
 });
 
 describe('IngestService.ingestStateEvent — concrete state triggers (CREW-254)', () => {
-  async function latestState(
-    db: Kysely<DaemonDatabase>,
-    key: string,
-  ): Promise<string | null> {
+  async function latestState(db: Kysely<DaemonDatabase>, key: string): Promise<string | null> {
     const row = await db
       .selectFrom('state_transitions')
       .select('to_state')
@@ -1366,7 +1363,13 @@ describe('IngestService.watchStateEvents', () => {
       writeFileSync(
         join(stateDir, `${agentKey}.jsonl`),
         'not json at all\n' +
-          JSON.stringify({ eventId: 'bad', key: agentKey, event: 'nope', ts: 'x', source: 'cli-run' }) +
+          JSON.stringify({
+            eventId: 'bad',
+            key: agentKey,
+            event: 'nope',
+            ts: 'x',
+            source: 'cli-run',
+          }) +
           '\n' +
           JSON.stringify({
             eventId: 'ok',

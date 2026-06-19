@@ -1,7 +1,7 @@
 ---
 name: testing
 description: Bruno + Playwright + daemon fixtures
-last_updated: 2026-06-08
+last_updated: 2026-06-19
 covers:
   - 'bruno/**'
   - 'packages/*/src/**/*.test.ts'
@@ -66,11 +66,11 @@ If your local stack has no fixtures and you expected some, check: are you in the
 
 ## Daemon unit-test harness (`packages/daemon/vitest.config.ts`)
 
-The daemon package carries its own `vitest.config.ts` (closest-config wins over the repo-root one) so it can register a `setupFiles` entry, `src/test/setup.ts`. That setup file pins `CREW_STARTUP_EVENTS_DIR` at a fresh empty temp dir for the whole package's test run.
+The daemon package carries its own `vitest.config.ts` (closest-config wins over the repo-root one) so it can register a `setupFiles` entry, `src/test/setup.ts`. That setup file pins both `CREW_STARTUP_EVENTS_DIR` and `CREW_STATE_EVENTS_DIR` (CREW-254) at fresh empty temp dirs for the whole package's test run.
 
-Why it exists: any test that builds the full app (`buildApp`) triggers the `onReady` hook's chokidar watcher on the startup-event dir. Unisolated, that defaults to the developer's real `~/.crew/startup`, and chokidar's initial scan (`ignoreInitial:false`) replays every historical `<key>.jsonl` through `IngestService` — a burst of synchronous SQLite writes on the shared db that starves later `app.inject` calls and trips the 5s test timeout. The setup file makes that scan always a no-op, so individual tests don't each have to isolate the env var themselves.
+Why it exists: any test that builds the full app (`buildApp`) triggers the `onReady` hook's two chokidar watchers — one on the startup-event dir, one on the state-event dir. Unisolated, those default to the developer's real `~/.crew/startup` and `~/.crew/state-events`, and chokidar's initial scan (`ignoreInitial:false`) replays every historical `<key>.jsonl` through `IngestService` — a burst of synchronous SQLite writes on the shared db that starves later `app.inject` calls and trips the 5s test timeout. The setup file makes both scans always a no-op, so individual tests don't each have to isolate the env vars themselves.
 
-The watcher reads its dir from `config.startupEventsDir`, not `process.env` (CREW-236): `parseDaemonConfig`'s `CREW_STARTUP_EVENTS_DIR` field defaults to `process.env.CREW_STARTUP_EVENTS_DIR ?? ~/.crew/startup`, so the `src/test/setup.ts` env pin still flows through for tests that build config from a partial env object. A test that wants its own dir overrides it explicitly via `parseDaemonConfig({ CREW_STARTUP_EVENTS_DIR: ... })` (see `routes/events.test.ts`) rather than juggling `process.env`.
+Each watcher reads its dir from config (`config.startupEventsDir` / `config.stateEventsDir`), not `process.env` (CREW-236): the matching `CREW_*_EVENTS_DIR` field defaults to `process.env.<VAR> ?? ~/.crew/<dir>`, so the `src/test/setup.ts` env pins still flow through for tests that build config from a partial env object. A test that wants its own dir overrides it explicitly via `parseDaemonConfig({ CREW_STARTUP_EVENTS_DIR: ... })` (see `routes/events.test.ts`) rather than juggling `process.env`.
 
 ## Sandboxed vs un-sandboxed test runs
 

@@ -1,7 +1,7 @@
 ---
 name: local-dev
 description: Docker stack, env.toml, worktree isolation, sandbox baseline
-last_updated: 2026-06-04
+last_updated: 2026-06-19
 covers:
   - 'docker-compose*.yml'
   - 'env.toml'
@@ -47,12 +47,14 @@ The seed dir lives under `src/` so the `tsx watch` bind-mount picks up changes w
 
 The `daemon` service bind-mounts several host paths read-only — registered project
 TOMLs, host transcripts, `gh` auth, the CLI startup-event JSONLs (`~/.crew/startup`),
-and the host runner log (`~/.crew/runner`, CREW-215, tailed by `GET /api/runner/logs`).
+the concrete state-event JSONLs (`~/.crew/state-events`, CREW-254, reduced into
+`state_transitions`), and the host runner log (`~/.crew/runner`, CREW-215, tailed by
+`GET /api/runner/logs`).
 
 There is **one** `docker-compose.yml`; worktree stacks reuse it with hashed ports (see
 below), so there is no per-worktree mount override. All stacks therefore bind the same
 host `${HOME}/.crew/*` paths. That's intentional: there is one host runner and one
-startup-event stream per machine. A worktree daemon mounting `~/.crew/runner` just sees
+startup-/state-event stream per machine. A worktree daemon mounting `~/.crew/runner` just sees
 an empty/absent log (no runner writes to it from a worktree), which the logs route
 handles by returning `{ lines: [] }`. Docker auto-creates a missing bind-mount source as
 an empty dir, so the mount is safe even before the runner has ever run.

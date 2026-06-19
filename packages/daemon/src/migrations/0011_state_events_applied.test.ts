@@ -43,10 +43,7 @@ describe('migration 0011 — state_events_applied', () => {
         .insertInto('state_events_applied')
         .values({ event_id: 'e1', agent_key: 'CREW-1', ts: 1_700_000_000_000 })
         .execute();
-      const row = await db
-        .selectFrom('state_events_applied')
-        .selectAll()
-        .executeTakeFirstOrThrow();
+      const row = await db.selectFrom('state_events_applied').selectAll().executeTakeFirstOrThrow();
       expect(row.event_id).toBe('e1');
       expect(row.agent_key).toBe('CREW-1');
       expect(row.ts).toBe(1_700_000_000_000);
