@@ -425,6 +425,71 @@ describe('HttpDaemonClient.refreshPrStatus (CREW-202)', () => {
   });
 });
 
+describe('HttpDaemonClient.overrideState (CREW-260)', () => {
+  it('POSTs the chosen state to /api/agents/:key/state', async () => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify({ from: 'running', to: 'pr_merged' }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      }),
+    );
+
+    await new HttpDaemonClient().overrideState('CREW-1', 'pr_merged');
+
+    expect(fetchSpy).toHaveBeenCalledWith(
+      '/api/agents/CREW-1/state',
+      expect.objectContaining({
+        method: 'POST',
+        headers: expect.objectContaining({ 'content-type': 'application/json' }),
+        body: JSON.stringify({ state: 'pr_merged' }),
+      }),
+    );
+  });
+
+  it('maps the `initializing` AgentState to the daemon `init` vocabulary', async () => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify({ from: 'running', to: 'init' }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      }),
+    );
+
+    await new HttpDaemonClient().overrideState('CREW-1', 'initializing');
+
+    expect(fetchSpy).toHaveBeenCalledWith(
+      '/api/agents/CREW-1/state',
+      expect.objectContaining({ body: JSON.stringify({ state: 'init' }) }),
+    );
+  });
+
+  it('encodes the key into the URL', async () => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify({ noop: true, state: 'finished' }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      }),
+    );
+
+    await new HttpDaemonClient().overrideState('weird/key', 'finished');
+    expect(fetchSpy).toHaveBeenCalledWith(
+      '/api/agents/weird%2Fkey/state',
+      expect.objectContaining({ method: 'POST' }),
+    );
+  });
+
+  it('throws AgentNotFoundError on 404', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('not found', { status: 404 }));
+    await expect(
+      new HttpDaemonClient().overrideState('NOPE', 'finished'),
+    ).rejects.toBeInstanceOf(AgentNotFoundError);
+  });
+
+  it('throws on other non-2xx', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('boom', { status: 500 }));
+    await expect(new HttpDaemonClient().overrideState('K', 'finished')).rejects.toThrow(/500/);
+  });
+});
+
 const SAMPLE_ACTION = {
   id: 7,
   kind: 'run',

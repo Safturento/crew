@@ -7,9 +7,11 @@ import type {
 } from 'crew-shared';
 
 import type { DaemonClient, RunnerStatus } from './DaemonClient.js';
+import { agentStateToTransitionState } from './state-meta.js';
 import type {
   Agent,
   AgentDetail,
+  AgentState,
   AggregateMetrics,
   FinishStep,
   Project,
@@ -360,6 +362,25 @@ export class HttpDaemonClient implements DaemonClient {
     if (res.status === 404) throw new AgentNotFoundError(key);
     if (!res.ok) throw new Error(`POST /api/agents/${key}/refresh-pr-status: ${res.status}`);
     return RefreshPrStatusResponseSchema.parse(await res.json());
+  }
+
+  /**
+   * CREW-260: operator escape hatch — force an agent to `state`, bypassing the
+   * daemon's reducer + its terminal stickiness. Mirrors the refresh-pr-status
+   * POST shape. The dashboard models states as `AgentState` (`initializing`)
+   * but the route speaks the `TransitionState` vocabulary (`init`), so the
+   * label is mapped on the way out. The badge updates over the existing
+   * `agent.state_changed` SSE; we don't need the response body. 404s become
+   * AgentNotFoundError to match the not-found pattern used elsewhere.
+   */
+  async overrideState(key: string, state: AgentState): Promise<void> {
+    const res = await fetch(`${this.baseUrl}/api/agents/${encodeURIComponent(key)}/state`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ state: agentStateToTransitionState(state) }),
+    });
+    if (res.status === 404) throw new AgentNotFoundError(key);
+    if (!res.ok) throw new Error(`POST /api/agents/${key}/state: ${res.status}`);
   }
 
   /**

@@ -105,6 +105,24 @@ export function transitionToAgentState(t: TransitionState): AgentState {
   return TRANSITION_TO_AGENT_STATE[t];
 }
 
+// CREW-260: the override route speaks the daemon's TransitionState vocabulary
+// (`init`), while the dashboard models agents in AgentState (`initializing`).
+// `initializing → init` is the only divergence; the other seven labels match.
+const AGENT_STATE_TO_TRANSITION: Record<AgentState, TransitionState> = {
+  initializing: 'init',
+  running: 'running',
+  idle: 'idle',
+  waiting: 'waiting',
+  pr_open: 'pr_open',
+  pr_merged: 'pr_merged',
+  error: 'error',
+  finished: 'finished',
+};
+
+export function agentStateToTransitionState(s: AgentState): TransitionState {
+  return AGENT_STATE_TO_TRANSITION[s];
+}
+
 export function sortAgentsByPriority(agents: Agent[]): Agent[] {
   return [...agents].sort((a, b) => {
     const rankDiff = STATE_META[a.state].sortRank - STATE_META[b.state].sortRank;

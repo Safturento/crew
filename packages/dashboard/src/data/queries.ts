@@ -11,6 +11,7 @@ import { eventStream } from './eventStream.js';
 import { HttpDaemonClient, type RefreshPrStatusResponse } from './HttpDaemonClient.js';
 import type {
   AgentDetail,
+  AgentState,
   AggregateMetrics,
   ProjectDetailResponse,
   StateTransition,
@@ -130,6 +131,24 @@ export function useRefreshPrStatus(
   const qc = useQueryClient();
   return useMutation({
     mutationFn: () => defaultClient.refreshPrStatus(key),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['agent', key] });
+      void qc.invalidateQueries({ queryKey: ['agent', key, 'state-history'] });
+      void qc.invalidateQueries({ queryKey: ['agents'] });
+    },
+  });
+}
+
+/**
+ * CREW-260: mutation hook backing the drawer's state-override control. Forces
+ * the agent to `state` via the daemon escape hatch, then invalidates the
+ * agent + state-history + list views so the change lands immediately (the
+ * `agent.state_changed` SSE picks up the same transition in parallel).
+ */
+export function useOverrideState(key: string): UseMutationResult<void, Error, AgentState> {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (state: AgentState) => defaultClient.overrideState(key, state),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ['agent', key] });
       void qc.invalidateQueries({ queryKey: ['agent', key, 'state-history'] });
