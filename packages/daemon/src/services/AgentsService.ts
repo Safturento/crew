@@ -241,6 +241,14 @@ export class AgentsService {
         sql<TransitionTarget | null>`(SELECT st.to_state FROM state_transitions st WHERE st.agent_key = a.key ORDER BY st.ts DESC, st.id DESC LIMIT 1)`.as(
           'latest_to_state',
         ),
+        // CREW-264: the `source` of that same latest row (identical ORDER/LIMIT
+        // selects the same transition) — lets deriveState honor an override
+        // out of a terminal state.
+        sql<
+          string | null
+        >`(SELECT st.source FROM state_transitions st WHERE st.agent_key = a.key ORDER BY st.ts DESC, st.id DESC LIMIT 1)`.as(
+          'latest_source',
+        ),
       ])
       .orderBy('a.key', 'asc')
       .execute();
@@ -254,6 +262,7 @@ export class AgentsService {
         currentState: latestToAgentState(row.latest_to_state),
         finishCompletedOk: Boolean(row.has_finish_completed_ok),
         prMerged: Boolean(row.pr_merged),
+        latestIsOverride: row.latest_source === 'override',
       });
       const summary: AgentSummary = {
         key: row.key,
@@ -361,7 +370,7 @@ export class AgentsService {
     // list()'s ⏎-aware detection. One source of truth for list + drawer.
     const latestTransition = await this.db
       .selectFrom('state_transitions')
-      .select('to_state')
+      .select(['to_state', 'source'])
       .where('agent_key', '=', key)
       .orderBy('ts', 'desc')
       .orderBy('id', 'desc')
@@ -374,6 +383,7 @@ export class AgentsService {
       currentState: latestToAgentState(latestTransition?.to_state ?? null),
       finishCompletedOk,
       prMerged,
+      latestIsOverride: latestTransition?.source === 'override',
     });
 
     // Project config is optional plumbing for the drawer's app + Jira pills.
@@ -619,6 +629,17 @@ interface DeriveStateInput {
    * on the log) so the merged state is honored even for historical agents.
    */
   prMerged: boolean;
+  /**
+   * CREW-264: whether the agent's latest transition (the same row that feeds
+   * `currentState`) carries `source='override'` — i.e. the operator escape
+   * hatch (`recordStateOverride`, CREW-259) is the newest fact. When true,
+   * `currentState` already reflects the override target and must win over the
+   * legacy terminal guards so an override OUT of `finished`/`error`/`pr_merged`
+   * survives the list/detail re-derive instead of reverting after the SSE flip.
+   * Restricted to `source='override'` so the backfill-protection the guards give
+   * legacy agents is preserved for every other transition source.
+   */
+  latestIsOverride: boolean;
 }
 
 function emptyBucket(): TokenCategoryBucket {
@@ -642,6 +663,20 @@ function latestToAgentState(toState: TransitionTarget | null): AgentState {
  * pre-0002 agents whose log is empty.
  */
 function deriveState(input: DeriveStateInput): AgentState {
+  // CREW-264 Defect 2: an operator override is the newest transition, so honor
+  // it over the legacy terminal guards — `currentState` is projected from that
+  // same latest (ts, id) row, so it already holds the override target. This is
+  // the read-path counterpart to `recordStateOverride`'s escape hatch: an
+  // override OUT of `finished`/`error`/`pr_merged` now survives the re-derive
+  // instead of reverting. Gated on `source='override'` (any newer automatic
+  // event would write a non-override row and re-take precedence), so legacy
+  // backfilled agents keep the guards below.
+  //
+  // INVARIANT: `latestIsOverride` and `currentState` MUST be read from the same
+  // latest `(ts, id)` transition row (see `list()`/`getByKey`). Sourcing them
+  // from different rows would let this return a `currentState` that doesn't
+  // correspond to the override.
+  if (input.latestIsOverride) return input.currentState;
   if (input.finishCompletedOk) return 'finished';
   if (input.completedAt === null) {
     if (input.currentState !== 'initializing') return input.currentState;
@@ -650,7 +685,12 @@ function deriveState(input: DeriveStateInput): AgentState {
   if (input.exitCode !== null && input.exitCode !== 0) return 'error';
   if (input.prMerged) return 'pr_merged';
   if (input.currentState !== 'initializing') return input.currentState;
-  return 'finished';
+  // CREW-264 Defect 1: a completed run (exit 0, no PR) whose log is empty or
+  // non-terminal is `idle` (run ended with no PR — the state CREW-257 made
+  // reachable), never a fabricated `finished`. `finished` is produced solely by
+  // the `finishCompletedOk` guard above; the old `return 'finished'` here
+  // masqueraded a dropped/missed terminal detection as a clean close-out.
+  return 'idle';
 }
 
 export {
