@@ -43,6 +43,7 @@ import {
   emitStartupEventSync,
 } from '../lib/startup-events/index.js';
 import { emitRunStarted, emitDispatchExitedSync } from '../lib/state-events/index.js';
+import { claudeFreshArgs } from '../lib/claude/spawn.js';
 import {
   resolveBrunoEnvName,
   writeEnvFile as writeBrunoEnvFile,
@@ -592,7 +593,7 @@ export async function runRun(key: string, opts: RunOptions): Promise<never> {
     timestamp: new Date().toISOString(),
     summary: 'spawning claude --dangerously-skip-permissions',
   });
-  const claudeProcess = execa('claude', ['--dangerously-skip-permissions', '-p', prompt], {
+  const claudeProcess = execa('claude', claudeFreshArgs(prompt), {
     cwd: worktree,
     stdin: 'ignore',
     stdout: 'pipe',
