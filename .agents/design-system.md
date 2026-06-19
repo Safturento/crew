@@ -1,7 +1,7 @@
 ---
 name: design-system
 description: Crew Figma DS + token bindings + Pill primitive contract
-last_updated: 2026-06-16
+last_updated: 2026-06-19
 covers:
   - 'packages/dashboard/src/components/**'
   - '*.figma.tsx'
@@ -149,6 +149,12 @@ Figma node IDs below are in the live consolidated file (`9FeJPriqdsdA4n9R5Xsrr8`
 | `AlertModal`         | `373:413`                       | `packages/dashboard/src/components/AlertModal.tsx`               |
 | `ModalSelectionRow`  | `350:236`                       | `packages/dashboard/src/components/ModalSelectionRow.tsx`        |
 | `Stepper`            | `378:462`                       | `packages/dashboard/src/components/Stepper.tsx`                  |
+| `SupervisorCard`     | `789:1190`                      | `packages/dashboard/src/components/runner/SupervisorCard.tsx`    |
+| `ProcessRow`         | `767:1179`                      | `packages/dashboard/src/components/runner/ProcessRow.tsx`        |
+| `FailedStartCard`    | `771:1142`                      | `packages/dashboard/src/components/runner/FailedStartCard.tsx`   |
+| `ViewOutputModal`    | `774:1150`                      | `packages/dashboard/src/components/runner/ViewOutputModal.tsx`   |
+
+The runner composites (`SupervisorCard`, `ProcessRow`, `FailedStartCard`, `ViewOutputModal`) landed via CREW-245 (Epic CREW-235, Runner page). `SupervisorCard` / `ProcessRow` resolve to component sets (a `state` variant axis); `ViewOutputModal` maps to the `ViewOutputContent` composite (`774:1150`) — the Diagnosis + Output body the modal renders inside the `Modal` chrome. `ProcessRow` / `FailedStartCard` and the runner's other rows (Unmanaged, Queued, Recently-ended) all render through the shared `Row` primitive (below). Verification record: `docs/visual-fidelity-reports/CREW-245.md`.
 
 The modal-family composites (`Modal`, `AlertModal`, `ModalSelectionRow`, `Stepper`) landed via CREW-137 (T3 of the DS→code reconciliation); modal screens get wired in separate slices. Those slices have now landed: `Modal` is wired by both `NewRunModal` (CREW-218) and `FixPrModal` (CREW-219); `Stepper` + `ModalSelectionRow` by `NewRunModal` (CREW-218). Only `AlertModal` remains **build-only — no caller site yet**. `Modal` wraps the `dialog` primitive, `AlertModal` wraps the new `alert-dialog` primitive.
 
@@ -156,7 +162,9 @@ The modal-family composites (`Modal`, `AlertModal`, `ModalSelectionRow`, `Steppe
 
 `Drawer` (`packages/dashboard/src/components/Drawer.tsx`) is the right-anchored, full-height sibling to `Modal`: it wraps the same `dialog` primitive but as a side panel, and backs `AgentDrawer`. Like `FixPrModal` it's figma-less and stays out of the composites table — a structural primitive, not a designed composite. Its enter/exit slide uses `tw-animate-css`'s standard `slide-in-from-right` / `slide-out-to-right` (panel) + `fade-in-0` / `fade-out-0` (overlay) utilities; `index.css` imports `tw-animate-css`, so the shadcn `animate-in` / `zoom-in` classes on `dialog` / `popover` / `alert-dialog` are live (CREW-237 — before that the repo had no animate plugin and those classes were inert, which is why the drawer originally shipped with bespoke `drawer-*` keyframes). It replaced the former hand-rolled `fixed inset-0` drawer and its `overlay-guard` context (CREW-232): being a real Radix Dialog layer is what lets the nested Filters popover dismiss without closing the drawer. The Filters popover must be `modal` for the click-outside case — Radix only coordinates Escape to the top layer, so a non-modal popover's overlay-click would dismiss the drawer too.
 
-`TopNav`, `AgentRow`, `TimelineSection`, and `Stepper` resolve to component sets in the live file; the rest resolve to single components. `ErrorFallback` is the only un-built composite from the original Phase 4 inventory; it lands alongside the next fidelity ticket that surfaces a need.
+`Row` (`packages/dashboard/src/components/Row.tsx`, CREW-245) is the shared row anatomy — a 96px status slot · title + subheader · actions slot, plus an explicit `accent?: AgentState` that drives the `STATE_CLASSES` tint/border + the `animate-att-pulse` left bar when the accent is attention-worthy. Like `Drawer` / `PillBase` it's figma-less and stays out of the composites table — a structural primitive, not a designed composite. `AgentRow` and every Runner-page row compose it. The accent is kept explicit (not derived from the status-pill color) so a `cancelling` process — amber pill, plain row — isn't wrongly tinted; only Failed-to-start (`error`) and Unmanaged (`waiting`) carry the accent. The runner's section wrappers (`FailedToStartSection`, `LiveProcessList`, `UnmanagedRuns`, `QueuedActions`, `RecentlyEnded`) and `CommandBadge` / `Section` / `rowStates` are feature-internal (figma-less) and stay out of the table.
+
+`TopNav`, `AgentRow`, `TimelineSection`, `Stepper`, `SupervisorCard`, and `ProcessRow` resolve to component sets in the live file; the rest resolve to single components. `ErrorFallback` is the only un-built composite from the original Phase 4 inventory; it lands alongside the next fidelity ticket that surfaces a need.
 
 `FinishSteps` (CREW-220) is the drawer's live `crew finish` step checklist (ok/skip/error rows). It is figma-less feature-internal — the same status as `MinimapStripe` — because no finish-checklist was ever designed in the Crew DS Figma; it borrows the `TokensByTool` card shell and the status palette (`emerald-500` / `muted-foreground` / `red-400`) directly. A future fidelity pass could add a Figma counterpart (tracked in `docs/followups.md`).
 
@@ -208,7 +216,7 @@ The decision is reversible — the file structure stays compatible with future p
 
 ### Authoring a `.figma.tsx` — the file anatomy
 
-Every code-shipped composite/primitive gets a sibling `<Component>.figma.tsx` in the same directory as its `.tsx`. They're inert (not published — see above) but **are typechecked** by the dashboard `tsc`, so they must import the real component and compile. Author the mapping *alongside* the component — never before it exists (the import won't resolve, and the typecheck breaks). Copy the canonical shape below rather than re-deriving it from another file:
+Every code-shipped composite/primitive gets a sibling `<Component>.figma.tsx` in the same directory as its `.tsx`. They're inert (not published — see above) but **are typechecked** by the dashboard `tsc`, so they must import the real component and compile. Author the mapping _alongside_ the component — never before it exists (the import won't resolve, and the typecheck breaks). Copy the canonical shape below rather than re-deriving it from another file:
 
 ```tsx
 import { figma } from '@figma/code-connect';
@@ -230,15 +238,15 @@ figma.connect(
 
 **Prop-mapping helpers** — the string argument is always the **Figma** property name exactly as it appears in the component's `componentPropertyDefinitions` (e.g. `'Label'`, `'Has Icon'`, the variant axis `'color'`):
 
-| Helper | Maps | Example |
-| --- | --- | --- |
-| `figma.string('Prop')` | a TEXT property → string | `label: figma.string('Label')` |
-| `figma.enum('Axis', { figmaVal: codeVal })` | a VARIANT axis → a code union. **Keys are Figma's values, values are the code's** — this is where Figma's kebab (`pr-open`) bridges to code's snake (`pr_open`), and where renames like `type`→`size` happen | `size: figma.enum('type', { 'button-sm': 'sm' })` |
-| `figma.boolean('Prop', { true: …, false: … })` | a BOOLEAN property → a value or rendered children | `icon: figma.boolean('Has Icon', { true: <Icon />, false: undefined })` |
-| `figma.instance('Slot')` | an INSTANCE_SWAP slot → a nested mapped component | `icon: figma.instance('Icon')` |
-| `figma.children(['Layer'])` | nested instances → rendered children | content-slot composites |
+| Helper                                         | Maps                                                                                                                                                                                                         | Example                                                                 |
+| ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------- |
+| `figma.string('Prop')`                         | a TEXT property → string                                                                                                                                                                                     | `label: figma.string('Label')`                                          |
+| `figma.enum('Axis', { figmaVal: codeVal })`    | a VARIANT axis → a code union. **Keys are Figma's values, values are the code's** — this is where Figma's kebab (`pr-open`) bridges to code's snake (`pr_open`), and where renames like `type`→`size` happen | `size: figma.enum('type', { 'button-sm': 'sm' })`                       |
+| `figma.boolean('Prop', { true: …, false: … })` | a BOOLEAN property → a value or rendered children                                                                                                                                                            | `icon: figma.boolean('Has Icon', { true: <Icon />, false: undefined })` |
+| `figma.instance('Slot')`                       | an INSTANCE_SWAP slot → a nested mapped component                                                                                                                                                            | `icon: figma.instance('Icon')`                                          |
+| `figma.children(['Layer'])`                    | nested instances → rendered children                                                                                                                                                                         | content-slot composites                                                 |
 
-`example` is a single render function returning the canonical JSX with the mapped `props` — document *one* representative usage, not every variant.
+`example` is a single render function returning the canonical JSX with the mapped `props` — document _one_ representative usage, not every variant.
 
 **When to skip a `.figma.tsx`** (don't author one): radix/shadcn plumbing whose mapping rides on the composite that uses it (`alert-dialog` → `AlertModal`); internal-only anatomy (`pill-base`); glyph/util primitives with no Figma counterpart (`state-icon`, `meta-list`, `popover`); and feature modals that compose a designed primitive but aren't themselves a DS composite (`FixPrModal`). See the `components/ui/` notes above.
 
