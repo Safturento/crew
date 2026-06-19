@@ -411,6 +411,63 @@ describe('IngestService.recordRunCompleted — fix-pr cycle-back (CREW-198)', ()
   });
 });
 
+describe('IngestService — transition source provenance (CREW-259)', () => {
+  async function latestSource(db: Kysely<DaemonDatabase>, key: string): Promise<string | null> {
+    const row = await db
+      .selectFrom('state_transitions')
+      .select('source')
+      .where('agent_key', '=', key)
+      .orderBy('ts', 'desc')
+      .orderBy('id', 'desc')
+      .executeTakeFirst();
+    return row?.source ?? null;
+  }
+
+  it('recordError stamps source=startup-failure', async () => {
+    const { db, agentKey } = await setup();
+    try {
+      const svc = new IngestService({ db, logger: silentLogger, eventBus: new EventBus() });
+      await svc.recordError(agentKey, 1000);
+      expect(await getLatestState(db, agentKey)).toBe('error');
+      expect(await latestSource(db, agentKey)).toBe('startup-failure');
+    } finally {
+      await db.destroy();
+    }
+  });
+
+  it('recordFinishCompleted stamps source=cli-finish', async () => {
+    const { db, agentKey } = await setup();
+    try {
+      const svc = new IngestService({ db, logger: silentLogger, eventBus: new EventBus() });
+      await svc.recordFinishCompleted(agentKey, '2026-06-19T00:00:00Z');
+      expect(await getLatestState(db, agentKey)).toBe('finished');
+      expect(await latestSource(db, agentKey)).toBe('cli-finish');
+    } finally {
+      await db.destroy();
+    }
+  });
+
+  it('recordRunCompleted stamps source=cli-fixpr on the cycle-back', async () => {
+    const { db, agentKey } = await setup();
+    try {
+      const svc = new IngestService({ db, logger: silentLogger, eventBus: new EventBus() });
+      await svc.ingestStateEvent({
+        eventId: 'rs',
+        key: agentKey,
+        event: 'run_started',
+        ts: '2026-06-19T00:00:00Z',
+        source: 'cli-run',
+      });
+      const fixPrRunId = await insertRun(db, agentKey, 'fix-pr', 'session-src-fixpr');
+      await svc.recordRunCompleted(agentKey, fixPrRunId, '2026-06-19T00:02:00Z');
+      expect(await getLatestState(db, agentKey)).toBe('pr_open');
+      expect(await latestSource(db, agentKey)).toBe('cli-fixpr');
+    } finally {
+      await db.destroy();
+    }
+  });
+});
+
 async function getLatestState(
   db: Kysely<DaemonDatabase>,
   agentKey: string,
@@ -822,6 +879,30 @@ describe('IngestService.ingestStateEvent — concrete state triggers (CREW-254)'
       const flips = seen.filter((e) => e.type === 'agent.state_changed');
       expect(flips).toHaveLength(2);
       expect(flips.map((e) => (e.data as { to?: string }).to)).toEqual(['running', 'pr_open']);
+    } finally {
+      await db.destroy();
+    }
+  });
+
+  it('records the StateEvent source on the transition it writes (CREW-259)', async () => {
+    const { db, agentKey } = await setup();
+    try {
+      const svc = new IngestService({ db, logger: silentLogger, eventBus: new EventBus() });
+      await svc.ingestStateEvent({
+        eventId: 's1',
+        key: agentKey,
+        event: 'run_started',
+        ts: '2026-06-19T00:00:00Z',
+        source: 'cli-run',
+      });
+      const row = await db
+        .selectFrom('state_transitions')
+        .select(['to_state', 'source'])
+        .where('agent_key', '=', agentKey)
+        .orderBy('ts', 'desc')
+        .orderBy('id', 'desc')
+        .executeTakeFirst();
+      expect(row).toMatchObject({ to_state: 'running', source: 'cli-run' });
     } finally {
       await db.destroy();
     }
