@@ -58,6 +58,7 @@ import {
   preflightTools,
   readWorktreeState,
   requireGhToken,
+  injectStateEventHook,
   requireWorktreeAvailable,
   runLogPathFor,
   runSkillInjection,
@@ -520,6 +521,14 @@ export async function runRun(key: string, opts: RunOptions): Promise<never> {
     browsingSkillSource,
     log: (msg) => console.log(pc.dim(`    ${msg}`)),
     warn: (msg) => console.warn(pc.yellow(`  ! ${msg}`)),
+  });
+
+  // Inject the PostToolUse hook that captures the in-session `pr_created` fact
+  // into the dispatched session's settings.local.json (templated with this key).
+  injectStateEventHook({
+    worktree,
+    key,
+    log: (msg) => console.log(pc.dim(`    ${msg}`)),
   });
 
   const ghToken = readFileSync(ghTokenDest, 'utf8').trim();

@@ -6,6 +6,7 @@ export * from './cleanup-worktree.js';
 export * from './discover-transcript.js';
 export * from './paths.js';
 export * from './skill-injection-step.js';
+export * from './state-event-hook-injection.js';
 export * from './preconditions.js';
 export * from './preflight.js';
 export * from './preflight-tracking.js';

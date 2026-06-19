@@ -48,6 +48,7 @@ Organization: Active is grouped by topic (not chronology) since the dominant acc
     - [2026-04-28 — `useAttention.clear()` snapshot semantic isn't directly tested](#2026-04-28--useattentionclear-snapshot-semantic-isnt-directly-tested)
   - [Daemon, CLI & Dispatch](#daemon-cli--dispatch)
     - [2026-06-19 — A throw between `*_started` and `*_exited` leaves the agent stuck `running`](#2026-06-19--a-throw-between-_started-and-_exited-leaves-the-agent-stuck-running)
+    - [2026-06-19 — `pr_created` hook regex misses env-var/command-prefixed `gh pr create`](#2026-06-19--pr_created-hook-regex-misses-env-varcommand-prefixed-gh-pr-create)
     - [2026-06-17 — Host runner can't apply `dequeue` (no daemon "drop pending action" route)](#2026-06-17--host-runner-cant-apply-dequeue-no-daemon-drop-pending-action-route)
     - [2026-06-17 — `RunnerCommandsService.reportResult` silently 204s on an unknown command id (vs `ActionService.report`'s 404)](#2026-06-17--runnercommandsservicereportresult-silently-204s-on-an-unknown-command-id-vs-actionservicereports-404)
     - [2026-06-17 — failed-start rows render as plain `error` agents in the main grid](#2026-06-17--failed-start-rows-render-as-plain-error-agents-in-the-main-grid)
@@ -723,7 +724,7 @@ The "synthetic Unregistered section" feels right — single render path, no extr
 
 #### 2026-06-19 — A throw between `*_started` and `*_exited` leaves the agent stuck `running`
 
-**What:** CREW-255 emits a `run_started`/`fixpr_started` state event at dispatch and a paired `run_exited`/`fixpr_exited` at the command's exit. If the command throws *between* those two points — `crew run` between `emitRunStarted` (after `registerRun`) and the final `process.exit` (`maybeRunE2eGate`, the 120s docker wait, `completeRun`), or `crew fix-pr` inside the `try { … } finally` that streams the transcript (the `finally` only de-registers signal handlers; it does not catch) — the exit event never lands. The daemon's reducer (plan Tasks 3/6) then has a dangling `running` state with no terminal event to move it off. The separate `completeRun(runId, …)` daemon call still fires for the run-row lifecycle, so the run isn't *lost*, but the reduced agent state would lie.
+**What:** CREW-255 emits a `run_started`/`fixpr_started` state event at dispatch and a paired `run_exited`/`fixpr_exited` at the command's exit. If the command throws _between_ those two points — `crew run` between `emitRunStarted` (after `registerRun`) and the final `process.exit` (`maybeRunE2eGate`, the 120s docker wait, `completeRun`), or `crew fix-pr` inside the `try { … } finally` that streams the transcript (the `finally` only de-registers signal handlers; it does not catch) — the exit event never lands. The daemon's reducer (plan Tasks 3/6) then has a dangling `running` state with no terminal event to move it off. The separate `completeRun(runId, …)` daemon call still fires for the run-row lifecycle, so the run isn't _lost_, but the reduced agent state would lie.
 
 **Why noticed:** Code review of CREW-255 (plan Task 4, the CLI producer). Mirrors a known shape in the sibling startup-events producer (the early `process.exit` on a missing transcript has the same "no paired event" property) — flagged Minor/non-blocking by the reviewer since the consumer that would have to tolerate it isn't built yet.
 
@@ -739,6 +740,23 @@ The "synthetic Unregistered section" feels right — single render path, no extr
 **Shape of work:** decided inside the daemon-ingestion tickets (Tasks 3/6) — either a reconciliation on `completeRun` or a stuck-`running` timeout sweep. No CLI change anticipated.
 
 **Open questions:** Does `completeRun` already carry enough (exit code) for the daemon to synthesize the missing terminal transition, or does the reducer need an explicit "run row settled, no state event seen" signal?
+
+#### 2026-06-19 — `pr_created` hook regex misses env-var/command-prefixed `gh pr create`
+
+**What:** The PostToolUse hook's command-boundary regex `(^|&&|;|\|)\s*gh pr create\b` (`hooks/state-events/pr-create-postuse.mjs`) only matches `gh` immediately after a separator (`^`, `&&`, `;`, `|`). It does **not** match an env-var prefix (`GH_TOKEN=x gh pr create`), a builtin prefix (`command gh pr create`), `sudo gh pr create`, or extra inner whitespace (`gh   pr   create`). Those forms silently drop the `pr_created` state event. The miss fails _closed_ (no false `pr_created`), and the daemon also learns PR state via `PrPoller`, so the agent's state still converges — but the in-session event (the fast path that flips `running → pr_open` immediately) is skipped for prefixed invocations.
+
+**Why noticed:** Code review of CREW-256 (plan Task 5). The reviewer flagged it as Minor/non-blocking. The exact regex was specified verbatim in the Epic plan + ticket, so CREW-256 shipped it as-spec rather than widening it unilaterally. It's slightly ironic that the injection _itself_ templates an env-var prefix (`CREW_AGENT_KEY=<key> node …`) into the hook command — agents nearly always run a bare `gh pr create`, so impact is low in practice.
+
+**Anchors:**
+
+- `hooks/state-events/pr-create-postuse.mjs` — `PR_CREATE` regex
+- `hooks/state-events/pr-create-postuse.test.mjs` — would gain prefixed-form + inner-whitespace cases
+- `.agents/dispatch.md` § State-event hook injection — documents the boundary regex
+- plan `docs/superpowers/plans/2026-06-18-concrete-state-triggers.md` Task 5
+
+**Shape of work:** tiny regex widen — allow an optional run of `VAR=val ` / `command ` / `sudo ` tokens after the boundary, and tolerate inner whitespace (`gh\s+pr\s+create`). Add the missed-form tests alongside. Watch the decoy case (`echo "… gh pr create …"`) still fails — the widening must stay anchored to a command boundary, not match mid-string.
+
+**Open questions:** worth doing at all? A missed best-effort event is recovered by `PrPoller` on its next tick, so the only cost is a brief state-flip latency. Decide whether the latency matters enough to widen, or whether the bare-form coverage is sufficient and this should be abandoned.
 
 #### 2026-06-17 — Host runner can't apply `dequeue` (no daemon "drop pending action" route)
 

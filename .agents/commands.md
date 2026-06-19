@@ -1,7 +1,7 @@
 ---
 name: commands
 description: npm scripts cheatsheet with env-var notes
-last_updated: 2026-05-14
+last_updated: 2026-06-19
 covers:
   - 'package.json'
   - 'packages/*/package.json'
@@ -38,8 +38,9 @@ The sweep does **not** include `npm run build`. Crew's services run via `tsx`/`v
 | Script                 | Scope                                                                                                                                            |
 | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `npm run test`         | Vitest watch mode across every workspace (`--workspaces --if-present`). Local dev only.                                                          |
-| `npm run test:run`     | One-shot Vitest run across every workspace, plus `npm run test:scripts` for `scripts/*.test.ts`. This is the script the cleanliness sweep calls. |
+| `npm run test:run`     | One-shot Vitest run across every workspace, plus `npm run test:scripts` (`scripts/*.test.ts`) and `npm run test:hooks` (`hooks/*.test.mjs`). This is the script the cleanliness sweep calls. |
 | `npm run test:scripts` | Vitest run scoped to `scripts/` (frontmatter validator tests, etc.).                                                                             |
+| `npm run test:hooks`   | Vitest run scoped to `hooks/` (the repo-root injected hooks, e.g. the `pr_created` PostToolUse hook — `.mjs`, dependency-free, runs from the worktree at dispatch). |
 | `npm run test:e2e`     | Playwright e2e against the running worktree stack. Aliased to `npm run test:e2e --workspace=crew-dashboard`.                                     |
 | `npm run bruno:smoke`  | Bruno CLI run of the daemon API smoke flow. Needs `CREW_BRUNO_ENV` set (see below).                                                              |
 
