@@ -47,6 +47,7 @@ Organization: Active is grouped by topic (not chronology) since the dominant acc
     - [2026-04-28 — Dashboard New Run modal + projects route view](#2026-04-28--dashboard-new-run-modal--projects-route-view)
     - [2026-04-28 — `useAttention.clear()` snapshot semantic isn't directly tested](#2026-04-28--useattentionclear-snapshot-semantic-isnt-directly-tested)
   - [Daemon, CLI & Dispatch](#daemon-cli--dispatch)
+    - [2026-06-19 — A throw between `*_started` and `*_exited` leaves the agent stuck `running`](#2026-06-19--a-throw-between-_started-and-_exited-leaves-the-agent-stuck-running)
     - [2026-06-17 — Host runner can't apply `dequeue` (no daemon "drop pending action" route)](#2026-06-17--host-runner-cant-apply-dequeue-no-daemon-drop-pending-action-route)
     - [2026-06-17 — `RunnerCommandsService.reportResult` silently 204s on an unknown command id (vs `ActionService.report`'s 404)](#2026-06-17--runnercommandsservicereportresult-silently-204s-on-an-unknown-command-id-vs-actionservicereports-404)
     - [2026-06-17 — failed-start rows render as plain `error` agents in the main grid](#2026-06-17--failed-start-rows-render-as-plain-error-agents-in-the-main-grid)
@@ -719,6 +720,25 @@ The "synthetic Unregistered section" feels right — single render path, no extr
 **Shape of work:** Tiny cleanup. Add 2–3 RTL test cases. Bundle into the cva-cleanup ticket above or stand alone.
 
 ### Daemon, CLI & Dispatch
+
+#### 2026-06-19 — A throw between `*_started` and `*_exited` leaves the agent stuck `running`
+
+**What:** CREW-255 emits a `run_started`/`fixpr_started` state event at dispatch and a paired `run_exited`/`fixpr_exited` at the command's exit. If the command throws *between* those two points — `crew run` between `emitRunStarted` (after `registerRun`) and the final `process.exit` (`maybeRunE2eGate`, the 120s docker wait, `completeRun`), or `crew fix-pr` inside the `try { … } finally` that streams the transcript (the `finally` only de-registers signal handlers; it does not catch) — the exit event never lands. The daemon's reducer (plan Tasks 3/6) then has a dangling `running` state with no terminal event to move it off. The separate `completeRun(runId, …)` daemon call still fires for the run-row lifecycle, so the run isn't *lost*, but the reduced agent state would lie.
+
+**Why noticed:** Code review of CREW-255 (plan Task 4, the CLI producer). Mirrors a known shape in the sibling startup-events producer (the early `process.exit` on a missing transcript has the same "no paired event" property) — flagged Minor/non-blocking by the reviewer since the consumer that would have to tolerate it isn't built yet.
+
+**Anchors:**
+
+- `packages/cli/src/commands/run.ts` — `emitRunStarted` (post-`registerRun`) … `emitDispatchExitedSync` (pre-`process.exit`); the gap is everything between.
+- `packages/cli/src/commands/fix-pr.ts` — `emitFixprStarted` (dispatch) … `emitDispatchExited` (post-drain); the `try/finally` around `streamTranscript` doesn't catch.
+- `packages/cli/src/lib/state-events/dispatch.ts` — the emit helpers.
+- Plan Tasks 3/6 in `docs/superpowers/plans/2026-06-18-concrete-state-triggers.md` — the daemon reducer + `state_transitions` write path.
+
+**What's been considered:** Cheapest is to make the daemon side tolerant rather than the producer airtight: the reducer/ingest already keys off `completeRun` for the run row, so a daemon reconciliation (e.g. on run completion, or a timeout sweep) could resolve a `running` agent whose run has terminated without a state event. Alternatively the CLI could wrap the dispatch body in a `try/finally` that always emits a terminal `*_exited` (with the caught error's code) — but that risks double-emits with the happy-path emit and complicates the sync/async split. The daemon-tolerance route is the recommended one and naturally folds into Tasks 3/6.
+
+**Shape of work:** decided inside the daemon-ingestion tickets (Tasks 3/6) — either a reconciliation on `completeRun` or a stuck-`running` timeout sweep. No CLI change anticipated.
+
+**Open questions:** Does `completeRun` already carry enough (exit code) for the daemon to synthesize the missing terminal transition, or does the reducer need an explicit "run row settled, no state event seen" signal?
 
 #### 2026-06-17 — Host runner can't apply `dequeue` (no daemon "drop pending action" route)
 

@@ -42,6 +42,7 @@ import {
   emitStartupEvent,
   emitStartupEventSync,
 } from '../lib/startup-events/index.js';
+import { emitRunStarted, emitDispatchExitedSync } from '../lib/state-events/index.js';
 import {
   resolveBrunoEnvName,
   writeEnvFile as writeBrunoEnvFile,
@@ -671,6 +672,11 @@ export async function runRun(key: string, opts: RunOptions): Promise<never> {
   });
   const runId = registration.ok ? registration.run.id : null;
 
+  // Concrete state trigger: the run is now live → `running`. Emitted right
+  // after registration so the daemon's reducer flips state off the durable log
+  // rather than inferring it from the transcript (CREW-255).
+  await emitRunStarted(key);
+
   await streamTranscript({ transcriptPath, signal: abort.signal });
 
   const result = await claudeProcess;
@@ -732,7 +738,13 @@ export async function runRun(key: string, opts: RunOptions): Promise<never> {
 
   if (existsSync(logPath)) console.log(readFileSync(logPath, 'utf8'));
 
-  process.exit(resolveExitCode(result, signaled));
+  // Concrete state trigger: the run process is exiting. Command-aware + carries
+  // the resolved exit code so the daemon reduces a clean run-with-no-PR to
+  // `idle` and a non-zero exit to `error`. Sync — process.exit() is next
+  // (CREW-255).
+  const runExitCode = resolveExitCode(result, signaled);
+  emitDispatchExitedSync(key, 'run', runExitCode);
+  process.exit(runExitCode);
 }
 
 export interface ExecResult {

@@ -13,6 +13,7 @@ import {
   JiraClient,
   type ProjectConfig,
 } from '../lib/index.js';
+import { emitFinishCompleted } from '../lib/state-events/index.js';
 
 export interface FinishDeps {
   cwd: string;
@@ -389,6 +390,11 @@ export async function runFinish(key: string, deps: FinishDeps): Promise<FinishRe
       completedAt: new Date().toISOString(),
     });
   }
+
+  // Concrete state trigger: cleanup finished → terminal `finished` state via
+  // the daemon's reducer. Kept alongside the existing completeRun call until
+  // the inferred-state path is fully retired (plan Task 6) (CREW-255).
+  await emitFinishCompleted(key);
 
   return { ok: true };
 }
