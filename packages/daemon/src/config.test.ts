@@ -73,4 +73,22 @@ describe('parseDaemonConfig', () => {
     const config = parseDaemonConfig({ CREW_STARTUP_EVENTS_DIR: '/tmp/custom-startup' });
     expect(config.startupEventsDir).toBe('/tmp/custom-startup');
   });
+
+  it('defaults stateEventsDir to ~/.crew/state-events', () => {
+    // As above, the package-level setup pins CREW_STATE_EVENTS_DIR; clear it
+    // so the schema's homedir() fallback is what we assert.
+    const prev = process.env.CREW_STATE_EVENTS_DIR;
+    delete process.env.CREW_STATE_EVENTS_DIR;
+    try {
+      const config = parseDaemonConfig({});
+      expect(config.stateEventsDir).toBe(join(homedir(), '.crew', 'state-events'));
+    } finally {
+      if (prev !== undefined) process.env.CREW_STATE_EVENTS_DIR = prev;
+    }
+  });
+
+  it('honors CREW_STATE_EVENTS_DIR override', () => {
+    const config = parseDaemonConfig({ CREW_STATE_EVENTS_DIR: '/tmp/custom-state-events' });
+    expect(config.stateEventsDir).toBe('/tmp/custom-state-events');
+  });
 });

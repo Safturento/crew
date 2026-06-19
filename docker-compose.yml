@@ -27,6 +27,11 @@ services:
       # ~/.crew/startup/<key>.jsonl from the host on dispatch; the daemon's
       # chokidar watcher ingests them into startup_events.
       - ${HOME}/.crew/startup:/root/.crew/startup:ro
+      # Read-only: concrete state-event JSONL log (CREW-254). Producers (CLI
+      # run/fix-pr/finish, runner-exit, the pr-create PostToolUse hook) write
+      # ~/.crew/state-events/<key>.jsonl from the host; the daemon's chokidar
+      # watcher reduces them into state_transitions.
+      - ${HOME}/.crew/state-events:/root/.crew/state-events:ro
       # Read-only: host runner log (CREW-215). The host runner process writes
       # ~/.crew/runner/runner.log; GET /api/runner/logs tails it. One runner
       # per host, so all stacks (canonical + worktree) bind the same host

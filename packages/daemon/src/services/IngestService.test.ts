@@ -1124,3 +1124,274 @@ describe('IngestService.watchStartupEvents', () => {
     }
   }, 10_000);
 });
+
+describe('IngestService.ingestStateEvent — concrete state triggers (CREW-254)', () => {
+  async function latestState(db: Kysely<DaemonDatabase>, key: string): Promise<string | null> {
+    const row = await db
+      .selectFrom('state_transitions')
+      .select('to_state')
+      .where('agent_key', '=', key)
+      .orderBy('ts', 'desc')
+      .orderBy('id', 'desc')
+      .executeTakeFirst();
+    return row?.to_state ?? null;
+  }
+
+  it('applies a pr_created event, flips state to pr_open, and stamps agents.pr_url', async () => {
+    const { db, agentKey } = await setup();
+    try {
+      const bus = new EventBus();
+      const seen: SseEvent[] = [];
+      bus.subscribe({ onEvent: (e) => seen.push(e) });
+      const svc = new IngestService({ db, logger: silentLogger, eventBus: bus });
+
+      await svc.ingestStateEvent({
+        eventId: 'e1',
+        key: agentKey,
+        event: 'run_started',
+        ts: '2026-06-18T00:00:00Z',
+        source: 'cli-run',
+      });
+      expect(await latestState(db, agentKey)).toBe('running');
+
+      await svc.ingestStateEvent({
+        eventId: 'e2',
+        key: agentKey,
+        event: 'pr_created',
+        ts: '2026-06-18T00:01:00Z',
+        source: 'hook-pr-create',
+        prUrl: 'https://github.com/o/r/pull/9',
+      });
+      expect(await latestState(db, agentKey)).toBe('pr_open');
+
+      const agent = await db
+        .selectFrom('agents')
+        .select('pr_url')
+        .where('key', '=', agentKey)
+        .executeTakeFirstOrThrow();
+      expect(agent.pr_url).toBe('https://github.com/o/r/pull/9');
+
+      const flips = seen.filter((e) => e.type === 'agent.state_changed');
+      expect(flips).toHaveLength(2);
+      expect(flips.map((e) => (e.data as { to?: string }).to)).toEqual(['running', 'pr_open']);
+    } finally {
+      await db.destroy();
+    }
+  });
+
+  it('is idempotent on eventId — replay across a simulated restart writes no duplicate transition', async () => {
+    const { db, agentKey } = await setup();
+    try {
+      const ev = {
+        eventId: 'dup',
+        key: agentKey,
+        event: 'run_started' as const,
+        ts: '2026-06-18T00:00:00Z',
+        source: 'cli-run' as const,
+      };
+      // First service instance applies the event.
+      const svc1 = new IngestService({ db, logger: silentLogger, eventBus: new EventBus() });
+      await svc1.ingestStateEvent(ev);
+      // A fresh instance (cold in-memory cache) models a daemon restart that
+      // re-reads the same JSONL line from offset 0.
+      const svc2 = new IngestService({ db, logger: silentLogger, eventBus: new EventBus() });
+      await svc2.ingestStateEvent(ev);
+
+      const rows = await db
+        .selectFrom('state_transitions')
+        .selectAll()
+        .where('agent_key', '=', agentKey)
+        .execute();
+      expect(rows).toHaveLength(1);
+    } finally {
+      await db.destroy();
+    }
+  });
+
+  it('run_exited while pr_open is a no-op (the happy-path run end)', async () => {
+    const { db, agentKey } = await setup();
+    try {
+      const svc = new IngestService({ db, logger: silentLogger, eventBus: new EventBus() });
+      await svc.ingestStateEvent({
+        eventId: 'a',
+        key: agentKey,
+        event: 'run_started',
+        ts: '2026-06-18T00:00:00Z',
+        source: 'cli-run',
+      });
+      await svc.ingestStateEvent({
+        eventId: 'b',
+        key: agentKey,
+        event: 'pr_created',
+        ts: '2026-06-18T00:01:00Z',
+        source: 'hook-pr-create',
+      });
+      await svc.ingestStateEvent({
+        eventId: 'c',
+        key: agentKey,
+        event: 'run_exited',
+        ts: '2026-06-18T00:02:00Z',
+        source: 'runner-exit',
+        exitCode: 0,
+      });
+      expect(await latestState(db, agentKey)).toBe('pr_open');
+    } finally {
+      await db.destroy();
+    }
+  });
+
+  it('run_exited from running activates idle (the dormant state becomes reachable)', async () => {
+    const { db, agentKey } = await setup();
+    try {
+      const svc = new IngestService({ db, logger: silentLogger, eventBus: new EventBus() });
+      await svc.ingestStateEvent({
+        eventId: 'a',
+        key: agentKey,
+        event: 'run_started',
+        ts: '2026-06-18T00:00:00Z',
+        source: 'cli-run',
+      });
+      await svc.ingestStateEvent({
+        eventId: 'b',
+        key: agentKey,
+        event: 'run_exited',
+        ts: '2026-06-18T00:01:00Z',
+        source: 'runner-exit',
+        exitCode: 0,
+      });
+      expect(await latestState(db, agentKey)).toBe('idle');
+
+      // The reducer must accept `idle` as a current state across a restart so a
+      // re-dispatch resumes correctly: idle + run_started → running.
+      const svc2 = new IngestService({ db, logger: silentLogger, eventBus: new EventBus() });
+      await svc2.ingestStateEvent({
+        eventId: 'c',
+        key: agentKey,
+        event: 'run_started',
+        ts: '2026-06-18T00:02:00Z',
+        source: 'cli-run',
+      });
+      expect(await latestState(db, agentKey)).toBe('running');
+    } finally {
+      await db.destroy();
+    }
+  });
+
+  it('records the eventId even on a no-op reduce so the replay stays a no-op', async () => {
+    const { db, agentKey } = await setup();
+    try {
+      const svc = new IngestService({ db, logger: silentLogger, eventBus: new EventBus() });
+      // run_exited while still `init` reduces to null (no transition), but the
+      // ledger must still record the eventId.
+      await svc.ingestStateEvent({
+        eventId: 'noop',
+        key: agentKey,
+        event: 'run_exited',
+        ts: '2026-06-18T00:00:00Z',
+        source: 'runner-exit',
+        exitCode: 0,
+      });
+      const transitions = await db
+        .selectFrom('state_transitions')
+        .selectAll()
+        .where('agent_key', '=', agentKey)
+        .execute();
+      expect(transitions).toHaveLength(0);
+      const applied = await db
+        .selectFrom('state_events_applied')
+        .selectAll()
+        .where('event_id', '=', 'noop')
+        .execute();
+      expect(applied).toHaveLength(1);
+    } finally {
+      await db.destroy();
+    }
+  });
+});
+
+describe('IngestService.watchStateEvents', () => {
+  it('ingests concrete state events from files appended in the watched dir', async () => {
+    const { db, agentKey } = await setup();
+    const stateDir = tmp();
+    const svc = new IngestService({ db, logger: silentLogger, eventBus: new EventBus() });
+    try {
+      await svc.watchStateEvents(stateDir);
+      const path = join(stateDir, `${agentKey}.jsonl`);
+      writeFileSync(
+        path,
+        JSON.stringify({
+          eventId: 'w1',
+          key: agentKey,
+          event: 'run_started',
+          ts: '2026-06-18T00:00:00Z',
+          source: 'cli-run',
+        }) + '\n',
+      );
+      await delay(800);
+      appendFileSync(
+        path,
+        JSON.stringify({
+          eventId: 'w2',
+          key: agentKey,
+          event: 'pr_created',
+          ts: '2026-06-18T00:01:00Z',
+          source: 'hook-pr-create',
+          prUrl: 'https://github.com/o/r/pull/3',
+        }) + '\n',
+      );
+      await delay(800);
+
+      const rows = await db
+        .selectFrom('state_transitions')
+        .selectAll()
+        .where('agent_key', '=', agentKey)
+        .orderBy('ts', 'asc')
+        .execute();
+      expect(rows.map((r) => r.to_state)).toEqual(['running', 'pr_open']);
+    } finally {
+      await svc.stopStateEventWatcher();
+      await db.destroy();
+    }
+  }, 10_000);
+
+  it('skips malformed and schema-invalid lines without crashing the watcher', async () => {
+    const { db, agentKey } = await setup();
+    const stateDir = tmp();
+    const svc = new IngestService({ db, logger: silentLogger, eventBus: new EventBus() });
+    try {
+      await svc.watchStateEvents(stateDir);
+      writeFileSync(
+        join(stateDir, `${agentKey}.jsonl`),
+        'not json at all\n' +
+          JSON.stringify({
+            eventId: 'bad',
+            key: agentKey,
+            event: 'nope',
+            ts: 'x',
+            source: 'cli-run',
+          }) +
+          '\n' +
+          JSON.stringify({
+            eventId: 'ok',
+            key: agentKey,
+            event: 'run_started',
+            ts: '2026-06-18T00:00:00Z',
+            source: 'cli-run',
+          }) +
+          '\n',
+      );
+      await delay(800);
+
+      const rows = await db
+        .selectFrom('state_transitions')
+        .selectAll()
+        .where('agent_key', '=', agentKey)
+        .execute();
+      expect(rows).toHaveLength(1);
+      expect(rows[0].to_state).toBe('running');
+    } finally {
+      await svc.stopStateEventWatcher();
+      await db.destroy();
+    }
+  }, 10_000);
+});

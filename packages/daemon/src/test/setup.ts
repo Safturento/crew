@@ -17,3 +17,9 @@ import { join } from 'node:path';
 // watcher's initial scan is always a no-op; individual tests may still
 // override via parseDaemonConfig({ CREW_STARTUP_EVENTS_DIR: ... }).
 process.env.CREW_STARTUP_EVENTS_DIR = mkdtempSync(join(tmpdir(), 'crew-daemon-startup-'));
+
+// CREW-254: same blanket safety net for the concrete state-events watcher
+// (app.ts onReady, config.stateEventsDir defaulting to
+// `process.env.CREW_STATE_EVENTS_DIR ?? ~/.crew/state-events`). Pin it at a
+// fresh empty temp dir so the watcher's initial scan is a no-op in tests.
+process.env.CREW_STATE_EVENTS_DIR = mkdtempSync(join(tmpdir(), 'crew-daemon-state-events-'));

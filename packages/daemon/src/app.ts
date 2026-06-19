@@ -139,6 +139,16 @@ export async function buildApp({
     } catch (err) {
       logger.warn({ err, startupDir }, 'startup-event watcher failed to attach');
     }
+    // CREW-254: attach the chokidar watcher for the concrete state-event
+    // JSONL stream. Defaults to ~/.crew/state-events; docker-compose mounts
+    // ${HOME}/.crew/state-events into the container, so os.homedir() == /root
+    // inside the daemon resolves to the same place.
+    const stateEventsDir = config.stateEventsDir;
+    try {
+      await ingest.watchStateEvents(stateEventsDir);
+    } catch (err) {
+      logger.warn({ err, stateEventsDir }, 'state-event watcher failed to attach');
+    }
     // CREW-202: start the background PR-status poller. Each round walks
     // pr_open agents and asks `gh pr view` for the current PR state.
     if (!prPollerDisabled) prPoller.start();

@@ -159,11 +159,22 @@ export interface RunnerCommandsTable {
   updated_at: string;
 }
 
+/** CREW-254: dedup ledger for the concrete state-events log. One row per
+ *  applied `eventId`; lets `IngestService.ingestStateEvent` skip a replayed
+ *  line after the daemon re-reads `~/.crew/state-events/<key>.jsonl` from
+ *  offset 0 on restart (exactly-once reduce). See migration 0011. */
+export interface StateEventsAppliedTable {
+  event_id: string;
+  agent_key: string;
+  ts: number;
+}
+
 export interface DaemonDatabase {
   agents: AgentsTable;
   runs: RunsTable;
   tool_calls: ToolCallsTable;
   state_transitions: StateTransitionsTable;
+  state_events_applied: StateEventsAppliedTable;
   startup_events: StartupEventsTable;
   finish_steps: FinishStepsTable;
   action_requests: ActionRequestsTable;

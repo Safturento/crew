@@ -7,10 +7,12 @@ import {
   claudeProjectDirFor,
   hasPrCreateInvocation,
   startupEventSchema,
+  stateEventSchema,
   summarizeInput,
   tailTranscript,
   type AssistantEvent,
   type StartupEvent,
+  type StateEvent,
   type ToolResultContent,
   type ToolUseContent,
   type TranscriptEvent,
@@ -18,7 +20,8 @@ import {
 } from 'crew-shared';
 import type { DaemonDatabase } from '../db.js';
 import type { EventBus } from './EventBus.js';
-import type { TransitionState } from './state-derivation.js';
+import { reduceState } from './state-reduce.js';
+import type { TransitionState, TransitionTarget } from './state-derivation.js';
 
 export interface IngestServiceDeps {
   db: Kysely<DaemonDatabase>;
@@ -85,8 +88,10 @@ export class IngestService {
   private readonly tails = new Map<number, AbortController>();
   /** Per-agent derived-state cache. Lazily seeded from the latest
    *  `state_transitions` row so a daemon restart mid-session does not
-   *  re-emit a duplicate flip. */
-  private readonly agentStateCache = new Map<string, TransitionState>();
+   *  re-emit a duplicate flip. Typed `TransitionTarget` (the wider union)
+   *  because the concrete-event reducer (CREW-254) can land an agent in
+   *  `idle`, which the narrower `TransitionState` excludes. */
+  private readonly agentStateCache = new Map<string, TransitionTarget>();
   /** In-flight `gh pr create` tool_use ids → run/agent context for matching
    *  the follow-up `tool_result`. Bounded by the number of concurrent PR
    *  creates per agent in practice (≈1), so we don't TTL-evict. */
@@ -111,6 +116,15 @@ export class IngestService {
    *  the appending CLI flushed the trailing newline. Prepended to the
    *  next read so the line eventually completes intact. */
   private readonly startupFileBuffers = new Map<string, string>();
+  /** CREW-254: chokidar watcher on ~/.crew/state-events — the concrete
+   *  state-event log. Mirrors the startup watcher exactly; one per daemon. */
+  private stateEventWatcher: FSWatcher | undefined;
+  /** Per-file consumed-byte offset for the state-events log (see the startup
+   *  equivalent for the offset/leftover protocol). */
+  private readonly stateEventFileOffsets = new Map<string, number>();
+  /** Per-file trailing partial line carried across `change` events for the
+   *  state-events log. */
+  private readonly stateEventFileBuffers = new Map<string, string>();
 
   constructor(deps: IngestServiceDeps) {
     this.db = deps.db;
@@ -167,6 +181,7 @@ export class IngestService {
     for (const controller of this.tails.values()) controller.abort();
     this.tails.clear();
     await this.stopStartupWatcher();
+    await this.stopStateEventWatcher();
   }
 
   /**
@@ -210,6 +225,116 @@ export class IngestService {
     this.startupWatcher = undefined;
     this.startupFileOffsets.clear();
     this.startupFileBuffers.clear();
+  }
+
+  /**
+   * CREW-254: watch `~/.crew/state-events/*.jsonl` — the concrete lifecycle
+   * log producers (CLI run/fix-pr/finish, the runner-exit path, the
+   * PostToolUse pr-create hook) append to. Each line is reduced against the
+   * agent's current state to drive `state_transitions`. A near-clone of
+   * `watchStartupEvents`: same offset/partial-line protocol; idempotency comes
+   * from the per-eventId `state_events_applied` ledger rather than a UNIQUE
+   * index, so a re-read after a daemon restart never double-applies.
+   */
+  async watchStateEvents(stateEventsDir: string): Promise<void> {
+    mkdirSync(stateEventsDir, { recursive: true });
+    this.stateEventWatcher = chokidar.watch(stateEventsDir, {
+      persistent: true,
+      ignoreInitial: false,
+      depth: 1,
+      awaitWriteFinish: { stabilityThreshold: 100, pollInterval: 50 },
+    });
+    const handle = (filePath: string): void => {
+      if (!filePath.endsWith('.jsonl')) return;
+      void this.onStateEventFile(filePath).catch((err: unknown) => {
+        this.logger.warn({ err, filePath }, 'state-event file handler crashed');
+      });
+    };
+    this.stateEventWatcher.on('add', handle);
+    this.stateEventWatcher.on('change', handle);
+    const watcher = this.stateEventWatcher;
+    await new Promise<void>((resolve) => {
+      watcher.once('ready', () => resolve());
+    });
+  }
+
+  async stopStateEventWatcher(): Promise<void> {
+    if (!this.stateEventWatcher) return;
+    await this.stateEventWatcher.close();
+    this.stateEventWatcher = undefined;
+    this.stateEventFileOffsets.clear();
+    this.stateEventFileBuffers.clear();
+  }
+
+  /**
+   * CREW-254: apply one concrete state event. Dedups on `eventId` (exactly-once
+   * across replays), reduces `(currentState, event) → next | null`, and on a
+   * real transition writes a `state_transitions` row + publishes
+   * `agent.state_changed`. The `eventId` is recorded even on a no-op reduce so
+   * a later replay of the same line stays a no-op. `pr_created` additionally
+   * stamps `agents.pr_url`. Test seam: the live watcher feeds parsed events
+   * through this same method.
+   */
+  async ingestStateEvent(event: StateEvent): Promise<void> {
+    // Dedup first: skip if this eventId was already applied.
+    const already = await this.db
+      .selectFrom('state_events_applied')
+      .select('event_id')
+      .where('event_id', '=', event.eventId)
+      .executeTakeFirst();
+    if (already) return;
+
+    const ts = Date.parse(event.ts);
+    if (!Number.isFinite(ts)) {
+      this.logger.warn(
+        { key: event.key, event: event.event, ts: event.ts },
+        'unparseable state-event ts; skipping',
+      );
+      return;
+    }
+
+    const previous = await this.getCachedAgentState(event.key);
+    const next = reduceState(previous, event.event);
+
+    // Atomicity matters: the dedup-ledger row and the state_transitions row
+    // must commit together. If the ledger row landed but the transition write
+    // crashed, a restart's replay would dedup on the ledger row and never write
+    // the transition — the agent would be stuck in `previous` forever. One
+    // transaction closes that window: a crash before commit rolls back both, so
+    // the replay re-applies cleanly. The eventId is recorded even on a no-op
+    // reduce (so a replay stays a no-op).
+    await this.db.transaction().execute(async (trx) => {
+      await trx
+        .insertInto('state_events_applied')
+        .values({ event_id: event.eventId, agent_key: event.key, ts })
+        .onConflict((oc) => oc.column('event_id').doNothing())
+        .execute();
+
+      if (event.event === 'pr_created' && event.prUrl) {
+        await trx
+          .updateTable('agents')
+          .set({ pr_url: event.prUrl })
+          .where('key', '=', event.key)
+          .execute();
+      }
+
+      if (next !== null) {
+        await trx
+          .insertInto('state_transitions')
+          .values({ agent_key: event.key, from_state: previous, to_state: next, ts })
+          .execute();
+      }
+    });
+
+    if (next === null) return;
+
+    // Advance the in-memory cache + publish only after the commit, so neither
+    // ever reflects a rolled-back write.
+    this.agentStateCache.set(event.key, next);
+    this.eventBus.publish({
+      type: 'agent.state_changed',
+      data: { key: event.key, from: previous, to: next, ts },
+    });
   }
 
   /** Test seam — feeds a single parsed event through the same code path
@@ -337,6 +462,77 @@ export class IngestService {
         continue;
       }
       await this.ingestStartupEvent(agentKey, result.data);
+    }
+  }
+
+  /**
+   * CREW-254: read-and-reduce the new lines appended to a single
+   * `~/.crew/state-events/<key>.jsonl`. Byte-offset + partial-line protocol is
+   * identical to `onStartupFile`; the terminal action is
+   * `ingestStateEvent(result.data)` rather than `ingestStartupEvent`.
+   */
+  private async onStateEventFile(filePath: string): Promise<void> {
+    const agentKey = basename(filePath, '.jsonl');
+    let stat;
+    try {
+      stat = await fsp.stat(filePath);
+    } catch (err) {
+      this.logger.debug({ err, filePath }, 'state-event file stat failed (likely transient)');
+      return;
+    }
+
+    const lastOffset = this.stateEventFileOffsets.get(filePath) ?? 0;
+    if (stat.size === lastOffset) return;
+    if (stat.size < lastOffset) {
+      // Truncated (or rotated) — restart from the beginning.
+      this.stateEventFileOffsets.set(filePath, 0);
+      this.stateEventFileBuffers.delete(filePath);
+    }
+    const startOffset = this.stateEventFileOffsets.get(filePath) ?? 0;
+
+    const fh = await fsp.open(filePath, 'r');
+    let appended: string;
+    try {
+      const len = stat.size - startOffset;
+      const buf = Buffer.alloc(len);
+      await fh.read(buf, 0, len, startOffset);
+      appended = buf.toString('utf8');
+    } finally {
+      await fh.close();
+    }
+
+    const carried = this.stateEventFileBuffers.get(filePath) ?? '';
+    const combined = carried + appended;
+    const lastNewlineIdx = combined.lastIndexOf('\n');
+    if (lastNewlineIdx === -1) {
+      this.stateEventFileBuffers.set(filePath, combined);
+      this.stateEventFileOffsets.set(filePath, stat.size);
+      return;
+    }
+    const consumable = combined.slice(0, lastNewlineIdx);
+    const leftover = combined.slice(lastNewlineIdx + 1);
+    this.stateEventFileBuffers.set(filePath, leftover);
+    this.stateEventFileOffsets.set(filePath, stat.size);
+
+    for (const raw of consumable.split('\n')) {
+      const line = raw.trim();
+      if (line.length === 0) continue;
+      let parsed: unknown;
+      try {
+        parsed = JSON.parse(line);
+      } catch (err) {
+        this.logger.warn({ err, agentKey, line }, 'state event JSON parse failed');
+        continue;
+      }
+      const result = stateEventSchema.safeParse(parsed);
+      if (!result.success) {
+        this.logger.warn(
+          { issues: result.error.issues, agentKey, line },
+          'state event schema mismatch',
+        );
+        continue;
+      }
+      await this.ingestStateEvent(result.data);
     }
   }
 
@@ -582,7 +778,7 @@ export class IngestService {
     });
   }
 
-  private async getCachedAgentState(agentKey: string): Promise<TransitionState> {
+  private async getCachedAgentState(agentKey: string): Promise<TransitionTarget> {
     const cached = this.agentStateCache.get(agentKey);
     if (cached !== undefined) return cached;
     const latest = await this.db
@@ -592,7 +788,12 @@ export class IngestService {
       .orderBy('ts', 'desc')
       .orderBy('id', 'desc')
       .executeTakeFirst();
-    const initial: TransitionState = isTransitionState(latest?.to_state) ? latest.to_state : 'init';
+    // Recognize the full target set (incl. `idle`/`waiting`, CREW-254) on
+    // read-back so a concrete-event state survives a daemon restart instead of
+    // collapsing to `init`.
+    const initial: TransitionTarget = isTransitionTarget(latest?.to_state)
+      ? latest.to_state
+      : 'init';
     this.agentStateCache.set(agentKey, initial);
     return initial;
   }
@@ -694,7 +895,10 @@ interface ComputeContext {
  * the state?" caller. A vitest assertion below pins the equivalence.
  */
 function computeNextState(
-  previous: TransitionState,
+  // Accepts the wider `TransitionTarget` because the cache may now hold `idle`
+  // (CREW-254). An `idle`/`waiting` agent that produces a tool_call falls
+  // through to `running` below — the transcript path treats it as resumed work.
+  previous: TransitionTarget,
   toolName: string,
   bashCommand: string,
   ctx: ComputeContext,
@@ -717,6 +921,14 @@ function computeNextState(
   if (previous === 'pr_open') return 'pr_open';
   if (toolName === 'Bash' && hasPrCreateInvocation(bashCommand)) return 'pr_open';
   return 'running';
+}
+
+// Mirrors `isTransitionState`'s set plus the two reserved states the concrete
+// reducer activates (CREW-254). Intentionally keeps that helper's legacy quirk
+// of treating a stored `error` as a cold-read miss (→ `init`), so existing
+// error read-back behavior is unchanged; only `idle`/`waiting` are newly kept.
+function isTransitionTarget(s: string | null | undefined): s is TransitionTarget {
+  return isTransitionState(s) || s === 'idle' || s === 'waiting';
 }
 
 function isTransitionState(s: string | null | undefined): s is TransitionState {
