@@ -159,13 +159,7 @@ export function DrawerHeader({
           </Button>
         )}
         {showMergedPrPill && (
-          <Button
-            color="idle"
-            intensity="mid"
-            size="md"
-            icon={<GitMerge aria-hidden />}
-            asChild
-          >
+          <Button color="idle" intensity="mid" size="md" icon={<GitMerge aria-hidden />} asChild>
             <a href={detail.pr_url ?? '#'} target="_blank" rel="noreferrer">
               View merged PR
             </a>

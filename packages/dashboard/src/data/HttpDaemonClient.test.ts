@@ -479,9 +479,9 @@ describe('HttpDaemonClient.overrideState (CREW-260)', () => {
 
   it('throws AgentNotFoundError on 404', async () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('not found', { status: 404 }));
-    await expect(
-      new HttpDaemonClient().overrideState('NOPE', 'finished'),
-    ).rejects.toBeInstanceOf(AgentNotFoundError);
+    await expect(new HttpDaemonClient().overrideState('NOPE', 'finished')).rejects.toBeInstanceOf(
+      AgentNotFoundError,
+    );
   });
 
   it('throws on other non-2xx', async () => {

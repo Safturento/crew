@@ -67,9 +67,7 @@ export function StateOverrideControl({ agentKey, state }: StateOverrideControlPr
                 }}
                 className={cn(
                   'flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm text-foreground',
-                  isCurrent
-                    ? 'cursor-default opacity-40'
-                    : 'cursor-pointer hover:bg-accent',
+                  isCurrent ? 'cursor-default opacity-40' : 'cursor-pointer hover:bg-accent',
                 )}
               >
                 <span
