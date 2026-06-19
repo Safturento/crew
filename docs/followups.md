@@ -27,6 +27,7 @@ Organization: Active is grouped by topic (not chronology) since the dominant acc
     - [2026-05-16 — figma-snapshot `resolvedStylesFor` text-color heuristic picks the first TEXT descendant](#2026-05-16--figma-snapshot-resolvedstylesfor-text-color-heuristic-picks-the-first-text-descendant)
     - [2026-05-15 — `crew fix-pr` does not refresh `.mcp.json` — chrome wiring goes stale on resume](#2026-05-15--crew-fix-pr-does-not-refresh-mcpjson--chrome-wiring-goes-stale-on-resume)
   - [Dashboard UI](#dashboard-ui)
+    - [2026-06-19 — Runner page: Failed-to-start / Queued / Recently-ended need read endpoints; supervisor controls unwired](#2026-06-19--runner-page-failed-to-start--queued--recently-ended-need-read-endpoints-supervisor-controls-unwired)
     - [2026-06-08 — Filters popover open inside the agent drawer makes the drawer click-dead (trigger/outside click dismisses the drawer)](#2026-06-08--filters-popover-open-inside-the-agent-drawer-makes-the-drawer-click-dead-triggeroutside-click-dismisses-the-drawer)
     - [2026-06-05 — Drawer `liveMode` + section-collapse leak across an in-place agent switch](#2026-06-05--drawer-livemode--section-collapse-leak-across-an-in-place-agent-switch)
     - [2026-06-05 — Dashboard has no cancel action; CLI kill never notifies the daemon](#2026-06-05--dashboard-has-no-cancel-action-cli-kill-never-notifies-the-daemon)
@@ -360,6 +361,20 @@ Organization: Active is grouped by topic (not chronology) since the dominant acc
 **Open questions:** Does `fix-pr` resume into a worktree fresh enough that re-asserting `.mcp.json` is always safe? Should `browsing` skill re-injection ride along?
 
 ### Dashboard UI
+
+#### 2026-06-19 — Runner page: Failed-to-start / Queued / Recently-ended need read endpoints; supervisor controls unwired
+
+**What:** The Runner page (CREW-245) ships with three of its six sections live-wired to the merged daemon (Supervisor + Live processes from `GET /api/runner/status`; Unmanaged derived client-side as running-agents-minus-snapshot). The other three — **Failed to start**, **Queued actions**, **Recently ended** — have their components fully built + fixture-tested, but `useRunnerPageData` feeds them `[]` because the merged daemon has no read endpoint for them: failed-start runs aren't "agents" (different `status` enum), `GET /api/actions/pending` _claims_ rows (can't list), and there's no recently-ended-runs query. So in production those sections stay hidden / show their empty state. Separately, the **SupervisorCard Restart/Stop/Start** buttons render (to match Figma) but are disabled — supervisor lifecycle is a `crew runner` CLI op with no daemon control route.
+
+**Why noticed:** CREW-245 scope decision (Task 8 of Epic CREW-235). The plan scoped Task 8 dashboard-only consuming `/api/runner/status`, and the dispatch run couldn't add+serve new daemon routes (the live stack runs the merged binary). The spec repeatedly defers the richer per-entity surfaces to **CREW-249** (per-entity log drawers), which reads the same captured-per-run data. Full context: `docs/tickets/CREW-245.md` (Decisions / Ruled out) + the spec `docs/superpowers/specs/2026-06-16-crew-235-runner-control-design.md`.
+
+**Anchors:** `packages/dashboard/src/components/runner/useRunnerPageData.ts` (the `failedToStart: []`, `queued: []`, `recentlyEnded: []` stubs + the doc comment); `packages/dashboard/src/components/runner/{FailedToStartSection,QueuedActions,RecentlyEnded}.tsx` (the built-but-unfed components); `packages/dashboard/src/components/runner/SupervisorCard.tsx` (the `onRestart`/`onStop`/`onStart` optional handlers — pass them once a control route exists). Daemon side: `packages/daemon/src/services/RunFailureService.ts` (already stores failed-start rows + `acknowledge`), `packages/daemon/src/routes/runs.ts`, `packages/daemon/src/routes/actions.ts`.
+
+**What's been considered:** A single daemon read endpoint (e.g. `GET /api/runner/page` or `GET /api/runner/recent-runs` + a read-only `GET /api/actions`) returning `{ failedToStart, queued, recentlyEnded }` from `runs` + `action_requests`, then a one-line swap of each `[]` in `useRunnerPageData` for the fetched data. Likely folds into **CREW-249** rather than a standalone ticket (same per-run captured data, same drawer destination). Supervisor controls would need new `crew runner` control routes (restart/stop/start) — a separate, larger concern (the daemon is containerized and can't signal the host runner directly; it would route through the same `runner_commands` reverse-queue or a new mechanism).
+
+**Shape of work:** likely one read-endpoint ticket (or fold into CREW-249) for the three sections; a separate, larger one for supervisor lifecycle control from the UI. Both gated on whether CREW-249 absorbs them.
+
+**Open questions:** Should the three history sections wait for CREW-249's per-entity surfaces, or get a thin interim read endpoint sooner? Is UI-driven supervisor restart/stop wanted at all, or is the `crew runner` CLI the intended control surface (in which case the buttons should be dropped, not wired)?
 
 #### 2026-06-08 — Filters popover open inside the agent drawer makes the drawer click-dead (trigger/outside click dismisses the drawer)
 
