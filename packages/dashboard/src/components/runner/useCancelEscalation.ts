@@ -64,8 +64,12 @@ export function useCancelEscalation({
   }, [onSoftCancel, escalateAfterMs, clear]);
 
   const forceKill = useCallback(() => {
+    // Settle the escalation timer — a Force kill can fire on the
+    // snapshot-reported `cancelling` path while a prior soft-cancel timer is
+    // still pending; clearing it avoids a stray post-settle state update.
+    clear();
     onForceKill();
-  }, [onForceKill]);
+  }, [onForceKill, clear]);
 
   return { phase, showForceKill, requestCancel, dismiss, confirm, forceKill };
 }
