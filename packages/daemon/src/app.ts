@@ -89,7 +89,16 @@ export async function buildApp({
   db,
   dashboardDistDir,
 }: BuildAppOptions): Promise<DaemonApp> {
-  const app: DaemonApp = Fastify({ loggerInstance: logger }).withTypeProvider<ZodTypeProvider>();
+  // pluginTimeout governs the avvio ready sequence, incl. the `onReady` hook
+  // below which serially awaits three chokidar initial scans (transcript tail +
+  // ~/.crew/startup + ~/.crew/state-events). On slow WSL2/docker bind-mounts —
+  // especially with multiple worktree stacks booting at once — those scans can
+  // exceed the 10s default and crash boot (AVV_ERR_READY_TIMEOUT). 60s is a
+  // stopgap; the durable fix is to not block onReady on the watchers' `ready`.
+  const app: DaemonApp = Fastify({
+    loggerInstance: logger,
+    pluginTimeout: 60_000,
+  }).withTypeProvider<ZodTypeProvider>();
   app.setValidatorCompiler(validatorCompiler);
   app.setSerializerCompiler(serializerCompiler);
 
