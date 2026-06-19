@@ -89,15 +89,16 @@ export async function buildApp({
   db,
   dashboardDistDir,
 }: BuildAppOptions): Promise<DaemonApp> {
-  // pluginTimeout governs the avvio ready sequence, incl. the `onReady` hook
-  // below which serially awaits three chokidar initial scans (transcript tail +
-  // ~/.crew/startup + ~/.crew/state-events). On slow WSL2/docker bind-mounts —
-  // especially with multiple worktree stacks booting at once — those scans can
-  // exceed the 10s default and crash boot (AVV_ERR_READY_TIMEOUT). 60s is a
-  // stopgap; the durable fix is to not block onReady on the watchers' `ready`.
+  // CREW-265: the `onReady` hook below no longer blocks on any chokidar initial
+  // scan — the startup/state-event watchers attach synchronously and let their
+  // `ready` resolve in the background (see `IngestService.watchStartupEvents`).
+  // The only remaining onReady work is one in-memory-fast DB query
+  // (`ingest.start()`) plus two synchronous mkdir+attach calls, so the Fastify
+  // default `pluginTimeout` (10s) is ample. We deliberately drop PR #381's 60s
+  // stopgap: a default timeout *surfaces* any future regression that
+  // reintroduces slow boot work rather than masking it for a minute.
   const app: DaemonApp = Fastify({
     loggerInstance: logger,
-    pluginTimeout: 60_000,
   }).withTypeProvider<ZodTypeProvider>();
   app.setValidatorCompiler(validatorCompiler);
   app.setSerializerCompiler(serializerCompiler);
@@ -144,7 +145,9 @@ export async function buildApp({
     // the daemon resolves to the same place.
     const startupDir = config.startupEventsDir;
     try {
-      await ingest.watchStartupEvents(startupDir);
+      // CREW-265: synchronous attach; boot never waits for the initial scan's
+      // `ready` (a slow/hung bind-mount must not crash the daemon).
+      ingest.watchStartupEvents(startupDir);
     } catch (err) {
       logger.warn({ err, startupDir }, 'startup-event watcher failed to attach');
     }
@@ -154,7 +157,8 @@ export async function buildApp({
     // inside the daemon resolves to the same place.
     const stateEventsDir = config.stateEventsDir;
     try {
-      await ingest.watchStateEvents(stateEventsDir);
+      // CREW-265: synchronous attach; boot never waits for the initial scan.
+      ingest.watchStateEvents(stateEventsDir);
     } catch (err) {
       logger.warn({ err, stateEventsDir }, 'state-event watcher failed to attach');
     }

@@ -1,7 +1,8 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { setTimeout as delay } from 'node:timers/promises';
 import { buildApp } from './app.js';
 import { createDb, runMigrations } from './db.js';
 import { createLogger } from './logger.js';
@@ -73,6 +74,47 @@ describe('buildApp', () => {
       await app.close();
     }
   });
+
+  it('completes boot even when a watcher attach never readies (onReady must not block)', async () => {
+    const db = createDb(':memory:');
+    await runMigrations(db, MIGRATIONS_DIR);
+    const app = await buildApp({
+      config: {
+        port: 0,
+        host: '127.0.0.1',
+        configDir: '/tmp/does-not-matter',
+        dbFile: ':memory:',
+        pidFile: '/tmp/daemon.pid',
+        logFile: '/tmp/daemon.log',
+        transcriptsHome: undefined,
+        runnerLogDir: '/tmp/does-not-matter/runner',
+        startupEventsDir: process.env.CREW_STARTUP_EVENTS_DIR ?? '/tmp/does-not-matter/startup',
+        stateEventsDir: process.env.CREW_STATE_EVENTS_DIR ?? '/tmp/does-not-matter/state-events',
+      },
+      logger: createLogger(),
+      db,
+    });
+    // buildApp registers routes but has NOT fired `onReady` yet — that happens on
+    // the first `ready()`/`inject()`. Simulate a watcher whose initial scan never
+    // readies (a slow / hung WSL2 docker bind-mount): the attach returns a promise
+    // that never settles. Boot must attach-and-continue, never await readiness.
+    const ingest = app.diContainer.cradle.ingestService;
+    // Returning a never-settling promise from the (now synchronous) attach: if
+    // `onReady` regressed to `await`-ing it, boot would hang past the race below.
+    const neverSettles = new Promise<never>(() => {}) as unknown as void;
+    vi.spyOn(ingest, 'watchStartupEvents').mockReturnValue(neverSettles);
+    vi.spyOn(ingest, 'watchStateEvents').mockReturnValue(neverSettles);
+    try {
+      const winner = await Promise.race([
+        app.ready().then(() => 'ready' as const),
+        delay(2000).then(() => 'timeout' as const),
+      ]);
+      expect(winner).toBe('ready');
+    } finally {
+      await app.close();
+      await db.destroy();
+    }
+  }, 10_000);
 
   it('maps ConfigDirNotFoundError to 503 via setErrorHandler', async () => {
     const app = await buildTestApp();

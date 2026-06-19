@@ -706,7 +706,8 @@ describe('IngestService.watchStartupEvents', () => {
     const startupDir = tmp();
     const svc = new IngestService({ db, logger: silentLogger, eventBus: new EventBus() });
     try {
-      await svc.watchStartupEvents(startupDir);
+      svc.watchStartupEvents(startupDir);
+      await svc.whenStartupWatcherReady();
       const path = join(startupDir, `${agentKey}.jsonl`);
       writeFileSync(
         path,
@@ -752,7 +753,8 @@ describe('IngestService.watchStartupEvents', () => {
     const startupDir = tmp();
     const svc = new IngestService({ db, logger: silentLogger, eventBus: new EventBus() });
     try {
-      await svc.watchStartupEvents(startupDir);
+      svc.watchStartupEvents(startupDir);
+      await svc.whenStartupWatcherReady();
       const path = join(startupDir, `${agentKey}.jsonl`);
       const event1 = JSON.stringify({
         type: 'system',
@@ -799,12 +801,41 @@ describe('IngestService.watchStartupEvents', () => {
     }
   }, 10_000);
 
+  it('attaches synchronously without blocking on the initial scan (boot-safety)', async () => {
+    const { db } = await setup();
+    const startupDir = tmp();
+    const svc = new IngestService({ db, logger: silentLogger, eventBus: new EventBus() });
+    try {
+      // Boot must never await the watcher's initial-scan `ready` (a slow/hung
+      // bind-mount would crash the daemon). The attach is synchronous and returns
+      // void; readiness is exposed separately via `whenStartupWatcherReady()`.
+      const ret: void = svc.watchStartupEvents(startupDir);
+      expect(ret).toBeUndefined();
+
+      let readied = false;
+      void svc.whenStartupWatcherReady().then(() => {
+        readied = true;
+      });
+      // Synchronously after the attach call returns, ready has NOT resolved —
+      // proof the attach did not block on the initial scan.
+      expect(readied).toBe(false);
+
+      // The deterministic test seam still resolves once the scan completes.
+      await svc.whenStartupWatcherReady();
+      expect(readied).toBe(true);
+    } finally {
+      await svc.stopStartupWatcher();
+      await db.destroy();
+    }
+  }, 10_000);
+
   it('skips malformed JSON lines', async () => {
     const { db, agentKey } = await setup();
     const startupDir = tmp();
     const svc = new IngestService({ db, logger: silentLogger, eventBus: new EventBus() });
     try {
-      await svc.watchStartupEvents(startupDir);
+      svc.watchStartupEvents(startupDir);
+      await svc.whenStartupWatcherReady();
       writeFileSync(
         join(startupDir, `${agentKey}.jsonl`),
         'not json at all\n' +
@@ -1152,12 +1183,35 @@ describe('IngestService.recordStateOverride (CREW-259)', () => {
 });
 
 describe('IngestService.watchStateEvents', () => {
+  it('attaches synchronously without blocking on the initial scan (boot-safety)', async () => {
+    const { db } = await setup();
+    const stateDir = tmp();
+    const svc = new IngestService({ db, logger: silentLogger, eventBus: new EventBus() });
+    try {
+      const ret: void = svc.watchStateEvents(stateDir);
+      expect(ret).toBeUndefined();
+
+      let readied = false;
+      void svc.whenStateWatcherReady().then(() => {
+        readied = true;
+      });
+      expect(readied).toBe(false);
+
+      await svc.whenStateWatcherReady();
+      expect(readied).toBe(true);
+    } finally {
+      await svc.stopStateEventWatcher();
+      await db.destroy();
+    }
+  }, 10_000);
+
   it('ingests concrete state events from files appended in the watched dir', async () => {
     const { db, agentKey } = await setup();
     const stateDir = tmp();
     const svc = new IngestService({ db, logger: silentLogger, eventBus: new EventBus() });
     try {
-      await svc.watchStateEvents(stateDir);
+      svc.watchStateEvents(stateDir);
+      await svc.whenStateWatcherReady();
       const path = join(stateDir, `${agentKey}.jsonl`);
       writeFileSync(
         path,
@@ -1201,7 +1255,8 @@ describe('IngestService.watchStateEvents', () => {
     const stateDir = tmp();
     const svc = new IngestService({ db, logger: silentLogger, eventBus: new EventBus() });
     try {
-      await svc.watchStateEvents(stateDir);
+      svc.watchStateEvents(stateDir);
+      await svc.whenStateWatcherReady();
       writeFileSync(
         join(stateDir, `${agentKey}.jsonl`),
         'not json at all\n' +
