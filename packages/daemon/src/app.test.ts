@@ -29,6 +29,8 @@ async function buildTestApp(opts: { dashboardDistDir?: string } = {}) {
       // Pinned to the package-level empty temp dir (src/test/setup.ts) so the
       // onReady startup-event watcher's initial scan is a clean no-op.
       startupEventsDir: process.env.CREW_STARTUP_EVENTS_DIR ?? '/tmp/does-not-matter/startup',
+      // Same blanket safety net for the state-event watcher (CREW-254).
+      stateEventsDir: process.env.CREW_STATE_EVENTS_DIR ?? '/tmp/does-not-matter/state-events',
     },
     logger: createLogger(),
     db,

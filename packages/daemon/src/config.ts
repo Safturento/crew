@@ -38,6 +38,18 @@ const daemonConfigSchema = z.object({
   CREW_STARTUP_EVENTS_DIR: z
     .string()
     .default(() => process.env.CREW_STARTUP_EVENTS_DIR ?? join(homedir(), '.crew', 'startup')),
+  // CREW-254: directory holding the CLI/runner/hook's concrete state-event
+  // JSONL stream, tailed by a chokidar watcher in app.ts onReady. Defaults to
+  // `~/.crew/state-events` (the path producers write to); docker-compose mounts
+  // ${HOME}/.crew/state-events into the container at /root/.crew/state-events,
+  // so os.homedir() == /root inside the daemon resolves to the same place.
+  // The default factory also consults process.env so the package-level vitest
+  // setup (src/test/setup.ts), which pins this var to an empty temp dir as a
+  // blanket watcher safety net, still flows through for tests that build config
+  // from a partial env object without naming this key.
+  CREW_STATE_EVENTS_DIR: z
+    .string()
+    .default(() => process.env.CREW_STATE_EVENTS_DIR ?? join(homedir(), '.crew', 'state-events')),
 });
 
 export interface DaemonConfig {
@@ -53,6 +65,8 @@ export interface DaemonConfig {
   runnerLogDir: string;
   /** Directory holding the CLI's startup-event JSONL stream (watched on boot). */
   startupEventsDir: string;
+  /** Directory holding the concrete state-event JSONL stream (watched on boot). */
+  stateEventsDir: string;
 }
 
 /**
@@ -74,5 +88,6 @@ export function parseDaemonConfig(
     transcriptsHome: parsed.CREW_TRANSCRIPTS_HOME === '' ? undefined : parsed.CREW_TRANSCRIPTS_HOME,
     runnerLogDir: parsed.CREW_RUNNER_LOG_DIR,
     startupEventsDir: parsed.CREW_STARTUP_EVENTS_DIR,
+    stateEventsDir: parsed.CREW_STATE_EVENTS_DIR,
   };
 }
