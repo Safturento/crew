@@ -8,6 +8,7 @@ import type { AgentDetail } from '../data/types.js';
 vi.mock('../data/queries.js', () => ({
   useAgent: vi.fn(),
   useRefreshPrStatus: vi.fn(() => ({ mutate: vi.fn(), isPending: false })),
+  useOverrideState: vi.fn(() => ({ mutate: vi.fn(), isPending: false })),
 }));
 vi.mock('../data/useFinishSteps.js', () => ({
   useFinishSteps: vi.fn(() => []),

@@ -18,6 +18,7 @@ import { Badge } from './ui/badge.js';
 import { Button } from './ui/button.js';
 import { MetaList } from './ui/meta-list.js';
 import { StateIcon } from './ui/state-icon.js';
+import { StateOverrideControl } from './StateOverrideControl.js';
 
 const ACTIVE_STATES = new Set<AgentState>(['running', 'initializing']);
 
@@ -120,6 +121,9 @@ export function DrawerHeader({
         >
           {meta.label}
         </Badge>
+        {/* CREW-260: operator escape hatch — force a corrected state when the
+            badge is wrong or stranded. Secondary affordance beside the pill. */}
+        <StateOverrideControl agentKey={detail.key} state={detail.state} />
         <MetaList>
           <StatusItem label="runtime" value={runtime ?? '—'} />
           <StatusItem label="tokens" value={formatTokens(detail.tokens.total)} />
