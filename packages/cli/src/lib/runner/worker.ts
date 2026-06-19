@@ -2,9 +2,10 @@ import { appendFileSync, mkdirSync } from 'node:fs';
 import { execa } from 'execa';
 import { loadProjectConfigByName } from 'crew-shared';
 import { crewDaemonClientFromEnv } from '../daemon-client/index.js';
-import { executeAction } from './executor.js';
+import { executeAction, type LaunchHandle } from './executor.js';
 import { runLoop } from './loop.js';
 import { runnerPaths } from './paths.js';
+import { Registry } from './registry.js';
 
 /** Format one runner.log line: ISO timestamp prefix, newline-terminated. */
 export function formatLogLine(msg: string, now: Date = new Date()): string {
@@ -23,17 +24,33 @@ function runToCompletion(file: string, args: string[], opts: { cwd: string }): P
 
 /**
  * Launch a long-running agent verb detached and resolve the moment it spawns
- * (not when the minutes-long run finishes). Rejects if the spawn itself fails
- * — e.g. `crew` not on PATH — so the runner reports `failed`.
+ * (not when the minutes-long run finishes) with its `{ pid, pgid }`. `detached:
+ * true` makes the child a process-group leader, so `pgid === pid` and the
+ * runner can later signal `-pgid` to reach the verb and every child it spawned
+ * (claude, docker, …). Rejects if the spawn itself fails — e.g. `crew` not on
+ * PATH — so the runner reports `failed`.
  */
-function launchDetached(file: string, args: string[], opts: { cwd: string }): Promise<unknown> {
+function launchDetached(
+  file: string,
+  args: string[],
+  opts: { cwd: string },
+): Promise<LaunchHandle> {
   const child = execa(file, args, { cwd: opts.cwd, detached: true, stdio: 'ignore' });
   // We don't track the detached run's completion; swallow its eventual
   // settle so a later non-zero exit can't surface as an unhandledRejection.
   child.catch(() => {});
   child.unref();
   return new Promise((resolve, reject) => {
-    child.once('spawn', () => resolve(undefined));
+    child.once('spawn', () => {
+      // A spawned child always has a pid; guard anyway — registering a bogus
+      // pid would later make `kill(-pgid)` target the wrong group. No pid →
+      // report a failed launch instead of tracking a phantom.
+      if (child.pid === undefined) {
+        reject(new Error('spawned process has no pid'));
+        return;
+      }
+      resolve({ pid: child.pid, pgid: child.pid });
+    });
     child.once('error', (err) => reject(err));
   });
 }
@@ -66,10 +83,22 @@ export async function runWorker(deps: WorkerDeps): Promise<void> {
       appendFileSync(paths.logFile, formatLogLine(line));
     });
 
+  // One registry for the worker's lifetime: the executor records each spawned
+  // process, the loop serializes it into the heartbeat snapshot, and command
+  // apply signals + prunes it. `process.kill` with a negative pid signals the
+  // whole process group.
+  const registry = new Registry();
   await runLoop({
     client: crewDaemonClientFromEnv(deps.env),
+    registry,
+    kill: (target, signal) => process.kill(target, signal),
     execute: (action) =>
-      executeAction(action, { exec: runToCompletion, launch: launchDetached, resolveRepoDir }),
+      executeAction(action, {
+        exec: runToCompletion,
+        launch: launchDetached,
+        resolveRepoDir,
+        registry,
+      }),
     log,
     signal: deps.signal,
   });
