@@ -1,12 +1,13 @@
 ---
 name: dispatch
 description: crew run prompt-build, skills injection, verification gates
-last_updated: 2026-06-17
+last_updated: 2026-06-19
 covers:
   - 'packages/cli/src/lib/run/**'
   - 'packages/cli/src/lib/prompts/**'
   - 'packages/cli/src/lib/mcp-config/**'
   - 'packages/cli/src/lib/startup-events/**'
+  - 'packages/cli/src/lib/state-events/**'
   - '.claude/skills/**'
   - 'packages/cli/src/lib/preflight/**'
   - 'packages/cli/src/lib/health/**'
@@ -149,6 +150,7 @@ Skip rules (in `computeGateSkip`): `verify_after_run=false`, `--skip-docker`, do
 | `/tmp/crew-verify-gate-<KEY>.log` | `runVerifyGate` resume        | Output of each gate-driven agent resume                                                                                                                                                                                                                            |
 | `/tmp/crew-mcp-<KEY>.log`         | `writeMcpDiagnosticLog`       | Resolved MCP wiring — chrome MCP server path, playwright chromium path, plugin warnings, and the `.mcp.json` it produced. Inspect when the agent reports `mcp__chrome__use_browser` missing from its tool inventory.                                               |
 | `~/.crew/startup/<KEY>.jsonl`     | `emitStartupEvent`            | CREW-201 per-phase startup events (`started` + `completed`/`failed` per phase). Daemon's chokidar watcher (mounted into the container as `/root/.crew/startup`) ingests into `startup_events` and surfaces the merged `StartupPhaseRow`s on the timeline endpoint. |
+| `~/.crew/state-events/<KEY>.jsonl` | `emitStateEvent`             | CREW-255 concrete lifecycle facts (`run_started`/`fixpr_started`/`run_exited`/`fixpr_exited`/`finish_completed`). Producer side only so far — the daemon watcher + reducer that consume this log land in the daemon-ingestion tickets (plan Tasks 3/6).            |
 
 All paths constructed by helpers in `lib/run/paths.ts` — use those rather than rebuilding the strings.
 
@@ -159,6 +161,18 @@ Every step in the **End-to-end flow** above is bracketed with `emitStartupEvent`
 The helper that wraps each phase is `bracketStartupPhase` in `lib/startup-events/`. It writes a `started` event before the work, a `completed` event after success, and a `failed` event in the catch block before re-throwing — failure semantics for callers are unchanged. The preflight phase uses a sync `failStartupPhase` helper instead, because its early-exit paths call `process.exit()` (async appends would never flush before teardown).
 
 The daemon side lives in `IngestService.watchStartupEvents` (chokidar) + `mergeStartedAndCompleted` (per-phase merge into one `StartupPhaseRow`). Failed events also call `IngestService.recordError`, flipping the agent's derived state to `error` so the dashboard list view turns red immediately.
+
+## State event capture (CREW-255)
+
+A second, parallel producer stream carries **concrete lifecycle facts** (as opposed to startup phases): the writer in `lib/state-events/` appends one JSONL line per fact to `~/.crew/state-events/<KEY>.jsonl`. The dispatch commands emit at these moments:
+
+- `crew run` — `run_started` right after `registerRun` succeeds; `run_exited` (carrying the resolved exit code) at the final `process.exit`, via the **sync** variant since the async append would never flush before teardown.
+- `crew fix-pr` — `fixpr_started` at dispatch; `fixpr_exited` (with the resolved exit code, `130` on a signaled abort) once the run drains — **async**, because fix-pr sets `process.exitCode` and returns rather than calling `process.exit()`.
+- `crew finish` — `finish_completed` once all post-merge cleanup steps succeed.
+
+The thin per-moment helpers (`emitRunStarted`, `emitFixprStarted`, `emitDispatchExited[Sync]`, `emitFinishCompleted`) live in `lib/state-events/dispatch.ts`; they encode the `event`+`source` so the command bodies stay thin. Emits are best-effort (mirroring `emitStartupEvent` — failures go to stderr, never into the dispatch flow). The writer fills `eventId`/`key`/`ts`; the producer only asserts the fact, never the target state.
+
+The daemon-side consumer — a chokidar watcher + a pure reducer `(currentState, event) → nextState` driving `state_transitions`, plus an `eventId` dedup ledger — lands in the daemon-ingestion tickets (plan Tasks 3/6), at which point the inferred transcript-driven state path is retired and `idle` becomes reachable.
 
 ## Failure modes worth knowing
 
