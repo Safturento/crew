@@ -15,7 +15,6 @@ Organization: Active is grouped by topic (not chronology) since the dominant acc
     - [2026-05-12 — Move figma-snapshot PAGE_DIR_MAP into project config](#2026-05-12--move-figma-snapshot-page_dir_map-into-project-config)
     - [2026-05-12 — Pill trailing-icon support + CodeChip mono-font composite](#2026-05-12--pill-trailing-icon-support--codechip-mono-font-composite)
     - [2026-05-12 — Explore intensity-axis for Button (parallels StateBadge muted/mid/loud)](#2026-05-12--explore-intensity-axis-for-button-parallels-statebadge-mutedmidloud)
-    - [2026-05-11 — `idle` and `waiting` agent states not reachable from daemon fixtures](#2026-05-11--idle-and-waiting-agent-states-not-reachable-from-daemon-fixtures)
     - [2026-05-09 — Crew Dashboard Screens: 3 remaining ad-hoc modal frames need DS Modal swap + semantic-token bindings](#2026-05-09--crew-dashboard-screens-3-remaining-ad-hoc-modal-frames-need-ds-modal-swap--semantic-token-bindings)
   - [Visual Fidelity Tooling](#visual-fidelity-tooling)
     - [2026-06-06 — figma-snapshot committed baseline predates content-scoped freshness (full re-enrich needed)](#2026-06-06--figma-snapshot-committed-baseline-predates-content-scoped-freshness-full-re-enrich-needed)
@@ -58,7 +57,6 @@ Organization: Active is grouped by topic (not chronology) since the dominant acc
     - [2026-06-04 — `finish_steps` table accumulates across `crew finish` re-runs (no run scoping)](#2026-06-04--finish_steps-table-accumulates-across-crew-finish-re-runs-no-run-scoping)
     - [2026-06-04 — Runner pidfile has no liveness identity (recycled-PID false positive)](#2026-06-04--runner-pidfile-has-no-liveness-identity-recycled-pid-false-positive)
     - [2026-06-04 — `GET /api/runner/logs` reads the whole log file into memory](#2026-06-04--get-apirunnerlogs-reads-the-whole-log-file-into-memory)
-    - [2026-06-03 — `deriveState` falls through to `finished` when PR-create isn't detected](#2026-06-03--derivestate-falls-through-to-finished-when-pr-create-isnt-detected)
     - [2026-06-03 — `getStackUrl` is orphaned + duplicated by `docker-list`'s port/URL helpers](#2026-06-03--getstackurl-is-orphaned--duplicated-by-docker-lists-porturl-helpers)
     - [2026-05-23 — GitHub webhook as a future PR-status detection mechanism (parking-lot)](#2026-05-23--github-webhook-as-a-future-pr-status-detection-mechanism-parking-lot)
     - [2026-05-22 — CREW-183's `installNodeModules` fix doesn't extend to `crew fix-pr`](#2026-05-22--crew-183s-installnodemodules-fix-doesnt-extend-to-crew-fix-pr)
@@ -96,6 +94,8 @@ Organization: Active is grouped by topic (not chronology) since the dominant acc
     - [2026-05-15 — `.agents/` topic-doc system vs native `.claude/rules/` and agents.md alignment](#2026-05-15--agents-topic-doc-system-vs-native-clauderules-and-agentsmd-alignment)
     - [2026-05-12 — Rethink followup-tracking system (priority tier + Jira backlog sync)](#2026-05-12--rethink-followup-tracking-system-priority-tier--jira-backlog-sync)
 - [Resolved](#resolved)
+  - [2026-06-03 — `deriveState` falls through to `finished` when PR-create isn't detected](#2026-06-03--derivestate-falls-through-to-finished-when-pr-create-isnt-detected)
+  - [2026-05-11 — `idle` and `waiting` agent states not reachable from daemon fixtures](#2026-05-11--idle-and-waiting-agent-states-not-reachable-from-daemon-fixtures)
   - [2026-05-10 — Wire dashboard QuickAction buttons (Resume / Finish / Inspect / Provide input) to daemon endpoints](#2026-05-10--wire-dashboard-quickaction-buttons-resume--finish--inspect--provide-input-to-daemon-endpoints)
   - [2026-05-08 — Surface `crew finish` step results in the dashboard](#2026-05-08--surface-crew-finish-step-results-in-the-dashboard)
   - [2026-06-08 — Hook command paths in settings.json were relative, breaking on cwd drift](#2026-06-08--hook-command-paths-in-settingsjson-were-relative-breaking-on-cwd-drift)
@@ -205,20 +205,6 @@ Organization: Active is grouped by topic (not chronology) since the dominant acc
 - [ ] If pairs: which colors need siblings? (`warning` for sure; `secondary`/`ghost` don't seem to need it; `default` is already neutral.)
 - [ ] Naming convention for siblings if going pairs-based.
 - [ ] Whether to backport to the existing `destructive` ↔ `danger`. Probably not worth the rename churn but worth flagging.
-
-#### 2026-05-11 — `idle` and `waiting` agent states not reachable from daemon fixtures
-
-**What:** The dashboard's `AgentState` union has 7 values; `StateBadge` + `STATE_CLASSES` cover all 7. But the daemon's `deriveState` only produces 5 of them (`initializing`, `running`, `pr_open`, `error`, `finished`) from runs + tool_calls. `idle` and `waiting` come from explicit `state_transitions` rows that the dev seed never writes. Result: those two badges are typed and styled but can't be visually exercised in dev.
-
-**Why noticed:** During the 2026-05-11 state-color migration verification. The dashboard renders 5 states cleanly; the migration's correctness for `idle`/`waiting` is verified only via code paths, not visually.
-
-**Anchors:** `packages/daemon/src/services/AgentsService.ts:328-336` (`deriveState`); `packages/daemon/src/services/AgentsService.ts:45-52` (`StateTransitionState`); `packages/dashboard/src/data/state-meta.ts` (`STATE_CLASSES`); `packages/dashboard/src/components/StateBadge.tsx`.
-
-**What's been considered:** Two paths — (a) Showcase route `#/dev/badges` renders all 21 StateBadge variants × intensities + CountBadge × 7 + AgentRow attention-tint examples statically. Independent of daemon state, ~30 min. (b) Seed-level fix — extend `dev.ts` to insert agents whose state arrives via `state_transitions` rows. Needs daemon-side understanding of when `idle`/`waiting` are emitted in prod. Larger scope.
-
-**Shape of work:** Either ~30 lines for the showcase route, OR a daemon-side investigation + seed extension.
-
-**Open questions:** Are `idle` and `waiting` ever expected to be the _current_ state of an agent (visible in the agents list) or only intermediate transitions visible in `StateHistoryBar`? If only transitions, the showcase route is sufficient.
 
 #### 2026-05-09 — Crew Dashboard Screens: 3 remaining ad-hoc modal frames need DS Modal swap + semantic-token bindings
 
@@ -901,24 +887,6 @@ The "synthetic Unregistered section" feels right — single render path, no extr
 
 **Shape of work:** small, contained — swap the full read for a trailing-chunk read in one function; existing route tests still apply. Best folded into T4 (CREW-216) when the producer ships, so the bound and the writer land together.
 
-#### 2026-06-03 — `deriveState` falls through to `finished` when PR-create isn't detected
-
-**What:** `AgentsService.deriveState` ends with `return 'finished'` (`packages/daemon/src/services/AgentsService.ts`) as the catch-all after `completedAt != null`, `exitCode == 0`, `!prMerged`, `!hasPrCreate`. So _any_ cleanly-completed run whose PR-create signal was missed renders as **finished** — a state that otherwise means "PR merged and cleaned up via `crew finish`". It silently masquerades a detection miss (or a genuinely PR-less run) as a successful close-out, with no visible distinction from a real finish. This is the second half of the 2026-06-03 status bug (CREW-31/32/174 showed `finished` instead of `pr_open`); the immediate fix only hardened the `hasPrCreate` matcher, leaving the fallthrough as a latent footgun for any other reason detection could miss.
-
-**Why noticed:** Root-cause investigation of "three agents marked finished instead of pr_open" (this session). The matcher fix (broadening prefix-match → per-line "starts with `gh pr create`", shared helper `hasPrCreateInvocation` in crew-shared) addressed the reported incident. When asked whether to also harden the fallthrough, user chose "matcher only" — so this is the explicitly-deferred half.
-
-**Anchors:** `packages/daemon/src/services/AgentsService.ts` `deriveState()` (the `return 'finished'` at the end); `crew-shared` `hasPrCreateInvocation`; the live transition twin in `IngestService.ts` `computeNextState` (where a completed-but-undetected run just stays `running`, _disagreeing_ with the list/getByKey display that shows `finished`). Branch `fix/pr-create-detection-cd-prefix`.
-
-**What's been considered:**
-
-- A completed `run`/`fix-pr` with no detected PR and no `finish` run is arguably `error` (it was supposed to open a PR and the signal we have says it didn't), or a distinct "completed, no PR" state — not `finished`.
-- Note the cross-path inconsistency: the SQL-derived display (`AgentsService`) calls it `finished`, while the live tool-call machine (`computeNextState`) leaves it `running`. Whatever the resolution, these two should agree.
-- Residual matcher gap (same area, cheap to fold in): `hasPrCreateInvocation` is per-line/start-anchored, so a _single-line_ `git push && gh pr create …` (no newline) still won't match. The dispatch prompt puts them on separate lines, so this isn't the observed failure, but it's the next brittle edge.
-
-**Shape of work:** small, contained — decide the right terminal state for "completed, PR-create not observed", make `deriveState` + `computeNextState` agree on it, add the `&&`-chained matcher case. One ticket. Needs a design call on the state name before coding.
-
-**Open questions:** Is "completed, no PR detected" really an error, or a legitimate no-op outcome (epic-guard exit, ticket already shipped — the prompt's `→ no-pr:` path)? If legitimate, `finished` may be defensible and the real fix is just surfacing _why_ (a distinct label/tooltip) rather than changing the state.
-
 #### 2026-06-03 — `getStackUrl` is orphaned + duplicated by `docker-list`'s port/URL helpers
 
 **What:** `packages/cli/src/lib/docker/compose.ts:52` `getStackUrl(project)` has no production caller — only `compose.test.ts` references it (already true at `origin/main`, predating CREW-31). CREW-31's new `list-stacks.ts` re-implements its two concerns independently: `getHostPort` parses `docker port <id> <spec>` (last-colon segment), and `stackUrl` builds `https://localhost[:port]` with the `443`→no-suffix rule. So the repo now carries two copies of that port-parse + URL-build logic, one of them dead in production.
@@ -1589,6 +1557,42 @@ The other two open questions (sandbox config drift, Phase 2 + Phase 3 separation
 - Should priority on the markdown side map directly to Jira priority, or stay a separate signal?
 
 ## Resolved
+
+### 2026-06-03 — `deriveState` falls through to `finished` when PR-create isn't detected
+
+**Resolved 2026-06-19:** Closed by the concrete-state-triggers cutover (Epic [CREW-252](https://safturento.atlassian.net/browse/CREW-252), final task [CREW-257](https://safturento.atlassian.net/browse/CREW-257)). The inferred PR-create detection is gone entirely — agent state is now driven only by concrete lifecycle events, so a "completed run, no PR observed" no longer needs a heuristic terminal-state guess. A clean `run_exited` with no PR now lands the agent in the (newly reachable) `idle` state, and a non-zero `*_exited` routes to `error`; neither masquerades as `finished`. The `computeNextState`/`deriveState` cross-path inconsistency is moot because `computeNextState` was deleted. The `&&`-chained matcher edge survives only on the `pr_created` hook regex — tracked separately in the 2026-06-19 "`pr_created` hook regex misses env-var/command-prefixed `gh pr create`" entry.
+
+**What:** `AgentsService.deriveState` ends with `return 'finished'` (`packages/daemon/src/services/AgentsService.ts`) as the catch-all after `completedAt != null`, `exitCode == 0`, `!prMerged`, `!hasPrCreate`. So _any_ cleanly-completed run whose PR-create signal was missed renders as **finished** — a state that otherwise means "PR merged and cleaned up via `crew finish`". It silently masquerades a detection miss (or a genuinely PR-less run) as a successful close-out, with no visible distinction from a real finish. This is the second half of the 2026-06-03 status bug (CREW-31/32/174 showed `finished` instead of `pr_open`); the immediate fix only hardened the `hasPrCreate` matcher, leaving the fallthrough as a latent footgun for any other reason detection could miss.
+
+**Why noticed:** Root-cause investigation of "three agents marked finished instead of pr_open" (this session). The matcher fix (broadening prefix-match → per-line "starts with `gh pr create`", shared helper `hasPrCreateInvocation` in crew-shared) addressed the reported incident. When asked whether to also harden the fallthrough, user chose "matcher only" — so this is the explicitly-deferred half.
+
+**Anchors:** `packages/daemon/src/services/AgentsService.ts` `deriveState()` (the `return 'finished'` at the end); `crew-shared` `hasPrCreateInvocation`; the live transition twin in `IngestService.ts` `computeNextState` (where a completed-but-undetected run just stays `running`, _disagreeing_ with the list/getByKey display that shows `finished`). Branch `fix/pr-create-detection-cd-prefix`.
+
+**What's been considered:**
+
+- A completed `run`/`fix-pr` with no detected PR and no `finish` run is arguably `error` (it was supposed to open a PR and the signal we have says it didn't), or a distinct "completed, no PR" state — not `finished`.
+- Note the cross-path inconsistency: the SQL-derived display (`AgentsService`) calls it `finished`, while the live tool-call machine (`computeNextState`) leaves it `running`. Whatever the resolution, these two should agree.
+- Residual matcher gap (same area, cheap to fold in): `hasPrCreateInvocation` is per-line/start-anchored, so a _single-line_ `git push && gh pr create …` (no newline) still won't match. The dispatch prompt puts them on separate lines, so this isn't the observed failure, but it's the next brittle edge.
+
+**Shape of work:** small, contained — decide the right terminal state for "completed, PR-create not observed", make `deriveState` + `computeNextState` agree on it, add the `&&`-chained matcher case. One ticket. Needs a design call on the state name before coding.
+
+**Open questions:** Is "completed, no PR detected" really an error, or a legitimate no-op outcome (epic-guard exit, ticket already shipped — the prompt's `→ no-pr:` path)? If legitimate, `finished` may be defensible and the real fix is just surfacing _why_ (a distinct label/tooltip) rather than changing the state.
+
+### 2026-05-11 — `idle` and `waiting` agent states not reachable from daemon fixtures
+
+**Resolved 2026-06-19:** Closed by the concrete-state-triggers cutover (Epic [CREW-252](https://safturento.atlassian.net/browse/CREW-252), final task [CREW-257](https://safturento.atlassian.net/browse/CREW-257)). `idle` is now a real, reachable _current_ state (a clean `run_exited` with no PR; `reduceState`), and both `idle` and `waiting` project to their own badge via `TRANSITION_TO_AGENT_STATE` instead of collapsing to `running`. The daemon's `AgentState` union + the `/api/agents` `AgentStateEnum` gained `idle`/`waiting`; the dashboard already styled all states (`state-meta.ts`, `AgentRow`), so the badges are now exercised end-to-end rather than only via code paths. (Answer to the open question: `idle`/`waiting` _are_ expected as current states visible in the agents list, not just intermediate transitions.)
+
+**What:** The dashboard's `AgentState` union has 7 values; `StateBadge` + `STATE_CLASSES` cover all 7. But the daemon's `deriveState` only produces 5 of them (`initializing`, `running`, `pr_open`, `error`, `finished`) from runs + tool_calls. `idle` and `waiting` come from explicit `state_transitions` rows that the dev seed never writes. Result: those two badges are typed and styled but can't be visually exercised in dev.
+
+**Why noticed:** During the 2026-05-11 state-color migration verification. The dashboard renders 5 states cleanly; the migration's correctness for `idle`/`waiting` is verified only via code paths, not visually.
+
+**Anchors:** `packages/daemon/src/services/AgentsService.ts:328-336` (`deriveState`); `packages/daemon/src/services/AgentsService.ts:45-52` (`StateTransitionState`); `packages/dashboard/src/data/state-meta.ts` (`STATE_CLASSES`); `packages/dashboard/src/components/StateBadge.tsx`.
+
+**What's been considered:** Two paths — (a) Showcase route `#/dev/badges` renders all 21 StateBadge variants × intensities + CountBadge × 7 + AgentRow attention-tint examples statically. Independent of daemon state, ~30 min. (b) Seed-level fix — extend `dev.ts` to insert agents whose state arrives via `state_transitions` rows. Needs daemon-side understanding of when `idle`/`waiting` are emitted in prod. Larger scope.
+
+**Shape of work:** Either ~30 lines for the showcase route, OR a daemon-side investigation + seed extension.
+
+**Open questions:** Are `idle` and `waiting` ever expected to be the _current_ state of an agent (visible in the agents list) or only intermediate transitions visible in `StateHistoryBar`? If only transitions, the showcase route is sufficient.
 
 ### 2026-05-10 — Wire dashboard QuickAction buttons (Resume / Finish / Inspect / Provide input) to daemon endpoints
 
