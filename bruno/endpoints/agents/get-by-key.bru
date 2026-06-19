@@ -31,7 +31,7 @@ assert {
 
 tests {
   test("AgentDetail shape — top-level fields", () => {
-    const allowedStates = ["initializing", "running", "pr_open", "error", "finished"];
+    const allowedStates = ["initializing", "running", "idle", "waiting", "pr_open", "pr_merged", "error", "finished"];
     expect(allowedStates).to.include(res.body.state);
     expect(res.body.ticket_title === null || typeof res.body.ticket_title === "string").to.equal(true);
     expect(res.body.pr_url === null || typeof res.body.pr_url === "string").to.equal(true);

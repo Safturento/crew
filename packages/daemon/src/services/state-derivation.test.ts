@@ -85,6 +85,13 @@ describe('currentStateFromTransitions', () => {
     expect(currentStateFromTransitions([{ to: 'error', ts: 1 }])).toBe('error');
   });
 
+  it('maps idle/waiting transitions to their own badge state', () => {
+    // CREW-257: concrete events make `idle` reachable (clean run_exited, no PR).
+    // Both must project to their dedicated badge, not collapse to `running`.
+    expect(currentStateFromTransitions([{ to: 'idle', ts: 1 }])).toBe('idle');
+    expect(currentStateFromTransitions([{ to: 'waiting', ts: 1 }])).toBe('waiting');
+  });
+
   it('picks the latest by ts regardless of input order', () => {
     expect(
       currentStateFromTransitions([

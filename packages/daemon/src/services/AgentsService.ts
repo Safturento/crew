@@ -12,6 +12,8 @@ const ASSISTANT_TOOL_LABEL = 'Assistant';
 export type AgentState =
   | 'initializing'
   | 'running'
+  | 'idle'
+  | 'waiting'
   | 'pr_open'
   | 'pr_merged'
   | 'error'
