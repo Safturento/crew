@@ -770,6 +770,10 @@ The "synthetic Unregistered section" feels right — single render path, no extr
 
 #### 2026-06-16 — `hasPrCreateInvocation` still misses `gh pr create` chained on one line with `&&`
 
+**Ticket:** [CREW-251](https://safturento.atlassian.net/browse/CREW-251)
+
+**Confirmed 2026-06-18 (CREW-243):** the open question below is answered — this is a real behavior bug, not doc-only cleanup. The CREW-243 agent ran `cd /home/safturento/Repos/crew-CREW-243; gh pr create …` (a single-line `;` chain — an even plainer case than the `&&` in the title) and stuck in `running`; PR #365 opened but the badge never advanced. Verified empirically against the real parser (`;`- and `&&`-chained → `false`; newline-separated and bare → `true`; the `echo` decoy → `false`). Stopgap ticketed as CREW-251; superseded longer-term by the Concrete State Triggers Epic (spec PR #366), which removes transcript parsing from the state path entirely.
+
 **What:** `hasPrCreateInvocation` (`packages/shared/src/transcripts/parser.ts`) detects the PR-create signal by splitting on `\n`/`⏎` and testing each line with `startsWith('gh pr create')`. A command that chains the push and the PR on a single line — `git push -u origin FOO && gh pr create …` — produces one line that starts with `git push`, so the predicate returns false and the agent never transitions to `pr_open`. The predicate's own doc comment explicitly claims it tolerates this `git push && …` form, but it does not; only the newline-separated form is actually handled (and that's the only chain case the parser tests cover).
 
 **Why noticed:** While fixing the CREW-237/CREW-241 stuck-in-`running` bug (detection was running against the 140-char truncated summary instead of the raw command — fixed by feeding `toolUse.input.command` into the predicate). The raw-command fix resolves the heredoc case that actually bit those two tickets, but reading the predicate surfaced this adjacent gap: even with the raw command in hand, a single-line `&&` chain still slips through. Not what stranded CREW-237/241 (both used heredoc-then-`gh pr create`-on-its-own-line), so it's deferred rather than folded into that fix.
