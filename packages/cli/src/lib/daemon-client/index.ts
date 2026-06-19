@@ -74,7 +74,7 @@ export interface AgentSummary {
   key: string;
   projectName: string;
   ticketTitle: string;
-  state: 'initializing' | 'running' | 'pr_open' | 'error' | 'finished';
+  state: 'initializing' | 'running' | 'idle' | 'waiting' | 'pr_open' | 'pr_merged' | 'error' | 'finished';
   startedAt: string;
   tokens: number;
   prUrl?: string;
