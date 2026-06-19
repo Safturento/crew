@@ -27,6 +27,7 @@ import {
 import { runResumePreflight } from '../lib/preflight/index.js';
 import { playwrightEnabled, resolveAppUrl, type DockerPorts } from '../lib/mcp-config/index.js';
 import { emitStartupEvent } from '../lib/startup-events/index.js';
+import { emitFixprStarted, emitDispatchExited } from '../lib/state-events/index.js';
 
 export type FeedbackMode =
   | { kind: 'pr' }
@@ -313,6 +314,11 @@ async function runFixPr(key: string, flags: FixPrFlags): Promise<void> {
     if (registration.ok) runId = registration.run.id;
   }
 
+  // Concrete state trigger: fix-pr dispatch flips a `pr_open` agent back to
+  // `running` via the daemon's reducer (CREW-255). Emitted at dispatch,
+  // regardless of daemon registration (a downed daemon still tails the log).
+  await emitFixprStarted(key);
+
   // Set the flag and kill the subprocess on SIGINT — but DO NOT call
   // process.exit(130) inline. The inline exit short-circuits the tail
   // loop's final drain, dropping events written between the kill and the
@@ -367,7 +373,14 @@ async function runFixPr(key: string, flags: FixPrFlags): Promise<void> {
     headChanged: headBefore !== headAfter,
     claudeExitCode,
   });
-  process.exitCode = signaled ? 130 : claudeExitCode;
+
+  // Concrete state trigger: fix-pr child exited. Clean exit → back to
+  // `pr_open`; non-zero (or a signaled abort → 130) carries the code for the
+  // daemon's `error` routing. Async — fix-pr drains and returns rather than
+  // calling process.exit() (CREW-255).
+  const fixprExitCode = signaled ? 130 : claudeExitCode;
+  await emitDispatchExited(key, 'fix-pr', fixprExitCode);
+  process.exitCode = fixprExitCode;
 }
 
 interface PrintFooterOptions {
