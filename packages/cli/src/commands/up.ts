@@ -2,6 +2,7 @@ import { Command } from 'commander';
 import { execa } from 'execa';
 import pc from 'picocolors';
 import { ensureRunnerLogDir } from '../lib/index.js';
+import { ensureStateEventsDir, stateEventsChownRemediation } from '../lib/state-events/index.js';
 
 export interface UpDeps {
   /** Run a command in the current directory; rejects on non-zero exit. */
@@ -12,6 +13,11 @@ export interface UpDeps {
    * Must run before `docker compose up` — see {@link ensureRunnerLogDir}.
    */
   ensureRunnerDir: () => void;
+  /**
+   * Pre-create the host state-events dir (user-owned) before compose mounts it.
+   * Must run before `docker compose up` — see {@link ensureStateEventsDir}.
+   */
+  ensureStateEventsDir: () => void;
 }
 
 /**
@@ -19,12 +25,14 @@ export interface UpDeps {
  * then start the host runner. Plain `docker compose up` stays standalone (it
  * never requires a runner); this is just the one-liner for "stack + runner".
  *
- * `~/.crew/runner` is created first: Docker fabricates a missing bind-mount
- * source as `nobody`, so letting `docker compose up` run before the dir exists
- * leaves the host runner unable to write `runner.log` (EACCES).
+ * `~/.crew/runner` and `~/.crew/state-events` are created first: Docker
+ * fabricates a missing bind-mount source as `nobody`, so letting `docker compose
+ * up` run before the dirs exist leaves the host runner unable to write
+ * `runner.log` and the state-event emitters unable to append (EACCES).
  */
 export async function runUp(deps: UpDeps): Promise<void> {
   deps.ensureRunnerDir();
+  deps.ensureStateEventsDir();
   deps.log('docker compose up -d');
   await deps.exec('docker', ['compose', 'up', '-d']);
   deps.log('crew runner start');
@@ -44,6 +52,16 @@ export const upCommand = new Command('up')
             pc.yellow('!'),
             `runner log dir ${dir} is not writable; runner start may fail with EACCES.\n` +
               `  Fix ownership with: sudo chown -R "$(id -u):$(id -g)" ${dir}`,
+          );
+        }
+      },
+      ensureStateEventsDir: () => {
+        const { dir, writable } = ensureStateEventsDir();
+        if (!writable) {
+          console.warn(
+            pc.yellow('!'),
+            `${stateEventsChownRemediation(dir)}\n` +
+              `  (no concrete agent states will be recorded until fixed)`,
           );
         }
       },
