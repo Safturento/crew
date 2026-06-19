@@ -5,7 +5,6 @@ import type { Kysely } from 'kysely';
 import type { Logger } from 'pino';
 import {
   claudeProjectDirFor,
-  hasPrCreateInvocation,
   startupEventSchema,
   stateEventSchema,
   summarizeInput,
@@ -13,10 +12,8 @@ import {
   type AssistantEvent,
   type StartupEvent,
   type StateEvent,
-  type ToolResultContent,
   type ToolUseContent,
   type TranscriptEvent,
-  type UserEvent,
 } from 'crew-shared';
 import type { DaemonDatabase } from '../db.js';
 import type { EventBus } from './EventBus.js';
@@ -53,8 +50,6 @@ export interface ProcessEventInput {
   event: TranscriptEvent;
 }
 
-const PR_URL_REGEX = /https?:\/\/github\.com\/[^/\s]+\/[^/\s]+\/pull\/\d+/;
-
 /**
  * Ingests transcript events for active runs. One tail per run, keyed on
  * `runId`. `attach` starts a fire-and-forget background tail; `detach`
@@ -62,24 +57,20 @@ const PR_URL_REGEX = /https?:\/\/github\.com\/[^/\s]+\/[^/\s]+\/pull\/\d+/;
  * abort, so trailing lines written just before claude exits are still
  * captured.
  *
- * Per slice 1b spec:
  * - Only assistant-with-tool-use events become `tool_calls` rows.
  * - Idempotent on (run_id, occurred_at, tool_name) via the migration's
  *   UNIQUE index plus `ON CONFLICT DO NOTHING` here.
+ * - After each successful insert, publish a `tool_calls.changed` ping
+ *   (agent key only — payload bloat would defeat the SSE invalidation
+ *   pattern) so the dashboard re-fetches the run's timeline/metrics.
  *
- * Slice 1c (CREW-100) extensions, layered on top of the slice 1b path:
- * - After each successful tool_calls insert, publish a `tool_calls.changed`
- *   ping (agent key only — payload bloat would defeat the SSE invalidation
- *   pattern) and re-derive the agent's state from a per-agent in-memory
- *   cache. On flip, insert a `state_transitions` row + publish
- *   `agent.state_changed`.
- * - When a Bash tool_use's input.command starts with `gh pr create`, hold
- *   the tool_use.id in an in-flight map; when the matching `tool_result`
- *   lands, regex-scan its content for the GitHub PR URL and write it to
- *   `agents.pr_url`. NULL on no match (logged at debug). The schema's
- *   PR URL lives on `agents`, not `runs`, so that's where we write — the
- *   slice 1c spec wording "runs.pr_url" predates the slice 1a schema
- *   choice.
+ * Agent **state** is no longer inferred from the transcript (CREW-257): the
+ * old `gh pr create` tool-call scan + `computeNextState` machine was removed
+ * once concrete lifecycle events (CREW-252 Epic) became the single source of
+ * truth. State now flows exclusively through `ingestStateEvent` (the
+ * `~/.crew/state-events` log) plus the route-driven `recordFinishCompleted` /
+ * `recordRunCompleted` / `recordError` paths. Transcript ingestion is purely
+ * tool_calls/timeline/metrics.
  */
 export class IngestService {
   private readonly db: Kysely<DaemonDatabase>;
@@ -92,18 +83,9 @@ export class IngestService {
    *  because the concrete-event reducer (CREW-254) can land an agent in
    *  `idle`, which the narrower `TransitionState` excludes. */
   private readonly agentStateCache = new Map<string, TransitionTarget>();
-  /** In-flight `gh pr create` tool_use ids → run/agent context for matching
-   *  the follow-up `tool_result`. Bounded by the number of concurrent PR
-   *  creates per agent in practice (≈1), so we don't TTL-evict. */
-  private readonly pendingPrCreates = new Map<string, { runId: number; agentKey: string }>();
   /** runId → agent_key resolution cache so the per-event hot path doesn't
    *  re-SELECT from `runs`. Populated lazily (or by `attach`). */
   private readonly runToAgent = new Map<number, string>();
-  /** Per-agent the `run_id` of the most-recently-ingested tool_call. Drives
-   *  the `pr_open → running` re-cycle when a `crew fix-pr` (or any future
-   *  re-dispatch) starts a structurally-new run on an agent already in
-   *  `pr_open`. CREW-198. */
-  private readonly lastRunIdCache = new Map<string, number>();
   /** CREW-201: chokidar watcher on ~/.crew/startup. One watcher per
    *  daemon — covers every agent. */
   private startupWatcher: FSWatcher | undefined;
@@ -617,27 +599,17 @@ export class IngestService {
   /**
    * Test seam — feeds a single event through the same code path the live
    * tail uses, but lets the caller supply `agentKey` directly instead of
-   * resolving it from a real `runs` row. Used by the slice 1c unit tests
-   * that exercise state-transition + SSE + PR-URL extraction without a
-   * full attach lifecycle.
+   * resolving it from a real `runs` row. Exercises tool_calls ingestion +
+   * the `tool_calls.changed` ping without a full attach lifecycle.
    */
   async processEventForTest(input: ProcessEventInput): Promise<void> {
     await this.processEvent(input);
-  }
-
-  /** Test seam — drives the same `lastRunIdCache` priming the live tail
-   *  runs at attach. Used by the CREW-198 restart test to bypass tail
-   *  timing without hand-wiring the cache. */
-  async primeAgentForTest(agentKey: string): Promise<void> {
-    await this.primeLastRunIdCacheForAgent(agentKey);
   }
 
   private async processEvent(input: ProcessEventInput): Promise<void> {
     const { event } = input;
     if (event.type === 'assistant') {
       await this.handleAssistantEvent({ ...input, event });
-    } else if (event.type === 'user') {
-      await this.handleUserEvent({ ...input, event });
     }
   }
 
@@ -670,112 +642,7 @@ export class IngestService {
     const inserted = (result?.numInsertedOrUpdatedRows ?? 0n) > 0n;
     if (!inserted) return;
 
-    // Detect `gh pr create` against the RAW command, not the 140-char display
-    // summary stored above. Agents build the PR with a heredoc body first
-    // (`cat > body <<EOF … EOF; gh pr create --body-file`), which pushes the
-    // `gh pr create` line hundreds of chars past the summary truncation —
-    // detecting off `summary` silently missed it and stranded the agent in
-    // `running` with the PR already open (CREW-237/CREW-241).
-    const bashCommand = toolUse.name === 'Bash' ? String(toolUse.input.command ?? '') : '';
-    if (toolUse.name === 'Bash' && hasPrCreateInvocation(bashCommand)) {
-      this.pendingPrCreates.set(toolUse.id, { runId, agentKey });
-    }
-
     this.eventBus.publish({ type: 'tool_calls.changed', data: { key: agentKey } });
-
-    await this.applyStateTransition({
-      agentKey,
-      runId,
-      toolName: toolUse.name,
-      bashCommand,
-      tsIso: event.timestamp,
-    });
-  }
-
-  private async handleUserEvent(input: {
-    runId: number;
-    agentKey: string;
-    event: UserEvent;
-  }): Promise<void> {
-    const content = input.event.message.content;
-    if (!Array.isArray(content)) return;
-    for (const block of content) {
-      if (block.type !== 'tool_result') continue;
-      // The user-content schema falls through to `unknownContentSchema` via
-      // `.or(...)`, which fights TS's discriminated-union narrowing — assert
-      // here once we've already proven `type === 'tool_result'`.
-      const toolResult = block as ToolResultContent;
-      const pending = this.pendingPrCreates.get(toolResult.tool_use_id);
-      if (!pending) continue;
-      this.pendingPrCreates.delete(toolResult.tool_use_id);
-
-      const text = stringifyToolResultContent(toolResult.content);
-      const match = PR_URL_REGEX.exec(text);
-      if (!match) {
-        this.logger.debug(
-          {
-            agentKey: pending.agentKey,
-            runId: pending.runId,
-            toolUseId: toolResult.tool_use_id,
-          },
-          'gh pr create tool_result had no PR URL',
-        );
-        continue;
-      }
-
-      await this.db
-        .updateTable('agents')
-        .set({ pr_url: match[0] })
-        .where('key', '=', pending.agentKey)
-        .execute();
-    }
-  }
-
-  private async applyStateTransition(input: {
-    agentKey: string;
-    runId: number;
-    toolName: string;
-    /** Raw Bash command (not the truncated display summary) so `gh pr create`
-     *  detection survives a long heredoc body preceding it. Empty for non-Bash
-     *  tools, which never drive the PR-create transition. */
-    bashCommand: string;
-    tsIso: string;
-  }): Promise<void> {
-    const previous = await this.getCachedAgentState(input.agentKey);
-    const lastSeenRunId = this.lastRunIdCache.get(input.agentKey);
-    const next = computeNextState(previous, input.toolName, input.bashCommand, {
-      currentRunId: input.runId,
-      lastSeenRunId,
-    });
-    // Track the latest ingested run regardless of whether a transition fired;
-    // subsequent same-run calls must not re-trigger the cycle.
-    this.lastRunIdCache.set(input.agentKey, input.runId);
-    if (next === previous) return;
-
-    const ts = Date.parse(input.tsIso);
-    if (!Number.isFinite(ts)) {
-      this.logger.warn(
-        { agentKey: input.agentKey, tsIso: input.tsIso },
-        'unparseable timestamp; skipping state transition',
-      );
-      return;
-    }
-
-    await this.db
-      .insertInto('state_transitions')
-      .values({
-        agent_key: input.agentKey,
-        from_state: previous,
-        to_state: next,
-        ts,
-      })
-      .execute();
-
-    this.agentStateCache.set(input.agentKey, next);
-    this.eventBus.publish({
-      type: 'agent.state_changed',
-      data: { key: input.agentKey, from: previous, to: next, ts },
-    });
   }
 
   private async getCachedAgentState(agentKey: string): Promise<TransitionTarget> {
@@ -812,16 +679,6 @@ export class IngestService {
   }
 
   private async runTail(runId: number, path: string, signal: AbortSignal): Promise<void> {
-    // CREW-198: prime lastRunIdCache before the first event so a daemon
-    // restart mid-fix-pr correctly detects the `pr_open → running` cycle on
-    // the new run's first tool_call. Best-effort — a priming failure mustn't
-    // crash the tail.
-    try {
-      const agentKey = await this.resolveAgentKey(runId);
-      if (agentKey) await this.primeLastRunIdCacheForAgent(agentKey);
-    } catch (err) {
-      this.logger.warn({ err, runId, path }, 'lastRunIdCache prime failed');
-    }
     for await (const event of tailTranscript(path, { signal })) {
       try {
         await this.ingestEvent(runId, event);
@@ -829,26 +686,6 @@ export class IngestService {
         this.logger.warn({ err, runId, path }, 'ingestEvent failed');
       }
     }
-  }
-
-  /**
-   * Seed `lastRunIdCache[agentKey]` from the most-recently-ingested tool_call
-   * (across all of the agent's runs) so a fresh-process attach correctly
-   * detects a subsequent new-run-id transition. No-op when the cache is
-   * already populated (in-process state wins over DB read) or when the agent
-   * has no prior tool_calls.
-   */
-  private async primeLastRunIdCacheForAgent(agentKey: string): Promise<void> {
-    if (this.lastRunIdCache.has(agentKey)) return;
-    const latest = await this.db
-      .selectFrom('tool_calls')
-      .innerJoin('runs', 'runs.id', 'tool_calls.run_id')
-      .where('runs.agent_key', '=', agentKey)
-      .select('tool_calls.run_id as lastRunId')
-      .orderBy('tool_calls.occurred_at', 'desc')
-      .orderBy('tool_calls.id', 'desc')
-      .executeTakeFirst();
-    if (latest) this.lastRunIdCache.set(agentKey, latest.lastRunId);
   }
 }
 
@@ -869,63 +706,9 @@ function resolveAttachPath(input: AttachInput): string {
   );
 }
 
-interface ComputeContext {
-  /** The run_id of the tool_call currently being ingested. */
-  currentRunId: number;
-  /** The run_id of the most recently-ingested tool_call for this agent.
-   *  Undefined when no tool_call has yet been ingested for this agent in
-   *  the daemon's lifetime (cold start, pre-priming). */
-  lastSeenRunId: number | undefined;
-}
-
-/**
- * Forward-walk one step in the live state machine. The slice 1b helper
- * `deriveStateFromToolCalls` re-derives state from a *full* tool-call slice;
- * here we only have the just-inserted call plus the cached previous state,
- * so we encode the same monotonic rule directly:
- *
- *   - any Bash `gh pr create …` → `pr_open` (and stays)
- *   - else, any tool_call once we were `init` → `running`
- *   - CREW-198: when in `pr_open` and the tool_call belongs to a NEW run
- *     (different `run_id` than the last-seen one), cycle back to `running`.
- *   - else, no flip
- *
- * The standalone helper stays the canonical re-derivation for the migration
- * backfill (CREW-96) and for any future "given a slice of N calls, what's
- * the state?" caller. A vitest assertion below pins the equivalence.
- */
-function computeNextState(
-  // Accepts the wider `TransitionTarget` because the cache may now hold `idle`
-  // (CREW-254). An `idle`/`waiting` agent that produces a tool_call falls
-  // through to `running` below — the transcript path treats it as resumed work.
-  previous: TransitionTarget,
-  toolName: string,
-  bashCommand: string,
-  ctx: ComputeContext,
-): TransitionState {
-  if (previous === 'finished') return 'finished';
-  // CREW-202: pr_merged is sticky against tool-call-driven transitions.
-  // Only Finish (which writes 'finished') moves the agent out. Spec
-  // marks "polling pr_merged agents to detect re-opens" out of scope.
-  if (previous === 'pr_merged') return 'pr_merged';
-  // CREW-198: a new run starting on a pr_open agent (e.g. crew fix-pr) cycles
-  // state back to running. The `lastSeenRunId !== undefined` guard prevents
-  // the first-ever tool_call from spuriously firing this transition.
-  if (
-    previous === 'pr_open' &&
-    ctx.lastSeenRunId !== undefined &&
-    ctx.currentRunId !== ctx.lastSeenRunId
-  ) {
-    return 'running';
-  }
-  if (previous === 'pr_open') return 'pr_open';
-  if (toolName === 'Bash' && hasPrCreateInvocation(bashCommand)) return 'pr_open';
-  return 'running';
-}
-
 // Mirrors `isTransitionState`'s set plus the two reserved states the concrete
-// reducer activates (CREW-254). Intentionally keeps that helper's legacy quirk
-// of treating a stored `error` as a cold-read miss (→ `init`), so existing
+// reducer activates (CREW-254/257). Intentionally keeps that helper's legacy
+// quirk of treating a stored `error` as a cold-read miss (→ `init`), so existing
 // error read-back behavior is unchanged; only `idle`/`waiting` are newly kept.
 function isTransitionTarget(s: string | null | undefined): s is TransitionTarget {
   return isTransitionState(s) || s === 'idle' || s === 'waiting';
@@ -935,25 +718,4 @@ function isTransitionState(s: string | null | undefined): s is TransitionState {
   return (
     s === 'init' || s === 'running' || s === 'pr_open' || s === 'pr_merged' || s === 'finished'
   );
-}
-
-function stringifyToolResultContent(content: unknown): string {
-  if (typeof content === 'string') return content;
-  if (Array.isArray(content)) {
-    return content
-      .map((block) => {
-        if (
-          block !== null &&
-          typeof block === 'object' &&
-          'type' in block &&
-          (block as { type?: unknown }).type === 'text'
-        ) {
-          const text = (block as { text?: unknown }).text;
-          return typeof text === 'string' ? text : '';
-        }
-        return '';
-      })
-      .join('\n');
-  }
-  return '';
 }

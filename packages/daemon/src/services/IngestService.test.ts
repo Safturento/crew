@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { setTimeout as delay } from 'node:timers/promises';
 import { pino, type Logger } from 'pino';
 import type { Kysely } from 'kysely';
-import { summarizeInput, type TranscriptEvent } from 'crew-shared';
+import type { TranscriptEvent } from 'crew-shared';
 import { createDb, runMigrations, type DaemonDatabase } from '../db.js';
 import { useTmpDir } from '../test/tmpdir.js';
 import { EventBus, type SseEvent } from './EventBus.js';
@@ -278,13 +278,10 @@ describe('IngestService.detach', () => {
   });
 });
 
-// ─── Slice 1c fixtures + helpers ───
+// ─── tool_call fixture helper ───
 //
-// Plan tasks 11/12/13 (CREW-100) introduce three things that hang off an
-// `assistant` tool_use / `user` tool_result pair: a derived state flip, a
-// tool_calls.changed ping, and PR URL extraction. These helpers build the
-// minimal events those paths need without having to spell out the full
-// schema each time.
+// Builds the minimal `assistant` tool_use event the tool_calls ingest path
+// needs without spelling out the full transcript schema each time.
 
 interface BashToolUseInput {
   id: string;
@@ -313,255 +310,57 @@ function makeBashToolUse(input: BashToolUseInput): TranscriptEvent {
   };
 }
 
-interface ToolResultInput {
-  tool_use_id: string;
-  content: string;
-  ts?: string;
-}
-
-function makeToolResult(input: ToolResultInput): TranscriptEvent {
-  return {
-    type: 'user',
-    timestamp: input.ts ?? '2026-04-29T12:00:01Z',
-    message: {
-      role: 'user',
-      content: [
-        {
-          type: 'tool_result',
-          tool_use_id: input.tool_use_id,
-          content: input.content,
-        },
-      ],
-    },
-  };
-}
-
-describe('IngestService.processEventForTest — state_transitions + agent.state_changed', () => {
-  it('writes state_transitions row + publishes agent.state_changed on each derived flip', async () => {
+describe('IngestService.processEventForTest — inferred state path removed (CREW-257)', () => {
+  it('ingesting a gh pr create tool_call writes the tool_call but no state_transition', async () => {
     const { db, runId, agentKey } = await setup();
     try {
-      const bus = new EventBus({ bufferSize: 10 });
-      const seen: SseEvent[] = [];
-      bus.subscribe({ onEvent: (e) => seen.push(e) });
-      const svc = new IngestService({ db, logger: silentLogger, eventBus: bus });
-
-      await svc.processEventForTest({
-        runId,
-        agentKey,
-        event: makeBashToolUse({
-          id: 'tu_read',
-          command: 'ls -la',
-          ts: '2026-04-29T12:00:00Z',
-        }),
-      });
+      const svc = new IngestService({ db, logger: silentLogger, eventBus: new EventBus() });
       await svc.processEventForTest({
         runId,
         agentKey,
         event: makeBashToolUse({
           id: 'tu_pr',
-          command: 'gh pr create --title hi',
-          ts: '2026-04-29T12:00:01Z',
+          command: 'gh pr create --base main',
+          ts: '2026-04-29T12:00:00Z',
         }),
       });
 
+      // The transcript still drives tool_calls (timeline/metrics) ...
+      expect(await db.selectFrom('tool_calls').selectAll().execute()).toHaveLength(1);
+      // ... but it no longer drives state. Concrete events own that now.
       const rows = await db
         .selectFrom('state_transitions')
         .selectAll()
-        .orderBy('id', 'asc')
+        .where('agent_key', '=', agentKey)
         .execute();
-      expect(rows.map((r) => r.to_state)).toEqual(['running', 'pr_open']);
-      expect(rows.map((r) => r.from_state)).toEqual(['init', 'running']);
-      expect(seen.filter((e) => e.type === 'agent.state_changed')).toHaveLength(2);
-    } finally {
-      await db.destroy();
-    }
-  });
-
-  it('detects pr_open + captures pr_url when gh pr create trails a long heredoc body (past the summary window)', async () => {
-    const { db, runId, agentKey } = await setup();
-    try {
-      const bus = new EventBus({ bufferSize: 10 });
-      const svc = new IngestService({ db, logger: silentLogger, eventBus: bus });
-
-      // Real-world shape (CREW-237/CREW-241): write the PR body to a file via a
-      // heredoc, THEN call gh pr create --body-file. The `gh pr create` line
-      // lands far past the 140-char Bash input summary, so detecting off the
-      // summary misses it — detection must run against the raw command.
-      const longBody = 'x'.repeat(300);
-      const command = `cat > body.md <<'EOF'\n## Summary\n${longBody}\nEOF\ngh pr create --base main --head FOO --body-file body.md`;
-      expect(summarizeInput('Bash', { command })).not.toContain('gh pr create');
-
-      await svc.processEventForTest({
-        runId,
-        agentKey,
-        event: makeBashToolUse({ id: 'tu_pr', command, ts: '2026-04-29T12:00:00Z' }),
-      });
-      await svc.processEventForTest({
-        runId,
-        agentKey,
-        event: makeToolResult({
-          tool_use_id: 'tu_pr',
-          content: 'Creating pull request...\nhttps://github.com/x/y/pull/99\n',
-          ts: '2026-04-29T12:00:01Z',
-        }),
-      });
-
-      expect(await getLatestState(db, agentKey)).toBe('pr_open');
-      const row = await db
-        .selectFrom('agents')
-        .where('key', '=', agentKey)
-        .select('pr_url')
-        .executeTakeFirst();
-      expect(row?.pr_url).toBe('https://github.com/x/y/pull/99');
-    } finally {
-      await db.destroy();
-    }
-  });
-
-  it('does not publish or insert when derived state is unchanged', async () => {
-    const { db, runId, agentKey } = await setup();
-    try {
-      const bus = new EventBus({ bufferSize: 10 });
-      const seen: SseEvent[] = [];
-      bus.subscribe({ onEvent: (e) => seen.push(e) });
-      const svc = new IngestService({ db, logger: silentLogger, eventBus: bus });
-
-      await svc.processEventForTest({
-        runId,
-        agentKey,
-        event: makeBashToolUse({ id: 'tu_1', command: 'ls', ts: '2026-04-29T12:00:00Z' }),
-      });
-      await svc.processEventForTest({
-        runId,
-        agentKey,
-        event: makeBashToolUse({ id: 'tu_2', command: 'pwd', ts: '2026-04-29T12:00:02Z' }),
-      });
-
-      const rows = await db.selectFrom('state_transitions').selectAll().execute();
-      expect(rows.map((r) => r.to_state)).toEqual(['running']);
-      expect(seen.filter((e) => e.type === 'agent.state_changed')).toHaveLength(1);
+      expect(rows).toHaveLength(0);
     } finally {
       await db.destroy();
     }
   });
 });
 
-describe('IngestService.processEventForTest — fix-pr cycle (CREW-198)', () => {
-  it('fires pr_open → running when a new run starts producing tool_calls', async () => {
-    const { db, runId: firstRunId, agentKey } = await setup();
-    try {
-      const svc = new IngestService({ db, logger: silentLogger, eventBus: new EventBus() });
-
-      // Original run: ends with gh pr create → pr_open.
-      await svc.processEventForTest({
-        runId: firstRunId,
-        agentKey,
-        event: makeBashToolUse({
-          id: 'tu_pr',
-          command: 'gh pr create --title hi',
-          ts: '2026-04-29T12:00:00Z',
-        }),
-      });
-      expect(await getLatestState(db, agentKey)).toBe('pr_open');
-
-      // Fix-pr dispatch creates a new run. First tool_call from the new run → pr_open → running.
-      const fixPrRunId = await insertRun(db, agentKey, 'fix-pr', 'session-fix-pr-1');
-      await svc.processEventForTest({
-        runId: fixPrRunId,
-        agentKey,
-        event: makeBashToolUse({
-          id: 'tu_fp_1',
-          command: 'ls',
-          ts: '2026-04-29T12:01:00Z',
-        }),
-      });
-      expect(await getLatestState(db, agentKey)).toBe('running');
-
-      const rows = await db
-        .selectFrom('state_transitions')
-        .selectAll()
-        .orderBy('id', 'asc')
-        .execute();
-      expect(rows.map((r) => `${r.from_state}->${r.to_state}`)).toEqual([
-        'init->pr_open',
-        'pr_open->running',
-      ]);
-    } finally {
-      await db.destroy();
-    }
-  });
-
-  it('does NOT transition pr_open → running on continued activity within the same run', async () => {
-    const { db, runId, agentKey } = await setup();
-    try {
-      const svc = new IngestService({ db, logger: silentLogger, eventBus: new EventBus() });
-
-      await svc.processEventForTest({
-        runId,
-        agentKey,
-        event: makeBashToolUse({
-          id: 'tu_pr',
-          command: 'gh pr create --title hi',
-          ts: '2026-04-29T12:00:00Z',
-        }),
-      });
-      // Within the same run, after pr_open, additional tool_calls don't transition.
-      await svc.processEventForTest({
-        runId,
-        agentKey,
-        event: makeBashToolUse({ id: 'tu_2', command: 'ls', ts: '2026-04-29T12:00:01Z' }),
-      });
-      expect(await getLatestState(db, agentKey)).toBe('pr_open');
-    } finally {
-      await db.destroy();
-    }
-  });
-
-  it('does NOT spuriously transition on the first-ever tool_call (empty lastRunIdCache)', async () => {
-    // Fresh agent never observed before — first tool_call from the only-ever
-    // run should fall through the running-state logic, not falsely trigger
-    // pr_open → running.
-    const { db, runId, agentKey } = await setup();
-    try {
-      const svc = new IngestService({ db, logger: silentLogger, eventBus: new EventBus() });
-      await svc.processEventForTest({
-        runId,
-        agentKey,
-        event: makeBashToolUse({ id: 'tu_1', command: 'ls', ts: '2026-04-29T12:00:00Z' }),
-      });
-      expect(await getLatestState(db, agentKey)).toBe('running');
-    } finally {
-      await db.destroy();
-    }
-  });
-
-  it('recordRunCompleted fires running → pr_open + publishes for fix-pr runs', async () => {
-    const { db, runId: originalRunId, agentKey } = await setup();
+describe('IngestService.recordRunCompleted — fix-pr cycle-back (CREW-198)', () => {
+  it('fires running → pr_open + publishes for a completing fix-pr run', async () => {
+    const { db, agentKey } = await setup();
     try {
       const bus = new EventBus({ bufferSize: 10 });
       const seen: SseEvent[] = [];
       bus.subscribe({ onEvent: (e) => seen.push(e) });
       const svc = new IngestService({ db, logger: silentLogger, eventBus: bus });
 
-      // Bring the agent up to pr_open from the original run, then trigger the
-      // fix-pr cycle's first half (pr_open → running).
-      await svc.processEventForTest({
-        runId: originalRunId,
-        agentKey,
-        event: makeBashToolUse({
-          id: 'tu_pr',
-          command: 'gh pr create --title hi',
-          ts: '2026-04-29T12:00:00Z',
-        }),
-      });
-      const fixPrRunId = await insertRun(db, agentKey, 'fix-pr', 'session-fix-pr-2');
-      await svc.processEventForTest({
-        runId: fixPrRunId,
-        agentKey,
-        event: makeBashToolUse({ id: 'tu_fp', command: 'ls', ts: '2026-04-29T12:01:00Z' }),
+      // Reach `running` via a concrete run_started event — the transcript no
+      // longer drives state (CREW-257).
+      await svc.ingestStateEvent({
+        eventId: 'rs',
+        key: agentKey,
+        event: 'run_started',
+        ts: '2026-04-29T12:00:00Z',
+        source: 'cli-run',
       });
       expect(await getLatestState(db, agentKey)).toBe('running');
 
+      const fixPrRunId = await insertRun(db, agentKey, 'fix-pr', 'session-fix-pr-2');
       seen.length = 0;
       await svc.recordRunCompleted(agentKey, fixPrRunId, '2026-04-29T12:02:00Z');
 
@@ -577,81 +376,33 @@ describe('IngestService.processEventForTest — fix-pr cycle (CREW-198)', () => 
     }
   });
 
-  it('recordRunCompleted is a no-op for non-fix-pr runs', async () => {
-    // A regular `run` command completing shouldn't push a `running` agent to
-    // pr_open — only fix-pr runs trigger the cycle-back transition.
+  it('is a no-op for a completing non-fix-pr run', async () => {
     const { db, runId, agentKey } = await setup();
     try {
       const svc = new IngestService({ db, logger: silentLogger, eventBus: new EventBus() });
-      await svc.processEventForTest({
-        runId,
-        agentKey,
-        event: makeBashToolUse({ id: 'tu_1', command: 'ls', ts: '2026-04-29T12:00:00Z' }),
+      await svc.ingestStateEvent({
+        eventId: 'rs',
+        key: agentKey,
+        event: 'run_started',
+        ts: '2026-04-29T12:00:00Z',
+        source: 'cli-run',
       });
       expect(await getLatestState(db, agentKey)).toBe('running');
 
+      // The original `run` command completing does not cycle a running agent.
       await svc.recordRunCompleted(agentKey, runId, '2026-04-29T12:01:00Z');
-      // Still running — the `run` command's completion does not cycle.
       expect(await getLatestState(db, agentKey)).toBe('running');
     } finally {
       await db.destroy();
     }
   });
 
-  it('primes lastRunIdCache from latest tool_call on agent attach so daemon restart mid-fix-pr still detects the cycle', async () => {
-    // Daemon restart scenario: agent in pr_open from the original run, then a
-    // fix-pr run starts. The first tool_call AFTER the restart should still
-    // trigger pr_open → running because the cache was primed from the latest
-    // tool_call's run_id on the original run.
-    const { db, runId: originalRunId, agentKey, sessionId } = await setup();
-    try {
-      // Original run wrote a tool_call + reached pr_open.
-      const svcA = new IngestService({ db, logger: silentLogger, eventBus: new EventBus() });
-      await svcA.processEventForTest({
-        runId: originalRunId,
-        agentKey,
-        event: makeBashToolUse({
-          id: 'tu_pr',
-          command: 'gh pr create --title hi',
-          ts: '2026-04-29T12:00:00Z',
-        }),
-      });
-      expect(await getLatestState(db, agentKey)).toBe('pr_open');
-
-      // Simulate daemon restart: brand-new IngestService instance with an
-      // empty in-memory cache, then attach prior to seeing any events.
-      const fixPrRunId = await insertRun(db, agentKey, 'fix-pr', 'session-fix-pr-restart');
-      const customDir = tmp();
-      const jsonlPath = join(customDir, `${sessionId}.jsonl`);
-      writeFileSync(jsonlPath, '');
-      const svcB = new IngestService({ db, logger: silentLogger, eventBus: new EventBus() });
-      svcB.attach({ runId: fixPrRunId, jsonlPath });
-      // Give the tail's priming step a beat to complete before the first event
-      // lands on disk; this mirrors the real ordering (priming awaited before
-      // events flow). We also explicitly call attachAgent to make the test
-      // resilient to background-priming timing.
-      await svcB.primeAgentForTest(agentKey);
-
-      // First tool_call from fix-pr arrives. Should trigger pr_open → running.
-      await svcB.processEventForTest({
-        runId: fixPrRunId,
-        agentKey,
-        event: makeBashToolUse({ id: 'tu_fp', command: 'ls', ts: '2026-04-29T12:01:00Z' }),
-      });
-      expect(await getLatestState(db, agentKey)).toBe('running');
-      svcB.detach(fixPrRunId);
-    } finally {
-      await db.destroy();
-    }
-  });
-
-  it('recordRunCompleted is a no-op when previous state is not running', async () => {
+  it('is a no-op when the agent is not running', async () => {
     const { db, agentKey } = await setup();
     try {
       const svc = new IngestService({ db, logger: silentLogger, eventBus: new EventBus() });
       const fixPrRunId = await insertRun(db, agentKey, 'fix-pr', 'session-fix-pr-noop');
-      // Agent state is `init` (never ingested anything). Completion shouldn't
-      // transition.
+      // Agent state is `init` (never ingested anything) — completion is inert.
       await svc.recordRunCompleted(agentKey, fixPrRunId, '2026-04-29T12:00:00Z');
       expect(await getLatestState(db, agentKey)).toBeNull();
     } finally {
@@ -732,109 +483,6 @@ describe('IngestService.processEventForTest — tool_calls.changed pings', () =>
       await svc.processEventForTest({ runId, agentKey, event });
 
       expect(seen.filter((e) => e.type === 'tool_calls.changed')).toHaveLength(1);
-    } finally {
-      await db.destroy();
-    }
-  });
-});
-
-describe('IngestService.processEventForTest — PR URL extraction', () => {
-  it('writes agents.pr_url when the matching tool_result contains a github PR URL', async () => {
-    const { db, runId, agentKey } = await setup();
-    try {
-      const bus = new EventBus({ bufferSize: 10 });
-      const svc = new IngestService({ db, logger: silentLogger, eventBus: bus });
-
-      await svc.processEventForTest({
-        runId,
-        agentKey,
-        event: makeBashToolUse({
-          id: 'tu_pr',
-          command: 'gh pr create --title hi',
-          ts: '2026-04-29T12:00:00Z',
-        }),
-      });
-      await svc.processEventForTest({
-        runId,
-        agentKey,
-        event: makeToolResult({
-          tool_use_id: 'tu_pr',
-          content: 'Creating pull request for KAN-1...\nhttps://github.com/x/y/pull/42\n',
-          ts: '2026-04-29T12:00:01Z',
-        }),
-      });
-
-      const row = await db
-        .selectFrom('agents')
-        .where('key', '=', agentKey)
-        .selectAll()
-        .executeTakeFirst();
-      expect(row?.pr_url).toBe('https://github.com/x/y/pull/42');
-    } finally {
-      await db.destroy();
-    }
-  });
-
-  it('leaves agents.pr_url NULL when the matching tool_result has no URL', async () => {
-    const { db, runId, agentKey } = await setup();
-    try {
-      const bus = new EventBus({ bufferSize: 10 });
-      const svc = new IngestService({ db, logger: silentLogger, eventBus: bus });
-
-      await svc.processEventForTest({
-        runId,
-        agentKey,
-        event: makeBashToolUse({
-          id: 'tu_pr',
-          command: 'gh pr create',
-          ts: '2026-04-29T12:00:00Z',
-        }),
-      });
-      await svc.processEventForTest({
-        runId,
-        agentKey,
-        event: makeToolResult({
-          tool_use_id: 'tu_pr',
-          content: 'error: not authenticated',
-          ts: '2026-04-29T12:00:01Z',
-        }),
-      });
-
-      const row = await db
-        .selectFrom('agents')
-        .where('key', '=', agentKey)
-        .selectAll()
-        .executeTakeFirst();
-      expect(row?.pr_url).toBeNull();
-    } finally {
-      await db.destroy();
-    }
-  });
-
-  it('ignores tool_results that are not paired with a tracked gh-pr-create tool_use', async () => {
-    const { db, runId, agentKey } = await setup();
-    try {
-      const bus = new EventBus({ bufferSize: 10 });
-      const svc = new IngestService({ db, logger: silentLogger, eventBus: bus });
-
-      // No matching tool_use was tracked for `tu_unrelated` — even though the
-      // content has a PR URL, we must not write to agents.pr_url.
-      await svc.processEventForTest({
-        runId,
-        agentKey,
-        event: makeToolResult({
-          tool_use_id: 'tu_unrelated',
-          content: 'see https://github.com/x/y/pull/99',
-          ts: '2026-04-29T12:00:01Z',
-        }),
-      });
-
-      const row = await db
-        .selectFrom('agents')
-        .where('key', '=', agentKey)
-        .selectAll()
-        .executeTakeFirst();
-      expect(row?.pr_url).toBeNull();
     } finally {
       await db.destroy();
     }
@@ -1303,6 +951,31 @@ describe('IngestService.ingestStateEvent — concrete state triggers (CREW-254)'
         .where('event_id', '=', 'noop')
         .execute();
       expect(applied).toHaveLength(1);
+    } finally {
+      await db.destroy();
+    }
+  });
+
+  it('routes a non-zero run_exited to error (CREW-257)', async () => {
+    const { db, agentKey } = await setup();
+    try {
+      const svc = new IngestService({ db, logger: silentLogger, eventBus: new EventBus() });
+      await svc.ingestStateEvent({
+        eventId: 'a',
+        key: agentKey,
+        event: 'run_started',
+        ts: '2026-06-18T00:00:00Z',
+        source: 'cli-run',
+      });
+      await svc.ingestStateEvent({
+        eventId: 'b',
+        key: agentKey,
+        event: 'run_exited',
+        ts: '2026-06-18T00:01:00Z',
+        source: 'runner-exit',
+        exitCode: 1,
+      });
+      expect(await latestState(db, agentKey)).toBe('error');
     } finally {
       await db.destroy();
     }
