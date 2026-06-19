@@ -24,7 +24,7 @@ const URL_RE = /https:\/\/github\.com\/[^\s]+\/pull\/\d+/;
  * the Bash tool call. Best-effort: never throws into the hook process — a
  * failed append is written to stderr, matching the writer's contract.
  *
- * @param {{tool_name?: string, tool_input?: {command?: string}, tool_response?: {stdout?: string, exitCode?: number}}} payload
+ * @param {{tool_name?: string, tool_input?: {command?: string}, tool_response?: {stdout?: string}}} payload
  * @param {string} key   the dispatched agent's key (templated in at injection)
  * @param {string} [home] override for ~ (tests)
  */
@@ -32,10 +32,16 @@ export function handlePostToolUse(payload, key, home = homedir()) {
   if (payload?.tool_name !== 'Bash') return;
   const command = payload.tool_input?.command ?? '';
   if (!PR_CREATE.test(command)) return;
-  if (payload.tool_response?.exitCode !== 0) return;
 
+  // Claude Code's PostToolUse(Bash) payload does NOT expose an exit code
+  // (`tool_response` carries only stdout/stderr/interrupted/isImage/
+  // noOutputExpected — empirically captured, CREW-261). So success is keyed off
+  // the parsed PR URL instead: a successful `gh pr create` prints the PR URL to
+  // stdout; a failed one does not. The parsed URL is therefore a self-validating
+  // success signal — no exitCode gate.
   const stdout = payload.tool_response?.stdout ?? '';
   const prUrl = (stdout.match(URL_RE) ?? [])[0];
+  if (!prUrl) return;
 
   const file = join(home, '.crew', 'state-events', `${key}.jsonl`);
   const event = {
@@ -44,7 +50,7 @@ export function handlePostToolUse(payload, key, home = homedir()) {
     event: 'pr_created',
     ts: new Date().toISOString(),
     source: 'hook-pr-create',
-    ...(prUrl ? { prUrl } : {}),
+    prUrl,
   };
   try {
     mkdirSync(dirname(file), { recursive: true });
