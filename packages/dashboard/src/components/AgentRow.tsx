@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
 import type { MouseEvent, ReactNode } from 'react';
-import { cva } from 'class-variance-authority';
 import { Clock, Currency, GitMerge, GitPullRequest, Hash } from 'lucide-react';
 
 import type { Agent, AgentState } from '@/data/types';
-import { STATE_CLASSES, STATE_META } from '@/data/state-meta';
+import { STATE_META } from '@/data/state-meta';
+import { Row } from './Row.js';
 import { Badge } from './ui/badge.js';
 import { Button } from './ui/button.js';
 import { MetaList } from './ui/meta-list.js';
@@ -35,56 +35,18 @@ interface AgentRowProps {
 
 const ACTIVE_STATES = new Set<AgentState>(['running', 'initializing']);
 
-const agentRow = cva(
-  'group relative flex cursor-pointer items-center h-16 gap-3 rounded border bg-card px-4 py-3 transition-colors hover:bg-popover',
-  {
-    variants: {
-      state: {
-        initializing: 'border-white/10',
-        running: 'border-white/10',
-        idle: 'border-white/10',
-        finished: 'border-white/10',
-        waiting: `${STATE_CLASSES.waiting.border} ${STATE_CLASSES.waiting.bg}`,
-        pr_open: `${STATE_CLASSES.pr_open.border} ${STATE_CLASSES.pr_open.bg}`,
-        // CREW-202: pr_merged borrows the emerald success family — the row
-        // tinted green so the "ready to Finish" cohort is immediately visible
-        // in the list view alongside the other attention states.
-        pr_merged: `${STATE_CLASSES.pr_merged.border} ${STATE_CLASSES.pr_merged.bg}`,
-        error: `${STATE_CLASSES.error.border} ${STATE_CLASSES.error.bg}`,
-      },
-    },
-  },
-);
-
 export function AgentRow({ agent, onSelect, onAction, runnerOnline = true }: AgentRowProps) {
   const runtime = useLiveRuntime(agent.startedAt, ACTIVE_STATES.has(agent.state));
   const meta = STATE_META[agent.state];
-  const stateClasses = STATE_CLASSES[agent.state];
-  const attentionAttr = meta.attention ? agent.state : undefined;
 
   return (
-    <div
-      role="button"
-      tabIndex={0}
-      aria-label={`${agent.key} — ${agent.ticketTitle}`}
-      data-attention={attentionAttr}
-      onClick={() => onSelect(agent.key)}
-      onKeyDown={(e) => {
-        if (e.target !== e.currentTarget) return;
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
-          onSelect(agent.key);
-        }
-      }}
-      className={agentRow({ state: agent.state })}
-    >
-      {meta.attention && (
-        <span
-          aria-hidden
-          className={`absolute inset-y-1.5 left-0 w-1 rounded-full ${stateClasses.solidBg} animate-att-pulse`}
-        />
-      )}
-      <div className={'w-24'}>
+    <Row
+      // Only attention states tint the row + show the pulse bar (preserves the
+      // list's pre-Row behavior); the others fall back to the neutral border.
+      accent={meta.attention ? agent.state : undefined}
+      ariaLabel={`${agent.key} — ${agent.ticketTitle}`}
+      onActivate={() => onSelect(agent.key)}
+      statusSlot={
         <Badge
           role="status"
           aria-label={meta.label}
@@ -95,9 +57,9 @@ export function AgentRow({ agent, onSelect, onAction, runnerOnline = true }: Age
         >
           {meta.label}
         </Badge>
-      </div>
-      <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-        <span className="truncate text-sm text-foreground">{agent.ticketTitle}</span>
+      }
+      title={<span className="truncate text-sm text-foreground">{agent.ticketTitle}</span>}
+      subheader={
         <MetaList>
           <MetaItem icon={<Hash className="h-3 w-3" aria-hidden />} value={agent.key} />
           <MetaItem icon={<Clock className="h-3 w-3" aria-hidden />} value={runtime} />
@@ -106,9 +68,9 @@ export function AgentRow({ agent, onSelect, onAction, runnerOnline = true }: Age
             value={formatTokens(agent.tokens)}
           />
         </MetaList>
-      </div>
-      <QuickActions agent={agent} onAction={onAction} runnerOnline={runnerOnline} />
-    </div>
+      }
+      actions={<QuickActions agent={agent} onAction={onAction} runnerOnline={runnerOnline} />}
+    />
   );
 }
 

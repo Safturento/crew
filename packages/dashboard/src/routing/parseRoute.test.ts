@@ -35,6 +35,10 @@ describe('parseRoute', () => {
     });
   });
 
+  it('parses /runner as the runner route', () => {
+    expect(parseRoute('#/runner')).toEqual({ kind: 'runner' });
+  });
+
   it('falls back to agents-list for unknown routes', () => {
     expect(parseRoute('#/something/else')).toEqual({ kind: 'agents-list' });
   });

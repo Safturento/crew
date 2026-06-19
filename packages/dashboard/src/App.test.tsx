@@ -40,7 +40,11 @@ beforeEach(() => {
   window.location.hash = '';
   // useRunnerStatus polls defaultClient on mount; default it to offline so
   // tests that don't care about the runner stay deterministic and quiet.
-  vi.spyOn(defaultClient, 'getRunnerStatus').mockResolvedValue({ online: false, lastSeen: null });
+  vi.spyOn(defaultClient, 'getRunnerStatus').mockResolvedValue({
+    online: false,
+    lastSeen: null,
+    processes: [],
+  });
 });
 
 describe('App', () => {
@@ -143,13 +147,19 @@ describe('App', () => {
   it('renders the error fallback when a query rejects', async () => {
     // useRunnerStatus polls defaultClient (not the injected client); resolve
     // it so only the failing list queries throw to the boundary.
-    vi.spyOn(defaultClient, 'getRunnerStatus').mockResolvedValue({ online: false, lastSeen: null });
+    vi.spyOn(defaultClient, 'getRunnerStatus').mockResolvedValue({
+      online: false,
+      lastSeen: null,
+      processes: [],
+    });
     const failingClient: DaemonClient = {
       listProjects: () => Promise.reject(new Error('daemon unreachable')),
       listAgents: () => Promise.reject(new Error('daemon unreachable')),
       enqueueAction: () => Promise.reject(new Error('daemon unreachable')),
       getRunnerStatus: () => Promise.reject(new Error('daemon unreachable')),
       getRunnerLogs: () => Promise.reject(new Error('daemon unreachable')),
+      enqueueRunnerCommand: () => Promise.reject(new Error('daemon unreachable')),
+      acknowledgeRun: () => Promise.reject(new Error('daemon unreachable')),
     };
     const queryClient = new QueryClient({
       defaultOptions: { queries: { retry: false, throwOnError: true } },
@@ -192,7 +202,11 @@ describe('App — agent actions (CREW-217)', () => {
   });
 
   it('enqueues a run action when Resume is clicked (runner online)', async () => {
-    vi.spyOn(defaultClient, 'getRunnerStatus').mockResolvedValue({ online: true, lastSeen: 1 });
+    vi.spyOn(defaultClient, 'getRunnerStatus').mockResolvedValue({
+      online: true,
+      lastSeen: 1,
+      processes: [],
+    });
     const enqueue = vi.spyOn(defaultClient, 'enqueueAction').mockResolvedValue(SAMPLE_ACTION);
     const user = userEvent.setup();
 
@@ -210,7 +224,11 @@ describe('App — agent actions (CREW-217)', () => {
   });
 
   it('enqueues a finish action when Finish is clicked (runner online)', async () => {
-    vi.spyOn(defaultClient, 'getRunnerStatus').mockResolvedValue({ online: true, lastSeen: 1 });
+    vi.spyOn(defaultClient, 'getRunnerStatus').mockResolvedValue({
+      online: true,
+      lastSeen: 1,
+      processes: [],
+    });
     const enqueue = vi
       .spyOn(defaultClient, 'enqueueAction')
       .mockResolvedValue({ ...SAMPLE_ACTION, kind: 'finish', payload: { kind: 'finish' } });
@@ -245,7 +263,11 @@ describe('App — agent actions (CREW-217)', () => {
         prUrl: 'https://example.com/pr/60',
       },
     ];
-    vi.spyOn(defaultClient, 'getRunnerStatus').mockResolvedValue({ online: true, lastSeen: 1 });
+    vi.spyOn(defaultClient, 'getRunnerStatus').mockResolvedValue({
+      online: true,
+      lastSeen: 1,
+      processes: [],
+    });
     const enqueue = vi.spyOn(defaultClient, 'enqueueAction').mockResolvedValue({
       ...SAMPLE_ACTION,
       kind: 'fix_pr',
@@ -273,7 +295,11 @@ describe('App — agent actions (CREW-217)', () => {
   });
 
   it('disables the enqueue-able QuickActions when no runner is online', async () => {
-    vi.spyOn(defaultClient, 'getRunnerStatus').mockResolvedValue({ online: false, lastSeen: null });
+    vi.spyOn(defaultClient, 'getRunnerStatus').mockResolvedValue({
+      online: false,
+      lastSeen: null,
+      processes: [],
+    });
 
     renderWithProviders(<App client={new MockDaemonClient({ projects, agents: idleAgents })} />);
 

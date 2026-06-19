@@ -25,6 +25,10 @@ const EVENT_NAMES = [
   // action layer (toasts on launch failure, the runner-aware degradation).
   'action.changed',
   'runner.status_changed',
+  // CREW-242/CREW-245: the live-process snapshot rides a dedicated event
+  // (NOT status_changed, which fires only on online/offline edges) so the
+  // Runner page's process list updates each heartbeat cycle.
+  'runner.snapshot_changed',
   // CREW-220: pings the drawer's finish-step checklist to refetch as each
   // `crew finish` step streams in.
   'finish_step.changed',

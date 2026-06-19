@@ -3,11 +3,14 @@ export type Route =
   | { kind: 'agent-drawer'; key: string }
   | { kind: 'agent-full'; key: string }
   | { kind: 'projects' }
-  | { kind: 'project-detail'; slug: string };
+  | { kind: 'project-detail'; slug: string }
+  | { kind: 'runner' };
 
 export function parseRoute(hash: string): Route {
   const stripped = hash.replace(/^#/, '');
   if (stripped === '' || stripped === '/') return { kind: 'agents-list' };
+
+  if (stripped === '/runner') return { kind: 'runner' };
 
   const fullMatch = /^\/agent\/([^/]+)\/full$/.exec(stripped);
   if (fullMatch) return { kind: 'agent-full', key: fullMatch[1] };

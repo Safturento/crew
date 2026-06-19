@@ -28,6 +28,7 @@ describe('RunnerStatusChip', () => {
     vi.spyOn(defaultClient, 'getRunnerStatus').mockResolvedValue({
       online: true,
       lastSeen: Date.now(),
+      processes: [],
     });
 
     render(wrap(<RunnerStatusChip />));
@@ -40,6 +41,7 @@ describe('RunnerStatusChip', () => {
     vi.spyOn(defaultClient, 'getRunnerStatus').mockResolvedValue({
       online: false,
       lastSeen: null,
+      processes: [],
     });
 
     render(wrap(<RunnerStatusChip />));
@@ -53,6 +55,7 @@ describe('RunnerStatusChip', () => {
     vi.spyOn(defaultClient, 'getRunnerStatus').mockResolvedValue({
       online: true,
       lastSeen: Date.now(),
+      processes: [],
     });
 
     render(wrap(<RunnerStatusChip />));

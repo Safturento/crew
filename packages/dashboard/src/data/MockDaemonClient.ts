@@ -1,4 +1,9 @@
-import type { ActionRequest, EnqueueAction } from 'crew-shared';
+import type {
+  ActionRequest,
+  EnqueueAction,
+  EnqueueRunnerCommand,
+  RunnerCommand,
+} from 'crew-shared';
 
 import type { DaemonClient, RunnerStatus } from './DaemonClient.js';
 import type { Agent, Project, ProjectDetailResponse } from './types.js';
@@ -21,12 +26,20 @@ export class MockDaemonClient implements DaemonClient {
   private readonly runnerLogs: string[];
   /** Records of every action enqueued through this mock, for assertions. */
   readonly enqueued: EnqueueAction[] = [];
+  /** Records of every runner command enqueued through this mock. */
+  readonly enqueuedCommands: EnqueueRunnerCommand[] = [];
+  /** Keys acknowledged (Archive) through this mock. */
+  readonly acknowledged: string[] = [];
 
   constructor(options: MockDaemonClientOptions = {}) {
     this.agents = options.agents ?? FIXTURE_AGENTS;
     this.projects = options.projects ?? FIXTURE_PROJECTS;
     this.projectDetails = options.projectDetails ?? FIXTURE_PROJECT_DETAILS;
-    this.runnerStatus = options.runnerStatus ?? { online: true, lastSeen: Date.now() };
+    this.runnerStatus = options.runnerStatus ?? {
+      online: true,
+      lastSeen: Date.now(),
+      processes: [],
+    };
     this.runnerLogs = options.runnerLogs ?? [];
   }
 
@@ -68,5 +81,25 @@ export class MockDaemonClient implements DaemonClient {
 
   async getRunnerLogs(): Promise<string[]> {
     return this.runnerLogs;
+  }
+
+  async enqueueRunnerCommand(input: EnqueueRunnerCommand): Promise<RunnerCommand> {
+    this.enqueuedCommands.push(input);
+    const now = new Date().toISOString();
+    return {
+      id: this.enqueuedCommands.length,
+      agentKey: input.agentKey,
+      kind: input.kind,
+      payload: input.payload ?? null,
+      status: 'pending',
+      error: null,
+      createdAt: now,
+      updatedAt: now,
+    };
+  }
+
+  async acknowledgeRun(key: string): Promise<number> {
+    this.acknowledged.push(key);
+    return 1;
   }
 }

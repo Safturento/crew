@@ -1,5 +1,10 @@
 import { z } from 'zod';
-import type { ActionRequest, EnqueueAction } from 'crew-shared';
+import type {
+  ActionRequest,
+  EnqueueAction,
+  EnqueueRunnerCommand,
+  RunnerCommand,
+} from 'crew-shared';
 
 import type { DaemonClient, RunnerStatus } from './DaemonClient.js';
 import type {
@@ -177,10 +182,44 @@ const ActionRequestSchema = z.object({
   updatedAt: z.string(),
 });
 
+/**
+ * CREW-245: the live-process snapshot entry. Mirrors `crew-shared`'s
+ * `liveProcessSchema` inline, per this file's "only types cross over from
+ * crew-shared (the barrel re-exports a node-only loader Vite won't bundle)"
+ * convention.
+ */
+const LiveProcessSchema = z.object({
+  agentKey: z.string(),
+  command: z.enum(['run', 'fix-pr', 'finish']),
+  pid: z.number(),
+  pgid: z.number(),
+  actionRequestId: z.number().nullable(),
+  spawnedAt: z.string(),
+  state: z.enum(['launching', 'running', 'cancelling', 'paused']),
+  project: z.string(),
+});
+
 const RunnerStatusSchema = z.object({
   online: z.boolean(),
   lastSeen: z.number().nullable(),
+  // CREW-242 ships `processes` on `GET /api/runner/status`; default to []
+  // so a legacy daemon that omits it still parses.
+  processes: z.array(LiveProcessSchema).default([]),
 });
+
+/** CREW-245: wire shape of an enqueued `RunnerCommand` (the 201 body). */
+const RunnerCommandSchema = z.object({
+  id: z.number(),
+  agentKey: z.string().nullable(),
+  kind: z.enum(['cancel_soft', 'cancel_hard', 'dequeue', 'reap', 'pause', 'resume', 'message']),
+  payload: z.object({ message: z.string().optional() }).nullable(),
+  status: z.enum(['pending', 'claimed', 'applied', 'failed']),
+  error: z.string().nullable(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+});
+
+const AcknowledgeRunSchema = z.object({ acknowledged: z.number() });
 
 /**
  * CREW-220: `GET /api/agents/:key/finish-steps` response. Each step is the
@@ -361,5 +400,35 @@ export class HttpDaemonClient implements DaemonClient {
     const res = await fetch(`${this.baseUrl}/api/runner/logs${qs}`);
     if (!res.ok) throw new Error(`GET /api/runner/logs: ${res.status}`);
     return RunnerLogsSchema.parse(await res.json()).lines;
+  }
+
+  /**
+   * CREW-245: enqueue a runner reverse-queue control command. The daemon
+   * persists it `pending`; the host runner drains + applies it each cycle
+   * (signals the tracked process-group / drops a pending action / settles
+   * an orphan). Backs the Runner page row controls (Cancel/Force kill/
+   * Reap/Dequeue).
+   */
+  async enqueueRunnerCommand(input: EnqueueRunnerCommand): Promise<RunnerCommand> {
+    const res = await fetch(`${this.baseUrl}/api/runner/commands`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(input),
+    });
+    if (!res.ok) throw new Error(`POST /api/runner/commands: ${res.status}`);
+    return RunnerCommandSchema.parse(await res.json());
+  }
+
+  /**
+   * CREW-245: acknowledge (Archive) a key's unacknowledged failed-start
+   * rows. Idempotent — re-acknowledging returns 0. Backs the Failed-to-start
+   * section's Archive control.
+   */
+  async acknowledgeRun(key: string): Promise<number> {
+    const res = await fetch(`${this.baseUrl}/api/runs/${encodeURIComponent(key)}/acknowledge`, {
+      method: 'POST',
+    });
+    if (!res.ok) throw new Error(`POST /api/runs/${key}/acknowledge: ${res.status}`);
+    return AcknowledgeRunSchema.parse(await res.json()).acknowledged;
   }
 }
