@@ -1,7 +1,7 @@
 ---
 name: security
 description: Secrets handling, sandbox model + known limitations
-last_updated: 2026-05-14
+last_updated: 2026-06-19
 covers:
   - '**/.env*'
   - '**/secrets/**'
@@ -29,6 +29,8 @@ The per-repo baseline lives in [`.claude/settings.json`](../.claude/settings.jso
 - `sandbox.excludedCommands` — commands that bypass the sandbox entirely (host loopback, docker socket).
 - `sandbox.network.allowedDomains` — HTTPS allowlist for outbound calls.
 - `sandbox.filesystem.allowWrite` — extra write paths beyond the worktree.
+
+`crew run` also writes a per-dispatch `<worktree>/.claude/settings.local.json` (gitignored by `.claude/*`, merged by Claude Code over the baseline) carrying the `pr_created` PostToolUse hook with the agent key templated in — it never touches the tracked `settings.json`. See [`dispatch.md`](dispatch.md) § State-event hook injection.
 
 ## Workaround-able restrictions
 
