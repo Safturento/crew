@@ -522,7 +522,8 @@ describe('HttpDaemonClient.getRunnerStatus (CREW-217)', () => {
 
     const status = await new HttpDaemonClient().getRunnerStatus();
 
-    expect(status).toEqual({ online: true, lastSeen: 1717459200000 });
+    // CREW-245: a daemon that omits `processes` defaults to [].
+    expect(status).toEqual({ online: true, lastSeen: 1717459200000, processes: [] });
     expect(fetchSpy).toHaveBeenCalledWith('/api/runner/status');
   });
 
@@ -532,12 +533,80 @@ describe('HttpDaemonClient.getRunnerStatus (CREW-217)', () => {
     );
 
     const status = await new HttpDaemonClient().getRunnerStatus();
-    expect(status).toEqual({ online: false, lastSeen: null });
+    expect(status).toEqual({ online: false, lastSeen: null, processes: [] });
+  });
+
+  it('parses the live-process snapshot (CREW-245)', async () => {
+    const proc = {
+      agentKey: 'CREW-231',
+      command: 'run',
+      pid: 10,
+      pgid: 10,
+      actionRequestId: null,
+      spawnedAt: '2026-06-19T00:00:00.000Z',
+      state: 'running',
+      project: 'crew',
+    };
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify({ online: true, lastSeen: 1, processes: [proc] }), {
+        status: 200,
+      }),
+    );
+
+    const status = await new HttpDaemonClient().getRunnerStatus();
+    expect(status.processes).toEqual([proc]);
   });
 
   it('throws on non-2xx', async () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('boom', { status: 500 }));
     await expect(new HttpDaemonClient().getRunnerStatus()).rejects.toThrow(/500/);
+  });
+});
+
+describe('HttpDaemonClient runner controls (CREW-245)', () => {
+  it('POSTs /api/runner/commands and returns the parsed command', async () => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          id: 7,
+          agentKey: 'CREW-231',
+          kind: 'cancel_soft',
+          payload: null,
+          status: 'pending',
+          error: null,
+          createdAt: 'x',
+          updatedAt: 'x',
+        }),
+        { status: 201 },
+      ),
+    );
+
+    const cmd = await new HttpDaemonClient().enqueueRunnerCommand({
+      agentKey: 'CREW-231',
+      kind: 'cancel_soft',
+      payload: null,
+    });
+
+    expect(cmd.id).toBe(7);
+    expect(cmd.kind).toBe('cancel_soft');
+    expect(fetchSpy).toHaveBeenCalledWith(
+      '/api/runner/commands',
+      expect.objectContaining({ method: 'POST' }),
+    );
+  });
+
+  it('POSTs /api/runs/:key/acknowledge and returns the count', async () => {
+    const fetchSpy = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValue(new Response(JSON.stringify({ acknowledged: 2 }), { status: 200 }));
+
+    const n = await new HttpDaemonClient().acknowledgeRun('CREW-241');
+
+    expect(n).toBe(2);
+    expect(fetchSpy).toHaveBeenCalledWith(
+      '/api/runs/CREW-241/acknowledge',
+      expect.objectContaining({ method: 'POST' }),
+    );
   });
 });
 

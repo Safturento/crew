@@ -45,40 +45,68 @@ function fire(event: string, data: unknown): void {
   for (const fn of bucket) fn(data);
 }
 
+const PROC = {
+  agentKey: 'CREW-231',
+  command: 'run' as const,
+  pid: 10,
+  pgid: 10,
+  actionRequestId: null,
+  spawnedAt: '2026-06-19T00:00:00.000Z',
+  state: 'running' as const,
+  project: 'crew',
+};
+
 describe('useRunnerStatus', () => {
   it('seeds from defaultClient.getRunnerStatus on mount', async () => {
     const spy = vi
       .spyOn(defaultClient, 'getRunnerStatus')
-      .mockResolvedValue({ online: true, lastSeen: 1234 });
+      .mockResolvedValue({ online: true, lastSeen: 1234, processes: [PROC] });
 
     const { result } = renderHook(() => useRunnerStatus(), { wrapper: makeWrapper(qc) });
 
     await waitFor(() => expect(result.current.online).toBe(true));
     expect(spy).toHaveBeenCalledOnce();
-    expect(result.current).toEqual({ online: true, lastSeen: 1234 });
+    expect(result.current).toEqual({ online: true, lastSeen: 1234, processes: [PROC] });
   });
 
-  it('defaults to offline before the query resolves', () => {
+  it('defaults to offline with no processes before the query resolves', () => {
     vi.spyOn(defaultClient, 'getRunnerStatus').mockReturnValue(new Promise(() => {}));
 
     const { result } = renderHook(() => useRunnerStatus(), { wrapper: makeWrapper(qc) });
 
-    expect(result.current).toEqual({ online: false, lastSeen: null });
+    expect(result.current).toEqual({ online: false, lastSeen: null, processes: [] });
   });
 
-  it('patches state when runner.status_changed fires, without a refetch', async () => {
+  it('patches online/lastSeen on runner.status_changed, preserving processes', async () => {
     const spy = vi
       .spyOn(defaultClient, 'getRunnerStatus')
-      .mockResolvedValue({ online: true, lastSeen: 1234 });
+      .mockResolvedValue({ online: true, lastSeen: 1234, processes: [PROC] });
 
     const { result } = renderHook(() => useRunnerStatus(), { wrapper: makeWrapper(qc) });
     await waitFor(() => expect(result.current.online).toBe(true));
 
+    // status_changed carries only {online, lastSeen} — the process list survives.
     fire('runner.status_changed', { online: false, lastSeen: 5678 });
 
     await waitFor(() => expect(result.current.online).toBe(false));
-    expect(result.current).toEqual({ online: false, lastSeen: 5678 });
+    expect(result.current).toEqual({ online: false, lastSeen: 5678, processes: [PROC] });
     // SSE patch updates the cache directly — no second fetch.
     expect(spy).toHaveBeenCalledOnce();
+  });
+
+  it('patches the process list on runner.snapshot_changed, preserving online/lastSeen', async () => {
+    vi.spyOn(defaultClient, 'getRunnerStatus').mockResolvedValue({
+      online: true,
+      lastSeen: 1234,
+      processes: [],
+    });
+
+    const { result } = renderHook(() => useRunnerStatus(), { wrapper: makeWrapper(qc) });
+    await waitFor(() => expect(result.current.online).toBe(true));
+
+    fire('runner.snapshot_changed', { processes: [PROC] });
+
+    await waitFor(() => expect(result.current.processes).toHaveLength(1));
+    expect(result.current).toEqual({ online: true, lastSeen: 1234, processes: [PROC] });
   });
 });

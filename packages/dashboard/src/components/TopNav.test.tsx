@@ -17,7 +17,11 @@ beforeEach(() => {
   qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   // The mounted RunnerStatusChip reads runner status/logs; stub both so
   // TopNav tests stay offline and deterministic.
-  vi.spyOn(defaultClient, 'getRunnerStatus').mockResolvedValue({ online: false, lastSeen: null });
+  vi.spyOn(defaultClient, 'getRunnerStatus').mockResolvedValue({
+    online: false,
+    lastSeen: null,
+    processes: [],
+  });
   vi.spyOn(defaultClient, 'getRunnerLogs').mockResolvedValue([]);
 });
 
