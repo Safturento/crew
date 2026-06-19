@@ -10,6 +10,10 @@ vi.mock('../data/queries.js', () => ({
   useRefreshPrStatus: vi.fn(() => ({ mutate: vi.fn(), isPending: false })),
   useOverrideState: vi.fn(() => ({ mutate: vi.fn(), isPending: false })),
 }));
+vi.mock('../data/runnerControls.js', () => ({
+  useCancelRun: vi.fn(() => ({ mutate: vi.fn(), isPending: false })),
+  useForceKill: vi.fn(() => ({ mutate: vi.fn(), isPending: false })),
+}));
 vi.mock('../data/useFinishSteps.js', () => ({
   useFinishSteps: vi.fn(() => []),
 }));

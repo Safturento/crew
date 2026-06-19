@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
@@ -20,6 +20,14 @@ vi.mock('../data/queries.js', async (importOriginal) => {
 import { useRefreshPrStatus, useOverrideState } from '../data/queries.js';
 const mockedUseRefreshPrStatus = vi.mocked(useRefreshPrStatus);
 const mockedUseOverrideState = vi.mocked(useOverrideState);
+
+vi.mock('../data/runnerControls.js', () => ({
+  useCancelRun: vi.fn(),
+  useForceKill: vi.fn(),
+}));
+import { useCancelRun, useForceKill } from '../data/runnerControls.js';
+const mockedUseCancelRun = vi.mocked(useCancelRun);
+const mockedUseForceKill = vi.mocked(useForceKill);
 
 function makeMutation(overrides: Partial<{ isPending: boolean; mutate: () => void }> = {}) {
   return {
@@ -46,6 +54,8 @@ function makeMutation(overrides: Partial<{ isPending: boolean; mutate: () => voi
 afterEach(() => {
   mockedUseRefreshPrStatus.mockReset();
   mockedUseOverrideState.mockReset();
+  mockedUseCancelRun.mockReset();
+  mockedUseForceKill.mockReset();
 });
 
 function wrap(ui: ReactNode): ReactNode {
@@ -94,6 +104,8 @@ describe('DrawerHeader', () => {
   beforeEach(() => {
     mockedUseRefreshPrStatus.mockReturnValue(makeMutation());
     mockedUseOverrideState.mockReturnValue(makeMutation());
+    mockedUseCancelRun.mockReturnValue(makeMutation());
+    mockedUseForceKill.mockReturnValue(makeMutation());
   });
 
   it('renders project + ticket key + state badge in the breadcrumb', () => {
@@ -205,6 +217,8 @@ describe('DrawerHeader — Refresh PR + Merged PR (CREW-202)', () => {
   beforeEach(() => {
     mockedUseRefreshPrStatus.mockReturnValue(makeMutation());
     mockedUseOverrideState.mockReturnValue(makeMutation());
+    mockedUseCancelRun.mockReturnValue(makeMutation());
+    mockedUseForceKill.mockReturnValue(makeMutation());
   });
 
   it('shows a Refresh PR button when state is pr_open and pr_url is set', () => {
@@ -291,5 +305,99 @@ describe('DrawerHeader — Refresh PR + Merged PR (CREW-202)', () => {
       ),
     );
     expect(screen.getByRole('button', { name: /refresh pr/i })).toBeDisabled();
+  });
+});
+
+describe('DrawerHeader — Cancel control (CREW-246)', () => {
+  beforeEach(() => {
+    mockedUseRefreshPrStatus.mockReturnValue(makeMutation());
+    mockedUseOverrideState.mockReturnValue(makeMutation());
+    mockedUseCancelRun.mockReturnValue(makeMutation());
+    mockedUseForceKill.mockReturnValue(makeMutation());
+  });
+
+  it('renders a Cancel control in the action cluster for a running agent', () => {
+    render(
+      wrap(
+        <DrawerHeader detail={makeDetail({ state: 'running' })} showCloseButton showOpenAsPage />,
+      ),
+    );
+    expect(screen.getByRole('button', { name: /^cancel$/i })).toBeInTheDocument();
+  });
+
+  it('shows no Cancel control for a non-running agent', () => {
+    render(
+      wrap(
+        <DrawerHeader
+          detail={makeDetail({ state: 'pr_open', pr_url: 'https://example.com/pr/1' })}
+          showCloseButton
+          showOpenAsPage
+        />,
+      ),
+    );
+    expect(screen.queryByRole('button', { name: /^cancel$/i })).not.toBeInTheDocument();
+  });
+
+  it('Cancel opens the confirm AlertModal without firing the soft cancel yet', async () => {
+    const user = userEvent.setup();
+    const cancelMutate = vi.fn();
+    mockedUseCancelRun.mockReturnValue(makeMutation({ mutate: cancelMutate }));
+
+    render(
+      wrap(
+        <DrawerHeader detail={makeDetail({ state: 'running' })} showCloseButton showOpenAsPage />,
+      ),
+    );
+    await user.click(screen.getByRole('button', { name: /^cancel$/i }));
+
+    expect(screen.getByRole('alertdialog')).toBeInTheDocument();
+    expect(cancelMutate).not.toHaveBeenCalled();
+  });
+
+  it('confirming the modal fires the soft cancel keyed by the agent key', async () => {
+    const user = userEvent.setup();
+    const cancelMutate = vi.fn();
+    mockedUseCancelRun.mockReturnValue(makeMutation({ mutate: cancelMutate }));
+
+    render(
+      wrap(
+        <DrawerHeader detail={makeDetail({ state: 'running' })} showCloseButton showOpenAsPage />,
+      ),
+    );
+    await user.click(screen.getByRole('button', { name: /^cancel$/i }));
+    await user.click(screen.getByRole('button', { name: /cancel run/i }));
+
+    expect(cancelMutate).toHaveBeenCalledWith('kanban-api/KAN-23');
+  });
+
+  // Uses synchronous fireEvent + getByRole — testing-library's async findBy /
+  // userEvent poll on real timers, which fake timers freeze.
+  it('escalates to a Force kill button ~10s after a soft cancel and fires the hard kill', () => {
+    vi.useFakeTimers();
+    try {
+      const forceMutate = vi.fn();
+      mockedUseForceKill.mockReturnValue(makeMutation({ mutate: forceMutate }));
+
+      render(
+        wrap(
+          <DrawerHeader detail={makeDetail({ state: 'running' })} showCloseButton showOpenAsPage />,
+        ),
+      );
+      fireEvent.click(screen.getByRole('button', { name: /^cancel$/i }));
+      fireEvent.click(screen.getByRole('button', { name: /cancel run/i }));
+
+      // Before escalation: no Force kill yet.
+      expect(screen.queryByRole('button', { name: /force kill/i })).toBeNull();
+
+      act(() => {
+        vi.advanceTimersByTime(10_000);
+      });
+
+      const forceKill = screen.getByRole('button', { name: /force kill/i });
+      fireEvent.click(forceKill);
+      expect(forceMutate).toHaveBeenCalledWith('kanban-api/KAN-23');
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
