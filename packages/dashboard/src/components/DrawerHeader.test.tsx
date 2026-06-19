@@ -14,10 +14,12 @@ vi.mock('../data/queries.js', async (importOriginal) => {
   return {
     ...actual,
     useRefreshPrStatus: vi.fn(),
+    useOverrideState: vi.fn(),
   };
 });
-import { useRefreshPrStatus } from '../data/queries.js';
+import { useRefreshPrStatus, useOverrideState } from '../data/queries.js';
 const mockedUseRefreshPrStatus = vi.mocked(useRefreshPrStatus);
+const mockedUseOverrideState = vi.mocked(useOverrideState);
 
 function makeMutation(overrides: Partial<{ isPending: boolean; mutate: () => void }> = {}) {
   return {
@@ -43,6 +45,7 @@ function makeMutation(overrides: Partial<{ isPending: boolean; mutate: () => voi
 
 afterEach(() => {
   mockedUseRefreshPrStatus.mockReset();
+  mockedUseOverrideState.mockReset();
 });
 
 function wrap(ui: ReactNode): ReactNode {
@@ -90,6 +93,7 @@ function makeDetail(overrides: Partial<AgentDetail> = {}): AgentDetail {
 describe('DrawerHeader', () => {
   beforeEach(() => {
     mockedUseRefreshPrStatus.mockReturnValue(makeMutation());
+    mockedUseOverrideState.mockReturnValue(makeMutation());
   });
 
   it('renders project + ticket key + state badge in the breadcrumb', () => {
@@ -200,6 +204,7 @@ describe('DrawerHeader', () => {
 describe('DrawerHeader — Refresh PR + Merged PR (CREW-202)', () => {
   beforeEach(() => {
     mockedUseRefreshPrStatus.mockReturnValue(makeMutation());
+    mockedUseOverrideState.mockReturnValue(makeMutation());
   });
 
   it('shows a Refresh PR button when state is pr_open and pr_url is set', () => {
