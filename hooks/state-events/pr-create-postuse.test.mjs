@@ -42,6 +42,13 @@ describe('handlePostToolUse', () => {
     expect(parsed.prUrl).toBe('https://github.com/o/r/pull/8');
   });
 
+  it('matches the `|`-piped form', () => {
+    const home = mkHome();
+    handlePostToolUse(ev('true | gh pr create', 'https://github.com/o/r/pull/3', 0), 'CREW-1', home);
+    const parsed = JSON.parse(readFileSync(eventsFile(home, 'CREW-1'), 'utf8').trim());
+    expect(parsed.prUrl).toBe('https://github.com/o/r/pull/3');
+  });
+
   it('matches a bare `gh pr create` at the start of the command', () => {
     const home = mkHome();
     handlePostToolUse(ev('gh pr create --base main --fill', 'https://github.com/o/r/pull/9', 0), 'CREW-1', home);

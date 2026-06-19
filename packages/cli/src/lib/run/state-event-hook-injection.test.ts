@@ -92,6 +92,20 @@ describe('injectStateEventHook', () => {
     expect(settings.hooks.PostToolUse).toHaveLength(1);
   });
 
+  it('re-templates the key on a re-dispatch with a different key (replace, not append)', () => {
+    const worktree = makeWorktree();
+
+    injectStateEventHook({ worktree, key: 'CREW-1', log: () => {} });
+    injectStateEventHook({ worktree, key: 'CREW-2', log: () => {} });
+
+    const settings = readLocal(worktree) as {
+      hooks: { PostToolUse: { hooks: { command: string }[] }[] };
+    };
+    expect(settings.hooks.PostToolUse).toHaveLength(1);
+    expect(settings.hooks.PostToolUse[0].hooks[0].command).toContain('CREW_AGENT_KEY=CREW-2');
+    expect(settings.hooks.PostToolUse[0].hooks[0].command).not.toContain('CREW_AGENT_KEY=CREW-1');
+  });
+
   it('logs the destination', () => {
     const worktree = makeWorktree();
     const log = vi.fn();
