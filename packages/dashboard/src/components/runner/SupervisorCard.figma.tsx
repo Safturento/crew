@@ -11,8 +11,6 @@ figma.connect(
       // is data, not a Figma property. Snippet documents the canonical mount.
       state: figma.enum('state', { running: true, down: false }),
     },
-    example: ({ state }) => (
-      <SupervisorCard supervisor={{ online: state, lastSeen: Date.now() }} />
-    ),
+    example: ({ state }) => <SupervisorCard supervisor={{ online: state, lastSeen: Date.now() }} />,
   },
 );

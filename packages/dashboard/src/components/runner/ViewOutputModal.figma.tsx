@@ -20,7 +20,8 @@ figma.connect(
           check: 'remote-repo-resolves',
           headline: "Remote 'origin' not found in project config",
           remediation: 'set repo.remote in crew.toml',
-          output: '$ crew run CREW-241\npreflight: remote-repo-resolves\nprocess exited 1 before registering',
+          output:
+            '$ crew run CREW-241\npreflight: remote-repo-resolves\nprocess exited 1 before registering',
         }}
       />
     ),

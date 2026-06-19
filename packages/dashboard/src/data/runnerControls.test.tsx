@@ -42,9 +42,7 @@ describe('runner control hooks', () => {
   });
 
   it('useForceKill enqueues a cancel_hard command', async () => {
-    const spy = vi
-      .spyOn(defaultClient, 'enqueueRunnerCommand')
-      .mockResolvedValue({} as never);
+    const spy = vi.spyOn(defaultClient, 'enqueueRunnerCommand').mockResolvedValue({} as never);
     const { result } = renderHook(() => useForceKill(), { wrapper: wrapper() });
     result.current.mutate('CREW-232');
     await waitFor(() => expect(spy).toHaveBeenCalled());

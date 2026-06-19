@@ -72,7 +72,12 @@ export function Row({
           }
         : {})}
       data-attention={accent && attention ? accent : undefined}
-      className={cn(BASE, accentClasses, interactive && 'cursor-pointer hover:bg-popover', className)}
+      className={cn(
+        BASE,
+        accentClasses,
+        interactive && 'cursor-pointer hover:bg-popover',
+        className,
+      )}
     >
       {accent && attention && (
         <span

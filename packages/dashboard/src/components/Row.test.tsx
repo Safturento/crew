@@ -26,7 +26,15 @@ describe('Row', () => {
   });
 
   it('tints the row with literal STATE_CLASSES tokens for an attention accent', () => {
-    render(<Row statusSlot={<span>s</span>} title="t" accent="error" ariaLabel="r" onActivate={() => {}} />);
+    render(
+      <Row
+        statusSlot={<span>s</span>}
+        title="t"
+        accent="error"
+        ariaLabel="r"
+        onActivate={() => {}}
+      />,
+    );
     const row = screen.getByRole('button', { name: 'r' });
     expect(row.className).toContain('border-red-500');
     expect(row.className).toContain('bg-red-1050');
@@ -54,7 +62,9 @@ describe('Row', () => {
   it('is a clickable button that fires onActivate on click', async () => {
     const user = userEvent.setup();
     const onActivate = vi.fn();
-    render(<Row statusSlot={<span>s</span>} title="t" ariaLabel="my row" onActivate={onActivate} />);
+    render(
+      <Row statusSlot={<span>s</span>} title="t" ariaLabel="my row" onActivate={onActivate} />,
+    );
     await user.click(screen.getByRole('button', { name: 'my row' }));
     expect(onActivate).toHaveBeenCalledOnce();
   });
@@ -62,7 +72,9 @@ describe('Row', () => {
   it('fires onActivate on Enter/Space when the row itself is focused', async () => {
     const user = userEvent.setup();
     const onActivate = vi.fn();
-    render(<Row statusSlot={<span>s</span>} title="t" ariaLabel="my row" onActivate={onActivate} />);
+    render(
+      <Row statusSlot={<span>s</span>} title="t" ariaLabel="my row" onActivate={onActivate} />,
+    );
     const row = screen.getByRole('button', { name: 'my row' });
     row.focus();
     await user.keyboard('{Enter}');
