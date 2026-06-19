@@ -35,7 +35,7 @@ removes the boot-blocking dependency entirely.
   watcher-ready dependency gone, the only remaining `onReady` work is one
   in-memory-fast DB query (`ingest.start()`) plus two synchronous
   `mkdirSync`+attach calls — milliseconds, not seconds. Reverting to the default
-  is preferable to keeping the 60s stopgap: a default timeout would *surface* any
+  is preferable to keeping the 60s stopgap: a default timeout would _surface_ any
   future regression that reintroduces slow boot work rather than masking it for a
   minute.
 

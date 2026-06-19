@@ -89,6 +89,11 @@ export class IngestService {
   /** CREW-201: chokidar watcher on ~/.crew/startup. One watcher per
    *  daemon — covers every agent. */
   private startupWatcher: FSWatcher | undefined;
+  /** CREW-265: resolves when the startup watcher's initial scan has readied.
+   *  Boot must NOT block on this (a slow/hung bind-mount would crash the
+   *  daemon); it exists only as a deterministic await seam for tests, via
+   *  `whenStartupWatcherReady()`. */
+  private startupWatcherReady: Promise<void> | undefined;
   /** Per-file byte offset of the last fully-consumed (i.e. ended in `\n`)
    *  position; lets the watcher re-read only new lines on `change` and
    *  preserves any trailing partial line so a mid-append `change` event
@@ -101,6 +106,9 @@ export class IngestService {
   /** CREW-254: chokidar watcher on ~/.crew/state-events — the concrete
    *  state-event log. Mirrors the startup watcher exactly; one per daemon. */
   private stateEventWatcher: FSWatcher | undefined;
+  /** CREW-265: ready-await seam for the state-event watcher's initial scan.
+   *  Boot must not block on it — see `whenStateWatcherReady()`. */
+  private stateEventWatcherReady: Promise<void> | undefined;
   /** Per-file consumed-byte offset for the state-events log (see the startup
    *  equivalent for the offset/leftover protocol). */
   private readonly stateEventFileOffsets = new Map<string, number>();
@@ -174,7 +182,7 @@ export class IngestService {
    * skips lines already ingested, and the (agent_key, subtype, status,
    * ts) UNIQUE keeps anything that slips through idempotent.
    */
-  async watchStartupEvents(startupDir: string): Promise<void> {
+  watchStartupEvents(startupDir: string): void {
     mkdirSync(startupDir, { recursive: true });
     // Watch the directory itself (not a glob); chokidar's glob support is
     // deferred to consumer libs in v4. Filter to `.jsonl` in the handler.
@@ -192,19 +200,32 @@ export class IngestService {
     };
     this.startupWatcher.on('add', handle);
     this.startupWatcher.on('change', handle);
-    // chokidar resolves the watcher asynchronously; in tests we want to
-    // await the initial scan so a writeFileSync-just-after-await isn't
-    // racing against the watcher attaching.
+    // CREW-265: chokidar resolves the watcher's initial scan asynchronously.
+    // Boot must NOT await it (a slow/hung bind-mount must never crash the
+    // daemon — the offset-tracked add/change handlers ingest existing lines
+    // whenever the scan completes regardless). We only capture the ready
+    // promise so tests can await it explicitly via `whenStartupWatcherReady()`,
+    // avoiding a writeFileSync racing the watcher attach.
     const watcher = this.startupWatcher;
-    await new Promise<void>((resolve) => {
+    this.startupWatcherReady = new Promise<void>((resolve) => {
       watcher.once('ready', () => resolve());
     });
+  }
+
+  /**
+   * CREW-265: deterministic test seam — resolves once the startup watcher's
+   * initial scan has readied. Resolves immediately when no watcher is attached.
+   * Boot deliberately does not call this; only tests do.
+   */
+  async whenStartupWatcherReady(): Promise<void> {
+    await (this.startupWatcherReady ?? Promise.resolve());
   }
 
   async stopStartupWatcher(): Promise<void> {
     if (!this.startupWatcher) return;
     await this.startupWatcher.close();
     this.startupWatcher = undefined;
+    this.startupWatcherReady = undefined;
     this.startupFileOffsets.clear();
     this.startupFileBuffers.clear();
   }
@@ -218,7 +239,7 @@ export class IngestService {
    * from the per-eventId `state_events_applied` ledger rather than a UNIQUE
    * index, so a re-read after a daemon restart never double-applies.
    */
-  async watchStateEvents(stateEventsDir: string): Promise<void> {
+  watchStateEvents(stateEventsDir: string): void {
     mkdirSync(stateEventsDir, { recursive: true });
     this.stateEventWatcher = chokidar.watch(stateEventsDir, {
       persistent: true,
@@ -234,16 +255,28 @@ export class IngestService {
     };
     this.stateEventWatcher.on('add', handle);
     this.stateEventWatcher.on('change', handle);
+    // CREW-265: see `watchStartupEvents` — attach now, never block boot on the
+    // initial scan; expose the ready promise as a test-only await seam.
     const watcher = this.stateEventWatcher;
-    await new Promise<void>((resolve) => {
+    this.stateEventWatcherReady = new Promise<void>((resolve) => {
       watcher.once('ready', () => resolve());
     });
+  }
+
+  /**
+   * CREW-265: deterministic test seam — resolves once the state-event watcher's
+   * initial scan has readied. Resolves immediately when no watcher is attached.
+   * Boot deliberately does not call this; only tests do.
+   */
+  async whenStateWatcherReady(): Promise<void> {
+    await (this.stateEventWatcherReady ?? Promise.resolve());
   }
 
   async stopStateEventWatcher(): Promise<void> {
     if (!this.stateEventWatcher) return;
     await this.stateEventWatcher.close();
     this.stateEventWatcher = undefined;
+    this.stateEventWatcherReady = undefined;
     this.stateEventFileOffsets.clear();
     this.stateEventFileBuffers.clear();
   }
