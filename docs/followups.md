@@ -47,7 +47,6 @@ Organization: Active is grouped by topic (not chronology) since the dominant acc
     - [2026-04-28 — Dashboard New Run modal + projects route view](#2026-04-28--dashboard-new-run-modal--projects-route-view)
     - [2026-04-28 — `useAttention.clear()` snapshot semantic isn't directly tested](#2026-04-28--useattentionclear-snapshot-semantic-isnt-directly-tested)
   - [Daemon, CLI & Dispatch](#daemon-cli--dispatch)
-    - [2026-06-19 — `AgentsService.deriveState` terminal guards silently revert a state override out of `finished`/`error`/`pr_merged`](#2026-06-19--agentsservicederivestate-terminal-guards-silently-revert-a-state-override-out-of-finishederrorpr_merged)
     - [2026-06-19 — A throw between `*_started` and `*_exited` leaves the agent stuck `running`](#2026-06-19--a-throw-between-_started-and-_exited-leaves-the-agent-stuck-running)
     - [2026-06-19 — `pr_created` hook regex misses env-var/command-prefixed `gh pr create`](#2026-06-19--pr_created-hook-regex-misses-env-varcommand-prefixed-gh-pr-create)
     - [2026-06-17 — Host runner can't apply `dequeue` (no daemon "drop pending action" route)](#2026-06-17--host-runner-cant-apply-dequeue-no-daemon-drop-pending-action-route)
@@ -96,6 +95,7 @@ Organization: Active is grouped by topic (not chronology) since the dominant acc
     - [2026-05-15 — `.agents/` topic-doc system vs native `.claude/rules/` and agents.md alignment](#2026-05-15--agents-topic-doc-system-vs-native-clauderules-and-agentsmd-alignment)
     - [2026-05-12 — Rethink followup-tracking system (priority tier + Jira backlog sync)](#2026-05-12--rethink-followup-tracking-system-priority-tier--jira-backlog-sync)
 - [Resolved](#resolved)
+  - [2026-06-19 — `AgentsService.deriveState` terminal guards silently revert a state override out of `finished`/`error`/`pr_merged`](#2026-06-19--agentsservicederivestate-terminal-guards-silently-revert-a-state-override-out-of-finishederrorpr_merged)
   - [2026-06-03 — `deriveState` falls through to `finished` when PR-create isn't detected](#2026-06-03--derivestate-falls-through-to-finished-when-pr-create-isnt-detected)
   - [2026-05-11 — `idle` and `waiting` agent states not reachable from daemon fixtures](#2026-05-11--idle-and-waiting-agent-states-not-reachable-from-daemon-fixtures)
   - [2026-05-10 — Wire dashboard QuickAction buttons (Resume / Finish / Inspect / Provide input) to daemon endpoints](#2026-05-10--wire-dashboard-quickaction-buttons-resume--finish--inspect--provide-input-to-daemon-endpoints)
@@ -723,27 +723,6 @@ The "synthetic Unregistered section" feels right — single render path, no extr
 **Shape of work:** Tiny cleanup. Add 2–3 RTL test cases. Bundle into the cva-cleanup ticket above or stand alone.
 
 ### Daemon, CLI & Dispatch
-
-#### 2026-06-19 — `AgentsService.deriveState` terminal guards silently revert a state override out of `finished`/`error`/`pr_merged`
-
-**Ticket:** [CREW-258](https://safturento.atlassian.net/browse/CREW-258) — *gated on the state-override Epic; resolution should land within or alongside it.*
-
-**What:** CREW-259 (Epic CREW-258) ships `recordStateOverride` + `POST /api/agents/:key/state` as the operator escape hatch whose stated core behavior is moving an agent **out of** a terminal state (`finished`/`pr_merged`). The override correctly writes a `state_transitions` row (`source='override'`), advances the in-memory cache, and publishes `agent.state_changed`. **But the dashboard's displayed badge comes from `AgentsService.deriveState`** (GET `/api/agents` list + GET `/api/agents/:key` detail), whose terminal guards take precedence over the latest transition: `finishCompletedOk` → forces `finished`; `exitCode !== 0` → forces `error`; `prMerged` (any `pr_merged` row ever written for the agent) → forces `pr_merged`. So an override *out of* one of those three states is honored on the optimistic SSE flip but **silently reverts on the next list/detail refetch** — defeating the Epic's goal for exactly the terminal states the escape hatch most needs to leave. Overrides *into* any state, and overrides between non-terminal states (or while the latest run is still open, `completed_at IS NULL`), are unaffected.
-
-**Why noticed:** Self-review of CREW-259 (daemon ticket). The plan (`docs/superpowers/plans/2026-06-19-state-override-control.md`) scoped Ticket 1 to the migration + service + route + Bruno and deliberately did not touch `AgentsService`; its Self-Review claimed the service-level test (asserting the latest `pr_merged → pr_open` transition row) proves the behavior — true at the log/cache layer, but the read-path projection was not accounted for. Shipping Ticket 1 as specified; flagging rather than autonomously expanding into the risky terminal-guard logic.
-
-**Anchors:**
-
-- `packages/daemon/src/services/AgentsService.ts` — `deriveState` (the `finishCompletedOk` / `exitCode` / `prMerged` precedence ladder); `list()` computes `prMerged` as `MAX(CASE WHEN st.to_state = 'pr_merged' …)` and `finishCompletedOk` from a clean finish run; `getByKey` mirrors it.
-- `packages/daemon/src/services/IngestService.ts` — `recordStateOverride` (writes the override transition + cache + SSE).
-- `docs/superpowers/plans/2026-06-19-state-override-control.md` — Ticket 1 scope + Self-Review.
-- Epic [CREW-258](https://safturento.atlassian.net/browse/CREW-258); ticket CREW-259.
-
-**What's been considered:** The terminal guards are a legacy compatibility layer ("the CREW-96 backfill never wrote `finished`/`error`/`pr_merged` for historical agents"). Post-CREW-252/257 concrete events *do* write terminal transitions, so the guards increasingly duplicate the log. Two directions: (a) make `deriveState` honor the latest transition when it is strictly newer than the terminal signal (e.g. compare the override row's `ts`/`id` against the `pr_merged`/finish signal — the `source='override'` stamp this ticket adds is a natural discriminator); or (b) have the override actively neutralize the competing terminal signal (it can't delete the old `pr_merged` row without rewriting history, and `finishCompletedOk` derives from the runs table, not transitions — so (a) is cleaner). Either way it's an `AgentsService`-layer change, properly its own unit of work.
-
-**Shape of work:** small, contained change in `AgentsService.deriveState` (+ the `list()`/`getByKey` projections feeding it) plus tests asserting an override out of each terminal state survives a refetch. Likely belongs as a new child of CREW-258 (or folded into the dashboard ticket's acceptance) so the Epic's user-facing goal actually holds end-to-end.
-
-**Open questions:** Should `deriveState` trust *any* newer transition over the terminal guards, or specifically only `source='override'` ones (preserving the legacy-agent protection for everything else)? The latter is safer and uses the provenance column this ticket introduces.
 
 #### 2026-06-19 — A throw between `*_started` and `*_exited` leaves the agent stuck `running`
 
@@ -1595,7 +1574,26 @@ The other two open questions (sandbox config drift, Phase 2 + Phase 3 separation
 
 ## Resolved
 
+### 2026-06-19 — `AgentsService.deriveState` terminal guards silently revert a state override out of `finished`/`error`/`pr_merged`
+
+**Resolved 2026-06-19:** Closed by [CREW-264](https://safturento.atlassian.net/browse/CREW-264) (the same PR that fixed the coupled `finished`-fallthrough footgun). `deriveState` now takes a `latestIsOverride` flag — true when the agent's latest transition (the row that already feeds `currentState`) carries `source='override'` (CREW-259's provenance column). When set, the override target wins over the `finishCompletedOk`/`exitCode`/`prMerged` terminal guards, so an override OUT of `finished`/`error`/`pr_merged` survives the list + detail re-derive instead of reverting after the optimistic SSE flip. The gate is `source='override'` specifically — answering the open question in favor of the safer option — so any newer automatic event (which writes a non-override row) re-takes precedence and legacy/backfilled agents keep the guards. `list()` surfaces the latest row's `source` via a correlated subquery; `getByKey` selects it alongside `to_state`. Unit tests cover an override out of each terminal state surviving a re-derive plus the non-override-defers-to-guard case.
+
+**What:** CREW-259 (Epic CREW-258) ships `recordStateOverride` + `POST /api/agents/:key/state` as the operator escape hatch whose stated core behavior is moving an agent **out of** a terminal state (`finished`/`pr_merged`). The override correctly writes a `state_transitions` row (`source='override'`), advances the in-memory cache, and publishes `agent.state_changed`. **But the dashboard's displayed badge comes from `AgentsService.deriveState`** (GET `/api/agents` list + GET `/api/agents/:key` detail), whose terminal guards take precedence over the latest transition: `finishCompletedOk` → forces `finished`; `exitCode !== 0` → forces `error`; `prMerged` (any `pr_merged` row ever written for the agent) → forces `pr_merged`. So an override *out of* one of those three states is honored on the optimistic SSE flip but **silently reverts on the next list/detail refetch** — defeating the Epic's goal for exactly the terminal states the escape hatch most needs to leave. Overrides *into* any state, and overrides between non-terminal states (or while the latest run is still open, `completed_at IS NULL`), are unaffected.
+
+**Why noticed:** Self-review of CREW-259 (daemon ticket). The plan (`docs/superpowers/plans/2026-06-19-state-override-control.md`) scoped Ticket 1 to the migration + service + route + Bruno and deliberately did not touch `AgentsService`; its Self-Review claimed the service-level test (asserting the latest `pr_merged → pr_open` transition row) proves the behavior — true at the log/cache layer, but the read-path projection was not accounted for. Shipping Ticket 1 as specified; flagging rather than autonomously expanding into the risky terminal-guard logic.
+
+**Anchors:**
+
+- `packages/daemon/src/services/AgentsService.ts` — `deriveState` (the `finishCompletedOk` / `exitCode` / `prMerged` precedence ladder); `list()` computes `prMerged` as `MAX(CASE WHEN st.to_state = 'pr_merged' …)` and `finishCompletedOk` from a clean finish run; `getByKey` mirrors it.
+- `packages/daemon/src/services/IngestService.ts` — `recordStateOverride` (writes the override transition + cache + SSE).
+- `docs/superpowers/plans/2026-06-19-state-override-control.md` — Ticket 1 scope + Self-Review.
+- Epic [CREW-258](https://safturento.atlassian.net/browse/CREW-258); ticket CREW-259.
+
+**What's been considered:** The terminal guards are a legacy compatibility layer ("the CREW-96 backfill never wrote `finished`/`error`/`pr_merged` for historical agents"). Post-CREW-252/257 concrete events *do* write terminal transitions, so the guards increasingly duplicate the log. Two directions: (a) make `deriveState` honor the latest transition when it is strictly newer than the terminal signal (e.g. compare the override row's `ts`/`id` against the `pr_merged`/finish signal — the `source='override'` stamp this ticket adds is a natural discriminator); or (b) have the override actively neutralize the competing terminal signal (it can't delete the old `pr_merged` row without rewriting history, and `finishCompletedOk` derives from the runs table, not transitions — so (a) is cleaner). Either way it's an `AgentsService`-layer change, properly its own unit of work. *Resolution took direction (a), keyed on `source='override'`.*
+
 ### 2026-06-03 — `deriveState` falls through to `finished` when PR-create isn't detected
+
+**Resolved 2026-06-19 (read-path half — CREW-264):** The cutover note below describes the *write-path* (`reduceState`/`IngestService`) twin, but `AgentsService.deriveState` — the read-path projection that actually drives the displayed badge — still ended with a literal `return 'finished'` fallthrough until [CREW-264](https://safturento.atlassian.net/browse/CREW-264) changed it to `return 'idle'`. So a completed exit-0 run with an empty/non-terminal transition log now renders `idle` on the list + detail endpoints (matching the write-path), and `finished` is produced only by the `finishCompletedOk` guard. The footgun is closed end-to-end. (CREW-264 also fixed the coupled override-revert defect — see its own Resolved entry below.)
 
 **Resolved 2026-06-19:** Closed by the concrete-state-triggers cutover (Epic [CREW-252](https://safturento.atlassian.net/browse/CREW-252), final task [CREW-257](https://safturento.atlassian.net/browse/CREW-257)). The inferred PR-create detection is gone entirely — agent state is now driven only by concrete lifecycle events, so a "completed run, no PR observed" no longer needs a heuristic terminal-state guess. A clean `run_exited` with no PR now lands the agent in the (newly reachable) `idle` state, and a non-zero `*_exited` routes to `error`; neither masquerades as `finished`. The `computeNextState`/`deriveState` cross-path inconsistency is moot because `computeNextState` was deleted. The `&&`-chained matcher edge survives only on the `pr_created` hook regex — tracked separately in the 2026-06-19 "`pr_created` hook regex misses env-var/command-prefixed `gh pr create`" entry.
 

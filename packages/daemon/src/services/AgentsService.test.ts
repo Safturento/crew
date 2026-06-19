@@ -220,10 +220,11 @@ async function makeStateTransition(
   to: AnyTransitionState,
   ts: number,
   from: AnyTransitionState | null = null,
+  source: string | null = null,
 ): Promise<void> {
   await db
     .insertInto('state_transitions')
-    .values({ agent_key: agentKey, from_state: from, to_state: to, ts })
+    .values({ agent_key: agentKey, from_state: from, to_state: to, ts, source })
     .execute();
 }
 
@@ -288,7 +289,11 @@ describe('AgentsService.list', () => {
     }
   });
 
-  it('returns finished when latest run is completed=0 AND no gh pr create ever observed', async () => {
+  // CREW-264 Defect 1: a completed exit-0 run with no terminal transition is
+  // `idle` (run ended, no PR — CREW-257), never a fabricated `finished`. The
+  // old `return 'finished'` fallthrough masqueraded a dropped detection as a
+  // clean close-out. `finished` is now produced only by `finishCompletedOk`.
+  it('returns idle when latest run is completed=0 with an empty/non-terminal transition log', async () => {
     const db = await freshDb();
     try {
       await makeAgent(db, 'KAN-4');
@@ -298,7 +303,7 @@ describe('AgentsService.list', () => {
       });
       await makeToolCall(db, runId, { tool: 'Read', tokens: 2 });
       const svc = new AgentsService({ db });
-      expect((await svc.list())[0]).toMatchObject({ key: 'KAN-4', state: 'finished' });
+      expect((await svc.list())[0]).toMatchObject({ key: 'KAN-4', state: 'idle' });
     } finally {
       await db.destroy();
     }
@@ -502,6 +507,123 @@ describe('AgentsService.list', () => {
       await db.destroy();
     }
   });
+
+  // CREW-264 Defect 2: a `source='override'` transition is the newest row and
+  // must escape the terminal guards — an operator moving an agent OUT of a
+  // terminal state has to survive the list refetch, not just the SSE flip.
+
+  it('honors an override out of finished (survives a list re-derive)', async () => {
+    const db = await freshDb();
+    try {
+      await makeAgent(db, 'KAN-OV-FIN');
+      const r1 = await makeRun(db, 'KAN-OV-FIN', 's-ov-fin', {
+        completedAt: '2026-04-29T13:00:00Z',
+        exitCode: 0,
+      });
+      await makeToolCall(db, r1, { tool: 'Read', tokens: 1 });
+      // A clean finish run makes finishCompletedOk true (terminal guard).
+      await makeRun(db, 'KAN-OV-FIN', `finish-KAN-OV-FIN-${'a'.repeat(8)}`, {
+        command: 'finish',
+        completedAt: '2026-04-29T14:00:00Z',
+        exitCode: 0,
+      });
+      await makeStateTransition(db, 'KAN-OV-FIN', 'finished', 2000, null, 'cli-finish');
+      await makeStateTransition(db, 'KAN-OV-FIN', 'running', 3000, 'finished', 'override');
+      const agents = await new AgentsService({ db }).list();
+      expect(agents[0]).toMatchObject({ key: 'KAN-OV-FIN', state: 'running' });
+    } finally {
+      await db.destroy();
+    }
+  });
+
+  it('honors an override out of pr_merged (survives a list re-derive)', async () => {
+    const db = await freshDb();
+    try {
+      await makeAgent(db, 'KAN-OV-PM', { prUrl: 'https://github.com/x/y/pull/1' });
+      const r1 = await makeRun(db, 'KAN-OV-PM', 's-ov-pm', {
+        completedAt: '2026-04-29T13:00:00Z',
+        exitCode: 0,
+      });
+      await makeToolCall(db, r1, { tool: 'Read', tokens: 1 });
+      await makeStateTransition(db, 'KAN-OV-PM', 'pr_merged', 2000, 'pr_open', 'poller');
+      await makeStateTransition(db, 'KAN-OV-PM', 'pr_open', 3000, 'pr_merged', 'override');
+      const agents = await new AgentsService({ db }).list();
+      expect(agents[0]).toMatchObject({ key: 'KAN-OV-PM', state: 'pr_open' });
+    } finally {
+      await db.destroy();
+    }
+  });
+
+  it('honors an override out of error (survives a list re-derive)', async () => {
+    const db = await freshDb();
+    try {
+      await makeAgent(db, 'KAN-OV-ERR');
+      const r1 = await makeRun(db, 'KAN-OV-ERR', 's-ov-err', {
+        completedAt: '2026-04-29T13:00:00Z',
+        exitCode: 1,
+      });
+      await makeToolCall(db, r1, { tool: 'Read', tokens: 1 });
+      await makeStateTransition(db, 'KAN-OV-ERR', 'error', 2000, 'running', 'runner-exit');
+      await makeStateTransition(db, 'KAN-OV-ERR', 'idle', 3000, 'error', 'override');
+      const agents = await new AgentsService({ db }).list();
+      expect(agents[0]).toMatchObject({ key: 'KAN-OV-ERR', state: 'idle' });
+    } finally {
+      await db.destroy();
+    }
+  });
+
+  // The override escape only applies to `source='override'`. A non-override
+  // latest transition still defers to the legacy terminal guards, so legacy /
+  // backfilled agents are unaffected.
+  it('still defers to the finish guard when the latest transition is not an override', async () => {
+    const db = await freshDb();
+    try {
+      await makeAgent(db, 'KAN-OV-LEGACY');
+      const r1 = await makeRun(db, 'KAN-OV-LEGACY', 's-ov-legacy', {
+        completedAt: '2026-04-29T13:00:00Z',
+        exitCode: 0,
+      });
+      await makeToolCall(db, r1, { tool: 'Read', tokens: 1 });
+      await makeRun(db, 'KAN-OV-LEGACY', `finish-KAN-OV-LEGACY-${'b'.repeat(8)}`, {
+        command: 'finish',
+        completedAt: '2026-04-29T14:00:00Z',
+        exitCode: 0,
+      });
+      // Latest transition is a non-override running row — the finish guard
+      // (finishCompletedOk) must still win.
+      await makeStateTransition(db, 'KAN-OV-LEGACY', 'running', 3000, 'init', 'cli-fixpr');
+      const agents = await new AgentsService({ db }).list();
+      expect(agents[0]).toMatchObject({ key: 'KAN-OV-LEGACY', state: 'finished' });
+    } finally {
+      await db.destroy();
+    }
+  });
+
+  // CREW-264: a stale override does not win forever — a newer automatic event
+  // (here PrPoller's pr_merged) writes a non-override row that becomes the
+  // latest transition, so the terminal guards re-take precedence over the
+  // earlier override. This is the safety net that justifies gating on
+  // `source='override'` rather than "any newer transition".
+  it('lets a newer automatic transition re-take precedence over a stale override', async () => {
+    const db = await freshDb();
+    try {
+      await makeAgent(db, 'KAN-OV-RECOVER', { prUrl: 'https://github.com/x/y/pull/3' });
+      const r1 = await makeRun(db, 'KAN-OV-RECOVER', 's-ov-recover', {
+        completedAt: '2026-04-29T13:00:00Z',
+        exitCode: 0,
+      });
+      await makeToolCall(db, r1, { tool: 'Read', tokens: 1 });
+      await makeStateTransition(db, 'KAN-OV-RECOVER', 'pr_merged', 2000, 'pr_open', 'poller');
+      // Operator overrides back to pr_open…
+      await makeStateTransition(db, 'KAN-OV-RECOVER', 'pr_open', 3000, 'pr_merged', 'override');
+      // …then the PR re-merges and the poller writes a fresh, newer pr_merged.
+      await makeStateTransition(db, 'KAN-OV-RECOVER', 'pr_merged', 4000, 'pr_open', 'poller');
+      const agents = await new AgentsService({ db }).list();
+      expect(agents[0]).toMatchObject({ key: 'KAN-OV-RECOVER', state: 'pr_merged' });
+    } finally {
+      await db.destroy();
+    }
+  });
 });
 
 describe('AgentsService.getByKey', () => {
@@ -685,6 +807,49 @@ describe('AgentsService.getByKey', () => {
       await makeStateTransition(db, 'KAN-FF-G', 'pr_open', 2000, 'running');
       const detail = await new AgentsService({ db }).getByKey('KAN-FF-G');
       expect(detail?.state).toBe('pr_open');
+    } finally {
+      await db.destroy();
+    }
+  });
+
+  // CREW-264 Defect 1 (single-agent endpoint): completed exit-0 run, empty log
+  // → idle, not a fabricated finished.
+  it('returns idle for a completed exit-0 run with no terminal transition (single-agent endpoint)', async () => {
+    const db = await freshDb();
+    try {
+      await makeAgent(db, 'KAN-IDLE-G');
+      const r1 = await makeRun(db, 'KAN-IDLE-G', 's-idle-g', {
+        completedAt: '2026-04-29T13:00:00Z',
+        exitCode: 0,
+      });
+      await makeToolCall(db, r1, { tool: 'Read', tokens: 1 });
+      const detail = await new AgentsService({ db }).getByKey('KAN-IDLE-G');
+      expect(detail?.state).toBe('idle');
+    } finally {
+      await db.destroy();
+    }
+  });
+
+  // CREW-264 Defect 2 (single-agent endpoint): an override out of a terminal
+  // state survives the detail refetch, mirroring list().
+  it('honors an override out of finished (single-agent endpoint)', async () => {
+    const db = await freshDb();
+    try {
+      await makeAgent(db, 'KAN-OV-FIN-G');
+      const r1 = await makeRun(db, 'KAN-OV-FIN-G', 's-ov-fin-g', {
+        completedAt: '2026-04-29T13:00:00Z',
+        exitCode: 0,
+      });
+      await makeToolCall(db, r1, { tool: 'Read', tokens: 1 });
+      await makeRun(db, 'KAN-OV-FIN-G', `finish-KAN-OV-FIN-G-1`, {
+        command: 'finish',
+        completedAt: '2026-04-29T14:00:00Z',
+        exitCode: 0,
+      });
+      await makeStateTransition(db, 'KAN-OV-FIN-G', 'finished', 2000, null, 'cli-finish');
+      await makeStateTransition(db, 'KAN-OV-FIN-G', 'running', 3000, 'finished', 'override');
+      const detail = await new AgentsService({ db }).getByKey('KAN-OV-FIN-G');
+      expect(detail?.state).toBe('running');
     } finally {
       await db.destroy();
     }
