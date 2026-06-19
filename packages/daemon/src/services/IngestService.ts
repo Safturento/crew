@@ -294,7 +294,7 @@ export class IngestService {
     }
 
     const previous = await this.getCachedAgentState(event.key);
-    const next = reduceState(previous, event.event);
+    const next = reduceState(previous, event.event, event.exitCode);
 
     // Atomicity matters: the dedup-ledger row and the state_transitions row
     // must commit together. If the ledger row landed but the transition write

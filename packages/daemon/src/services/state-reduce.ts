@@ -14,12 +14,27 @@ import type { TransitionTarget } from './state-derivation.js';
  * `run_exited` is the only state-dependent case: a run process ending while
  * still `running` means it produced no PR → `idle` (the operator decides next);
  * ending while already `pr_open` is the normal happy path → no change.
+ *
+ * A non-zero `exitCode` on either `*_exited` event supersedes the normal
+ * routing → `error`: a dispatch that crashed didn't go idle or back to pr_open,
+ * it failed. `exitCode` is meaningful only on `*_exited`; an omitted/`null`
+ * (clean) code keeps the normal routing. `recordError` still owns the
+ * *startup-phase* failure path — this covers the runner's own non-zero exit.
  */
 export function reduceState(
   current: TransitionTarget,
   event: StateEventKind,
+  exitCode?: number | null,
 ): TransitionTarget | null {
   if (current === 'finished' || current === 'pr_merged') return null;
+
+  if (
+    (event === 'run_exited' || event === 'fixpr_exited') &&
+    exitCode != null &&
+    exitCode !== 0
+  ) {
+    return current === 'error' ? null : 'error';
+  }
 
   let next: TransitionTarget | null;
   switch (event) {
