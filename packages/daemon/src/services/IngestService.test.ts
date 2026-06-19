@@ -411,6 +411,63 @@ describe('IngestService.recordRunCompleted — fix-pr cycle-back (CREW-198)', ()
   });
 });
 
+describe('IngestService — transition source provenance (CREW-259)', () => {
+  async function latestSource(db: Kysely<DaemonDatabase>, key: string): Promise<string | null> {
+    const row = await db
+      .selectFrom('state_transitions')
+      .select('source')
+      .where('agent_key', '=', key)
+      .orderBy('ts', 'desc')
+      .orderBy('id', 'desc')
+      .executeTakeFirst();
+    return row?.source ?? null;
+  }
+
+  it('recordError stamps source=startup-failure', async () => {
+    const { db, agentKey } = await setup();
+    try {
+      const svc = new IngestService({ db, logger: silentLogger, eventBus: new EventBus() });
+      await svc.recordError(agentKey, 1000);
+      expect(await getLatestState(db, agentKey)).toBe('error');
+      expect(await latestSource(db, agentKey)).toBe('startup-failure');
+    } finally {
+      await db.destroy();
+    }
+  });
+
+  it('recordFinishCompleted stamps source=cli-finish', async () => {
+    const { db, agentKey } = await setup();
+    try {
+      const svc = new IngestService({ db, logger: silentLogger, eventBus: new EventBus() });
+      await svc.recordFinishCompleted(agentKey, '2026-06-19T00:00:00Z');
+      expect(await getLatestState(db, agentKey)).toBe('finished');
+      expect(await latestSource(db, agentKey)).toBe('cli-finish');
+    } finally {
+      await db.destroy();
+    }
+  });
+
+  it('recordRunCompleted stamps source=cli-fixpr on the cycle-back', async () => {
+    const { db, agentKey } = await setup();
+    try {
+      const svc = new IngestService({ db, logger: silentLogger, eventBus: new EventBus() });
+      await svc.ingestStateEvent({
+        eventId: 'rs',
+        key: agentKey,
+        event: 'run_started',
+        ts: '2026-06-19T00:00:00Z',
+        source: 'cli-run',
+      });
+      const fixPrRunId = await insertRun(db, agentKey, 'fix-pr', 'session-src-fixpr');
+      await svc.recordRunCompleted(agentKey, fixPrRunId, '2026-06-19T00:02:00Z');
+      expect(await getLatestState(db, agentKey)).toBe('pr_open');
+      expect(await latestSource(db, agentKey)).toBe('cli-fixpr');
+    } finally {
+      await db.destroy();
+    }
+  });
+});
+
 async function getLatestState(
   db: Kysely<DaemonDatabase>,
   agentKey: string,
@@ -827,6 +884,30 @@ describe('IngestService.ingestStateEvent — concrete state triggers (CREW-254)'
     }
   });
 
+  it('records the StateEvent source on the transition it writes (CREW-259)', async () => {
+    const { db, agentKey } = await setup();
+    try {
+      const svc = new IngestService({ db, logger: silentLogger, eventBus: new EventBus() });
+      await svc.ingestStateEvent({
+        eventId: 's1',
+        key: agentKey,
+        event: 'run_started',
+        ts: '2026-06-19T00:00:00Z',
+        source: 'cli-run',
+      });
+      const row = await db
+        .selectFrom('state_transitions')
+        .select(['to_state', 'source'])
+        .where('agent_key', '=', agentKey)
+        .orderBy('ts', 'desc')
+        .orderBy('id', 'desc')
+        .executeTakeFirst();
+      expect(row).toMatchObject({ to_state: 'running', source: 'cli-run' });
+    } finally {
+      await db.destroy();
+    }
+  });
+
   it('is idempotent on eventId — replay across a simulated restart writes no duplicate transition', async () => {
     const { db, agentKey } = await setup();
     try {
@@ -976,6 +1057,94 @@ describe('IngestService.ingestStateEvent — concrete state triggers (CREW-254)'
         exitCode: 1,
       });
       expect(await latestState(db, agentKey)).toBe('error');
+    } finally {
+      await db.destroy();
+    }
+  });
+});
+
+describe('IngestService.recordStateOverride (CREW-259)', () => {
+  async function latest(
+    db: Kysely<DaemonDatabase>,
+    key: string,
+  ): Promise<{ to_state: string; source: string | null } | undefined> {
+    return db
+      .selectFrom('state_transitions')
+      .select(['to_state', 'source'])
+      .where('agent_key', '=', key)
+      .orderBy('ts', 'desc')
+      .orderBy('id', 'desc')
+      .executeTakeFirst();
+  }
+
+  it('moves an agent OUT of a terminal state and stamps source=override', async () => {
+    const { db, agentKey } = await setup();
+    try {
+      const svc = new IngestService({ db, logger: silentLogger, eventBus: new EventBus() });
+      // Drive to a terminal state (pr_merged) — a plain event reducer could not
+      // leave it; the override must.
+      await svc.ingestStateEvent({
+        eventId: 'o1',
+        key: agentKey,
+        event: 'run_started',
+        ts: '2026-06-19T00:00:00Z',
+        source: 'cli-run',
+      });
+      await svc.ingestStateEvent({
+        eventId: 'o2',
+        key: agentKey,
+        event: 'pr_created',
+        ts: '2026-06-19T00:01:00Z',
+        source: 'hook-pr-create',
+      });
+      await svc.recordStateOverride(agentKey, 'pr_merged'); // simulate a merge
+      expect((await latest(db, agentKey))?.to_state).toBe('pr_merged');
+
+      const res = await svc.recordStateOverride(agentKey, 'pr_open');
+      expect(res).toMatchObject({ from: 'pr_merged', to: 'pr_open' });
+      const row = await latest(db, agentKey);
+      expect(row).toMatchObject({ to_state: 'pr_open', source: 'override' });
+    } finally {
+      await db.destroy();
+    }
+  });
+
+  it('publishes agent.state_changed + advances the cache on an override', async () => {
+    const { db, agentKey } = await setup();
+    try {
+      const bus = new EventBus();
+      const seen: SseEvent[] = [];
+      bus.subscribe({ onEvent: (e) => seen.push(e) });
+      const svc = new IngestService({ db, logger: silentLogger, eventBus: bus });
+
+      await svc.recordStateOverride(agentKey, 'finished');
+      const flips = seen.filter((e) => e.type === 'agent.state_changed');
+      expect(flips).toHaveLength(1);
+      expect(flips[0]?.data).toMatchObject({ key: agentKey, to: 'finished' });
+    } finally {
+      await db.destroy();
+    }
+  });
+
+  it('is a no-op when already in the target state (writes no row)', async () => {
+    const { db, agentKey } = await setup();
+    try {
+      const svc = new IngestService({ db, logger: silentLogger, eventBus: new EventBus() });
+      await svc.ingestStateEvent({
+        eventId: 'n1',
+        key: agentKey,
+        event: 'run_started',
+        ts: '2026-06-19T00:00:00Z',
+        source: 'cli-run',
+      });
+      const res = await svc.recordStateOverride(agentKey, 'running');
+      expect(res).toMatchObject({ noop: true, state: 'running' });
+      const rows = await db
+        .selectFrom('state_transitions')
+        .selectAll()
+        .where('agent_key', '=', agentKey)
+        .execute();
+      expect(rows).toHaveLength(1); // only the run_started row
     } finally {
       await db.destroy();
     }

@@ -1,7 +1,7 @@
 import { promises as fsp, mkdirSync } from 'node:fs';
 import { basename, join } from 'node:path';
 import chokidar, { type FSWatcher } from 'chokidar';
-import type { Kysely } from 'kysely';
+import type { Kysely, Transaction } from 'kysely';
 import type { Logger } from 'pino';
 import {
   claudeProjectDirFor,
@@ -301,10 +301,13 @@ export class IngestService {
       }
 
       if (next !== null) {
-        await trx
-          .insertInto('state_transitions')
-          .values({ agent_key: event.key, from_state: previous, to_state: next, ts })
-          .execute();
+        await this.writeTransitionRow(trx, {
+          agentKey: event.key,
+          from: previous,
+          to: next,
+          ts,
+          source: event.source,
+        });
       }
     });
 
@@ -312,11 +315,7 @@ export class IngestService {
 
     // Advance the in-memory cache + publish only after the commit, so neither
     // ever reflects a rolled-back write.
-    this.agentStateCache.set(event.key, next);
-    this.eventBus.publish({
-      type: 'agent.state_changed',
-      data: { key: event.key, from: previous, to: next, ts },
-    });
+    this.announceTransition({ agentKey: event.key, from: previous, to: next, ts });
   }
 
   /** Test seam — feeds a single parsed event through the same code path
@@ -366,15 +365,14 @@ export class IngestService {
     const previous = await this.getCachedAgentState(agentKey);
     if (previous === 'error' || previous === 'finished') return;
 
-    await this.db
-      .insertInto('state_transitions')
-      .values({ agent_key: agentKey, from_state: previous, to_state: 'error', ts })
-      .execute();
-    this.agentStateCache.set(agentKey, 'error');
-    this.eventBus.publish({
-      type: 'agent.state_changed',
-      data: { key: agentKey, from: previous, to: 'error', ts },
+    await this.writeTransitionRow(this.db, {
+      agentKey,
+      from: previous,
+      to: 'error',
+      ts,
+      source: 'startup-failure',
     });
+    this.announceTransition({ agentKey, from: previous, to: 'error', ts });
   }
 
   private async onStartupFile(filePath: string): Promise<void> {
@@ -538,16 +536,14 @@ export class IngestService {
       return;
     }
 
-    await this.db
-      .insertInto('state_transitions')
-      .values({ agent_key: agentKey, from_state: previous, to_state: 'finished', ts })
-      .execute();
-
-    this.agentStateCache.set(agentKey, 'finished');
-    this.eventBus.publish({
-      type: 'agent.state_changed',
-      data: { key: agentKey, from: previous, to: 'finished', ts },
+    await this.writeTransitionRow(this.db, {
+      agentKey,
+      from: previous,
+      to: 'finished',
+      ts,
+      source: 'cli-finish',
     });
+    this.announceTransition({ agentKey, from: previous, to: 'finished', ts });
   }
 
   /**
@@ -578,16 +574,37 @@ export class IngestService {
       return;
     }
 
-    await this.db
-      .insertInto('state_transitions')
-      .values({ agent_key: agentKey, from_state: 'running', to_state: 'pr_open', ts })
-      .execute();
-
-    this.agentStateCache.set(agentKey, 'pr_open');
-    this.eventBus.publish({
-      type: 'agent.state_changed',
-      data: { key: agentKey, from: 'running', to: 'pr_open', ts },
+    await this.writeTransitionRow(this.db, {
+      agentKey,
+      from: 'running',
+      to: 'pr_open',
+      ts,
+      source: 'cli-fixpr',
     });
+    this.announceTransition({ agentKey, from: 'running', to: 'pr_open', ts });
+  }
+
+  /**
+   * CREW-259 — operator escape hatch. Forces an agent to `toState`, bypassing
+   * `reduceState` and its terminal stickiness: the one path that can move an
+   * agent OUT of `finished`/`pr_merged`. Writes the transition (`source:
+   * 'override'`), advances the cache (so a later automatic event reduces against
+   * the corrected state, not a stale one), and publishes the SSE. No-op when
+   * already in the target state. Not a lifecycle fact — never touches the
+   * durable `~/.crew/state-events` log or the dedup ledger.
+   */
+  async recordStateOverride(
+    agentKey: string,
+    toState: TransitionTarget,
+  ): Promise<
+    { from: TransitionTarget; to: TransitionTarget } | { noop: true; state: TransitionTarget }
+  > {
+    const from = await this.getCachedAgentState(agentKey);
+    if (from === toState) return { noop: true, state: toState };
+    const ts = Date.now();
+    await this.writeTransitionRow(this.db, { agentKey, from, to: toState, ts, source: 'override' });
+    this.announceTransition({ agentKey, from, to: toState, ts });
+    return { from, to: toState };
   }
 
   async ingestEvent(runId: number, event: TranscriptEvent): Promise<void> {
@@ -643,6 +660,54 @@ export class IngestService {
     if (!inserted) return;
 
     this.eventBus.publish({ type: 'tool_calls.changed', data: { key: agentKey } });
+  }
+
+  /**
+   * CREW-259: single insert point for `state_transitions`. Takes `exec` (either
+   * `this.db` or a Kysely transaction) so it can run inside `ingestStateEvent`'s
+   * dedup transaction or standalone from the route-driven writers. Every hop now
+   * stamps `source` — see the migration 0012 doc for the value vocabulary.
+   */
+  private async writeTransitionRow(
+    exec: Kysely<DaemonDatabase> | Transaction<DaemonDatabase>,
+    args: {
+      agentKey: string;
+      from: TransitionTarget | null;
+      to: TransitionTarget;
+      ts: number;
+      source: string;
+    },
+  ): Promise<void> {
+    await exec
+      .insertInto('state_transitions')
+      .values({
+        agent_key: args.agentKey,
+        from_state: args.from,
+        to_state: args.to,
+        ts: args.ts,
+        source: args.source,
+      })
+      .execute();
+  }
+
+  /**
+   * CREW-259: the post-write tail shared by every transition-writer — advance
+   * the in-memory state cache and publish the `agent.state_changed` SSE. Split
+   * from `writeTransitionRow` because `ingestStateEvent` must defer this until
+   * after its transaction commits (so neither cache nor SSE ever reflects a
+   * rolled-back write), while the standalone writers run it inline.
+   */
+  private announceTransition(args: {
+    agentKey: string;
+    from: TransitionTarget | null;
+    to: TransitionTarget;
+    ts: number;
+  }): void {
+    this.agentStateCache.set(args.agentKey, args.to);
+    this.eventBus.publish({
+      type: 'agent.state_changed',
+      data: { key: args.agentKey, from: args.from, to: args.to, ts: args.ts },
+    });
   }
 
   private async getCachedAgentState(agentKey: string): Promise<TransitionTarget> {

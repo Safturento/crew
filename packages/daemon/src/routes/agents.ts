@@ -234,6 +234,35 @@ export async function registerAgentsRoutes(app: DaemonApp): Promise<void> {
     },
   );
 
+  // CREW-259: operator escape hatch. Forces an agent to a chosen state,
+  // bypassing the reducer + its terminal stickiness (the one path that can move
+  // an agent OUT of `finished`/`pr_merged`). 404 unknown agent; 400 invalid
+  // state (Zod); 200 with the `{from,to}` flip or `{noop,state}` when already
+  // there. The override is stamped `source: 'override'` in state_transitions.
+  app.post(
+    '/api/agents/:key/state',
+    {
+      schema: {
+        params: KeyParamsSchema,
+        body: z.object({ state: TransitionStateEnum }),
+      },
+    },
+    async (req, reply) => {
+      const db = req.diScope.resolve('db');
+      const exists = await db
+        .selectFrom('agents')
+        .select('key')
+        .where('key', '=', req.params.key)
+        .executeTakeFirst();
+      if (!exists) {
+        throw new NotFoundError('agent_not_found', { resource: 'agent', id: req.params.key });
+      }
+      const ingest = req.diScope.resolve('ingestService');
+      const result = await ingest.recordStateOverride(req.params.key, req.body.state);
+      return reply.code(200).send(result);
+    },
+  );
+
   // Per spec §5.3: missing JSONL is graceful — return 200 + empty events +
   // an `X-Crew-Warning: transcript-missing` header so the dashboard can
   // surface the gap without breaking the drawer. No pagination — long

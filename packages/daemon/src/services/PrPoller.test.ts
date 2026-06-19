@@ -92,6 +92,7 @@ describe('PrPoller.checkAgent', () => {
         .executeTakeFirst();
       expect(latest?.from_state).toBe('pr_open');
       expect(latest?.to_state).toBe('pr_merged');
+      expect(latest?.source).toBe('poller'); // CREW-259 provenance
       expect(events.map((e) => e.type)).toContain('agent.state_changed');
       const stateChanged = events.find((e) => e.type === 'agent.state_changed');
       expect(stateChanged?.data).toMatchObject({ key: 'AGENT', from: 'pr_open', to: 'pr_merged' });

@@ -111,7 +111,13 @@ export class PrPoller {
     const ts = Date.now();
     await this.db
       .insertInto('state_transitions')
-      .values({ agent_key: agentKey, from_state: 'pr_open', to_state: 'pr_merged', ts })
+      .values({
+        agent_key: agentKey,
+        from_state: 'pr_open',
+        to_state: 'pr_merged',
+        ts,
+        source: 'poller',
+      })
       .execute();
     this.eventBus.publish({
       type: 'agent.state_changed',
