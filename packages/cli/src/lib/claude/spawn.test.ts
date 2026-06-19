@@ -4,7 +4,10 @@ import {
   spawnClaudeFresh,
   spawnClaudeResume,
   claudeSpawnEnv,
+  claudeFreshArgs,
+  claudeResumeArgs,
   CLAUDE_PERMISSION_FLAG,
+  CLAUDE_SETTING_SOURCES_FLAGS,
 } from './spawn.js';
 
 vi.mock('execa', () => ({ execa: vi.fn() }));
@@ -30,7 +33,15 @@ describe('spawnClaudeResume', () => {
 
     expect(mockedExeca).toHaveBeenCalledWith(
       'claude',
-      ['--dangerously-skip-permissions', '--resume', 'abc-123', '-p', 'do the thing'],
+      [
+        '--dangerously-skip-permissions',
+        '--setting-sources',
+        'user,project,local',
+        '--resume',
+        'abc-123',
+        '-p',
+        'do the thing',
+      ],
       expect.objectContaining({ env: expect.any(Object) }),
     );
     expect(result).toBe(fakeSubprocess);
@@ -144,6 +155,38 @@ describe('spawnClaudeResume', () => {
   });
 });
 
+describe('setting-sources args', () => {
+  // CREW-262: a headless `claude -p` only loads the user + project setting
+  // sources by default, so the injected `pr_created` hook (which lives in the
+  // worktree's settings.local.json — the `local` source) never registers.
+  // Every crew spawn must opt the `local` source back in explicitly.
+  it('CLAUDE_SETTING_SOURCES_FLAGS opts in user, project, and local', () => {
+    expect(CLAUDE_SETTING_SOURCES_FLAGS).toEqual(['--setting-sources', 'user,project,local']);
+  });
+
+  it('claudeFreshArgs carries the permission + setting-sources flags before the prompt', () => {
+    expect(claudeFreshArgs('do the thing')).toEqual([
+      '--dangerously-skip-permissions',
+      '--setting-sources',
+      'user,project,local',
+      '-p',
+      'do the thing',
+    ]);
+  });
+
+  it('claudeResumeArgs carries the permission + setting-sources flags before --resume', () => {
+    expect(claudeResumeArgs('abc-123', 'do the thing')).toEqual([
+      '--dangerously-skip-permissions',
+      '--setting-sources',
+      'user,project,local',
+      '--resume',
+      'abc-123',
+      '-p',
+      'do the thing',
+    ]);
+  });
+});
+
 describe('claudeSpawnEnv', () => {
   it('CLAUDE_PERMISSION_FLAG is the headless permission flag', () => {
     expect(CLAUDE_PERMISSION_FLAG).toBe('--dangerously-skip-permissions');
@@ -193,7 +236,13 @@ describe('spawnClaudeFresh', () => {
 
     expect(mockedExeca).toHaveBeenCalledWith(
       'claude',
-      ['--dangerously-skip-permissions', '-p', 'do the thing'],
+      [
+        '--dangerously-skip-permissions',
+        '--setting-sources',
+        'user,project,local',
+        '-p',
+        'do the thing',
+      ],
       expect.objectContaining({ env: expect.any(Object) }),
     );
   });
