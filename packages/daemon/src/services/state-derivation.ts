@@ -18,19 +18,19 @@ export type TransitionState = 'init' | 'running' | 'pr_open' | 'pr_merged' | 'fi
 
 /**
  * Every value `state_transitions.to_state` can hold (mirrors the DB column
- * union in `db.ts`). The tool-call-driven machine only ever writes the six
- * `TransitionState` values; `idle`/`waiting` are reserved by the schema but
- * unreachable in v1. Kept here so `currentStateFromTransitions` can accept a
- * raw `to_state` without an unsafe cast at the call site.
+ * union in `db.ts`). The concrete-event reducer (`reduceState`, CREW-254/257)
+ * can land an agent in `idle`; `waiting` remains schema-reserved for a future
+ * producer. Kept here so `currentStateFromTransitions` can accept a raw
+ * `to_state` without an unsafe cast at the call site.
  */
 export type TransitionTarget = TransitionState | 'idle' | 'waiting';
 
 /**
  * Maps a `state_transitions.to_state` value to the UI badge union `AgentState`.
  * `init` → `initializing` (the transitions table uses the spec's canonical
- * `init`; the badge uses `initializing`). `idle`/`waiting` are unreachable in
- * v1 but map to `running` (an idle/waiting agent is mid-session, not finished)
- * so the badge never has a hole if the schema's reserved states ever appear.
+ * `init`; the badge uses `initializing`). `idle`/`waiting` project to their own
+ * badge state (CREW-257): a clean `run_exited` with no PR makes `idle` a real
+ * current state visible in the agents list, not just an intermediate transition.
  */
 const TRANSITION_TO_AGENT_STATE: Record<TransitionTarget, AgentState> = {
   init: 'initializing',
@@ -39,8 +39,8 @@ const TRANSITION_TO_AGENT_STATE: Record<TransitionTarget, AgentState> = {
   pr_merged: 'pr_merged',
   finished: 'finished',
   error: 'error',
-  idle: 'running',
-  waiting: 'running',
+  idle: 'idle',
+  waiting: 'waiting',
 };
 
 /**

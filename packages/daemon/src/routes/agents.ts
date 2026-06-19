@@ -5,6 +5,8 @@ import { NotFoundError } from '../errors.js';
 const AgentStateEnum = z.enum([
   'initializing',
   'running',
+  'idle',
+  'waiting',
   'pr_open',
   'pr_merged',
   'error',
