@@ -13,10 +13,17 @@ import { randomUUID } from 'node:crypto';
 import { homedir } from 'node:os';
 import { dirname, join } from 'node:path';
 
-// Match `gh pr create` only at a command boundary — start of string, or after a
-// `&&` / `;` / `|` separator — so an `echo "... gh pr create ..."` decoy that
-// merely mentions it (mid-string, no boundary) does not fire.
-const PR_CREATE = /(^|&&|;|\|)\s*gh pr create\b/;
+// Match `gh pr create` anywhere in the command (word-boundaried, so the
+// past-tense `gh pr created` does not fire). Position-anchoring used to gate
+// against `echo "... gh pr create ..."` decoys, but that was a holdover from the
+// transcript-parsing world and was the source of a recurring bug class — it
+// missed every positional variant it didn't enumerate (notably the newline-
+// separated `cd <wt>⏎gh pr create`, CREW-246/CREW-251/CREW-266). The PR-URL gate
+// below (`URL_RE` against stdout) is the real, stronger discriminator: a decoy
+// echo, `--help`, or `gh pr view`/`gh pr list` either prints no PR URL or isn't
+// a `create` at all. So the command check only needs to confirm a real
+// `gh pr create` invocation; the URL gate confirms it succeeded.
+const PR_CREATE = /\bgh pr create\b/;
 const URL_RE = /https:\/\/github\.com\/[^\s]+\/pull\/\d+/;
 
 /**
