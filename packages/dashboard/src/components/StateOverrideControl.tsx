@@ -48,8 +48,20 @@ export function StateOverrideControl({ agentKey, state }: StateOverrideControlPr
             aria-label="Override state"
           />
         </PopoverTrigger>
-        <PopoverContent className="w-52 p-1" align="start" role="menu">
-          <p className="px-2 py-1.5 font-mono text-[10px] uppercase tracking-wide text-muted-foreground">
+        {/* A plain Radix Popover, not a Menu primitive — so no `role="menu"`
+            (it would promise arrow-key roving focus + typeahead this doesn't
+            provide). Items are ordinary buttons in a group labelled by the
+            heading, matching the Timeline/Filters popover convention. */}
+        <PopoverContent
+          className="w-52 p-1"
+          align="start"
+          role="group"
+          aria-labelledby="override-state-heading"
+        >
+          <p
+            id="override-state-heading"
+            className="px-2 py-1.5 font-mono text-[10px] uppercase tracking-wide text-muted-foreground"
+          >
             Override state
           </p>
           {ALL_STATES.map((s) => {
@@ -58,7 +70,6 @@ export function StateOverrideControl({ agentKey, state }: StateOverrideControlPr
               <button
                 key={s}
                 type="button"
-                role="menuitem"
                 disabled={isCurrent}
                 aria-disabled={isCurrent || undefined}
                 onClick={() => {

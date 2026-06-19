@@ -53,13 +53,13 @@ test.describe('Drawer state-override control (CREW-260)', () => {
     // Open the override popover.
     await page.getByRole('button', { name: 'Override state' }).click();
 
-    // All 8 states are offered; the current one (running) is disabled.
-    const items = page.getByRole('menuitem');
-    await expect(items).toHaveCount(8);
-    await expect(page.getByRole('menuitem', { name: /running/i })).toBeDisabled();
+    // All 8 states are offered (in the labelled group); current (running) disabled.
+    const group = page.getByRole('group', { name: 'Override state' });
+    await expect(group.getByRole('button')).toHaveCount(8);
+    await expect(group.getByRole('button', { name: /running/i })).toBeDisabled();
 
     // Selecting a different state raises the AlertModal naming both states.
-    await page.getByRole('menuitem', { name: 'Finished' }).click();
+    await group.getByRole('button', { name: 'Finished' }).click();
     const dialog = page.getByRole('alertdialog', { name: 'Override agent state' });
     await expect(dialog).toBeVisible();
     await expect(dialog).toContainText(/from "Running" to "Finished"/i);
