@@ -8,7 +8,7 @@ describe('runUp', () => {
     const exec = vi.fn(async (file: string, args: string[]) => {
       calls.push([file, ...args]);
     });
-    await runUp({ exec, log: vi.fn(), ensureRunnerDir: vi.fn() });
+    await runUp({ exec, log: vi.fn(), ensureRunnerDir: vi.fn(), ensureStateEventsDir: vi.fn() });
     expect(calls).toEqual([
       ['docker', 'compose', 'up', '-d'],
       ['crew', 'runner', 'start'],
@@ -23,9 +23,24 @@ describe('runUp', () => {
     const ensureRunnerDir = vi.fn(() => {
       order.push('ensure-runner-dir');
     });
-    await runUp({ exec, log: vi.fn(), ensureRunnerDir });
+    await runUp({ exec, log: vi.fn(), ensureRunnerDir, ensureStateEventsDir: vi.fn() });
     expect(order[0]).toBe('ensure-runner-dir');
     expect(order.indexOf('ensure-runner-dir')).toBeLessThan(order.indexOf('docker compose up -d'));
+  });
+
+  it('pre-creates the host state-events dir before compose can mount it', async () => {
+    const order: string[] = [];
+    const exec = vi.fn(async (file: string, args: string[]) => {
+      order.push([file, ...args].join(' '));
+    });
+    const ensureStateEventsDir = vi.fn(() => {
+      order.push('ensure-state-events-dir');
+    });
+    await runUp({ exec, log: vi.fn(), ensureRunnerDir: vi.fn(), ensureStateEventsDir });
+    expect(ensureStateEventsDir).toHaveBeenCalledOnce();
+    expect(order.indexOf('ensure-state-events-dir')).toBeLessThan(
+      order.indexOf('docker compose up -d'),
+    );
   });
 });
 
