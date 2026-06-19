@@ -50,7 +50,11 @@ export function useCancelEscalation({
   useEffect(() => clear, [clear]);
 
   const requestCancel = useCallback(() => setPhase('confirming'), []);
-  const dismiss = useCallback(() => setPhase('idle'), []);
+  // Only an un-confirmed cancel resets to idle. Confirming the AlertDialog
+  // fires both onAction (→ confirm → 'cancelling') and onOpenChange(false)
+  // (→ dismiss) in one event; the functional guard keeps `dismiss` from
+  // clobbering the `cancelling` phase regardless of which lands first.
+  const dismiss = useCallback(() => setPhase((p) => (p === 'confirming' ? 'idle' : p)), []);
 
   const confirm = useCallback(() => {
     onSoftCancel();

@@ -8,7 +8,9 @@ afterEach(() => vi.useRealTimers());
 
 describe('useCancelEscalation', () => {
   it('starts idle, opens the confirm, and dismisses back to idle', () => {
-    const { result } = renderHook(() => useCancelEscalation({ onSoftCancel: vi.fn(), onForceKill: vi.fn() }));
+    const { result } = renderHook(() =>
+      useCancelEscalation({ onSoftCancel: vi.fn(), onForceKill: vi.fn() }),
+    );
     expect(result.current.phase).toBe('idle');
 
     act(() => result.current.requestCancel());
