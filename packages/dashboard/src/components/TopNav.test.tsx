@@ -56,6 +56,19 @@ describe('TopNav', () => {
     expect(screen.getByRole('link', { name: 'Projects' })).toHaveAttribute('aria-current', 'page');
   });
 
+  it('marks the Runner tab active for the runner route', () => {
+    renderTopNav(
+      <TopNav
+        route={{ kind: 'runner' }}
+        attentionCount={0}
+        onClearAttention={() => {}}
+        onNewRun={() => {}}
+      />,
+    );
+    expect(screen.getByRole('link', { name: 'Runner' })).toHaveAttribute('aria-current', 'page');
+    expect(screen.getByRole('link', { name: 'Agents' })).not.toHaveAttribute('aria-current');
+  });
+
   it('disables the Clear attention button when count is 0', () => {
     renderTopNav(
       <TopNav
