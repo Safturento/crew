@@ -296,27 +296,40 @@ export class IngestService {
     const previous = await this.getCachedAgentState(event.key);
     const next = reduceState(previous, event.event);
 
-    // Record the eventId even on a no-op so a replay stays a no-op.
-    await this.db
-      .insertInto('state_events_applied')
-      .values({ event_id: event.eventId, agent_key: event.key, ts })
-      .onConflict((oc) => oc.column('event_id').doNothing())
-      .execute();
-
-    if (event.event === 'pr_created' && event.prUrl) {
-      await this.db
-        .updateTable('agents')
-        .set({ pr_url: event.prUrl })
-        .where('key', '=', event.key)
+    // Atomicity matters: the dedup-ledger row and the state_transitions row
+    // must commit together. If the ledger row landed but the transition write
+    // crashed, a restart's replay would dedup on the ledger row and never write
+    // the transition — the agent would be stuck in `previous` forever. One
+    // transaction closes that window: a crash before commit rolls back both, so
+    // the replay re-applies cleanly. The eventId is recorded even on a no-op
+    // reduce (so a replay stays a no-op).
+    await this.db.transaction().execute(async (trx) => {
+      await trx
+        .insertInto('state_events_applied')
+        .values({ event_id: event.eventId, agent_key: event.key, ts })
+        .onConflict((oc) => oc.column('event_id').doNothing())
         .execute();
-    }
+
+      if (event.event === 'pr_created' && event.prUrl) {
+        await trx
+          .updateTable('agents')
+          .set({ pr_url: event.prUrl })
+          .where('key', '=', event.key)
+          .execute();
+      }
+
+      if (next !== null) {
+        await trx
+          .insertInto('state_transitions')
+          .values({ agent_key: event.key, from_state: previous, to_state: next, ts })
+          .execute();
+      }
+    });
 
     if (next === null) return;
 
-    await this.db
-      .insertInto('state_transitions')
-      .values({ agent_key: event.key, from_state: previous, to_state: next, ts })
-      .execute();
+    // Advance the in-memory cache + publish only after the commit, so neither
+    // ever reflects a rolled-back write.
     this.agentStateCache.set(event.key, next);
     this.eventBus.publish({
       type: 'agent.state_changed',
