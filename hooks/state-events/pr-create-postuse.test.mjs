@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { mkdtempSync, readFileSync, existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { handlePostToolUse } from './pr-create-postuse.mjs';
+import { handlePostToolUse, prCreateFailureLine } from './pr-create-postuse.mjs';
 
 // Real Claude Code PostToolUse(Bash) payload shape — empirically captured from a
 // live session transcript (CREW-261): `tool_response` carries
@@ -108,5 +108,24 @@ describe('handlePostToolUse', () => {
     expect(() =>
       handlePostToolUse(ev('gh pr create', 'https://github.com/o/r/pull/1'), 'CREW-1', '/dev/null/nope'),
     ).not.toThrow();
+  });
+});
+
+describe('prCreateFailureLine', () => {
+  it('appends the chown remediation on a permission error (EACCES)', () => {
+    const err = Object.assign(new Error('permission denied'), { code: 'EACCES' });
+    const line = prCreateFailureLine('/dir', 'CREW-1', err);
+    expect(line).toContain('failed to emit pr_created for CREW-1');
+    expect(line).toContain('sudo chown -R "$(id -u):$(id -g)" /dir');
+  });
+
+  it('appends the chown remediation on EPERM too', () => {
+    const err = Object.assign(new Error('operation not permitted'), { code: 'EPERM' });
+    expect(prCreateFailureLine('/dir', 'CREW-1', err)).toContain('sudo chown -R');
+  });
+
+  it('does not append remediation for a non-permission error', () => {
+    const err = Object.assign(new Error('boom'), { code: 'ENOENT' });
+    expect(prCreateFailureLine('/dir', 'CREW-1', err)).not.toContain('sudo chown');
   });
 });

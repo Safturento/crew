@@ -20,6 +20,29 @@ const PR_CREATE = /(^|&&|;|\|)\s*gh pr create\b/;
 const URL_RE = /https:\/\/github\.com\/[^\s]+\/pull\/\d+/;
 
 /**
+ * Build the stderr line for a failed append. On a permission error
+ * (EACCES/EPERM — the `nobody`-owned-dir footgun, CREW-263) the chown
+ * remediation is appended so a perms regression is loud and self-explanatory
+ * rather than a swallowed no-op. Mirrors `emitFailureLine` in
+ * lib/state-events/writer.ts (duplicated, not imported — this hook is
+ * dependency-free).
+ *
+ * @param {string} dir   the state-events dir the append targeted
+ * @param {string} key   the dispatched agent's key
+ * @param {unknown} err  the caught error
+ */
+export function prCreateFailureLine(dir, key, err) {
+  const code = err && typeof err === 'object' ? err.code : undefined;
+  const remediation =
+    code === 'EACCES' || code === 'EPERM'
+      ? `\nstate-events dir ${dir} is not writable by the current user — ` +
+        `Docker likely created it as 'nobody'. ` +
+        `Fix ownership with: sudo chown -R "$(id -u):$(id -g)" ${dir}`
+      : '';
+  return `crew hook: failed to emit pr_created for ${key}: ${err}${remediation}`;
+}
+
+/**
  * Append the `pr_created` event iff a successful `gh pr create` is detected in
  * the Bash tool call. Best-effort: never throws into the hook process — a
  * failed append is written to stderr, matching the writer's contract.
@@ -56,7 +79,7 @@ export function handlePostToolUse(payload, key, home = homedir()) {
     mkdirSync(dirname(file), { recursive: true });
     appendFileSync(file, `${JSON.stringify(event)}\n`, 'utf8');
   } catch (err) {
-    process.stderr.write(`crew hook: failed to emit pr_created for ${key}: ${err}\n`);
+    process.stderr.write(`${prCreateFailureLine(dirname(file), key, err)}\n`);
   }
 }
 
