@@ -584,6 +584,29 @@ export class IngestService {
     this.announceTransition({ agentKey, from: 'running', to: 'pr_open', ts });
   }
 
+  /**
+   * CREW-259 — operator escape hatch. Forces an agent to `toState`, bypassing
+   * `reduceState` and its terminal stickiness: the one path that can move an
+   * agent OUT of `finished`/`pr_merged`. Writes the transition (`source:
+   * 'override'`), advances the cache (so a later automatic event reduces against
+   * the corrected state, not a stale one), and publishes the SSE. No-op when
+   * already in the target state. Not a lifecycle fact — never touches the
+   * durable `~/.crew/state-events` log or the dedup ledger.
+   */
+  async recordStateOverride(
+    agentKey: string,
+    toState: TransitionTarget,
+  ): Promise<
+    { from: TransitionTarget; to: TransitionTarget } | { noop: true; state: TransitionTarget }
+  > {
+    const from = await this.getCachedAgentState(agentKey);
+    if (from === toState) return { noop: true, state: toState };
+    const ts = Date.now();
+    await this.writeTransitionRow(this.db, { agentKey, from, to: toState, ts, source: 'override' });
+    this.announceTransition({ agentKey, from, to: toState, ts });
+    return { from, to: toState };
+  }
+
   async ingestEvent(runId: number, event: TranscriptEvent): Promise<void> {
     const agentKey = await this.resolveAgentKey(runId);
     if (!agentKey) return;

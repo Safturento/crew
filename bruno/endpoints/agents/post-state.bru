@@ -1,0 +1,55 @@
+meta {
+  name: POST /api/agents/:key/state
+  type: http
+  seq: 14
+}
+
+post {
+  url: {{baseUrl}}/api/agents/{{agentKey}}/state
+  body: json
+}
+
+body:json {
+  {
+    "state": "pr_merged"
+  }
+}
+
+script:pre-request {
+  // Fallback for standalone runs. In the smoke chain, post-register-run.bru
+  // sets `agentKey` via `vars:post-response`; this only fires when the chain
+  // has not already populated it.
+  if (!bru.getVar("agentKey")) {
+    bru.setVar("agentKey", "BRUNO-1");
+  }
+}
+
+assert {
+  res.status: eq 200
+}
+
+tests {
+  test("override reports the agent now sits in the requested state", () => {
+    // recordStateOverride returns {from,to} on a real flip or {noop,state}
+    // when the agent was already there — either way the target is pr_merged.
+    const landed = res.body.to ?? res.body.state;
+    expect(landed).to.equal("pr_merged");
+  });
+}
+
+docs {
+  Operator escape hatch (CREW-259). The drawer's state-override control POSTs
+  the chosen state here. The daemon delegates to IngestService.recordStateOverride,
+  which bypasses the reducer + its terminal stickiness — the one path that can
+  move an agent OUT of `finished`/`pr_merged` — writes a state_transitions row
+  stamped `source: 'override'`, advances the in-memory cache, and publishes
+  `agent.state_changed`.
+
+    1. 404s if the agent key is unknown.
+    2. 400s an invalid state (Zod enum over the 8 transition targets).
+    3. 200 with `{from, to}` on a real flip, or `{noop: true, state}` when the
+       agent already sits in the requested state (no row written).
+
+  Uses the agentKey chained forward by `post-register-run.bru`. Overriding the
+  smoke fixture to `pr_merged` is inert for the later finish-step cards.
+}

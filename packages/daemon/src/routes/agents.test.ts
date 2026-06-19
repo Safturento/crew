@@ -725,3 +725,112 @@ describe('POST /api/agents/:key/refresh-pr-status (CREW-202)', () => {
     }
   });
 });
+
+describe('POST /api/agents/:key/state — operator override (CREW-259)', () => {
+  async function seedAgent(
+    db: Awaited<ReturnType<typeof setupApp>>['db'],
+    key: string,
+  ): Promise<void> {
+    await db
+      .insertInto('agents')
+      .values({
+        key,
+        project_name: 'demo',
+        ticket_title: `${key} title`,
+        worktree_path: `/w/${key}`,
+        branch: key,
+        pr_url: null,
+        created_at: '2026-06-19T12:00:00Z',
+      })
+      .execute();
+  }
+
+  it('overrides the state and stamps source=override (200)', async () => {
+    const { app, db } = await setupApp();
+    try {
+      await app.ready();
+      await seedAgent(db, 'AGENT');
+      const res = await app.inject({
+        method: 'POST',
+        url: '/api/agents/AGENT/state',
+        payload: { state: 'finished' },
+      });
+      expect(res.statusCode).toBe(200);
+      expect(res.json()).toMatchObject({ to: 'finished' });
+      const latest = await db
+        .selectFrom('state_transitions')
+        .select(['to_state', 'source'])
+        .where('agent_key', '=', 'AGENT')
+        .orderBy('id', 'desc')
+        .executeTakeFirst();
+      expect(latest).toMatchObject({ to_state: 'finished', source: 'override' });
+    } finally {
+      await app.close();
+      await db.destroy();
+    }
+  });
+
+  it('is a no-op (200) when already in the target state, writing no row', async () => {
+    const { app, db } = await setupApp();
+    try {
+      await app.ready();
+      await seedAgent(db, 'AGENT');
+      // First override establishes `finished`; the repeat is the no-op.
+      await app.inject({
+        method: 'POST',
+        url: '/api/agents/AGENT/state',
+        payload: { state: 'finished' },
+      });
+      const res = await app.inject({
+        method: 'POST',
+        url: '/api/agents/AGENT/state',
+        payload: { state: 'finished' },
+      });
+      expect(res.statusCode).toBe(200);
+      expect(res.json()).toMatchObject({ noop: true, state: 'finished' });
+      const rows = await db
+        .selectFrom('state_transitions')
+        .selectAll()
+        .where('agent_key', '=', 'AGENT')
+        .execute();
+      expect(rows).toHaveLength(1);
+    } finally {
+      await app.close();
+      await db.destroy();
+    }
+  });
+
+  it('returns 404 for an unknown agent key', async () => {
+    const { app, db } = await setupApp();
+    try {
+      await app.ready();
+      const res = await app.inject({
+        method: 'POST',
+        url: '/api/agents/NOPE/state',
+        payload: { state: 'finished' },
+      });
+      expect(res.statusCode).toBe(404);
+      expect(res.json()).toMatchObject({ error: 'agent_not_found' });
+    } finally {
+      await app.close();
+      await db.destroy();
+    }
+  });
+
+  it('returns 400 for an invalid state', async () => {
+    const { app, db } = await setupApp();
+    try {
+      await app.ready();
+      await seedAgent(db, 'AGENT');
+      const res = await app.inject({
+        method: 'POST',
+        url: '/api/agents/AGENT/state',
+        payload: { state: 'bogus' },
+      });
+      expect(res.statusCode).toBe(400);
+    } finally {
+      await app.close();
+      await db.destroy();
+    }
+  });
+});
