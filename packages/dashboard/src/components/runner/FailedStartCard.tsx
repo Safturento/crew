@@ -56,7 +56,7 @@ export function FailedStartCard({ failure, onArchive }: FailedStartCardProps) {
         }
         actions={
           <div className="flex shrink-0 items-center justify-end gap-1.5">
-            <Button color="running" intensity="ghost" size="sm" onClick={() => onArchive(f.key)}>
+            <Button color="idle" intensity="ghost" size="sm" onClick={() => onArchive(f.key)}>
               Archive
             </Button>
             <Button color="error" intensity="mid" size="sm" onClick={() => setInspecting(true)}>

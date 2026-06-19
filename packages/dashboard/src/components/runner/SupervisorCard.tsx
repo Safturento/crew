@@ -55,8 +55,8 @@ export function SupervisorCard({ supervisor, onRestart, onStop, onStart }: Super
           {online ? (
             <>
               <Button
-                color="running"
-                intensity="mid"
+                color="idle"
+                intensity="muted"
                 size="sm"
                 onClick={onRestart}
                 disabled={!onRestart}
@@ -67,7 +67,7 @@ export function SupervisorCard({ supervisor, onRestart, onStop, onStart }: Super
               </Button>
               <Button
                 color="error"
-                intensity="mid"
+                intensity="muted"
                 size="sm"
                 onClick={onStop}
                 disabled={!onStop}

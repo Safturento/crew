@@ -75,7 +75,7 @@ export function ProcessRow({ process, onCancel, onForceKill }: ProcessRowProps) 
               <>
                 {process.state === 'running' && (
                   <Button
-                    color="running"
+                    color="idle"
                     intensity="ghost"
                     size="sm"
                     disabled
@@ -85,7 +85,12 @@ export function ProcessRow({ process, onCancel, onForceKill }: ProcessRowProps) 
                     Pause
                   </Button>
                 )}
-                <Button color="error" intensity="mid" size="sm" onClick={escalation.requestCancel}>
+                <Button
+                  color="error"
+                  intensity="muted"
+                  size="sm"
+                  onClick={escalation.requestCancel}
+                >
                   Cancel
                 </Button>
               </>
