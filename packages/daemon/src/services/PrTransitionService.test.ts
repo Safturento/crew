@@ -76,7 +76,7 @@ describe('PrTransitionService', () => {
     await db.destroy();
   });
 
-  const setState = (key: string, to: string) =>
+  const setState = (key: string, to: 'pr_open' | 'running' | 'pr_merged') =>
     db
       .insertInto('state_transitions')
       .values({ agent_key: key, from_state: null, to_state: to, ts: Date.now() })
