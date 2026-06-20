@@ -4,6 +4,8 @@ import {
   Container,
   FolderGit,
   GitMerge,
+  Pause,
+  Play,
   RefreshCw,
   SquareArrowOutUpRight,
   X,
@@ -14,8 +16,10 @@ import { formatTokens } from '../format/tokens.js';
 import type { AgentDetail, AgentState } from '../data/types.js';
 import { STATE_META } from '../data/state-meta.js';
 import { useRefreshPrStatus } from '../data/queries.js';
-import { useCancelRun, useForceKill } from '../data/runnerControls.js';
+import { useCancelRun, useForceKill, usePauseRun, useResumeRun } from '../data/runnerControls.js';
+import { useRunnerStatus } from '../data/useRunnerStatus.js';
 import { AlertModal } from './AlertModal.js';
+import { ResumeModal } from './ResumeModal.js';
 import { Badge } from './ui/badge.js';
 import { Button } from './ui/button.js';
 import { MetaList } from './ui/meta-list.js';
@@ -61,7 +65,19 @@ export function DrawerHeader({
     onSoftCancel: () => cancelRun.mutate(detail.key),
     onForceKill: () => forceKill.mutate(detail.key),
   });
-  const showCancel = detail.state === 'running';
+
+  // CREW-274: Pause/Resume parity with the Runner-page row. A pause reduces the
+  // persistent run-state to `idle` (CREW-273), so the live-process snapshot is
+  // the only place the `paused` label survives — cross-reference it by key to
+  // decide whether to offer Resume. A `running` agent offers Pause.
+  const runner = useRunnerStatus();
+  const isPaused = runner.processes.find((p) => p.agentKey === detail.key)?.state === 'paused';
+  const pauseRun = usePauseRun();
+  const resumeRun = useResumeRun();
+  const [resumeOpen, setResumeOpen] = useState(false);
+  const showPause = detail.state === 'running';
+  const showResume = isPaused;
+  const showCancel = detail.state === 'running' || isPaused;
   const cancelling = escalation.phase === 'cancelling';
 
   return (
@@ -110,6 +126,28 @@ export function DrawerHeader({
                 aria-label="Refresh PR status"
               >
                 Refresh PR
+              </Button>
+            )}
+            {showPause && (
+              <Button
+                color="idle"
+                intensity="ghost"
+                size="sm"
+                icon={<Pause aria-hidden />}
+                onClick={() => pauseRun.mutate(detail.key)}
+              >
+                Pause
+              </Button>
+            )}
+            {showResume && (
+              <Button
+                color="running"
+                intensity="mid"
+                size="sm"
+                icon={<Play aria-hidden />}
+                onClick={() => setResumeOpen(true)}
+              >
+                Resume
               </Button>
             )}
             {showCancel &&
@@ -223,6 +261,12 @@ export function DrawerHeader({
         actionColor="error"
         actionIntensity="loud"
         onAction={escalation.confirm}
+      />
+      <ResumeModal
+        agentKey={detail.key}
+        open={resumeOpen}
+        onOpenChange={setResumeOpen}
+        onSubmit={(message) => resumeRun.mutate({ agentKey: detail.key, message })}
       />
     </>
   );

@@ -31,6 +31,45 @@ export function useCancelRun(): UseMutationResult<RunnerCommand, Error, string> 
   return useRunnerCommand('cancel_soft', 'cancel');
 }
 
+/**
+ * Pause a running agent — SIGTERM its turn and keep the entry tracked as
+ * `paused` (CREW-272). Non-destructive + resumable, so it enqueues immediately
+ * (no confirm); the row/drawer reconciles to `paused` on the next snapshot.
+ */
+export function usePauseRun(): UseMutationResult<RunnerCommand, Error, string> {
+  return useRunnerCommand('pause', 'pause');
+}
+
+/** The input to a resume: the agent key plus an optional steer message. */
+export interface ResumeInput {
+  agentKey: string;
+  message?: string;
+}
+
+/**
+ * Resume a paused agent. With no steer message it enqueues a plain `resume`;
+ * with one it enqueues a `message` command carrying `payload.message` (the
+ * resume-with-injected-message path). `resume` and `message` share one host
+ * apply path (CREW-272) — the kind only varies whether a message rides along.
+ */
+export function useResumeRun(): UseMutationResult<RunnerCommand, Error, ResumeInput> {
+  return useMutation<RunnerCommand, Error, ResumeInput>({
+    mutationFn: ({ agentKey, message }) => {
+      const steer = message?.trim();
+      return steer
+        ? defaultClient.enqueueRunnerCommand({
+            agentKey,
+            kind: 'message',
+            payload: { message: steer },
+          })
+        : defaultClient.enqueueRunnerCommand({ agentKey, kind: 'resume', payload: null });
+    },
+    onError: (error, { agentKey }) => {
+      toast.error(`Couldn't resume ${agentKey}: ${error.message}`);
+    },
+  });
+}
+
 /** Hard cancel — SIGKILL the tracked process group (the escalation). */
 export function useForceKill(): UseMutationResult<RunnerCommand, Error, string> {
   return useRunnerCommand('cancel_hard', 'force-kill');

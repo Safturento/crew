@@ -1,7 +1,7 @@
 ---
 name: design-system
 description: Crew Figma DS + token bindings + Pill primitive contract
-last_updated: 2026-06-19
+last_updated: 2026-06-20
 covers:
   - 'packages/dashboard/src/components/**'
   - '*.figma.tsx'
@@ -160,6 +160,10 @@ The modal-family composites (`Modal`, `AlertModal`, `ModalSelectionRow`, `Steppe
 
 `FixPrModal` itself has **no Figma counterpart and no `.figma.tsx`** — it's a feature modal (composes the designed `Modal` primitive), not a DS composite, so it stays out of the Code-shipped-composites table above. Its button variant choices follow `AlertModal` (Cancel `running/mid`; primary `loud`, color `running` rather than the destructive-default `error` since Fix PR is constructive). Verification record: `docs/visual-fidelity-reports/CREW-219.md`.
 
+`ResumeModal` (`packages/dashboard/src/components/ResumeModal.tsx`, CREW-274) is the same category as `FixPrModal` — a figma-less feature modal over the `Modal` primitive, out of the composites table. It collects an **optional** steer message for resuming a paused agent (empty → plain `resume`; typed → a `message` runner command), so unlike `FixPrModal` its primary is always enabled. Same button variants (Cancel `running/mid`; Resume `running/loud`, constructive).
+
+The Pause/Resume controls on the Runner-page `ProcessRow` (running → Pause; paused → Resume) and the matching `DrawerHeader` cluster (CREW-274) are **net-new UI the Figma design never included** — the pause/resume affordances were the designed-for-but-deferred CREW-248 fast-follow, so the Figma `ProcessRow` set's `state` axis carries no `paused` variant and no Resume control. The controls reuse canonical DS primitives (`Button`, `Badge` paused→`idle`, `ResumeModal`/`AlertModal`) rather than a Figma reference; this is a documented `visual-fidelity-check` gap, not a token mismatch.
+
 `StateOverrideControl` (`packages/dashboard/src/components/StateOverrideControl.tsx`, CREW-260) is the drawer's operator state-override escape hatch — a ghost icon `Button` (color `idle`, lucide `sliders-horizontal`) beside the `DrawerHeader` state badge that opens a `popover` of all 8 states (current disabled) → `AlertModal` confirm → the `useOverrideState` mutation (`POST /api/agents/:key/state`). Like `FixPrModal` it's figma-less and stays out of the composites table — a feature control composing designed primitives, not a DS composite, and net-new UI the Figma design never included. Its `AlertModal` action is `waiting/loud` (amber caution) rather than the destructive-default `error` — the override is a deliberate-but-recoverable correction, not a delete. Verification record: `docs/visual-fidelity-reports/CREW-260.md`.
 
 `Drawer` (`packages/dashboard/src/components/Drawer.tsx`) is the right-anchored, full-height sibling to `Modal`: it wraps the same `dialog` primitive but as a side panel, and backs `AgentDrawer`. Like `FixPrModal` it's figma-less and stays out of the composites table — a structural primitive, not a designed composite. Its enter/exit slide uses `tw-animate-css`'s standard `slide-in-from-right` / `slide-out-to-right` (panel) + `fade-in-0` / `fade-out-0` (overlay) utilities; `index.css` imports `tw-animate-css`, so the shadcn `animate-in` / `zoom-in` classes on `dialog` / `popover` / `alert-dialog` are live (CREW-237 — before that the repo had no animate plugin and those classes were inert, which is why the drawer originally shipped with bespoke `drawer-*` keyframes). It replaced the former hand-rolled `fixed inset-0` drawer and its `overlay-guard` context (CREW-232): being a real Radix Dialog layer is what lets the nested Filters popover dismiss without closing the drawer. The Filters popover must be `modal` for the click-outside case — Radix only coordinates Escape to the top layer, so a non-modal popover's overlay-click would dismiss the drawer too.
@@ -250,7 +254,7 @@ figma.connect(
 
 `example` is a single render function returning the canonical JSX with the mapped `props` — document _one_ representative usage, not every variant.
 
-**When to skip a `.figma.tsx`** (don't author one): radix/shadcn plumbing whose mapping rides on the composite that uses it (`alert-dialog` → `AlertModal`); internal-only anatomy (`pill-base`); glyph/util primitives with no Figma counterpart (`state-icon`, `meta-list`, `popover`); and feature modals that compose a designed primitive but aren't themselves a DS composite (`FixPrModal`). See the `components/ui/` notes above.
+**When to skip a `.figma.tsx`** (don't author one): radix/shadcn plumbing whose mapping rides on the composite that uses it (`alert-dialog` → `AlertModal`); internal-only anatomy (`pill-base`); glyph/util primitives with no Figma counterpart (`state-icon`, `meta-list`, `popover`); and feature modals that compose a designed primitive but aren't themselves a DS composite (`FixPrModal`, `ResumeModal`). See the `components/ui/` notes above.
 
 ### Existing Code Connect mappings
 

@@ -13,6 +13,7 @@ figma.connect(
         running: 'running',
         launching: 'launching',
         cancelling: 'cancelling',
+        paused: 'paused',
       }),
     },
     example: ({ state }) => (
@@ -29,6 +30,8 @@ figma.connect(
         }}
         onCancel={() => {}}
         onForceKill={() => {}}
+        onPause={() => {}}
+        onResume={() => {}}
       />
     ),
   },

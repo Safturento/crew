@@ -13,6 +13,11 @@ vi.mock('../data/queries.js', () => ({
 vi.mock('../data/runnerControls.js', () => ({
   useCancelRun: vi.fn(() => ({ mutate: vi.fn(), isPending: false })),
   useForceKill: vi.fn(() => ({ mutate: vi.fn(), isPending: false })),
+  usePauseRun: vi.fn(() => ({ mutate: vi.fn(), isPending: false })),
+  useResumeRun: vi.fn(() => ({ mutate: vi.fn(), isPending: false })),
+}));
+vi.mock('../data/useRunnerStatus.js', () => ({
+  useRunnerStatus: vi.fn(() => ({ online: false, lastSeen: null, processes: [] })),
 }));
 vi.mock('../data/useFinishSteps.js', () => ({
   useFinishSteps: vi.fn(() => []),
