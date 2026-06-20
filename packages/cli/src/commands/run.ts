@@ -42,7 +42,12 @@ import {
   emitStartupEvent,
   emitStartupEventSync,
 } from '../lib/startup-events/index.js';
-import { emitRunStarted, emitDispatchExitedSync } from '../lib/state-events/index.js';
+import {
+  emitRunStarted,
+  emitDispatchExitedSync,
+  emitRunPausedSync,
+} from '../lib/state-events/index.js';
+import { consumePauseSentinel } from '../lib/pause-sentinel/index.js';
 import { claudeFreshArgs } from '../lib/claude/spawn.js';
 import {
   resolveBrunoEnvName,
@@ -630,9 +635,15 @@ export async function runRun(key: string, opts: RunOptions): Promise<never> {
     .catch(() => {});
 
   let signaled = false;
+  let paused = false;
   const sigintHandler = (): void => {
     signaled = true;
-    console.error(pc.yellow('\n→ aborting…'));
+    // CREW-273: a `pause` reaches us as SIGTERM too, indistinguishable from a
+    // cancel by the signal alone. The runner leaves a sentinel to mark it;
+    // consume (read+delete) it here so a pause settles non-terminally
+    // (`run_paused` → resumable) instead of erroring like a cancel.
+    if (consumePauseSentinel(key)) paused = true;
+    console.error(pc.yellow(paused ? '\n→ pausing…' : '\n→ aborting…'));
     claudeProcess.kill('SIGTERM');
   };
   process.on('SIGINT', sigintHandler);
@@ -693,6 +704,22 @@ export async function runRun(key: string, opts: RunOptions): Promise<never> {
   logStream.end();
   process.off('SIGINT', sigintHandler);
   process.off('SIGTERM', sigintHandler);
+
+  const settlement = resolveRunSettlement({ paused, result, signaled });
+  if (settlement.kind === 'paused') {
+    // CREW-273: pause-interrupt — keep the run resumable. Suppress the terminal
+    // `completeRun` + `run_exited` (which the daemon would reduce to `error` on
+    // the 130 exit) and emit a non-terminal `run_paused` the daemon reduces to
+    // `idle`. Skip the e2e gate / docker wait below: a paused run hasn't
+    // finished, there's no PR to verify. The live `paused` label is carried by
+    // the runner's in-memory snapshot, which keeps the entry tracked.
+    emitRunPausedSync(key);
+    console.log();
+    console.log(
+      pc.yellow(`→ run ${key} paused — resumable (run_paused emitted; completeRun suppressed)`),
+    );
+    process.exit(resolveExitCode(result, signaled));
+  }
 
   if (runId !== null) {
     await daemonClient.completeRun(runId, {
@@ -760,6 +787,24 @@ export async function runRun(key: string, opts: RunOptions): Promise<never> {
 export interface ExecResult {
   exitCode?: number;
   signal?: string;
+}
+
+/**
+ * How a finished `crew run` settles its run-state (CREW-273). A pause-interrupt
+ * — the runner wrote a pause sentinel before SIGTERMing the group, which the
+ * signal handler consumed — stays resumable: the caller emits `run_paused` and
+ * suppresses the terminal `completeRun`. Anything else settles terminally with
+ * its resolved exit code, exactly as before pause-awareness existed.
+ */
+export type RunSettlement = { kind: 'paused' } | { kind: 'exited'; exitCode: number };
+
+export function resolveRunSettlement(opts: {
+  paused: boolean;
+  result: ExecResult;
+  signaled: boolean;
+}): RunSettlement {
+  if (opts.paused) return { kind: 'paused' };
+  return { kind: 'exited', exitCode: resolveExitCode(opts.result, opts.signaled) };
 }
 
 export function resolveExitCode(result: ExecResult, signaled: boolean): number {

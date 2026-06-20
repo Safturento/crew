@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { existsSync, readFileSync, writeFileSync, mkdirSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { resolveExitCode, runCommand } from './run.js';
+import { resolveExitCode, resolveRunSettlement, runCommand } from './run.js';
 
 describe('runCommand', () => {
   it('is named "run"', () => {
@@ -52,6 +52,32 @@ describe('resolveExitCode', () => {
 
   it('falls back to 1 when neither exit code nor signal is known', () => {
     expect(resolveExitCode({}, false)).toBe(1);
+  });
+});
+
+describe('resolveRunSettlement (CREW-273)', () => {
+  it('a pause-interrupt settles as paused regardless of exit code or signal', () => {
+    expect(
+      resolveRunSettlement({ paused: true, result: { exitCode: 0 }, signaled: false }),
+    ).toEqual({ kind: 'paused' });
+    expect(
+      resolveRunSettlement({ paused: true, result: { signal: 'SIGTERM' }, signaled: true }),
+    ).toEqual({ kind: 'paused' });
+  });
+
+  it('a clean (non-paused) exit settles terminally with its resolved code', () => {
+    expect(
+      resolveRunSettlement({ paused: false, result: { exitCode: 0 }, signaled: false }),
+    ).toEqual({ kind: 'exited', exitCode: 0 });
+    expect(
+      resolveRunSettlement({ paused: false, result: { exitCode: 7 }, signaled: false }),
+    ).toEqual({ kind: 'exited', exitCode: 7 });
+  });
+
+  it('a non-paused signaled abort settles terminally as 130 (cancel/finish, unchanged)', () => {
+    expect(
+      resolveRunSettlement({ paused: false, result: { exitCode: 0 }, signaled: true }),
+    ).toEqual({ kind: 'exited', exitCode: 130 });
   });
 });
 

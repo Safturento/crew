@@ -39,7 +39,19 @@ describe('stateEventSchema', () => {
     ).toThrow();
   });
 
-  it('exposes all six kinds', () => {
-    expect(STATE_EVENT_KINDS).toHaveLength(6);
+  it('accepts a run_paused event (CREW-273 — the non-terminal pause variant)', () => {
+    const e = stateEventSchema.parse({
+      eventId: 'p1',
+      key: 'CREW-1',
+      event: 'run_paused',
+      ts: '2026-06-18T00:00:00Z',
+      source: 'runner-exit',
+    });
+    expect(e.event).toBe('run_paused');
+  });
+
+  it('exposes all seven kinds', () => {
+    expect(STATE_EVENT_KINDS).toHaveLength(7);
+    expect(STATE_EVENT_KINDS).toContain('run_paused');
   });
 });

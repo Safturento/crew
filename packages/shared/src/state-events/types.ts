@@ -7,6 +7,7 @@ export const STATE_EVENT_KINDS = [
   'fixpr_started',
   'fixpr_exited',
   'run_exited',
+  'run_paused',
   'finish_completed',
 ] as const;
 export type StateEventKind = (typeof STATE_EVENT_KINDS)[number];
