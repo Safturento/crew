@@ -53,7 +53,6 @@ Organization: Active is grouped by topic (not chronology) since the dominant acc
     - [2026-06-17 — `RunnerCommandsService.reportResult` silently 204s on an unknown command id (vs `ActionService.report`'s 404)](#2026-06-17--runnercommandsservicereportresult-silently-204s-on-an-unknown-command-id-vs-actionservicereports-404)
     - [2026-06-17 — failed-start rows render as plain `error` agents in the main grid](#2026-06-17--failed-start-rows-render-as-plain-error-agents-in-the-main-grid)
     - [2026-06-17 — only `PreflightError` becomes a structured failed-start; docker/npm/playwright init failures don't](#2026-06-17--only-preflighterror-becomes-a-structured-failed-start-dockernpmplaywright-init-failures-dont)
-    - [2026-06-16 — `hasPrCreateInvocation` still misses `gh pr create` chained on one line with `&&`](#2026-06-16--hasprcreateinvocation-still-misses-gh-pr-create-chained-on-one-line-with-)
     - [2026-06-05 — `bruno-skeleton` fix() defaults the scaffolded port instead of deriving it from config](#2026-06-05--bruno-skeleton-fix-defaults-the-scaffolded-port-instead-of-deriving-it-from-config)
     - [2026-06-04 — `finish_steps` table accumulates across `crew finish` re-runs (no run scoping)](#2026-06-04--finish_steps-table-accumulates-across-crew-finish-re-runs-no-run-scoping)
     - [2026-06-04 — Runner pidfile has no liveness identity (recycled-PID false positive)](#2026-06-04--runner-pidfile-has-no-liveness-identity-recycled-pid-false-positive)
@@ -117,6 +116,7 @@ Organization: Active is grouped by topic (not chronology) since the dominant acc
   - [2026-05-13 — Agent drawer Close button uses Unicode "✕" glyph instead of `lucide/x` SVG](#2026-05-13--agent-drawer-close-button-uses-unicode--glyph-instead-of-lucidex-svg)
   - [2026-05-08 — Wire `StateHistoryBar`, `TokenTable`, and Token-usage section into `AgentBody`](#2026-05-08--wire-statehistorybar-tokentable-and-token-usage-section-into-agentbody)
 - [Abandoned](#abandoned)
+  - [2026-06-16 — `hasPrCreateInvocation` still misses `gh pr create` chained on one line with `&&`](#2026-06-16--hasprcreateinvocation-still-misses-gh-pr-create-chained-on-one-line-with-)
   - [2026-05-12 — Re-link 8 detached AgentRow tiles in modal-overlay screen backgrounds](#2026-05-12--re-link-8-detached-agentrow-tiles-in-modal-overlay-screen-backgrounds)
   - [2026-05-09 — Manual rename of Figma screens file to "Crew Dashboard Screens"](#2026-05-09--manual-rename-of-figma-screens-file-to-crew-dashboard-screens)
   - [2026-04-27 — Dashboard mobile responsive layout polish](#2026-04-27--dashboard-mobile-responsive-layout-polish)
@@ -825,26 +825,6 @@ The "synthetic Unregistered section" feels right — single render path, no extr
 **What's been considered:** Wrap the docker/npm/chromium throwers in a structured failure too — either widen `runTrackedPreflight` to catch any error and synthesize a `RunFailure` from the thrown message + the relevant `/tmp/crew-*-<KEY>.log` tail, or have each step throw a `PreflightError`-shaped error. The richer capture (reading the step's log tail for `failure_output`) overlaps CREW-243's per-run startup-log capture, so it's natural to wire when that executor work lands.
 
 **Shape of work:** Small change in `preflight-tracking.ts` (broaden the catch + map non-preflight errors to a generic `RunFailure`), or fold into CREW-243's startup-capture work for the log-tail-as-output version.
-
-#### 2026-06-16 — `hasPrCreateInvocation` still misses `gh pr create` chained on one line with `&&`
-
-**Ticket:** [CREW-251](https://safturento.atlassian.net/browse/CREW-251)
-
-**Confirmed 2026-06-18 (CREW-243):** the open question below is answered — this is a real behavior bug, not doc-only cleanup. The CREW-243 agent ran `cd /home/safturento/Repos/crew-CREW-243; gh pr create …` (a single-line `;` chain — an even plainer case than the `&&` in the title) and stuck in `running`; PR #365 opened but the badge never advanced. Verified empirically against the real parser (`;`- and `&&`-chained → `false`; newline-separated and bare → `true`; the `echo` decoy → `false`). Stopgap ticketed as CREW-251; superseded longer-term by the Concrete State Triggers Epic (spec PR #366), which removes transcript parsing from the state path entirely.
-
-**What:** `hasPrCreateInvocation` (`packages/shared/src/transcripts/parser.ts`) detects the PR-create signal by splitting on `\n`/`⏎` and testing each line with `startsWith('gh pr create')`. A command that chains the push and the PR on a single line — `git push -u origin FOO && gh pr create …` — produces one line that starts with `git push`, so the predicate returns false and the agent never transitions to `pr_open`. The predicate's own doc comment explicitly claims it tolerates this `git push && …` form, but it does not; only the newline-separated form is actually handled (and that's the only chain case the parser tests cover).
-
-**Why noticed:** While fixing the CREW-237/CREW-241 stuck-in-`running` bug (detection was running against the 140-char truncated summary instead of the raw command — fixed by feeding `toolUse.input.command` into the predicate). The raw-command fix resolves the heredoc case that actually bit those two tickets, but reading the predicate surfaced this adjacent gap: even with the raw command in hand, a single-line `&&` chain still slips through. Not what stranded CREW-237/241 (both used heredoc-then-`gh pr create`-on-its-own-line), so it's deferred rather than folded into that fix.
-
-**Anchors:**
-
-- `packages/shared/src/transcripts/parser.ts` — `hasPrCreateInvocation` (per-line `startsWith`) + its misleading `git push && …` comment
-- `packages/shared/src/transcripts/parser.test.ts` — `hasPrCreateInvocation` cases (only newline-separated chain covered)
-- `packages/daemon/src/services/IngestService.ts` — `computeNextState` + `pendingPrCreates` gate, the two callers
-
-**What's been considered:** Either (a) widen the per-line tokenization to also split on `&&` / `;` / `|` shell separators before the `startsWith` test, or (b) switch to a word-boundary regex anchored to a command position (`(^|&&|;|\n|⏎)\s*gh pr create\b`) — (b) keeps the `echo "… gh pr create …"` carve-out the per-line approach was built for. Either way, also correct the doc comment to match reality.
-
-**Open questions:** Are there real agent transcripts using the single-line `&&` form, or do crew's prompts always emit `gh pr create` on its own line? If the latter, this may be doc-comment-only cleanup rather than a behavior fix — worth a quick grep across `~/.claude/projects` before sizing.
 
 #### 2026-06-05 — `bruno-skeleton` fix() defaults the scaffolded port instead of deriving it from config
 
@@ -1937,6 +1917,26 @@ The first two examples resolve once the structural fix lands. The third is a ski
 **Resolved 2026-05-22:** Resolved via the drawer code migration Epic (CREW-177). `StateHistoryBar` and `TokenTable` were both deleted in CREW-182. The Token-usage section now ships as the `TokensByTool` composite (CREW-180), wired into `AgentBody` between the header and Timeline (CREW-178 backend + CREW-180 frontend). State history is surfaced as state-grouped Timeline sections (CREW-181) instead of the standalone bar.
 
 ## Abandoned
+
+### 2026-06-16 — `hasPrCreateInvocation` still misses `gh pr create` chained on one line with `&&`
+
+**Abandoned 2026-06-19:** State-path concern obsolete. `pr_open` is hook-driven now — the PostToolUse `pr_created` hook, hardened by CREW-266 to match `gh pr create` anywhere and gate on a real PR URL — and CREW-257 removed transcript parsing from the state path entirely. The underlying `hasPrCreateInvocation` chained-command gap survives only in `computeRunMetrics` (PR-create undercount) and `deriveStateFromToolCalls` (historical-agent backfill projection) — both minor and off the critical path. The stopgap ticket CREW-251 was closed unimplemented (superseded). Reopen if metrics accuracy for chained commands ever matters.
+
+**Confirmed 2026-06-18 (CREW-243):** the open question below is answered — this is a real behavior bug, not doc-only cleanup. The CREW-243 agent ran `cd /home/safturento/Repos/crew-CREW-243; gh pr create …` (a single-line `;` chain — an even plainer case than the `&&` in the title) and stuck in `running`; PR #365 opened but the badge never advanced. Verified empirically against the real parser (`;`- and `&&`-chained → `false`; newline-separated and bare → `true`; the `echo` decoy → `false`). Stopgap ticketed as CREW-251; superseded longer-term by the Concrete State Triggers Epic (spec PR #366), which removes transcript parsing from the state path entirely.
+
+**What:** `hasPrCreateInvocation` (`packages/shared/src/transcripts/parser.ts`) detects the PR-create signal by splitting on `\n`/`⏎` and testing each line with `startsWith('gh pr create')`. A command that chains the push and the PR on a single line — `git push -u origin FOO && gh pr create …` — produces one line that starts with `git push`, so the predicate returns false and the agent never transitions to `pr_open`. The predicate's own doc comment explicitly claims it tolerates this `git push && …` form, but it does not; only the newline-separated form is actually handled (and that's the only chain case the parser tests cover).
+
+**Why noticed:** While fixing the CREW-237/CREW-241 stuck-in-`running` bug (detection was running against the 140-char truncated summary instead of the raw command — fixed by feeding `toolUse.input.command` into the predicate). The raw-command fix resolves the heredoc case that actually bit those two tickets, but reading the predicate surfaced this adjacent gap: even with the raw command in hand, a single-line `&&` chain still slips through. Not what stranded CREW-237/241 (both used heredoc-then-`gh pr create`-on-its-own-line), so it's deferred rather than folded into that fix.
+
+**Anchors:**
+
+- `packages/shared/src/transcripts/parser.ts` — `hasPrCreateInvocation` (per-line `startsWith`) + its misleading `git push && …` comment
+- `packages/shared/src/transcripts/parser.test.ts` — `hasPrCreateInvocation` cases (only newline-separated chain covered)
+- `packages/daemon/src/services/IngestService.ts` — `computeNextState` + `pendingPrCreates` gate, the two callers
+
+**What's been considered:** Either (a) widen the per-line tokenization to also split on `&&` / `;` / `|` shell separators before the `startsWith` test, or (b) switch to a word-boundary regex anchored to a command position (`(^|&&|;|\n|⏎)\s*gh pr create\b`) — (b) keeps the `echo "… gh pr create …"` carve-out the per-line approach was built for. Either way, also correct the doc comment to match reality.
+
+**Open questions:** Are there real agent transcripts using the single-line `&&` form, or do crew's prompts always emit `gh pr create` on its own line? If the latter, this may be doc-comment-only cleanup rather than a behavior fix — worth a quick grep across `~/.claude/projects` before sizing.
 
 ### 2026-05-12 — Re-link 8 detached AgentRow tiles in modal-overlay screen backgrounds
 
