@@ -727,9 +727,11 @@ The "synthetic Unregistered section" feels right — single render path, no extr
 
 #### 2026-06-19 — Pause/resume/message build is gated on a host-only confirmation spike (CREW-248)
 
-**Ticket:** [CREW-248](https://safturento.atlassian.net/browse/CREW-248) — the F-1 spike of Epic [CREW-235](https://safturento.atlassian.net/browse/CREW-235). Spike outcome documented; the *build* is the deferred work this entry tracks.
+**Ticket:** Build tracked under Epic [CREW-235](https://safturento.atlassian.net/browse/CREW-235) as three children — [CREW-272](https://safturento.atlassian.net/browse/CREW-272) (apply paths), [CREW-273](https://safturento.atlassian.net/browse/CREW-273) (non-terminal `paused` run-state), [CREW-274](https://safturento.atlassian.net/browse/CREW-274) (dashboard controls). The gating spike [CREW-248](https://safturento.atlassian.net/browse/CREW-248) is **Done**. Resolution gated on the Epic; resolve this entry when the three build children ship.
 
-**What:** The pause/resume/message apply paths (`packages/cli/src/lib/runner/commands.ts`) + dashboard controls are designed-for in the v1 data model but gated behind a feasibility spike (cleanly interrupt a detached headless `claude` mid-turn + resume via `spawnClaudeResume` without a dangling-`tool_use` corrupting state). The spike's empirical leg **cannot run in the `crew run` dispatch sandbox** — `~/.claude/projects` + `~/.claude/session-env` are mounted read-only, so a nested `claude` persists no transcript/session and `--resume` has nothing to resume (the Bash tool also can't run). The gate is therefore **unconfirmed**, and the build is deferred until a host (un-sandboxed) confirmation run closes it.
+**Update 2026-06-19:** Gate **closed GREEN** on a host (un-sandboxed) confirmation run — `claude --resume` tolerates a transcript ending on a dangling `tool_use` (Claude Code's resume reconstruction sanitizes the trailing turn before re-sending to the API), so the apply path needs **no** transcript-sanitization branch. The build is now ticketed (CREW-272/273/274, all *Ready for Development*) — no longer deferred. The original blocked-in-sandbox framing below is retained for history.
+
+**What:** The pause/resume/message apply paths (`packages/cli/src/lib/runner/commands.ts`) + dashboard controls are designed-for in the v1 data model but gated behind a feasibility spike (cleanly interrupt a detached headless `claude` mid-turn + resume via `spawnClaudeResume` without a dangling-`tool_use` corrupting state). The spike's empirical leg **could not run in the `crew run` dispatch sandbox** — `~/.claude/projects` + `~/.claude/session-env` are mounted read-only, so a nested `claude` persists no transcript/session and `--resume` has nothing to resume (the Bash tool also can't run). The gate was therefore confirmed on the host instead (see Update above).
 
 **Why noticed:** Ran the CREW-248 spike under `crew run` dispatch; hit the read-only `~/.claude` substrate. See the full writeup + the reproducible host-confirmation script.
 
@@ -741,9 +743,9 @@ The "synthetic Unregistered section" feels right — single render path, no extr
 
 **What's been considered:** Design settled in `docs/tickets/CREW-248.md` — `pause` = SIGTERM the group + `registry.setState(paused)` (keep tracking); `resume`/`message` = re-dispatch `crew resume <key> [-m message]` via a new injected boundary on `ApplyCommandDeps`. Key wrinkle: `crew run` lands a *terminal* `completeRun` on any SIGTERM exit (reduces to `error`), so a *non-terminal* resumable `paused` run-state needs `crew run`/daemon pause-awareness — `paused` is a `LiveProcessState` only today.
 
-**Shape of work:** Two slices once green — (1) the small `commands.ts` apply mapping + injected `resume` boundary (easily TDD'd); (2) the harder non-terminal `paused` run-state in `crew run` + daemon (candidate for its own CREW-235 child). Dashboard Pause/Resume controls sit on (2).
+**Shape of work:** Now three CREW-235 children — (1) `commands.ts` apply mapping + injected `resume` boundary = CREW-272; (2) non-terminal `paused` run-state in `crew run` + daemon = CREW-273; (3) dashboard Pause/Resume controls = CREW-274. CREW-272 ∥ CREW-273 (parallel — different code seams), both block CREW-274.
 
-**Open questions:** Does `claude --resume` repair or reject a transcript ending on a dangling `tool_use`? (The gate, answered by the host run.) How to represent a non-terminal `paused` run — sentinel/suppress `completeRun`, distinct signal, or new daemon state?
+**Open questions:** Gate question (does `claude --resume` repair or reject a dangling `tool_use`?) **resolved 2026-06-19 — it repairs/tolerates it.** Remaining build-design choice carried into CREW-273: how to represent a non-terminal `paused` run — sentinel/suppress `completeRun`, distinct signal, or new daemon state?
 
 #### 2026-06-19 — A throw between `*_started` and `*_exited` leaves the agent stuck `running`
 
