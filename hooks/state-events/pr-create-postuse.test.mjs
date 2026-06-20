@@ -63,6 +63,32 @@ describe('handlePostToolUse', () => {
     expect(existsSync(eventsFile(home, 'CREW-1'))).toBe(true);
   });
 
+  it('matches the newline-separated form (`cd <wt>⏎gh pr create`, the CREW-246 miss)', () => {
+    const home = mkHome();
+    handlePostToolUse(
+      ev('cd /home/x/crew-CREW-1\ngh pr create --base main --head CREW-1', 'https://github.com/o/r/pull/12'),
+      'CREW-1',
+      home,
+    );
+    const parsed = JSON.parse(readFileSync(eventsFile(home, 'CREW-1'), 'utf8').trim());
+    expect(parsed.event).toBe('pr_created');
+    expect(parsed.prUrl).toBe('https://github.com/o/r/pull/12');
+  });
+
+  it('matches a heredoc-bodied gh pr create on its own line', () => {
+    const home = mkHome();
+    const command = [
+      'git push -u origin CREW-1',
+      'gh pr create --base main --body "$(cat <<EOF',
+      'Summary line',
+      'EOF',
+      ')"',
+    ].join('\n');
+    handlePostToolUse(ev(command, 'https://github.com/o/r/pull/13'), 'CREW-1', home);
+    const parsed = JSON.parse(readFileSync(eventsFile(home, 'CREW-1'), 'utf8').trim());
+    expect(parsed.prUrl).toBe('https://github.com/o/r/pull/13');
+  });
+
   it('emits when the payload has no exitCode field at all (CREW-261 regression)', () => {
     const home = mkHome();
     // Construct the payload by hand to guarantee no `exitCode` key is present —
@@ -91,9 +117,43 @@ describe('handlePostToolUse', () => {
     expect(existsSync(eventsFile(home, 'CREW-1'))).toBe(false);
   });
 
-  it('ignores an echo decoy that merely mentions gh pr create', () => {
+  it('ignores an echo decoy that merely mentions gh pr create (no URL in its output)', () => {
     const home = mkHome();
-    handlePostToolUse(ev('echo "run gh pr create later"', 'https://github.com/o/r/pull/5'), 'CREW-1', home);
+    // A realistic decoy: `echo` prints the literal mention, which carries no PR
+    // URL. The URL gate — not position-anchoring — is what rejects it now.
+    handlePostToolUse(ev('echo "run gh pr create later"', 'run gh pr create later\n'), 'CREW-1', home);
+    expect(existsSync(eventsFile(home, 'CREW-1'))).toBe(false);
+  });
+
+  it('does not emit for `gh pr create --help` (mentions create but prints no PR URL)', () => {
+    const home = mkHome();
+    handlePostToolUse(
+      ev('gh pr create --help', 'Usage: gh pr create [flags]\n  Create a pull request on GitHub.\n'),
+      'CREW-1',
+      home,
+    );
+    expect(existsSync(eventsFile(home, 'CREW-1'))).toBe(false);
+  });
+
+  it('does not emit for `gh pr view` even though it prints a PR URL (not a create)', () => {
+    const home = mkHome();
+    handlePostToolUse(ev('gh pr view --json url', 'https://github.com/o/r/pull/5'), 'CREW-1', home);
+    expect(existsSync(eventsFile(home, 'CREW-1'))).toBe(false);
+  });
+
+  it('does not emit for `gh pr list` even though it prints a PR URL (not a create)', () => {
+    const home = mkHome();
+    handlePostToolUse(ev('gh pr list --web', 'https://github.com/o/r/pull/6'), 'CREW-1', home);
+    expect(existsSync(eventsFile(home, 'CREW-1'))).toBe(false);
+  });
+
+  it('does not emit for the past-tense "gh pr created" (word-boundary guard)', () => {
+    const home = mkHome();
+    handlePostToolUse(
+      ev('echo "gh pr created the PR"', 'https://github.com/o/r/pull/4'),
+      'CREW-1',
+      home,
+    );
     expect(existsSync(eventsFile(home, 'CREW-1'))).toBe(false);
   });
 
