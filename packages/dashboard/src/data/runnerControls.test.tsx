@@ -9,7 +9,9 @@ import {
   useCancelRun,
   useDequeue,
   useForceKill,
+  usePauseRun,
   useReap,
+  useResumeRun,
 } from './runnerControls.js';
 
 function wrapper() {
@@ -63,6 +65,34 @@ describe('runner control hooks', () => {
     result.current.mutate('CREW-240');
     await waitFor(() => expect(spy).toHaveBeenCalled());
     expect(spy).toHaveBeenCalledWith({ agentKey: 'CREW-240', kind: 'dequeue', payload: null });
+  });
+
+  it('usePauseRun enqueues a pause command for the key', async () => {
+    const spy = vi.spyOn(defaultClient, 'enqueueRunnerCommand').mockResolvedValue({} as never);
+    const { result } = renderHook(() => usePauseRun(), { wrapper: wrapper() });
+    result.current.mutate('CREW-231');
+    await waitFor(() => expect(spy).toHaveBeenCalled());
+    expect(spy).toHaveBeenCalledWith({ agentKey: 'CREW-231', kind: 'pause', payload: null });
+  });
+
+  it('useResumeRun enqueues a plain resume command when no message is given', async () => {
+    const spy = vi.spyOn(defaultClient, 'enqueueRunnerCommand').mockResolvedValue({} as never);
+    const { result } = renderHook(() => useResumeRun(), { wrapper: wrapper() });
+    result.current.mutate({ agentKey: 'CREW-231' });
+    await waitFor(() => expect(spy).toHaveBeenCalled());
+    expect(spy).toHaveBeenCalledWith({ agentKey: 'CREW-231', kind: 'resume', payload: null });
+  });
+
+  it('useResumeRun forwards a steer message as a message command', async () => {
+    const spy = vi.spyOn(defaultClient, 'enqueueRunnerCommand').mockResolvedValue({} as never);
+    const { result } = renderHook(() => useResumeRun(), { wrapper: wrapper() });
+    result.current.mutate({ agentKey: 'CREW-231', message: 'focus on the failing test' });
+    await waitFor(() => expect(spy).toHaveBeenCalled());
+    expect(spy).toHaveBeenCalledWith({
+      agentKey: 'CREW-231',
+      kind: 'message',
+      payload: { message: 'focus on the failing test' },
+    });
   });
 
   it('useArchiveFailedStart acknowledges the key', async () => {
