@@ -170,11 +170,12 @@ const ActionPayloadSchema = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('run') }),
   z.object({ kind: z.literal('fix_pr'), comment: z.string() }),
   z.object({ kind: z.literal('finish') }),
+  z.object({ kind: z.literal('resume') }),
 ]);
 
 const ActionRequestSchema = z.object({
   id: z.number(),
-  kind: z.enum(['run', 'fix_pr', 'finish']),
+  kind: z.enum(['run', 'fix_pr', 'finish', 'resume']),
   ticketKey: z.string(),
   project: z.string(),
   payload: ActionPayloadSchema,

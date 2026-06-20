@@ -36,6 +36,33 @@ test.describe('runner-aware agent actions (CREW-217)', () => {
     await expect(page.getByText('Finish queued')).toBeVisible();
   });
 
+  // CREW-275: Resume enqueues a `resume` action (continues an interrupted run
+  // on its existing worktree via `crew resume`), not a fresh `run`. The success
+  // toast confirms the round-trip — the daemon returns 201 only for a valid
+  // `resume` kind, so a green toast proves the new kind end-to-end.
+  test('Resume enables on runner.status_changed, then enqueues a resume action', async ({
+    page,
+  }) => {
+    // Resume is offered on an idle agent (an interrupted/incomplete run whose
+    // worktree still exists). Scope to the Idle row so we click the right one.
+    const idleRow = page
+      .getByRole('button')
+      .filter({ has: page.getByRole('status', { name: 'Idle' }) })
+      .first();
+    const resume = idleRow.getByRole('button', { name: 'Resume' });
+    await expect(resume).toBeDisabled();
+
+    await page.evaluate(() => {
+      (
+        window as unknown as { __crewTestInjectEvent: (n: string, d: unknown) => void }
+      ).__crewTestInjectEvent('runner.status_changed', { online: true, lastSeen: Date.now() });
+    });
+    await expect(resume).toBeEnabled();
+
+    await resume.click();
+    await expect(page.getByText('Resume queued')).toBeVisible();
+  });
+
   test('Finish stays disabled until pr_merged ("Available after the PR is merged")', async ({
     page,
   }) => {
