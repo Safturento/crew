@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, it, expect, vi } from 'vitest';
-import { act, fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
@@ -24,10 +24,39 @@ const mockedUseOverrideState = vi.mocked(useOverrideState);
 vi.mock('../data/runnerControls.js', () => ({
   useCancelRun: vi.fn(),
   useForceKill: vi.fn(),
+  usePauseRun: vi.fn(),
+  useResumeRun: vi.fn(),
 }));
-import { useCancelRun, useForceKill } from '../data/runnerControls.js';
+import {
+  useCancelRun,
+  useForceKill,
+  usePauseRun,
+  useResumeRun,
+} from '../data/runnerControls.js';
 const mockedUseCancelRun = vi.mocked(useCancelRun);
 const mockedUseForceKill = vi.mocked(useForceKill);
+const mockedUsePauseRun = vi.mocked(usePauseRun);
+const mockedUseResumeRun = vi.mocked(useResumeRun);
+
+vi.mock('../data/useRunnerStatus.js', () => ({ useRunnerStatus: vi.fn() }));
+import { useRunnerStatus } from '../data/useRunnerStatus.js';
+import type { LiveProcess } from 'crew-shared';
+const mockedUseRunnerStatus = vi.mocked(useRunnerStatus);
+
+const OFFLINE = { online: false, lastSeen: null, processes: [] as LiveProcess[] };
+
+function pausedProcess(agentKey: string): LiveProcess {
+  return {
+    agentKey,
+    command: 'run',
+    pid: 10,
+    pgid: 10,
+    actionRequestId: null,
+    spawnedAt: new Date(Date.now() - 60_000).toISOString(),
+    state: 'paused',
+    project: '~/code/kanban-api',
+  };
+}
 
 function makeMutation(overrides: Partial<{ isPending: boolean; mutate: () => void }> = {}) {
   return {
@@ -56,6 +85,9 @@ afterEach(() => {
   mockedUseOverrideState.mockReset();
   mockedUseCancelRun.mockReset();
   mockedUseForceKill.mockReset();
+  mockedUsePauseRun.mockReset();
+  mockedUseResumeRun.mockReset();
+  mockedUseRunnerStatus.mockReset();
 });
 
 function wrap(ui: ReactNode): ReactNode {
@@ -106,6 +138,9 @@ describe('DrawerHeader', () => {
     mockedUseOverrideState.mockReturnValue(makeMutation());
     mockedUseCancelRun.mockReturnValue(makeMutation());
     mockedUseForceKill.mockReturnValue(makeMutation());
+    mockedUsePauseRun.mockReturnValue(makeMutation());
+    mockedUseResumeRun.mockReturnValue(makeMutation());
+    mockedUseRunnerStatus.mockReturnValue(OFFLINE);
   });
 
   it('renders project + ticket key + state badge in the breadcrumb', () => {
@@ -219,6 +254,9 @@ describe('DrawerHeader — Refresh PR + Merged PR (CREW-202)', () => {
     mockedUseOverrideState.mockReturnValue(makeMutation());
     mockedUseCancelRun.mockReturnValue(makeMutation());
     mockedUseForceKill.mockReturnValue(makeMutation());
+    mockedUsePauseRun.mockReturnValue(makeMutation());
+    mockedUseResumeRun.mockReturnValue(makeMutation());
+    mockedUseRunnerStatus.mockReturnValue(OFFLINE);
   });
 
   it('shows a Refresh PR button when state is pr_open and pr_url is set', () => {
@@ -314,6 +352,9 @@ describe('DrawerHeader — Cancel control (CREW-246)', () => {
     mockedUseOverrideState.mockReturnValue(makeMutation());
     mockedUseCancelRun.mockReturnValue(makeMutation());
     mockedUseForceKill.mockReturnValue(makeMutation());
+    mockedUsePauseRun.mockReturnValue(makeMutation());
+    mockedUseResumeRun.mockReturnValue(makeMutation());
+    mockedUseRunnerStatus.mockReturnValue(OFFLINE);
   });
 
   it('renders a Cancel control in the action cluster for a running agent', () => {
@@ -399,5 +440,84 @@ describe('DrawerHeader — Cancel control (CREW-246)', () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+});
+
+describe('DrawerHeader — Pause/Resume parity (CREW-274)', () => {
+  beforeEach(() => {
+    mockedUseRefreshPrStatus.mockReturnValue(makeMutation());
+    mockedUseOverrideState.mockReturnValue(makeMutation());
+    mockedUseCancelRun.mockReturnValue(makeMutation());
+    mockedUseForceKill.mockReturnValue(makeMutation());
+    mockedUsePauseRun.mockReturnValue(makeMutation());
+    mockedUseResumeRun.mockReturnValue(makeMutation());
+    mockedUseRunnerStatus.mockReturnValue(OFFLINE);
+  });
+
+  it('shows a Pause control for a running agent and enqueues a pause on click', async () => {
+    const user = userEvent.setup();
+    const pauseMutate = vi.fn();
+    mockedUsePauseRun.mockReturnValue(makeMutation({ mutate: pauseMutate }));
+
+    render(wrap(<DrawerHeader detail={makeDetail({ state: 'running' })} showCloseButton showOpenAsPage />));
+    await user.click(screen.getByRole('button', { name: /^pause$/i }));
+    expect(pauseMutate).toHaveBeenCalledWith('kanban-api/KAN-23');
+  });
+
+  it('shows no Pause control when the agent is not running', () => {
+    render(
+      wrap(
+        <DrawerHeader
+          detail={makeDetail({ state: 'pr_open', pr_url: 'https://example.com/pr/1' })}
+          showCloseButton
+          showOpenAsPage
+        />,
+      ),
+    );
+    expect(screen.queryByRole('button', { name: /^pause$/i })).not.toBeInTheDocument();
+  });
+
+  it('shows a Resume control when the live snapshot reports the agent paused (state reduced to idle)', () => {
+    mockedUseRunnerStatus.mockReturnValue({
+      ...OFFLINE,
+      online: true,
+      processes: [pausedProcess('kanban-api/KAN-23')],
+    });
+    render(
+      wrap(
+        <DrawerHeader detail={makeDetail({ state: 'idle' as AgentState })} showCloseButton showOpenAsPage />,
+      ),
+    );
+    expect(screen.getByRole('button', { name: /^resume$/i })).toBeInTheDocument();
+  });
+
+  it('does not show Resume for a genuinely idle agent absent from the snapshot', () => {
+    render(
+      wrap(
+        <DrawerHeader detail={makeDetail({ state: 'idle' as AgentState })} showCloseButton showOpenAsPage />,
+      ),
+    );
+    expect(screen.queryByRole('button', { name: /^resume$/i })).not.toBeInTheDocument();
+  });
+
+  it('Resume opens the modal; submitting with no message enqueues a plain resume', async () => {
+    const user = userEvent.setup();
+    const resumeMutate = vi.fn();
+    mockedUseResumeRun.mockReturnValue(makeMutation({ mutate: resumeMutate }));
+    mockedUseRunnerStatus.mockReturnValue({
+      ...OFFLINE,
+      online: true,
+      processes: [pausedProcess('kanban-api/KAN-23')],
+    });
+
+    render(
+      wrap(
+        <DrawerHeader detail={makeDetail({ state: 'idle' as AgentState })} showCloseButton showOpenAsPage />,
+      ),
+    );
+    await user.click(screen.getByRole('button', { name: /^resume$/i }));
+    const dialog = await screen.findByRole('dialog');
+    await user.click(within(dialog).getByRole('button', { name: 'Resume' }));
+    expect(resumeMutate).toHaveBeenCalledWith({ agentKey: 'kanban-api/KAN-23', message: undefined });
   });
 });
