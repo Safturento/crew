@@ -3,7 +3,7 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { sql, type Kysely } from 'kysely';
+import { type Kysely } from 'kysely';
 import { createDb, runMigrations, type DaemonDatabase } from '../db.js';
 import { down } from './0013_action_resume_kind.js';
 
