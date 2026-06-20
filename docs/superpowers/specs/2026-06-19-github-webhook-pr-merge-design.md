@@ -3,6 +3,7 @@
 **Date:** 2026-06-19
 **Status:** Design (brainstormed 2026-06-19) — Epic to be created
 **Complements:** [CREW-202](https://safturento.atlassian.net/browse/CREW-202) (the `PrPoller` this design demotes to a backstop).
+**Reconciled against:** [CREW-256](https://safturento.atlassian.net/browse/CREW-256) / [CREW-257](https://safturento.atlassian.net/browse/CREW-257) / [CREW-261](https://safturento.atlassian.net/browse/CREW-261) — the concrete-state-events refactor (`docs/superpowers/specs/2026-06-18-concrete-state-triggers-design.md`). See "Fit with the concrete-state-events model" below.
 
 ## Problem
 
@@ -73,6 +74,20 @@ markMerged(agentKey):
 The `latest === 'pr_open'` precondition is what makes the whole feature safe under **double delivery** and **webhook-vs-poll races**: whichever path fires first performs the transition; every later path sees a non-`pr_open` state and no-ops. The webhook path supplies `agentKey`; it never calls `gh pr view` (the payload already proves the PR closed). The poller keeps calling `gh pr view`, then calls `markMerged` on a hit. The drawer button keeps its existing precondition behavior via the same method.
 
 > A `byPrUrl(prUrl)` resolver (PR `html_url` → `agents.key` where state is `pr_open`) is the webhook's entry into this service. Lives in `AgentsService` or `PrTransitionService` — to be settled in the plan; it's a single indexed lookup either way.
+>
+> **New concern vs `PrPoller`:** the poller never string-compares URLs — it *passes* the stored `pr_url` to `gh pr view`. The webhook instead matches GitHub's `pull_request.html_url` against the stored `agents.pr_url` (written by the `pr_created` hook, CREW-261). These should be byte-identical canonical forms (`https://github.com/<owner>/<repo>/pull/<n>`), but the resolver must **normalize defensively** (trailing slash, host/owner casing) and the match must be verified against a real stored value during implementation — a silent mismatch would make every webhook a valid-but-unmatched `200` no-op, masking total failure behind the poll backstop.
+
+### Fit with the concrete-state-events model (CREW-256/257/261)
+
+The recent refactor replaced *inferred* state transitions with **concrete lifecycle events** that producers append to `~/.crew/state-events/<key>.jsonl`; the daemon (`IngestService`) dedups them via the `state_events_applied` ledger and reduces each via `reduceState` into a `state_transitions` row. This design **does not** route the merge through that pipeline, and that is deliberate, not an oversight:
+
+- **`pr_merged` is intentionally outside the event vocabulary.** `STATE_EVENT_KINDS` (`packages/shared/src/state-events/types.ts`) has no merge event, and `reduceState` (`packages/daemon/src/services/state-reduce.ts`) documents `pr_merged` as **terminal — reachable only via its dedicated path (`PrPoller`)**. A merge happens *on GitHub*, outside any crew process, so it is correctly modeled as a daemon-side authoritative observation, not a producer-emitted process lifecycle fact. Adding a merge event to `STATE_EVENT_KINDS` was considered and rejected: it would misclassify a GitHub-side fact as a crew-process fact and expand the reducer's contract for no benefit.
+- **The webhook is therefore a *peer of `PrPoller`* on that dedicated path**, not a producer. Both observe GitHub's authoritative state and call the same `PrTransitionService.markMerged`. `PrPoller` is untouched by the refactor (its transition write predates it); this design simply extracts the write both now share.
+- **No `state_events_applied` dedup for the webhook.** That ledger gives the *event* pipeline exactly-once across file replays. The webhook has no replay log; its idempotency comes entirely from `markMerged`'s `latest === 'pr_open'` precondition — which is also consistent with `reduceState` treating `pr_merged` as terminal. GitHub redeliveries and webhook-vs-poll races collapse to a single transition.
+- **Durability differs from the event path by design.** Producer events survive a daemon restart via the on-disk JSONL the daemon re-tails. The webhook is *not* durable-logged — a delivery lost while the daemon is down is gone. Durability for the merge path comes from the **poll backstop** instead, exactly as it does for `PrPoller` today. This is why removing the poller is a non-goal.
+- **Join keys still hold under the new pipeline.** `agents.pr_url` is now stamped by `IngestService` when it reduces the `pr_created` hook event (`IngestService.ts`), and that same reduction writes the `pr_open` row into `state_transitions`. So the webhook's two anchors — resolve agent by `pr_url`, gate on latest `state_transitions` being `pr_open` — read exactly the rows the new pipeline produces.
+
+> **fix-pr window:** an agent mid-`fix-pr` is transiently `running` (`pr_open → fixpr_started → running`). A merge delivered in that window finds `latest !== 'pr_open'` and no-ops — then `fixpr_exited` returns it to `pr_open` and the backstop poll reconciles. This is **identical to existing `PrPoller` behavior** (its `pollOnce` already selects only agents whose latest transition is `pr_open`), so it's a preserved property, not a new gap.
 
 ### `GithubWebhookService.handle()` — verification pipeline
 
@@ -156,7 +171,8 @@ Operator action, captured as a runbook + a `scripts/` helper (not daemon code):
 - **`GithubWebhookService`** — unit against real GitHub `pull_request` + `ping` JSON fixtures: valid signature passes; tampered body / wrong secret → `401`; wrong `X-GitHub-Hook-ID` → `401`; unknown repo → `404`; non-`pull_request` event → `204`; `ping` → `200` no-op; `action !== "closed"` → `200` no-op; valid `closed` with no matching `pr_open` agent → `200` no-op; valid `closed` with a matching agent → `markMerged` called.
 - **Route test** — raw-body HMAC plumbing: a real signed payload verifies end-to-end through the registered content-type parser (guards the Fastify-pre-parse regression).
 - **Config loader** — secrets file + `webhook_hook_id` parse; missing/partial config handled.
-- **`PrPoller`** — existing tests updated for the lengthened interval and the delegation to `PrTransitionService`.
+- **`byPrUrl` resolver** — matches the canonical `html_url` form; normalization cases (trailing slash, host/owner casing); unmatched URL → no resolution.
+- **`PrPoller`** — existing tests updated for the lengthened interval and the delegation to `PrTransitionService` (behavior unchanged otherwise — it predates and is untouched by the concrete-state-events refactor).
 - **Bruno** — endpoint for `POST /api/webhooks/github` per the `bruno-collection-maintenance` skill.
 
 ## Scope (one Epic)
@@ -165,7 +181,7 @@ Operator action, captured as a runbook + a `scripts/` helper (not daemon code):
 |---|---|
 | **A. Shared transition** | Extract `PrTransitionService` from `PrPoller`; repoint poller + drawer refresh; tests. |
 | **B. Config model** | `webhook_hook_id` in `[github]` schema; `github-webhook-secrets.toml` schema + loader; container mount; tests. |
-| **C. Webhook route + service** | `GithubWebhookService`, raw-body route, full verification pipeline, agent-by-`pr_url` resolver, Bruno endpoint, tests. (Includes the empirical IP-allowlist check.) |
+| **C. Webhook route + service** | `GithubWebhookService`, raw-body route, full verification pipeline, agent-by-`pr_url` resolver (with the `html_url`↔`pr_url` normalization + real-value check), Bruno endpoint, tests. (Includes the empirical IP-allowlist check.) |
 | **D. Poller demotion** | Lengthen interval; confirm backstop behavior; tests. |
 | **E. Setup (crew repo)** | Funnel ACL + path-scoped mapping runbook, `scripts/` helper, GitHub webhook creation, `hook_id` capture, `ping` verification. |
 
@@ -174,5 +190,6 @@ Operator action, captured as a runbook + a `scripts/` helper (not daemon code):
 ## Open questions
 
 - **IP allowlist feasibility behind Funnel** (does Funnel surface the client IP?) — resolved empirically in grouping C; design degrades gracefully either way.
+- **`html_url` ↔ stored `pr_url` exact match** — must be confirmed against a real `agents.pr_url` written by the `pr_created` hook (CREW-261), with defensive normalization, in grouping C. A silent mismatch fails open into the poll backstop, masking the webhook doing nothing.
 - **Exact backstop interval** (20 vs 30 min) — settled in the plan; not load-bearing.
 - **Where the `byPrUrl` resolver lives** (`AgentsService` vs `PrTransitionService`) — settled in the plan.
