@@ -1,0 +1,43 @@
+meta {
+  name: POST /api/actions (resume)
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{baseUrl}}/api/actions
+  body: json
+}
+
+body:json {
+  {
+    "kind": "resume",
+    "ticketKey": "CREW-275",
+    "project": "crew"
+  }
+}
+
+assert {
+  res.status: eq 201
+  res.body.id: isNumber
+  res.body.kind: eq resume
+  res.body.status: eq pending
+}
+
+tests {
+  test("enqueue accepts the resume kind and echoes a pending envelope", () => {
+    expect(res.body.ticketKey).to.equal("CREW-275");
+    expect(res.body.project).to.equal("crew");
+    expect(res.body.payload).to.deep.equal({ kind: "resume" });
+    expect(res.body.error).to.equal(null);
+  });
+}
+
+docs {
+  Enqueues a dashboard-triggered `resume` action (CREW-275) against the seeded
+  `crew` project. `resume` continues an interrupted run on its existing
+  worktree via `crew resume <key>`, where `run` would bounce off the "worktree
+  already exists" preflight. Carries no payload beyond the request envelope,
+  like `run`/`finish`. This row is left pending in the smoke run; the
+  get-pending step claims the older `run` row enqueued by post-enqueue.bru.
+}

@@ -34,7 +34,7 @@ shared → daemon enqueue (+ DB CHECK) → host runner executor → `crew resume
 
 ## Relationship
 
-Distinct from the pause/resume *live-process* work (CREW-273/274), which
+Distinct from the pause/resume _live-process_ work (CREW-273/274), which
 resumes a **paused running process** via `runner_commands`. This resumes an
 **idle / interrupted run** via the **action queue** + `crew resume`.
 

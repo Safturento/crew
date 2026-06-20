@@ -192,7 +192,7 @@ const ActionRequestSchema = z.object({
  */
 const LiveProcessSchema = z.object({
   agentKey: z.string(),
-  command: z.enum(['run', 'fix-pr', 'finish']),
+  command: z.enum(['run', 'fix-pr', 'finish', 'resume']),
   pid: z.number(),
   pgid: z.number(),
   actionRequestId: z.number().nullable(),
