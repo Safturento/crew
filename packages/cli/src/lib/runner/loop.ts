@@ -1,7 +1,7 @@
 import type { ActionRequest } from 'crew-shared';
 import type { CrewDaemonClient } from '../daemon-client/index.js';
 import { applyCommand } from './commands.js';
-import type { ExecutionResult } from './executor.js';
+import type { ExecutionResult, LaunchHandle } from './executor.js';
 import type { Registry } from './registry.js';
 
 /** The daemon surface a single poll iteration needs. */
@@ -70,6 +70,19 @@ export interface DrainCommandsDeps {
   registry: Registry;
   /** Signal boundary forwarded to {@link applyCommand} (negative pid = group). */
   kill: (target: number, signal: NodeJS.Signals) => void;
+  /**
+   * Resume boundary forwarded to {@link applyCommand}: re-dispatch
+   * `crew resume <key>` (with `-m <message>` when set) on the agent's existing
+   * worktree/session. Optional — a `resume`/`message` command fails cleanly
+   * when it's absent.
+   */
+  resume?: (agentKey: string, message?: string) => Promise<LaunchHandle>;
+  /**
+   * Pause-sentinel boundary forwarded to {@link applyCommand}: write the
+   * CREW-273 pause marker before a `pause` SIGTERM. Optional — a pause without
+   * it degrades to a terminal cancel on the `crew run` side.
+   */
+  writePauseSentinel?: (agentKey: string) => void;
   /** Structured log sink — one line per applied/failed command. */
   log: (line: string) => void;
 }
@@ -92,7 +105,12 @@ export async function drainCommands(deps: DrainCommandsDeps): Promise<void> {
     const command = claim.command;
     if (command === null) return;
 
-    const result = await applyCommand(command, { registry: deps.registry, kill: deps.kill });
+    const result = await applyCommand(command, {
+      registry: deps.registry,
+      kill: deps.kill,
+      resume: deps.resume,
+      writePauseSentinel: deps.writePauseSentinel,
+    });
     if (result.status === 'applied') {
       await deps.client.reportCommandResult(command.id, 'applied');
       deps.log(`applied command ${command.id} (${command.kind} ${command.agentKey ?? '-'})`);
@@ -109,6 +127,10 @@ export interface RunLoopDeps extends RunnerLoopDeps {
   registry: Registry;
   /** Signal boundary for command apply (negative pid = process group). */
   kill: (target: number, signal: NodeJS.Signals) => void;
+  /** Resume boundary for command apply (re-dispatch `crew resume <key>`). */
+  resume?: (agentKey: string, message?: string) => Promise<LaunchHandle>;
+  /** Pause-sentinel boundary for command apply (CREW-273 pause marker). */
+  writePauseSentinel?: (agentKey: string) => void;
   /** Aborting this signal stops the loop after the in-flight iteration. */
   signal: AbortSignal;
   /**
@@ -198,7 +220,14 @@ export async function runLoop(deps: RunLoopDeps): Promise<void> {
     deps.signal,
   );
   const stopCommandDrain = startCommandDrain(
-    { client: deps.client, registry: deps.registry, kill: deps.kill, log: deps.log },
+    {
+      client: deps.client,
+      registry: deps.registry,
+      kill: deps.kill,
+      resume: deps.resume,
+      writePauseSentinel: deps.writePauseSentinel,
+      log: deps.log,
+    },
     deps.commandDrainMs ?? 2_000,
     deps.signal,
   );

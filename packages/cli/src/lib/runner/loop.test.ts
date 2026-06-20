@@ -276,6 +276,21 @@ describe('drainCommands', () => {
     expect(d.client.claimPendingCommand).toHaveBeenCalledTimes(2);
   });
 
+  it('forwards the resume boundary to applyCommand for a resume command', async () => {
+    const resume = vi.fn().mockResolvedValue({ pid: 42, pgid: 42 });
+    const d = drainDeps({ resume });
+    d.client.claimPendingCommand
+      .mockResolvedValueOnce({
+        command: makeCommand({ id: 3, kind: 'message', payload: { message: 'steer here' } }),
+      })
+      .mockResolvedValueOnce({ command: null });
+
+    await drainCommands(d);
+
+    expect(resume).toHaveBeenCalledWith('CREW-231', 'steer here');
+    expect(d.client.reportCommandResult).toHaveBeenCalledWith(3, 'applied');
+  });
+
   it('reports a failed apply with the error and keeps draining', async () => {
     const d = drainDeps();
     d.client.claimPendingCommand
