@@ -47,6 +47,7 @@ Organization: Active is grouped by topic (not chronology) since the dominant acc
     - [2026-04-28 — Dashboard New Run modal + projects route view](#2026-04-28--dashboard-new-run-modal--projects-route-view)
     - [2026-04-28 — `useAttention.clear()` snapshot semantic isn't directly tested](#2026-04-28--useattentionclear-snapshot-semantic-isnt-directly-tested)
   - [Daemon, CLI & Dispatch](#daemon-cli--dispatch)
+    - [2026-06-19 — Pause/resume/message build is gated on a host-only confirmation spike (CREW-248)](#2026-06-19--pauseresumemessage-build-is-gated-on-a-host-only-confirmation-spike-crew-248)
     - [2026-06-19 — A throw between `*_started` and `*_exited` leaves the agent stuck `running`](#2026-06-19--a-throw-between-_started-and-_exited-leaves-the-agent-stuck-running)
     - [2026-06-19 — `pr_created` hook regex misses env-var/command-prefixed `gh pr create`](#2026-06-19--pr_created-hook-regex-misses-env-varcommand-prefixed-gh-pr-create)
     - [2026-06-17 — Host runner can't apply `dequeue` (no daemon "drop pending action" route)](#2026-06-17--host-runner-cant-apply-dequeue-no-daemon-drop-pending-action-route)
@@ -723,6 +724,26 @@ The "synthetic Unregistered section" feels right — single render path, no extr
 **Shape of work:** Tiny cleanup. Add 2–3 RTL test cases. Bundle into the cva-cleanup ticket above or stand alone.
 
 ### Daemon, CLI & Dispatch
+
+#### 2026-06-19 — Pause/resume/message build is gated on a host-only confirmation spike (CREW-248)
+
+**Ticket:** [CREW-248](https://safturento.atlassian.net/browse/CREW-248) — the F-1 spike of Epic [CREW-235](https://safturento.atlassian.net/browse/CREW-235). Spike outcome documented; the *build* is the deferred work this entry tracks.
+
+**What:** The pause/resume/message apply paths (`packages/cli/src/lib/runner/commands.ts`) + dashboard controls are designed-for in the v1 data model but gated behind a feasibility spike (cleanly interrupt a detached headless `claude` mid-turn + resume via `spawnClaudeResume` without a dangling-`tool_use` corrupting state). The spike's empirical leg **cannot run in the `crew run` dispatch sandbox** — `~/.claude/projects` + `~/.claude/session-env` are mounted read-only, so a nested `claude` persists no transcript/session and `--resume` has nothing to resume (the Bash tool also can't run). The gate is therefore **unconfirmed**, and the build is deferred until a host (un-sandboxed) confirmation run closes it.
+
+**Why noticed:** Ran the CREW-248 spike under `crew run` dispatch; hit the read-only `~/.claude` substrate. See the full writeup + the reproducible host-confirmation script.
+
+**Anchors:**
+
+- `docs/tickets/CREW-248.md` — full spike outcome, the host-confirmation script, the implementation design, and the cross-layer `paused` run-state wrinkle.
+- `packages/cli/src/lib/runner/commands.ts` (`applyCommand`) — `pause`/`resume`/`message` return `failed: not yet supported` today.
+- `packages/cli/src/commands/resume.ts`, `packages/cli/src/lib/claude/spawn.ts` (`spawnClaudeResume`) — the resume mechanism the build reuses.
+
+**What's been considered:** Design settled in `docs/tickets/CREW-248.md` — `pause` = SIGTERM the group + `registry.setState(paused)` (keep tracking); `resume`/`message` = re-dispatch `crew resume <key> [-m message]` via a new injected boundary on `ApplyCommandDeps`. Key wrinkle: `crew run` lands a *terminal* `completeRun` on any SIGTERM exit (reduces to `error`), so a *non-terminal* resumable `paused` run-state needs `crew run`/daemon pause-awareness — `paused` is a `LiveProcessState` only today.
+
+**Shape of work:** Two slices once green — (1) the small `commands.ts` apply mapping + injected `resume` boundary (easily TDD'd); (2) the harder non-terminal `paused` run-state in `crew run` + daemon (candidate for its own CREW-235 child). Dashboard Pause/Resume controls sit on (2).
+
+**Open questions:** Does `claude --resume` repair or reject a transcript ending on a dangling `tool_use`? (The gate, answered by the host run.) How to represent a non-terminal `paused` run — sentinel/suppress `completeRun`, distinct signal, or new daemon state?
 
 #### 2026-06-19 — A throw between `*_started` and `*_exited` leaves the agent stuck `running`
 
