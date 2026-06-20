@@ -150,11 +150,12 @@ describe('applyCommand', () => {
 
     it('fails when no resume boundary is configured', async () => {
       const { deps: d, registry } = deps();
+      registry.setState('CREW-231', 'paused');
       const result = await applyCommand(command({ kind: 'resume' }), d);
       expect(result.status).toBe('failed');
       if (result.status === 'failed') expect(result.error).toMatch(/resume boundary/i);
-      // The entry is untouched — still paused-eligible, not promoted to running.
-      expect(registry.get('CREW-231')?.state).toBe('running');
+      // The entry is untouched — still paused, not promoted to running.
+      expect(registry.get('CREW-231')?.state).toBe('paused');
     });
 
     it('reports a resume boundary that rejects as failed and leaves the entry untouched', async () => {

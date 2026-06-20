@@ -48,7 +48,7 @@ Implement the three runner command kinds in `applyCommand`
 - **`resume` boundary is optional on `ApplyCommandDeps`.** A runner wired before
   resume support — or a test exercising only cancels — can omit it; a
   `resume`/`message` command then fails cleanly (`runner has no resume boundary
-  configured`) rather than throwing, consistent with the "never crash the drain
+configured`) rather than throwing, consistent with the "never crash the drain
   loop" philosophy and the existing optional `now?` pattern in `executor.ts`.
 - **`resume` and `message` share one apply path** (`resumeAgent`). They differ
   only in whether a message is present; both forward `command.payload?.message`,
@@ -66,7 +66,7 @@ Implement the three runner command kinds in `applyCommand`
   `pause` SIGTERM today makes `crew run` land a terminal `completeRun`; the
   daemon reduces the non-zero exit → `error`). Different files (`run.ts`/daemon
   vs `commands.ts`), builds in parallel, merges independently. This slice's apply
-  mapping is correct in isolation; a *correct end-to-end* pause waits on that
+  mapping is correct in isolation; a _correct end-to-end_ pause waits on that
   slice.
 - Dashboard Pause/Resume controls.
 

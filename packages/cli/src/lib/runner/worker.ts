@@ -97,6 +97,9 @@ export async function runWorker(deps: WorkerDeps): Promise<void> {
     // the still-tracked (paused) entry's project. Mirrors `executeAction`'s
     // launch glue; `applyCommand` re-registers the entry on the returned handle.
     resume: (agentKey, message) => {
+      // Unreachable via applyCommand (it guards `no tracked process` before
+      // calling this); kept for type-narrowing on `entry.project` + safety if
+      // the boundary is ever called directly.
       const entry = registry.get(agentKey);
       if (!entry) throw new Error(`no tracked process for ${agentKey}`);
       const cwd = resolveRepoDir(entry.project);
