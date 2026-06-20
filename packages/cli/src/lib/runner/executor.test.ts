@@ -57,6 +57,23 @@ describe('executeAction', () => {
     expect(launch).toHaveBeenCalledWith('crew', ['finish', 'CREW-9'], { cwd: '/repos/crew' });
   });
 
+  it('launches `crew resume <key>` (continues an interrupted run on its worktree)', async () => {
+    const { deps: d, launch, exec } = deps();
+    const result = await executeAction(
+      makeAction({ kind: 'resume', payload: { kind: 'resume' } }),
+      d,
+    );
+    expect(result).toEqual({ status: 'launched' });
+    expect(launch).toHaveBeenCalledWith('crew', ['resume', 'CREW-9'], { cwd: '/repos/crew' });
+    expect(exec).not.toHaveBeenCalled();
+  });
+
+  it('records the resume process under the `resume` live-process command', async () => {
+    const { deps: d, registry } = deps();
+    await executeAction(makeAction({ kind: 'resume', payload: { kind: 'resume' } }), d);
+    expect(registry.get('CREW-9')?.command).toBe('resume');
+  });
+
   it('runs `gh pr comment` to completion before launching `crew fix-pr --from-pr`', async () => {
     const { deps: d, exec, launch } = deps();
     const order: string[] = [];
