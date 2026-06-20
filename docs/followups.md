@@ -47,6 +47,7 @@ Organization: Active is grouped by topic (not chronology) since the dominant acc
     - [2026-04-28 — Dashboard New Run modal + projects route view](#2026-04-28--dashboard-new-run-modal--projects-route-view)
     - [2026-04-28 — `useAttention.clear()` snapshot semantic isn't directly tested](#2026-04-28--useattentionclear-snapshot-semantic-isnt-directly-tested)
   - [Daemon, CLI & Dispatch](#daemon-cli--dispatch)
+    - [2026-06-20 — `crew resume` emits `run_started` as source `cli-run`, blurring resume vs original-run in the audit trail](#2026-06-20--crew-resume-emits-run_started-as-source-cli-run-blurring-resume-vs-original-run-in-the-audit-trail)
     - [2026-06-20 — Headless `crew run` silently cuts off an agent that backgrounds work and yields via `ScheduleWakeup`](#2026-06-20--headless-crew-run-silently-cuts-off-an-agent-that-backgrounds-work-and-yields-via-schedulewakeup)
     - [2026-06-19 — Per-run worktree stacks leak anonymous `node_modules` volumes (Docker disk hit 210 GB; 182 GB reclaimed manually)](#2026-06-19--per-run-worktree-stacks-leak-anonymous-node_modules-volumes-docker-disk-hit-210-gb-182-gb-reclaimed-manually)
     - [2026-06-19 — `PrTransitionService.markMerged` check-then-insert isn't transaction-guarded against a true concurrent race](#2026-06-19--prtransitionservicemarkmerged-check-then-insert-isnt-transaction-guarded-against-a-true-concurrent-race)
@@ -727,6 +728,25 @@ The "synthetic Unregistered section" feels right — single render path, no extr
 **Shape of work:** Tiny cleanup. Add 2–3 RTL test cases. Bundle into the cva-cleanup ticket above or stand alone.
 
 ### Daemon, CLI & Dispatch
+
+#### 2026-06-20 — `crew resume` emits `run_started` as source `cli-run`, blurring resume vs original-run in the audit trail
+
+**What:** The resume-from-error lifecycle fix (CREW-275 follow-on) made `crew resume` emit its lifecycle events by reusing the existing helpers: `emitRunStarted` (source `cli-run`) before each spawn, and `emitDispatchExited(key, 'run', …)` (source `runner-exit`) on exit. Functionally correct — the daemon reducer doesn't branch on `source` — but it means a resume's `state_transitions` audit rows are indistinguishable from an original `crew run`'s. A dedicated `cli-resume` source would let a timeline/audit view tell "operator resumed this from error" apart from "this is how the run first started."
+
+**Why noticed:** Scoping the resume lifecycle fix (`resume.ts` now emits start/exit/pause mirroring `run.ts`). Deliberately reused the existing helpers to keep the change scoped rather than touch the shared `EventSource` enum; flagged the audit-granularity tradeoff as a deferred nicety so it isn't lost.
+
+**Anchors:**
+
+- `packages/cli/src/commands/resume.ts` — `emitRunStarted(key)` before each spawn; `emitDispatchExited(key, 'run', …)` in `settleResumeState`.
+- `packages/cli/src/lib/state-events/dispatch.ts` — `emitRunStarted` hardcodes `source: 'cli-run'`; a `cli-resume` variant (or a `source` param) would live here.
+- `packages/shared/src/state-events/types.ts` — `STATE_EVENT_SOURCES` (`cli-run`/`cli-fixpr`/`cli-finish`/`runner-exit`/`hook-pr-create`); adding `cli-resume` ripples to the zod `stateEventSchema` + any exhaustive consumers.
+- `.agents/dispatch.md` — per-command lifecycle list (now carries the `crew resume` entry).
+
+**What's been considered:** Reuse `cli-run` (chosen — zero new surface, reducer-equivalent today) vs add `cli-resume` (clearer audit, touches the shared enum + schema + tests). Low urgency: nothing currently consumes `source` to discriminate resume from run, so this only bites once an audit/timeline surface wants the distinction.
+
+**Shape of work:** Small. Add `cli-resume` to `STATE_EVENT_SOURCES`, add an `emitResumeStarted` helper (or a `source` param on `emitRunStarted`), swap `resume.ts`'s call, update tests. Optionally a resume-specific exit source too.
+
+**Open questions:** Is a distinct *start* source enough, or does the exit half (`run_exited` via `runner-exit`) also want a resume-specific source? Is there a planned audit/timeline view that actually needs this, or is it speculative until one exists?
 
 #### 2026-06-20 — Headless `crew run` silently cuts off an agent that backgrounds work and yields via `ScheduleWakeup`
 

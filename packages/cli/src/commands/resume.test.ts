@@ -71,11 +71,30 @@ vi.mock('../lib/run/stream-transcript.js', () => ({
   })),
 }));
 
+vi.mock('../lib/pause-sentinel/index.js', () => ({
+  consumePauseSentinel: vi.fn(() => false),
+}));
+
+// Keep run.ts's own lifecycle emitters real (resume's flow never triggers
+// them), but stub the three resume drives so they can be asserted without
+// touching ~/.crew.
+vi.mock('../lib/state-events/index.js', async () => {
+  const actual = await vi.importActual('../lib/state-events/index.js');
+  return {
+    ...actual,
+    emitRunStarted: vi.fn(async () => {}),
+    emitDispatchExited: vi.fn(async () => {}),
+    emitRunPausedSync: vi.fn(() => {}),
+  };
+});
+
 import { existsSync } from 'node:fs';
 import { discoverProjectConfig } from '../lib/discover-project-config.js';
 import { findLatestSession } from '../lib/sessions/index.js';
 import { spawnClaudeFresh, spawnClaudeResume } from '../lib/claude/spawn.js';
 import { streamTranscript } from '../lib/run/stream-transcript.js';
+import { consumePauseSentinel } from '../lib/pause-sentinel/index.js';
+import { emitRunStarted, emitDispatchExited, emitRunPausedSync } from '../lib/state-events/index.js';
 import { runResume } from './resume.js';
 
 const existsMock = vi.mocked(existsSync);
@@ -84,6 +103,10 @@ const findSessionMock = vi.mocked(findLatestSession);
 const spawnFreshMock = vi.mocked(spawnClaudeFresh);
 const spawnResumeMock = vi.mocked(spawnClaudeResume);
 const streamTranscriptMock = vi.mocked(streamTranscript);
+const consumePauseMock = vi.mocked(consumePauseSentinel);
+const emitRunStartedMock = vi.mocked(emitRunStarted);
+const emitDispatchExitedMock = vi.mocked(emitDispatchExited);
+const emitRunPausedMock = vi.mocked(emitRunPausedSync);
 
 const baseConfig: ProjectConfig = {
   name: 'test',
@@ -136,6 +159,13 @@ describe('runResume', () => {
     };
     spawnFreshMock.mockImplementation(makeFakeSub);
     spawnResumeMock.mockImplementation(makeFakeSub);
+    consumePauseMock.mockReset();
+    consumePauseMock.mockReturnValue(false);
+    emitRunStartedMock.mockReset();
+    emitRunStartedMock.mockResolvedValue(undefined);
+    emitDispatchExitedMock.mockReset();
+    emitDispatchExitedMock.mockResolvedValue(undefined);
+    emitRunPausedMock.mockReset();
   });
 
   afterEach(() => {
@@ -349,5 +379,102 @@ describe('runResume', () => {
     // Drain order: kill first, then sub resolved, then stream drained.
     expect(events).toEqual(['sub-killed', 'sub-resolved', 'stream-resolved']);
     process.exitCode = prevExitCode;
+  });
+
+  // CREW-275 follow-on: resume must drive the run-state lifecycle the same way
+  // `crew run` does, else an error-state row stays stuck in `error` (no
+  // run_started) and a resumed run never settles (no run_exited). These guard
+  // the full start → exit/pause lifecycle.
+  describe('run-state lifecycle events', () => {
+    it('emits run_started before spawning (session path) so error → running', async () => {
+      findSessionMock.mockReturnValue({ sessionId: 'abc-123', transcriptPath: '/tmp/x.jsonl' });
+
+      await runResume('KAN-1', {});
+
+      expect(emitRunStartedMock).toHaveBeenCalledWith('KAN-1');
+      // Must fire before the spawn so the daemon flips state as the run goes live.
+      const startOrder = emitRunStartedMock.mock.invocationCallOrder[0]!;
+      const spawnOrder = spawnResumeMock.mock.invocationCallOrder[0]!;
+      expect(startOrder).toBeLessThan(spawnOrder);
+    });
+
+    it('emits run_started before spawning (fresh path)', async () => {
+      findSessionMock.mockReturnValue(null);
+
+      await runResume('KAN-1', {});
+
+      expect(emitRunStartedMock).toHaveBeenCalledWith('KAN-1');
+      const startOrder = emitRunStartedMock.mock.invocationCallOrder[0]!;
+      const spawnOrder = spawnFreshMock.mock.invocationCallOrder[0]!;
+      expect(startOrder).toBeLessThan(spawnOrder);
+    });
+
+    it('emits run_exited(0) after a clean resume so the run settles instead of staying running', async () => {
+      findSessionMock.mockReturnValue({ sessionId: 'abc-123', transcriptPath: '/tmp/x.jsonl' });
+
+      await runResume('KAN-1', {});
+
+      expect(emitDispatchExitedMock).toHaveBeenCalledWith('KAN-1', 'run', 0);
+      expect(emitRunPausedMock).not.toHaveBeenCalled();
+    });
+
+    it('emits run_exited with the non-zero code when the resumed agent re-crashes → daemon routes back to error', async () => {
+      findSessionMock.mockReturnValue({ sessionId: 'abc-123', transcriptPath: '/tmp/x.jsonl' });
+      spawnResumeMock.mockImplementation(() => {
+        const promise = Promise.resolve({ exitCode: 2 });
+        return {
+          kill: () => true,
+          then: promise.then.bind(promise),
+          catch: promise.catch.bind(promise),
+          finally: promise.finally.bind(promise),
+        } as never;
+      });
+
+      await runResume('KAN-1', {});
+
+      expect(emitDispatchExitedMock).toHaveBeenCalledWith('KAN-1', 'run', 2);
+    });
+
+    it('on a pause-interrupt emits run_paused (resumable) and NOT run_exited', async () => {
+      findSessionMock.mockReturnValue({ sessionId: 'abc-123', transcriptPath: '/tmp/x.jsonl' });
+      consumePauseMock.mockReturnValue(true);
+
+      let resolveStream: (() => void) | null = null;
+      streamTranscriptMock.mockImplementation(async () => {
+        await new Promise<void>((resolve) => {
+          resolveStream = resolve;
+        });
+        return { transcriptPath: '/tmp/x.jsonl' };
+      });
+      let resolveSub: (() => void) | null = null;
+      spawnResumeMock.mockImplementation(() => {
+        const promise = new Promise<{ exitCode: number }>((resolve) => {
+          resolveSub = (): void => resolve({ exitCode: 130 });
+        });
+        return {
+          kill: vi.fn(() => true),
+          then: promise.then.bind(promise),
+          catch: promise.catch.bind(promise),
+          finally: promise.finally.bind(promise),
+        } as never;
+      });
+
+      const prevExitCode = process.exitCode;
+      process.exitCode = undefined;
+      const run = runResume('KAN-1', {});
+      await new Promise<void>((resolve) => setImmediate(resolve));
+
+      const sigintListeners = process.listeners('SIGINT');
+      const handler = sigintListeners[sigintListeners.length - 1];
+      handler!('SIGINT');
+      resolveSub!();
+      resolveStream!();
+      await run;
+
+      expect(consumePauseMock).toHaveBeenCalledWith('KAN-1');
+      expect(emitRunPausedMock).toHaveBeenCalledWith('KAN-1');
+      expect(emitDispatchExitedMock).not.toHaveBeenCalled();
+      process.exitCode = prevExitCode;
+    });
   });
 });
