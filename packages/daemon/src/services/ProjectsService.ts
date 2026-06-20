@@ -94,6 +94,20 @@ export class ProjectsService {
     return entry.filePath;
   }
 
+  /**
+   * Find the project whose [github] repo equals `repoFullName` (case-insensitive
+   * — GitHub treats owner/repo case-insensitively). Returns null when none
+   * match. Used by the webhook to resolve a delivery's `repository.full_name`
+   * to its config (carrying the `webhook_hook_id` pin).
+   */
+  findByRepo(repoFullName: string): ProjectConfig | null {
+    const target = repoFullName.toLowerCase();
+    for (const { config } of this.scanValidProjectFiles()) {
+      if (config.github.repo.toLowerCase() === target) return config;
+    }
+    return null;
+  }
+
   private findEntryBySlug(slug: string): ProjectFileEntry | undefined {
     return this.scanValidProjectFiles().find(({ config }) => config.name === slug);
   }

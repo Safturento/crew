@@ -41,6 +41,13 @@ services:
       # (CREW-202) inherit the user's token without an in-container login.
       # Daemon image installs gh; this mounts the credentials.
       - ${HOME}/.config/gh:/root/.config/gh:ro
+      # Read-only: per-repo GitHub webhook HMAC secrets (CREW-269). The daemon
+      # loads these at boot to verify pull_request webhook deliveries. Host path
+      # mirrors the other ~/.config/crew mounts; os.homedir() == /root in the
+      # container resolves to the same logical location. The file must exist as a
+      # *file* before `docker compose up` (a bind mount of a missing path makes
+      # Docker create a directory) — see docs/runbooks/github-webhook-funnel.md.
+      - ${HOME}/.config/crew/github-webhook-secrets.toml:/root/.config/crew/github-webhook-secrets.toml:ro
     environment:
       - CREW_DB_FILE=/state/state.db
       - CREW_HOST=0.0.0.0

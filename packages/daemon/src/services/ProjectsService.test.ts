@@ -196,6 +196,40 @@ describe('ProjectsService.getBySlug', () => {
   });
 });
 
+describe('ProjectsService.findByRepo', () => {
+  it('matches github.repo case-insensitively', () => {
+    const dir = projectsDir();
+    // tomlWith writes `repo = "example/<name>"`.
+    writeFileSync(join(dir, 'crew.toml'), validToml('crew', '/code/crew'));
+    const svc = new ProjectsService({
+      projectsDir: dir,
+      logger: silentLogger,
+      agentsService: emptyAgentsCounter,
+    });
+    expect(svc.findByRepo('EXAMPLE/Crew')?.name).toBe('crew');
+  });
+
+  it('returns null when no project matches the repo', () => {
+    const dir = projectsDir();
+    writeFileSync(join(dir, 'crew.toml'), validToml('crew', '/code/crew'));
+    const svc = new ProjectsService({
+      projectsDir: dir,
+      logger: silentLogger,
+      agentsService: emptyAgentsCounter,
+    });
+    expect(svc.findByRepo('nobody/nope')).toBeNull();
+  });
+
+  it('returns null when the projects dir does not exist', () => {
+    const svc = new ProjectsService({
+      projectsDir: join(tmp(), 'absent'),
+      logger: silentLogger,
+      agentsService: emptyAgentsCounter,
+    });
+    expect(svc.findByRepo('example/crew')).toBeNull();
+  });
+});
+
 describe('ProjectsService.getConfigPath', () => {
   it('returns the resolved file path for a project', () => {
     const dir = projectsDir();

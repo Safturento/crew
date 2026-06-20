@@ -150,6 +150,49 @@ canonical_worktree = "main"
   });
 });
 
+describe('parseProjectConfig — github.webhook_hook_id', () => {
+  it('parses an optional github.webhook_hook_id', () => {
+    const cfg = parseProjectConfig(`
+name = "crew"
+repo_path = "/x"
+[jira]
+project_key = "CREW"
+site = "https://example.atlassian.net"
+[github]
+repo = "Owner/repo"
+webhook_hook_id = "123456789"
+`);
+    expect(cfg.github.webhook_hook_id).toBe('123456789');
+  });
+
+  it('coerces a bare-number webhook_hook_id to a string', () => {
+    const cfg = parseProjectConfig(`
+name = "crew"
+repo_path = "/x"
+[jira]
+project_key = "CREW"
+site = "https://example.atlassian.net"
+[github]
+repo = "Owner/repo"
+webhook_hook_id = 123456789
+`);
+    expect(cfg.github.webhook_hook_id).toBe('123456789');
+  });
+
+  it('leaves webhook_hook_id undefined when absent', () => {
+    const cfg = parseProjectConfig(`
+name = "crew"
+repo_path = "/x"
+[jira]
+project_key = "CREW"
+site = "https://example.atlassian.net"
+[github]
+repo = "Owner/repo"
+`);
+    expect(cfg.github.webhook_hook_id).toBeUndefined();
+  });
+});
+
 describe('parseProjectConfig — playwright', () => {
   const baseToml = `
 name = "minimal"

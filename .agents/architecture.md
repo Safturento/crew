@@ -61,7 +61,9 @@ For the _why_ behind these picks — and what was considered and ruled out — s
 
 Per-project TOML at `~/.config/crew/projects/<name>.toml`. Auto-discovered when `crew` is invoked from inside a registered repo's tree. **Nothing project-specific is hardcoded in code** — all customization flows through the loaded project config.
 
-The config encodes: repo path, default branch, Jira project key + site, GitHub repo, docker port bases + canonical worktree + service names (caddy/postgres), Playwright app URL, sandbox allowed domains.
+The config encodes: repo path, default branch, Jira project key + site, GitHub repo, an optional GitHub `webhook_hook_id` (the non-secret pin for PR-merge webhook deliveries, CREW-269), docker port bases + canonical worktree + service names (caddy/postgres), Playwright app URL, sandbox allowed domains.
+
+Per-repo GitHub **webhook secrets** live outside the project TOMLs, in a single daemon-loaded `~/.config/crew/github-webhook-secrets.toml` (`repo → secret` map, loaded by `loadGithubWebhookSecrets` in `crew-shared`; `CREW_GITHUB_WEBHOOK_SECRETS_FILE` overrides the path). A missing file is tolerated (zero configured webhooks); a present-but-malformed file throws.
 
 ## State store
 

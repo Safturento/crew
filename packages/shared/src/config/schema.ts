@@ -54,6 +54,10 @@ export const projectConfigSchema = z
     }),
     github: z.object({
       repo: z.string(),
+      // CREW: numeric GitHub webhook id, pinned per-repo. TOML may write it
+      // bare (number) or quoted (string); coerce to string so the daemon
+      // compares against the X-GitHub-Hook-ID header (a string) unambiguously.
+      webhook_hook_id: z.coerce.string().optional(),
     }),
     docker: z
       .object({

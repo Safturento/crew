@@ -46,7 +46,9 @@ The seed dir lives under `src/` so the `tsx watch` bind-mount picks up changes w
 ## Daemon bind mounts (and the single-compose-file caveat)
 
 The `daemon` service bind-mounts several host paths read-only — registered project
-TOMLs, host transcripts, `gh` auth, the CLI startup-event JSONLs (`~/.crew/startup`),
+TOMLs, host transcripts, `gh` auth, the per-repo GitHub webhook secrets file
+(`~/.config/crew/github-webhook-secrets.toml`, CREW-269, loaded at boot to verify
+PR-merge webhook deliveries), the CLI startup-event JSONLs (`~/.crew/startup`),
 the concrete state-event JSONLs (`~/.crew/state-events`, CREW-254, reduced into
 `state_transitions`), and the host runner log (`~/.crew/runner`, CREW-215, tailed by
 `GET /api/runner/logs`).
@@ -57,7 +59,14 @@ host `${HOME}/.crew/*` paths. That's intentional: there is one host runner and o
 startup-/state-event stream per machine. A worktree daemon mounting `~/.crew/runner` just sees
 an empty/absent log (no runner writes to it from a worktree), which the logs route
 handles by returning `{ lines: [] }`. Docker auto-creates a missing bind-mount source as
-an empty dir, so the mount is safe even before the runner has ever run.
+an empty dir, so directory mounts are safe even before the runner has ever run.
+
+**The webhook-secrets mount is a *file*, not a directory** — and Docker auto-creates a
+missing bind-mount source as a *directory*. So the host file must exist as a file before
+`docker compose up`, or the daemon will see a directory where it expects a TOML. The
+loader's missing-file tolerance only covers the daemon-side absence (no mount); once the
+mount exists it must point at a real file. See `docs/runbooks/github-webhook-funnel.md`
+(authored in the interactive child ticket) for the operator setup.
 
 ## `env.toml` is the source of truth for per-worktree env
 

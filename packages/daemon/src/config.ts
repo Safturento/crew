@@ -50,6 +50,13 @@ const daemonConfigSchema = z.object({
   CREW_STATE_EVENTS_DIR: z
     .string()
     .default(() => process.env.CREW_STATE_EVENTS_DIR ?? join(homedir(), '.crew', 'state-events')),
+  // CREW-269: per-repo GitHub webhook HMAC secrets file, loaded once at boot to
+  // verify pull_request webhook deliveries. Defaults to
+  // `~/.config/crew/github-webhook-secrets.toml`; docker-compose mounts the host
+  // file read-only at the same path (os.homedir() == /root in the container).
+  CREW_GITHUB_WEBHOOK_SECRETS_FILE: z
+    .string()
+    .default(() => join(defaultCrewHome(), 'github-webhook-secrets.toml')),
 });
 
 export interface DaemonConfig {
@@ -67,6 +74,8 @@ export interface DaemonConfig {
   startupEventsDir: string;
   /** Directory holding the concrete state-event JSONL stream (watched on boot). */
   stateEventsDir: string;
+  /** Path to the per-repo GitHub webhook HMAC secrets file (loaded at boot). */
+  githubWebhookSecretsFile: string;
 }
 
 /**
@@ -89,5 +98,6 @@ export function parseDaemonConfig(
     runnerLogDir: parsed.CREW_RUNNER_LOG_DIR,
     startupEventsDir: parsed.CREW_STARTUP_EVENTS_DIR,
     stateEventsDir: parsed.CREW_STATE_EVENTS_DIR,
+    githubWebhookSecretsFile: parsed.CREW_GITHUB_WEBHOOK_SECRETS_FILE,
   };
 }
