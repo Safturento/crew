@@ -38,12 +38,29 @@ describe('SupervisorCard', () => {
 
 describe('LiveProcessList', () => {
   it('renders a muted empty row when there are no processes', () => {
-    render(<LiveProcessList processes={[]} onCancel={vi.fn()} onForceKill={vi.fn()} />);
+    render(
+      <LiveProcessList
+        processes={[]}
+        onCancel={vi.fn()}
+        onForceKill={vi.fn()}
+        onPause={vi.fn()}
+        onResume={vi.fn()}
+      />,
+    );
     expect(screen.getByText('No agents currently running')).toBeInTheDocument();
   });
 
   it('renders skeleton rows while loading', () => {
-    render(<LiveProcessList processes={[]} loading onCancel={vi.fn()} onForceKill={vi.fn()} />);
+    render(
+      <LiveProcessList
+        processes={[]}
+        loading
+        onCancel={vi.fn()}
+        onForceKill={vi.fn()}
+        onPause={vi.fn()}
+        onResume={vi.fn()}
+      />,
+    );
     expect(screen.getAllByTestId('skeleton-row').length).toBeGreaterThan(0);
     expect(screen.queryByText('No agents currently running')).toBeNull();
   });

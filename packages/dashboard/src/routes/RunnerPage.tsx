@@ -4,7 +4,9 @@ import {
   useCancelRun,
   useDequeue,
   useForceKill,
+  usePauseRun,
   useReap,
+  useResumeRun,
 } from '../data/runnerControls.js';
 import { FailedToStartSection } from '../components/runner/FailedToStartSection.js';
 import { LiveProcessList } from '../components/runner/LiveProcessList.js';
@@ -31,6 +33,8 @@ export function RunnerPage({ agents, loading = false }: RunnerPageProps) {
   const data = useRunnerPageData(agents);
   const cancel = useCancelRun();
   const forceKill = useForceKill();
+  const pause = usePauseRun();
+  const resume = useResumeRun();
   const reap = useReap();
   const dequeue = useDequeue();
   const archive = useArchiveFailedStart();
@@ -51,6 +55,8 @@ export function RunnerPage({ agents, loading = false }: RunnerPageProps) {
         loading={loading}
         onCancel={(k) => cancel.mutate(k)}
         onForceKill={(k) => forceKill.mutate(k)}
+        onPause={(k) => pause.mutate(k)}
+        onResume={(k, message) => resume.mutate({ agentKey: k, message })}
       />
       <UnmanagedRuns runs={data.unmanaged} onReap={(k) => reap.mutate(k)} />
       <QueuedActions actions={data.queued} onDequeue={(k) => dequeue.mutate(k)} />

@@ -9,6 +9,8 @@ interface LiveProcessListProps {
   loading?: boolean;
   onCancel: (key: string) => void;
   onForceKill: (key: string) => void;
+  onPause: (key: string) => void;
+  onResume: (key: string, message?: string) => void;
 }
 
 /**
@@ -22,6 +24,8 @@ export function LiveProcessList({
   loading = false,
   onCancel,
   onForceKill,
+  onPause,
+  onResume,
 }: LiveProcessListProps) {
   return (
     <Section title="Live processes" count={`${processes.length} supervisor-held`}>
@@ -31,7 +35,14 @@ export function LiveProcessList({
         <EmptyRow>No agents currently running</EmptyRow>
       ) : (
         processes.map((p) => (
-          <ProcessRow key={p.agentKey} process={p} onCancel={onCancel} onForceKill={onForceKill} />
+          <ProcessRow
+            key={p.agentKey}
+            process={p}
+            onCancel={onCancel}
+            onForceKill={onForceKill}
+            onPause={onPause}
+            onResume={onResume}
+          />
         ))
       )}
     </Section>
