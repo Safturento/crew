@@ -15,6 +15,7 @@ export const enqueueActionSchema = z.discriminatedUnion('kind', [
     comment: z.string().min(1),
   }),
   z.object({ kind: z.literal('finish'), ticketKey: z.string().min(1), project: z.string().min(1) }),
+  z.object({ kind: z.literal('resume'), ticketKey: z.string().min(1), project: z.string().min(1) }),
 ]);
 
 export type EnqueueAction = z.infer<typeof enqueueActionSchema>;

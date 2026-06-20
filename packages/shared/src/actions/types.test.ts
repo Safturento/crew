@@ -21,6 +21,16 @@ describe('enqueueActionSchema', () => {
     });
   });
 
+  it('accepts a resume action', () => {
+    expect(
+      enqueueActionSchema.parse({ kind: 'resume', ticketKey: 'CREW-1', project: 'crew' }),
+    ).toMatchObject({
+      kind: 'resume',
+      ticketKey: 'CREW-1',
+      project: 'crew',
+    });
+  });
+
   it('accepts a fix_pr action carrying a comment', () => {
     expect(
       enqueueActionSchema.parse({
@@ -92,7 +102,7 @@ describe('finishStepSchema', () => {
 
 describe('action constant tuples', () => {
   it('enumerate the contract values', () => {
-    expect(ACTION_KINDS).toEqual(['run', 'fix_pr', 'finish']);
+    expect(ACTION_KINDS).toEqual(['run', 'fix_pr', 'finish', 'resume']);
     expect(ACTION_STATUSES).toEqual(['pending', 'claimed', 'launching', 'launched', 'failed']);
     expect(FINISH_STEP_STATUSES).toEqual(['ok', 'skip', 'error']);
   });
