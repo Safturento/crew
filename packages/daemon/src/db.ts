@@ -133,7 +133,8 @@ export interface FinishStepsTable {
  *  Insert/transition path: ActionService (enqueue → claim → report), each
  *  flip publishing an `action.changed` SSE event. `payload` is the per-kind
  *  JSON envelope (e.g. the `fix_pr` review comment); `error` is set only on
- *  the `failed` terminal status. See migration 0006. */
+ *  the `failed` terminal status. See migration 0006 (and 0013, which widened
+ *  the `kind` CHECK to include `resume`). */
 export interface ActionRequestsTable {
   id: Generated<number>;
   kind: ActionKind;

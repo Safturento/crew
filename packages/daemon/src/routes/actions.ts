@@ -12,6 +12,7 @@ const ActionPayloadSchema = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('run') }),
   z.object({ kind: z.literal('fix_pr'), comment: z.string() }),
   z.object({ kind: z.literal('finish') }),
+  z.object({ kind: z.literal('resume') }),
 ]);
 
 const ActionRequestSchema = z.object({
