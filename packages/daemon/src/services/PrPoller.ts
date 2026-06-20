@@ -2,9 +2,9 @@ import type { Kysely } from 'kysely';
 import { sql } from 'kysely';
 import type { Logger } from 'pino';
 import type { DaemonDatabase } from '../db.js';
-import type { EventBus } from './EventBus.js';
 import { fetchPrStateViaGh } from './github/fetch-pr-state.js';
 import type { AgentState } from './AgentsService.js';
+import type { PrTransitionService } from './PrTransitionService.js';
 
 export interface CheckResult {
   stateChanged: boolean;
@@ -13,23 +13,28 @@ export interface CheckResult {
 
 export interface PrPollerDeps {
   db: Kysely<DaemonDatabase>;
-  eventBus: EventBus;
+  /** Shared idempotent pr_open → pr_merged transition (CREW-268). */
+  prTransitions: PrTransitionService;
   logger: Logger;
-  /** Polling cadence in ms. Defaults to 5 minutes (CREW-202 spec). */
+  /**
+   * Polling cadence in ms. Defaults to 30 minutes — CREW-267 demotes the
+   * poller to a correctness backstop now that the webhook is the fast path.
+   */
   intervalMs?: number;
 }
 
-const DEFAULT_INTERVAL_MS = 5 * 60_000;
+const DEFAULT_INTERVAL_MS = 30 * 60_000;
 
 /**
  * CREW-202 — background + on-demand PR-status poller.
  *
  * `start()` kicks off an immediate poll, then re-polls on a fixed interval
- * (5 min by default). Every round walks all agents whose latest state
- * transition is `pr_open` AND who have a non-null `pr_url`, asks GitHub
- * for the PR's current state via `gh pr view`, and inserts a
- * `pr_open → pr_merged` transition + emits `agent.state_changed` when
- * the PR is no longer OPEN (merged or closed).
+ * (30 min by default — a correctness backstop behind the webhook fast path,
+ * CREW-267). Every round walks all agents whose latest state transition is
+ * `pr_open` AND who have a non-null `pr_url`, asks GitHub for the PR's
+ * current state via `gh pr view`, and delegates the `pr_open → pr_merged`
+ * transition to the shared `PrTransitionService` when the PR is no longer
+ * OPEN (merged or closed).
  *
  * `checkAgent(key)` is the public hook for the manual "Refresh PR status"
  * button in the drawer. Same pipeline, single agent. The precondition
@@ -41,14 +46,14 @@ const DEFAULT_INTERVAL_MS = 5 * 60_000;
  */
 export class PrPoller {
   private readonly db: Kysely<DaemonDatabase>;
-  private readonly eventBus: EventBus;
+  private readonly prTransitions: PrTransitionService;
   private readonly logger: Logger;
   private readonly intervalMs: number;
   private timer: NodeJS.Timeout | null = null;
 
   constructor(deps: PrPollerDeps) {
     this.db = deps.db;
-    this.eventBus = deps.eventBus;
+    this.prTransitions = deps.prTransitions;
     this.logger = deps.logger;
     this.intervalMs = deps.intervalMs ?? DEFAULT_INTERVAL_MS;
   }
@@ -108,22 +113,12 @@ export class PrPoller {
     const prState = await fetchPrStateViaGh(agent.pr_url);
     if (prState === 'OPEN') return { stateChanged: false };
 
-    const ts = Date.now();
-    await this.db
-      .insertInto('state_transitions')
-      .values({
-        agent_key: agentKey,
-        from_state: 'pr_open',
-        to_state: 'pr_merged',
-        ts,
-        source: 'poller',
-      })
-      .execute();
-    this.eventBus.publish({
-      type: 'agent.state_changed',
-      data: { key: agentKey, from: 'pr_open', to: 'pr_merged', ts },
-    });
-    return { stateChanged: true, newState: 'pr_merged' };
+    // Delegate the actual transition to the shared service so the poller,
+    // the webhook, and the manual refresh collapse to one idempotent path.
+    // `markMerged` re-checks the `latest === 'pr_open'` precondition
+    // authoritatively; the read above only gates the `gh pr view` call.
+    const { changed } = await this.prTransitions.markMerged(agentKey, { source: 'poller' });
+    return changed ? { stateChanged: true, newState: 'pr_merged' } : { stateChanged: false };
   }
 
   /**

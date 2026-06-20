@@ -10,6 +10,7 @@ import { EventBus } from './services/EventBus.js';
 import { TimelineService } from './services/TimelineService.js';
 import { MetricsService } from './services/MetricsService.js';
 import { PrPoller } from './services/PrPoller.js';
+import { PrTransitionService } from './services/PrTransitionService.js';
 import { RunnerStatusService } from './services/RunnerStatusService.js';
 import { FinishStepsService } from './services/FinishStepsService.js';
 import { ActionService } from './services/ActionService.js';
@@ -38,6 +39,7 @@ export interface DaemonCradle {
   eventBus: EventBus;
   timelineService: TimelineService;
   metricsService: MetricsService;
+  prTransitionService: PrTransitionService;
   prPoller: PrPoller;
   runnerStatusService: RunnerStatusService;
   finishStepsService: FinishStepsService;
@@ -111,11 +113,20 @@ export function buildContainer(deps: BuildContainerDeps): AwilixContainer<Daemon
           db,
         }),
     ).scoped(),
+    // CREW-268: shared idempotent pr_open → pr_merged transition, used by the
+    // poller (and the webhook fast path, CREW-267 child C). Singleton for
+    // parity with the merge-path services it serves; it holds no state.
+    prTransitionService: asFunction(
+      ({ db, eventBus, logger }: DaemonCradle) => new PrTransitionService({ db, eventBus, logger }),
+    ).singleton(),
     // CREW-202: background + on-demand poller of GitHub PR state. Singleton
     // because `start()` schedules a setInterval the app owns the lifetime
     // of — request-scoped instances would each schedule their own timer.
+    // CREW-268: routes the transition through prTransitionService and runs at
+    // a 30-min backstop cadence behind the webhook fast path.
     prPoller: asFunction(
-      ({ db, eventBus, logger }: DaemonCradle) => new PrPoller({ db, eventBus, logger }),
+      ({ db, logger, prTransitionService }: DaemonCradle) =>
+        new PrPoller({ db, logger, prTransitions: prTransitionService }),
     ).singleton(),
     // CREW-215: tracks the host runner's heartbeat → online/offline edges.
     // Singleton because the heartbeat state + falling-edge timer must be

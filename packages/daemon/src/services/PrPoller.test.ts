@@ -7,6 +7,7 @@ import { createDb, runMigrations, type DaemonDatabase } from '../db.js';
 import { useTmpDir } from '../test/tmpdir.js';
 import { EventBus, type SseEvent } from './EventBus.js';
 import { PrPoller } from './PrPoller.js';
+import { PrTransitionService } from './PrTransitionService.js';
 
 vi.mock('./github/fetch-pr-state.js', () => ({
   fetchPrStateViaGh: vi.fn(),
@@ -27,9 +28,28 @@ async function freshDb(): Promise<Kysely<DaemonDatabase>> {
   return db;
 }
 
+/**
+ * Build a poller wired to a real PrTransitionService over the same db + bus,
+ * so the delegated `pr_open → pr_merged` transition (insert + emitted
+ * `agent.state_changed`) is exercised end-to-end, not mocked.
+ */
+function makePoller(
+  db: Kysely<DaemonDatabase>,
+  bus: EventBus,
+  logger: Logger = silentLogger,
+  intervalMs?: number,
+): PrPoller {
+  const prTransitions = new PrTransitionService({ db, eventBus: bus, logger });
+  return new PrPoller({ db, logger, prTransitions, intervalMs });
+}
+
 async function seedAgent(
   db: Kysely<DaemonDatabase>,
-  opts: { key: string; pr_url: string | null; currentState?: 'init' | 'running' | 'pr_open' | 'pr_merged' | 'finished' | 'error' },
+  opts: {
+    key: string;
+    pr_url: string | null;
+    currentState?: 'init' | 'running' | 'pr_open' | 'pr_merged' | 'finished' | 'error';
+  },
 ): Promise<void> {
   await db
     .insertInto('agents')
@@ -79,7 +99,7 @@ describe('PrPoller.checkAgent', () => {
       });
       mockedFetch.mockResolvedValueOnce('MERGED');
       const { bus, events } = newBus();
-      const poller = new PrPoller({ db, eventBus: bus, logger: silentLogger });
+      const poller = makePoller(db, bus);
 
       const result = await poller.checkAgent('AGENT');
 
@@ -92,7 +112,7 @@ describe('PrPoller.checkAgent', () => {
         .executeTakeFirst();
       expect(latest?.from_state).toBe('pr_open');
       expect(latest?.to_state).toBe('pr_merged');
-      expect(latest?.source).toBe('poller'); // CREW-259 provenance
+      expect(latest?.source).toBe('poller'); // CREW-259 provenance, preserved through delegation
       expect(events.map((e) => e.type)).toContain('agent.state_changed');
       const stateChanged = events.find((e) => e.type === 'agent.state_changed');
       expect(stateChanged?.data).toMatchObject({ key: 'AGENT', from: 'pr_open', to: 'pr_merged' });
@@ -110,7 +130,7 @@ describe('PrPoller.checkAgent', () => {
         currentState: 'pr_open',
       });
       mockedFetch.mockResolvedValueOnce('CLOSED');
-      const poller = new PrPoller({ db, eventBus: newBus().bus, logger: silentLogger });
+      const poller = makePoller(db, newBus().bus);
 
       const result = await poller.checkAgent('AGENT');
 
@@ -130,7 +150,7 @@ describe('PrPoller.checkAgent', () => {
       });
       mockedFetch.mockResolvedValueOnce('OPEN');
       const { bus, events } = newBus();
-      const poller = new PrPoller({ db, eventBus: bus, logger: silentLogger });
+      const poller = makePoller(db, bus);
 
       const result = await poller.checkAgent('AGENT');
 
@@ -145,7 +165,7 @@ describe('PrPoller.checkAgent', () => {
     const db = await freshDb();
     try {
       await seedAgent(db, { key: 'AGENT', pr_url: null, currentState: 'pr_open' });
-      const poller = new PrPoller({ db, eventBus: newBus().bus, logger: silentLogger });
+      const poller = makePoller(db, newBus().bus);
 
       const result = await poller.checkAgent('AGENT');
 
@@ -164,7 +184,7 @@ describe('PrPoller.checkAgent', () => {
         pr_url: 'https://github.com/o/r/pull/4',
         currentState: 'pr_merged',
       });
-      const poller = new PrPoller({ db, eventBus: newBus().bus, logger: silentLogger });
+      const poller = makePoller(db, newBus().bus);
 
       const result = await poller.checkAgent('AGENT');
 
@@ -179,7 +199,7 @@ describe('PrPoller.checkAgent', () => {
     const db = await freshDb();
     try {
       await seedAgent(db, { key: 'AGENT', pr_url: 'https://github.com/o/r/pull/5' });
-      const poller = new PrPoller({ db, eventBus: newBus().bus, logger: silentLogger });
+      const poller = makePoller(db, newBus().bus);
 
       const result = await poller.checkAgent('AGENT');
 
@@ -193,7 +213,7 @@ describe('PrPoller.checkAgent', () => {
   it('no-op when agent does not exist at all', async () => {
     const db = await freshDb();
     try {
-      const poller = new PrPoller({ db, eventBus: newBus().bus, logger: silentLogger });
+      const poller = makePoller(db, newBus().bus);
       const result = await poller.checkAgent('NOPE');
       expect(result.stateChanged).toBe(false);
       expect(mockedFetch).not.toHaveBeenCalled();
@@ -213,7 +233,7 @@ describe('PrPoller.checkAgent', () => {
       mockedFetch.mockRejectedValueOnce(new Error('gh: command not found'));
       const logger = pino({ level: 'silent' });
       const warnSpy = vi.spyOn(logger, 'warn');
-      const poller = new PrPoller({ db, eventBus: newBus().bus, logger });
+      const poller = makePoller(db, newBus().bus, logger);
 
       const result = await poller.checkAgent('AGENT');
 
@@ -255,7 +275,7 @@ describe('PrPoller.pollOnce', () => {
       await seedAgent(db, { key: 'NOPR', pr_url: null, currentState: 'pr_open' });
 
       mockedFetch.mockResolvedValue('OPEN');
-      const poller = new PrPoller({ db, eventBus: newBus().bus, logger: silentLogger });
+      const poller = makePoller(db, newBus().bus);
 
       await poller.pollOnceForTest();
 
@@ -285,7 +305,7 @@ describe('PrPoller.pollOnce', () => {
         ])
         .execute();
 
-      const poller = new PrPoller({ db, eventBus: newBus().bus, logger: silentLogger });
+      const poller = makePoller(db, newBus().bus);
       await poller.pollOnceForTest();
 
       expect(mockedFetch).not.toHaveBeenCalled();
@@ -313,12 +333,7 @@ describe('PrPoller.start/stop', () => {
       });
       mockedFetch.mockResolvedValue('OPEN');
 
-      const poller = new PrPoller({
-        db,
-        eventBus: newBus().bus,
-        logger: silentLogger,
-        intervalMs: 60_000,
-      });
+      const poller = makePoller(db, newBus().bus, silentLogger, 60_000);
       poller.start();
       // Let the immediate poll's microtasks settle.
       await vi.advanceTimersByTimeAsync(0);
@@ -330,6 +345,36 @@ describe('PrPoller.start/stop', () => {
       poller.stop();
       await vi.advanceTimersByTimeAsync(60_000);
       expect(mockedFetch).toHaveBeenCalledTimes(2);
+    } finally {
+      await db.destroy();
+    }
+  });
+
+  it('defaults to a 30-minute backstop interval (webhook is the fast path)', async () => {
+    const db = await freshDb();
+    try {
+      await seedAgent(db, {
+        key: 'AGENT',
+        pr_url: 'https://github.com/o/r/pull/1',
+        currentState: 'pr_open',
+      });
+      mockedFetch.mockResolvedValue('OPEN');
+
+      // No intervalMs → the default backstop cadence.
+      const poller = makePoller(db, newBus().bus);
+      poller.start();
+      await vi.advanceTimersByTimeAsync(0);
+      expect(mockedFetch).toHaveBeenCalledTimes(1); // immediate poll
+
+      // The old 5-minute cadence would have fired a second poll by now.
+      await vi.advanceTimersByTimeAsync(5 * 60_000);
+      expect(mockedFetch).toHaveBeenCalledTimes(1);
+
+      // ...the backstop only fires at 30 minutes.
+      await vi.advanceTimersByTimeAsync(25 * 60_000);
+      expect(mockedFetch).toHaveBeenCalledTimes(2);
+
+      poller.stop();
     } finally {
       await db.destroy();
     }
