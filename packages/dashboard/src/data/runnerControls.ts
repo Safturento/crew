@@ -57,7 +57,11 @@ export function useResumeRun(): UseMutationResult<RunnerCommand, Error, ResumeIn
     mutationFn: ({ agentKey, message }) => {
       const steer = message?.trim();
       return steer
-        ? defaultClient.enqueueRunnerCommand({ agentKey, kind: 'message', payload: { message: steer } })
+        ? defaultClient.enqueueRunnerCommand({
+            agentKey,
+            kind: 'message',
+            payload: { message: steer },
+          })
         : defaultClient.enqueueRunnerCommand({ agentKey, kind: 'resume', payload: null });
     },
     onError: (error, { agentKey }) => {

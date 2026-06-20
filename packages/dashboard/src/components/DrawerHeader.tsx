@@ -71,8 +71,7 @@ export function DrawerHeader({
   // the only place the `paused` label survives — cross-reference it by key to
   // decide whether to offer Resume. A `running` agent offers Pause.
   const runner = useRunnerStatus();
-  const isPaused =
-    runner.processes.find((p) => p.agentKey === detail.key)?.state === 'paused';
+  const isPaused = runner.processes.find((p) => p.agentKey === detail.key)?.state === 'paused';
   const pauseRun = usePauseRun();
   const resumeRun = useResumeRun();
   const [resumeOpen, setResumeOpen] = useState(false);

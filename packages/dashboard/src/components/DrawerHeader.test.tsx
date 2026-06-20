@@ -27,12 +27,7 @@ vi.mock('../data/runnerControls.js', () => ({
   usePauseRun: vi.fn(),
   useResumeRun: vi.fn(),
 }));
-import {
-  useCancelRun,
-  useForceKill,
-  usePauseRun,
-  useResumeRun,
-} from '../data/runnerControls.js';
+import { useCancelRun, useForceKill, usePauseRun, useResumeRun } from '../data/runnerControls.js';
 const mockedUseCancelRun = vi.mocked(useCancelRun);
 const mockedUseForceKill = vi.mocked(useForceKill);
 const mockedUsePauseRun = vi.mocked(usePauseRun);
@@ -459,7 +454,11 @@ describe('DrawerHeader — Pause/Resume parity (CREW-274)', () => {
     const pauseMutate = vi.fn();
     mockedUsePauseRun.mockReturnValue(makeMutation({ mutate: pauseMutate }));
 
-    render(wrap(<DrawerHeader detail={makeDetail({ state: 'running' })} showCloseButton showOpenAsPage />));
+    render(
+      wrap(
+        <DrawerHeader detail={makeDetail({ state: 'running' })} showCloseButton showOpenAsPage />,
+      ),
+    );
     await user.click(screen.getByRole('button', { name: /^pause$/i }));
     expect(pauseMutate).toHaveBeenCalledWith('kanban-api/KAN-23');
   });
@@ -485,7 +484,11 @@ describe('DrawerHeader — Pause/Resume parity (CREW-274)', () => {
     });
     render(
       wrap(
-        <DrawerHeader detail={makeDetail({ state: 'idle' as AgentState })} showCloseButton showOpenAsPage />,
+        <DrawerHeader
+          detail={makeDetail({ state: 'idle' as AgentState })}
+          showCloseButton
+          showOpenAsPage
+        />,
       ),
     );
     expect(screen.getByRole('button', { name: /^resume$/i })).toBeInTheDocument();
@@ -494,7 +497,11 @@ describe('DrawerHeader — Pause/Resume parity (CREW-274)', () => {
   it('does not show Resume for a genuinely idle agent absent from the snapshot', () => {
     render(
       wrap(
-        <DrawerHeader detail={makeDetail({ state: 'idle' as AgentState })} showCloseButton showOpenAsPage />,
+        <DrawerHeader
+          detail={makeDetail({ state: 'idle' as AgentState })}
+          showCloseButton
+          showOpenAsPage
+        />,
       ),
     );
     expect(screen.queryByRole('button', { name: /^resume$/i })).not.toBeInTheDocument();
@@ -512,12 +519,19 @@ describe('DrawerHeader — Pause/Resume parity (CREW-274)', () => {
 
     render(
       wrap(
-        <DrawerHeader detail={makeDetail({ state: 'idle' as AgentState })} showCloseButton showOpenAsPage />,
+        <DrawerHeader
+          detail={makeDetail({ state: 'idle' as AgentState })}
+          showCloseButton
+          showOpenAsPage
+        />,
       ),
     );
     await user.click(screen.getByRole('button', { name: /^resume$/i }));
     const dialog = await screen.findByRole('dialog');
     await user.click(within(dialog).getByRole('button', { name: 'Resume' }));
-    expect(resumeMutate).toHaveBeenCalledWith({ agentKey: 'kanban-api/KAN-23', message: undefined });
+    expect(resumeMutate).toHaveBeenCalledWith({
+      agentKey: 'kanban-api/KAN-23',
+      message: undefined,
+    });
   });
 });

@@ -86,7 +86,10 @@ describe('ProcessRow', () => {
     renderRow({ state: 'paused' }, { onResume });
     await user.click(screen.getByRole('button', { name: 'Resume' }));
     const dialog = await screen.findByRole('dialog');
-    await user.type(within(dialog).getByRole('textbox', { name: /message/i }), 'retry the failing case');
+    await user.type(
+      within(dialog).getByRole('textbox', { name: /message/i }),
+      'retry the failing case',
+    );
     await user.click(within(dialog).getByRole('button', { name: 'Resume' }));
     expect(onResume).toHaveBeenCalledWith('CREW-231', 'retry the failing case');
   });
