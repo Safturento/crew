@@ -5,6 +5,7 @@ import { join } from 'node:path';
 
 import {
   emitRunStarted,
+  emitRunPausedSync,
   emitFixprStarted,
   emitFinishCompleted,
   emitDispatchExited,
@@ -33,6 +34,16 @@ describe('crew run path', () => {
     expect(e.event).toBe('run_exited');
     expect(e.source).toBe('runner-exit');
     expect(e.exitCode).toBe(0);
+  });
+
+  it('emitRunPausedSync lands a non-terminal run_paused carrying no exit code', () => {
+    const home = mkdtempSync(join(tmpdir(), 'crew-se-'));
+    emitRunPausedSync('CREW-1', { home });
+    const e = readEvent(home, 'CREW-1');
+    expect(e.event).toBe('run_paused');
+    expect(e.source).toBe('runner-exit');
+    // No exitCode — a pause must never look like a non-zero (error) exit.
+    expect(e.exitCode).toBeUndefined();
   });
 });
 

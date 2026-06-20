@@ -34,6 +34,24 @@ describe('reduceState', () => {
     expect(reduceState('pr_open', 'pr_created')).toBeNull();
   });
 
+  describe('run_paused stays non-terminal + resumable (CREW-273)', () => {
+    it('run_paused from running → idle (non-terminal, resumable)', () => {
+      expect(reduceState('running', 'run_paused')).toBe('idle');
+    });
+    it('run_paused is exempt from the non-zero-exit → error branch', () => {
+      // A pause SIGTERM exits the runner 130, but a paused run must stay
+      // resumable, never `error`.
+      expect(reduceState('running', 'run_paused', 130)).toBe('idle');
+    });
+    it('run_paused while pr_open is a no-op (a PR-bearing run is untouched)', () => {
+      expect(reduceState('pr_open', 'run_paused')).toBeNull();
+    });
+    it('run_paused is sticky against terminal states', () => {
+      expect(reduceState('finished', 'run_paused')).toBeNull();
+      expect(reduceState('pr_merged', 'run_paused')).toBeNull();
+    });
+  });
+
   describe('non-zero exit routes to error', () => {
     it('run_exited with a non-zero exitCode → error (overrides the idle case)', () => {
       expect(reduceState('running', 'run_exited', 1)).toBe('error');

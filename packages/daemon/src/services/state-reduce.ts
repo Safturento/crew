@@ -20,6 +20,12 @@ import type { TransitionTarget } from './state-derivation.js';
  * it failed. `exitCode` is meaningful only on `*_exited`; an omitted/`null`
  * (clean) code keeps the normal routing. `recordError` still owns the
  * *startup-phase* failure path — this covers the runner's own non-zero exit.
+ *
+ * `run_paused` (CREW-273) is the pause-interrupt variant of `run_exited`: like
+ * `run_exited` it settles a `running` run, but to `idle` (non-terminal,
+ * resumable) and **without** the error branch — a pause SIGTERMs the runner
+ * (exit 130) yet must never mark the run `error`. The user-visible `paused`
+ * label lives in the runner's live-process snapshot, not this run-state.
  */
 export function reduceState(
   current: TransitionTarget,
@@ -28,11 +34,7 @@ export function reduceState(
 ): TransitionTarget | null {
   if (current === 'finished' || current === 'pr_merged') return null;
 
-  if (
-    (event === 'run_exited' || event === 'fixpr_exited') &&
-    exitCode != null &&
-    exitCode !== 0
-  ) {
+  if ((event === 'run_exited' || event === 'fixpr_exited') && exitCode != null && exitCode !== 0) {
     return current === 'error' ? null : 'error';
   }
 
@@ -51,6 +53,14 @@ export function reduceState(
       next = 'pr_open';
       break;
     case 'run_exited':
+      next = current === 'running' ? 'idle' : null;
+      break;
+    case 'run_paused':
+      // CREW-273: a pause-interrupt stays non-terminal + resumable. A run
+      // paused while `running` settles to `idle` (operator decides next);
+      // the live-process `paused` label is carried by the runner's in-memory
+      // snapshot, not the persistent run-state. Exempt from the
+      // non-zero-exit → error branch above (it never carries an error code).
       next = current === 'running' ? 'idle' : null;
       break;
     case 'finish_completed':

@@ -1,4 +1,9 @@
-import { emitStateEvent, emitStateEventSync, type EmitOptions, type StateEventInput } from './writer.js';
+import {
+  emitStateEvent,
+  emitStateEventSync,
+  type EmitOptions,
+  type StateEventInput,
+} from './writer.js';
 
 /**
  * Thin lifecycle-emit helpers for the dispatch commands. Each encodes the
@@ -20,6 +25,18 @@ export async function emitFixprStarted(key: string, opts?: EmitOptions): Promise
 /** `crew finish`, once all post-merge cleanup steps complete. */
 export async function emitFinishCompleted(key: string, opts?: EmitOptions): Promise<void> {
   await emitStateEvent(key, { event: 'finish_completed', source: 'cli-finish' }, opts);
+}
+
+/**
+ * `crew run`, sync, on a pause-interrupt (the runner wrote a pause sentinel
+ * before SIGTERMing the group — see `lib/pause-sentinel`). Emits `run_paused`
+ * instead of the terminal `run_exited`: the daemon reduces it to a
+ * non-terminal, resumable `idle` (CREW-273). Carries no `exitCode` — a pause
+ * must never be mistaken for a non-zero (error) exit. Sync because `crew run`
+ * calls `process.exit()` immediately after.
+ */
+export function emitRunPausedSync(key: string, opts?: EmitOptions): void {
+  emitStateEventSync(key, { event: 'run_paused', source: 'runner-exit' }, opts);
 }
 
 /** The two dispatch commands whose child-process exit drives a state event. */
