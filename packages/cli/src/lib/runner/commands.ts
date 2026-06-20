@@ -24,6 +24,17 @@ export interface ApplyCommandDeps {
    * which case a `resume`/`message` command fails cleanly rather than throwing.
    */
   resume?: (agentKey: string, message?: string) => Promise<LaunchHandle>;
+  /**
+   * Pause-sentinel boundary (CREW-273). Called for a `pause` **immediately
+   * before** the SIGTERM, to durably mark the interrupt as a pause: a pause and
+   * a cancel both reach `crew run` as a SIGTERM, so `crew run`'s signal handler
+   * consumes this sentinel to settle non-terminally (`run_paused` → resumable)
+   * instead of erroring like a cancel. Injected so ordering (sentinel before
+   * kill) is unit-tested without touching the filesystem. Optional and
+   * best-effort: when absent the pause still SIGTERMs — it just degrades to a
+   * terminal cancel on the `crew run` side.
+   */
+  writePauseSentinel?: (agentKey: string) => void;
 }
 
 /**
@@ -88,6 +99,12 @@ export async function applyCommand(
  * either transition state (`cancel_soft`→`cancelling`, `pause`→`paused`, both
  * kept tracked) or drop tracking (`cancel_hard`→`remove`). A missing entry or a
  * null `agentKey` is a `failed` result — these commands target a live process.
+ *
+ * For `pause` only, a pause sentinel is written **before** the SIGTERM (CREW-273)
+ * so `crew run`'s signal handler can tell the pause-interrupt apart from a
+ * cancel and settle the run non-terminally. It is written only after the entry
+ * is resolved (so a no-op `pause` against a missing process leaves no stale
+ * sentinel to mis-mark a later cancel).
  */
 function signalGroup(
   command: RunnerCommand,
@@ -102,6 +119,7 @@ function signalGroup(
   if (!proc) {
     return { status: 'failed', error: `no tracked process for ${command.agentKey}` };
   }
+  if (after === 'paused') deps.writePauseSentinel?.(command.agentKey);
   try {
     deps.kill(-proc.pgid, signal);
   } catch (err) {

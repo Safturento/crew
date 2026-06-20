@@ -31,17 +31,22 @@ Implement the three runner command kinds in `applyCommand`
 ## Relevant files
 
 - `packages/cli/src/lib/runner/commands.ts` — `applyCommand`; the three new apply
-  paths + the `resume?` boundary on `ApplyCommandDeps`. `signalGroup` now also
-  serves `pause` (`after: 'paused'`); `resumeAgent` serves `resume`/`message`.
+  paths + the `resume?` and `writePauseSentinel?` boundaries on
+  `ApplyCommandDeps`. `signalGroup` now also serves `pause` (`after: 'paused'`,
+  writing the sentinel before the SIGTERM); `resumeAgent` serves
+  `resume`/`message`.
 - `packages/cli/src/lib/runner/commands.test.ts` — unit coverage for pause (kept
-  tracked), resume (re-register), message (forward), and the failure modes
+  tracked; sentinel written before kill; no sentinel on a missing entry or on a
+  cancel), resume (re-register), message (forward), and the failure modes
   (no entry / no boundary / boundary rejects).
-- `packages/cli/src/lib/runner/loop.ts` — threads `resume?` through
-  `DrainCommandsDeps` / `RunLoopDeps` into the `applyCommand` call.
+- `packages/cli/src/lib/runner/loop.ts` — threads `resume?` and
+  `writePauseSentinel?` through `DrainCommandsDeps` / `RunLoopDeps` into the
+  `applyCommand` call.
 - `packages/cli/src/lib/runner/loop.test.ts` — guards the boundary threading.
-- `packages/cli/src/lib/runner/worker.ts` — wires the real `resume` closure:
-  resolve the paused entry's project → `crew resume <key> [-m <message>]`
-  launched detached, mirroring `executeAction`'s launch glue.
+- `packages/cli/src/lib/runner/worker.ts` — wires the real `resume` closure
+  (resolve the paused entry's project → `crew resume <key> [-m <message>]`
+  launched detached) and the real `writePauseSentinel` from
+  `lib/pause-sentinel/` (the documented producer for CREW-273's consumer).
 
 ## Decisions
 
@@ -59,16 +64,25 @@ configured`) rather than throwing, consistent with the "never crash the drain
   untouched so the operator can retry.
 - **Re-dispatch `crew resume`, not `spawnClaudeResume` directly.** Reuses
   resume.ts's preflight/env/mcp refresh (the CREW-248 design recommendation).
+- **The pause path is CREW-273's sentinel producer.** CREW-273 (the non-terminal
+  `paused` run-state slice) landed on `main` first, shipping `lib/pause-sentinel/`
+  with `consumePauseSentinel` already wired into `crew run`'s signal handler and a
+  doc comment delegating the **write** to this slice's pause apply path. Surfaced
+  on rebase: without the producer, a `pause` SIGTERM is indistinguishable from a
+  cancel and `crew run` would settle it terminally. So `pause` now calls the
+  injected `writePauseSentinel` **before** the kill (durable before the signal).
+  Injected as a boundary (like `kill`/`resume`) so the ordering is unit-tested
+  without filesystem writes; best-effort and optional — absent, a pause degrades
+  to a terminal cancel rather than crashing the drain loop.
 
-## Out of scope (sibling slices)
+## Out of scope
 
-- The non-terminal **`paused` run state** in `crew run` + the daemon (a naive
-  `pause` SIGTERM today makes `crew run` land a terminal `completeRun`; the
-  daemon reduces the non-zero exit → `error`). Different files (`run.ts`/daemon
-  vs `commands.ts`), builds in parallel, merges independently. This slice's apply
-  mapping is correct in isolation; a _correct end-to-end_ pause waits on that
-  slice.
 - Dashboard Pause/Resume controls.
+
+(The non-terminal `paused` **run state** in `crew run` + the daemon — originally
+the sibling slice this ticket deferred to — landed as **CREW-273** before this
+branch merged. This slice now integrates with it via the pause sentinel above, so
+the end-to-end pause is correct once both are on `main`.)
 
 ## Notes
 

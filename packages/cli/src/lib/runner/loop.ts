@@ -77,6 +77,12 @@ export interface DrainCommandsDeps {
    * when it's absent.
    */
   resume?: (agentKey: string, message?: string) => Promise<LaunchHandle>;
+  /**
+   * Pause-sentinel boundary forwarded to {@link applyCommand}: write the
+   * CREW-273 pause marker before a `pause` SIGTERM. Optional — a pause without
+   * it degrades to a terminal cancel on the `crew run` side.
+   */
+  writePauseSentinel?: (agentKey: string) => void;
   /** Structured log sink — one line per applied/failed command. */
   log: (line: string) => void;
 }
@@ -103,6 +109,7 @@ export async function drainCommands(deps: DrainCommandsDeps): Promise<void> {
       registry: deps.registry,
       kill: deps.kill,
       resume: deps.resume,
+      writePauseSentinel: deps.writePauseSentinel,
     });
     if (result.status === 'applied') {
       await deps.client.reportCommandResult(command.id, 'applied');
@@ -122,6 +129,8 @@ export interface RunLoopDeps extends RunnerLoopDeps {
   kill: (target: number, signal: NodeJS.Signals) => void;
   /** Resume boundary for command apply (re-dispatch `crew resume <key>`). */
   resume?: (agentKey: string, message?: string) => Promise<LaunchHandle>;
+  /** Pause-sentinel boundary for command apply (CREW-273 pause marker). */
+  writePauseSentinel?: (agentKey: string) => void;
   /** Aborting this signal stops the loop after the in-flight iteration. */
   signal: AbortSignal;
   /**
@@ -216,6 +225,7 @@ export async function runLoop(deps: RunLoopDeps): Promise<void> {
       registry: deps.registry,
       kill: deps.kill,
       resume: deps.resume,
+      writePauseSentinel: deps.writePauseSentinel,
       log: deps.log,
     },
     deps.commandDrainMs ?? 2_000,

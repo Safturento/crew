@@ -121,6 +121,39 @@ describe('applyCommand', () => {
       if (result.status === 'failed') expect(result.error).toMatch(/no tracked process/i);
       expect(kill).not.toHaveBeenCalled();
     });
+
+    it('writes the pause sentinel BEFORE SIGTERMing the group (CREW-273 producer)', async () => {
+      const order: string[] = [];
+      const writePauseSentinel = vi.fn(() => order.push('sentinel'));
+      const kill = vi.fn(() => order.push('kill'));
+      const { deps: d, registry } = deps({ writePauseSentinel, kill });
+
+      const result = await applyCommand(command({ kind: 'pause' }), d);
+
+      expect(result).toEqual({ status: 'applied' });
+      expect(writePauseSentinel).toHaveBeenCalledWith('CREW-231');
+      // Durable before the signal — else run.ts's handler reads no sentinel and
+      // settles the run terminally (cancel) instead of pausing it.
+      expect(order).toEqual(['sentinel', 'kill']);
+      expect(registry.get('CREW-231')?.state).toBe('paused');
+    });
+
+    it('does not write a sentinel when the entry is missing (never SIGTERMs)', async () => {
+      const writePauseSentinel = vi.fn();
+      const { deps: d } = deps({ writePauseSentinel });
+      const result = await applyCommand(command({ kind: 'pause', agentKey: 'CREW-ghost' }), d);
+      expect(result.status).toBe('failed');
+      expect(writePauseSentinel).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('cancel does not write a pause sentinel', () => {
+    it.each<RunnerCommandKind>(['cancel_soft', 'cancel_hard'])('%s', async (kind) => {
+      const writePauseSentinel = vi.fn();
+      const { deps: d } = deps({ writePauseSentinel });
+      await applyCommand(command({ kind }), d);
+      expect(writePauseSentinel).not.toHaveBeenCalled();
+    });
   });
 
   describe('resume', () => {

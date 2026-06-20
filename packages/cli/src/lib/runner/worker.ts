@@ -2,6 +2,7 @@ import { appendFileSync, mkdirSync } from 'node:fs';
 import { execa } from 'execa';
 import { loadProjectConfigByName } from 'crew-shared';
 import { crewDaemonClientFromEnv } from '../daemon-client/index.js';
+import { writePauseSentinel } from '../pause-sentinel/index.js';
 import { executeAction, type LaunchHandle } from './executor.js';
 import { runLoop } from './loop.js';
 import { runnerPaths } from './paths.js';
@@ -92,6 +93,9 @@ export async function runWorker(deps: WorkerDeps): Promise<void> {
     client: crewDaemonClientFromEnv(deps.env),
     registry,
     kill: (target, signal) => process.kill(target, signal),
+    // Pause-sentinel boundary (CREW-273): mark a pause-interrupt before its
+    // SIGTERM so `crew run` settles it non-terminally instead of as a cancel.
+    writePauseSentinel: (agentKey) => writePauseSentinel(agentKey),
     // Resume boundary: re-dispatch `crew resume <key>` (with `-m <message>`
     // when steering) detached on the agent's existing worktree, resolved from
     // the still-tracked (paused) entry's project. Mirrors `executeAction`'s
