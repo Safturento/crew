@@ -91,6 +91,7 @@ function AppContent({ client }: { client: DaemonClient }) {
   const onAgentAction = useCallback(
     (kind: QuickActionKind, agent: Agent) => {
       if (kind === 'resume') {
+        // CREW-275: continue an interrupted run on its existing worktree.
         enqueue.mutate({ kind: 'resume', project: agent.projectName, ticketKey: agent.key });
       } else if (kind === 'finish') {
         enqueue.mutate({ kind: 'finish', project: agent.projectName, ticketKey: agent.key });
