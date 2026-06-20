@@ -47,6 +47,7 @@ Organization: Active is grouped by topic (not chronology) since the dominant acc
     - [2026-04-28 — Dashboard New Run modal + projects route view](#2026-04-28--dashboard-new-run-modal--projects-route-view)
     - [2026-04-28 — `useAttention.clear()` snapshot semantic isn't directly tested](#2026-04-28--useattentionclear-snapshot-semantic-isnt-directly-tested)
   - [Daemon, CLI & Dispatch](#daemon-cli--dispatch)
+    - [2026-06-20 — Headless `crew run` silently cuts off an agent that backgrounds work and yields via `ScheduleWakeup`](#2026-06-20--headless-crew-run-silently-cuts-off-an-agent-that-backgrounds-work-and-yields-via-schedulewakeup)
     - [2026-06-19 — `PrTransitionService.markMerged` check-then-insert isn't transaction-guarded against a true concurrent race](#2026-06-19--prtransitionservicemarkmerged-check-then-insert-isnt-transaction-guarded-against-a-true-concurrent-race)
     - [2026-06-19 — Pause/resume/message build is gated on a host-only confirmation spike (CREW-248)](#2026-06-19--pauseresumemessage-build-is-gated-on-a-host-only-confirmation-spike-crew-248)
     - [2026-06-19 — A throw between `*_started` and `*_exited` leaves the agent stuck `running`](#2026-06-19--a-throw-between-_started-and-_exited-leaves-the-agent-stuck-running)
@@ -725,6 +726,25 @@ The "synthetic Unregistered section" feels right — single render path, no extr
 **Shape of work:** Tiny cleanup. Add 2–3 RTL test cases. Bundle into the cva-cleanup ticket above or stand alone.
 
 ### Daemon, CLI & Dispatch
+
+#### 2026-06-20 — Headless `crew run` silently cuts off an agent that backgrounds work and yields via `ScheduleWakeup`
+
+**What:** A dispatched agent (CREW-272) finished implementing + committing (3 commits), then kicked off its daemon test suite as a **background task**, called **`ScheduleWakeup`**, and **ended its turn to wait for re-invocation** — expecting the harness to wake it when the wakeup fired / the task notified. In headless `claude -p` (`crew run`) mode there is **no** wakeup/background-task re-invocation (that's an interactive-harness affordance); ending the turn ends the run. The process exited **code 0** — so it looked like clean completion and the daemon did **not** flag it — leaving the 3 commits **unpushed with no PR** (the push+PR step had been queued for *after* the never-arriving wakeup). The surface symptom was a later re-dispatch hitting the `crew run` "worktree already exists" preflight guard.
+
+**Why noticed:** Investigating why CREW-272 "errored out." Root-caused from `~/.crew/state-events/CREW-272.jsonl` (`run_started` → `run_exited` `exitCode:0`, ~9s after a `ScheduleWakeup` turn-end) cross-read against the session transcript tail (the agent's final messages: "I've scheduled a check-in and the background task will also notify me. Ending this turn to wait…"). The agent's own unit tests had passed (runner units 30 green); the daemon-suite failures it was re-checking were parallel-contention noise (CLI-only change, daemon doesn't import CLI).
+
+**Anchors:**
+
+- `~/.claude/projects/-home-safturento-Repos-crew-CREW-272/e7768b98-…jsonl` — transcript end (the yield).
+- `~/.crew/state-events/CREW-272.jsonl` — `run_exited` `exitCode:0` on an incomplete run.
+- `packages/cli/src/commands/run.ts` — the headless run loop / exit; whether it should treat "turn ended with a pending `ScheduleWakeup` / live background task" as not-done.
+- The dispatch prompt (`packages/cli/src/lib/prompts/**`, `.agents/dispatch.md`) — does it warn agents off backgrounding-and-yielding?
+
+**What's been considered:** Two angles. (1) **Prompt guardrail (cheap first fix):** instruct dispatched agents to run long verification in the **foreground (blocking)** and never use `ScheduleWakeup` / background-and-yield — headless runs are not re-invoked. (2) **Harness-level:** make headless `crew run` detect a pending scheduled wakeup / live background task at turn-end and not treat it as completion (harder — fights `claude -p` semantics). Orthogonal but related: a run that ends with **unpushed commits + no PR** arguably should not report **exit 0 / clean** — a completion sanity-check (branch pushed? PR opened?) would have surfaced this instead of silently passing.
+
+**Shape of work:** Prompt guardrail = small edit to the dispatch prompt + a line in `.agents/dispatch.md`. Completion sanity-check = small addition to `crew run`/finish. Harness wakeup-awareness = larger `run.ts` change. Start with the prompt guardrail + completion check.
+
+**Open questions:** Should `crew run` re-invoke once on a pending wakeup, or strictly forbid the pattern via prompt? Where should the "did this run actually finish (pushed + PR)?" check live — `crew run`, `crew finish`, or the daemon reducer? Sibling: the [throw-between-`*_started`-and-`*_exited`](#2026-06-19--a-throw-between-_started-and-_exited-leaves-the-agent-stuck-running) entry is the *non-zero/throw* version of "run ends without the expected terminal outcome"; this is the *clean-exit-0* version.
 
 #### 2026-06-19 — `PrTransitionService.markMerged` check-then-insert isn't transaction-guarded against a true concurrent race
 
