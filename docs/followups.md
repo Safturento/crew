@@ -48,6 +48,7 @@ Organization: Active is grouped by topic (not chronology) since the dominant acc
     - [2026-04-28 — `useAttention.clear()` snapshot semantic isn't directly tested](#2026-04-28--useattentionclear-snapshot-semantic-isnt-directly-tested)
   - [Daemon, CLI & Dispatch](#daemon-cli--dispatch)
     - [2026-06-20 — Headless `crew run` silently cuts off an agent that backgrounds work and yields via `ScheduleWakeup`](#2026-06-20--headless-crew-run-silently-cuts-off-an-agent-that-backgrounds-work-and-yields-via-schedulewakeup)
+    - [2026-06-19 — Per-run worktree stacks leak anonymous `node_modules` volumes (Docker disk hit 210 GB; 182 GB reclaimed manually)](#2026-06-19--per-run-worktree-stacks-leak-anonymous-node_modules-volumes-docker-disk-hit-210-gb-182-gb-reclaimed-manually)
     - [2026-06-19 — `PrTransitionService.markMerged` check-then-insert isn't transaction-guarded against a true concurrent race](#2026-06-19--prtransitionservicemarkmerged-check-then-insert-isnt-transaction-guarded-against-a-true-concurrent-race)
     - [2026-06-19 — Pause/resume/message build is gated on a host-only confirmation spike (CREW-248)](#2026-06-19--pauseresumemessage-build-is-gated-on-a-host-only-confirmation-spike-crew-248)
     - [2026-06-19 — A throw between `*_started` and `*_exited` leaves the agent stuck `running`](#2026-06-19--a-throw-between-_started-and-_exited-leaves-the-agent-stuck-running)
@@ -745,6 +746,32 @@ The "synthetic Unregistered section" feels right — single render path, no extr
 **Shape of work:** Prompt guardrail = small edit to the dispatch prompt + a line in `.agents/dispatch.md`. Completion sanity-check = small addition to `crew run`/finish. Harness wakeup-awareness = larger `run.ts` change. Start with the prompt guardrail + completion check.
 
 **Open questions:** Should `crew run` re-invoke once on a pending wakeup, or strictly forbid the pattern via prompt? Where should the "did this run actually finish (pushed + PR)?" check live — `crew run`, `crew finish`, or the daemon reducer? Sibling: the [throw-between-`*_started`-and-`*_exited`](#2026-06-19--a-throw-between-_started-and-_exited-leaves-the-agent-stuck-running) entry is the *non-zero/throw* version of "run ends without the expected terminal outcome"; this is the *clean-exit-0* version.
+
+#### 2026-06-19 — Per-run worktree stacks leak anonymous `node_modules` volumes (Docker disk hit 210 GB; 182 GB reclaimed manually)
+
+**What:** Every per-run worktree compose stack (`crew-crew-NNN`) mints a **fresh pair** of anonymous `node_modules` volumes — `docker-compose.yml` declares `- /app/node_modules` on **both** the `daemon` (line 12) and `dashboard` (line 69) services ("Anonymous volume preserves npm ci output from being clobbered"). Because each run is its own compose project, these never get reused; they accumulate one pair per run. They're only ever reclaimed by `crew finish`'s `docker compose down -v`, which has **three** leak vectors — so in practice almost none get cleaned up. On 2026-06-19 the Docker `docker_data.vhdx` had grown to **~210 GB**, of which **239 orphaned anonymous volumes ≈ 91.5 GB** (plus 41.6 GB stale build cache and 303 piled-up per-run images). Manual `docker volume prune` + `builder prune` + `image prune -a` reclaimed it to ~28 GB of live data — but the leak refills on every run.
+
+**Why noticed:** User flagged the Docker storage file nearing its limit and asked how to prune safely without touching the good containers (audiobookshelf, recipes, the live crew stacks). Diagnosis (`docker system df`, `docker volume ls -f dangling=true`) traced the bulk to anonymous `node_modules` volumes from finished crew runs spanning run range **158→273**. Reading the teardown path (`packages/cli/src/commands/finish.ts`) revealed why they survive. Live corroboration: stacks `crew-crew-237` and `crew-crew-239` were sitting **unhealthy for 31h**, never torn down.
+
+**Anchors:**
+
+- `docker-compose.yml` lines 12 + 69 — the `- /app/node_modules` anonymous volume declarations (the source). Note the src bind-mounts are **subdir-only** (`/app/packages/*/src`), so whether this anon volume is still load-bearing vs **vestigial** needs verifying — if `/app/node_modules` is never actually shadowed, the volume (and the whole leak) could be deleted outright.
+- `packages/cli/src/commands/finish.ts` — teardown block (`finish.ts:309`), the best-effort `step()` helper (`finish.ts:158`, catches + continues), and `worktreeRegistered` gate (`finish.ts:263`, `:328`).
+- `packages/cli/src/commands/down.ts:20` — canonical `crew down` uses `docker compose down` **without** `-v` (and no `--rmi`), which is also why 303 per-run images piled up.
+- `.agents/local-dev.md` — documents the compose/worktree/port-hashing lifecycle; any fix updates here.
+- Sibling: [Daemon has no reaper for orphaned runs stuck in `running`](#2026-05-18--daemon-has-no-reaper-for-orphaned-runs-stuck-in-running) — same "no reaper for abandoned-run debris" shape, volume/stack edition.
+
+**What's been considered:** Three leak vectors, each wanting a different fix.
+
+1. **Swallowed-failure ordering (insidious — leaks even on a "successful" finish):** `step()` is best-effort — if `docker compose down -v` throws (docker busy, a stuck/unhealthy container, project can't resolve), it's caught + warned, and the **very next** step `git worktree remove` deletes the worktree dir anyway. Once that dir is gone the compose project context is gone and those anon volumes can **never** be reclaimed by `down -v` again — permanent orphan. Fix: run `down -v` with an explicit `-p <project>` (cwd-independent) and **gate `git worktree remove` on `down -v` actually succeeding**.
+2. **Unregistered-worktree skip** (`finish.ts:328`): if the worktree isn't registered, `down -v` is skipped entirely — no volume cleanup.
+3. **finish never runs:** abandoned / killed / crashed runs never reach teardown; whole stack + volumes leak.
+
+Three fix directions (likely an Epic, not one ticket): (a) **kill the anon volume at the source** if vestigial — eliminates the leak class entirely, cheapest if it holds; (b) **robust teardown** — explicit `-p`, ordering gate, `--rmi local` so images don't pile up either; (c) **safety-net reaper** — a `crew prune` (or pre-dispatch reaper) that finds crew artifacts whose worktree/key no longer exists and removes their stacks + images + volumes (defense-in-depth for vectors 2 & 3, and the only thing that catches already-orphaned debris going forward).
+
+**Shape of work:** Likely an Epic with three children mapping to (a)/(b)/(c). (a) is a small compose change gated on a verification spike (is the anon volume load-bearing?). (b) is a focused `finish.ts` change + tests. (c) is a new CLI subcommand + reaper logic + tests. (a) and (b) are independent; (c) is independent but most valuable shipped last (cleans up whatever (a)/(b) miss).
+
+**Open questions:** Is the `/app/node_modules` anon volume still load-bearing given src-subdir-only bind-mounts, or vestigial (→ just delete it)? Should the reaper run automatically pre-dispatch, or be an explicit `crew prune` the user invokes? Should `crew down` also gain `-v`/`--rmi`, or stay conservative for the canonical stack? Does the canonical (non-worktree) stack share the same per-project anon-volume churn, or only worktree runs?
 
 #### 2026-06-19 — `PrTransitionService.markMerged` check-then-insert isn't transaction-guarded against a true concurrent race
 
