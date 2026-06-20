@@ -92,6 +92,17 @@ export async function runWorker(deps: WorkerDeps): Promise<void> {
     client: crewDaemonClientFromEnv(deps.env),
     registry,
     kill: (target, signal) => process.kill(target, signal),
+    // Resume boundary: re-dispatch `crew resume <key>` (with `-m <message>`
+    // when steering) detached on the agent's existing worktree, resolved from
+    // the still-tracked (paused) entry's project. Mirrors `executeAction`'s
+    // launch glue; `applyCommand` re-registers the entry on the returned handle.
+    resume: (agentKey, message) => {
+      const entry = registry.get(agentKey);
+      if (!entry) throw new Error(`no tracked process for ${agentKey}`);
+      const cwd = resolveRepoDir(entry.project);
+      const args = message ? ['resume', agentKey, '-m', message] : ['resume', agentKey];
+      return launchDetached('crew', args, { cwd });
+    },
     execute: (action) =>
       executeAction(action, {
         exec: runToCompletion,
