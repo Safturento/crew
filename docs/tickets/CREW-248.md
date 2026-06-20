@@ -33,13 +33,54 @@ a **dangling `tool_use`** could make `--resume` reject the reconstructed
 conversation. That dangling-tool_use case is the whole reason this is gated
 rather than assumed-green from the existence of `crew resume`.
 
-## Outcome — INCONCLUSIVE in-sandbox (empirical leg blocked); host confirmation run required before building
+## Outcome — GREEN (host confirmation run 2026-06-19); build unblocked
+
+The host-confirmation spike below was run un-sandboxed and **closes the gate
+green**. The original in-sandbox leg was inconclusive for an environmental
+reason (read-only `~/.claude/projects` + `session-env` — detailed below); the
+host run resolves it. See *Host confirmation result* immediately below; the
+in-sandbox blockage record is retained after it for history.
+
+### Host confirmation result — GREEN (2026-06-19)
+
+Ran on the host (un-sandboxed) where `~/.claude/projects` + `session-env` are
+writable. Three legs:
+
+1. **Detached run + natural SIGTERM + `--resume`** → green. (Caveat: the inducer
+   run finished writing all 60 files before SIGTERM landed, so this leg resumed a
+   *clean* session — `DANGLING 0`. Encouraging but not the worst case.)
+2. **Manufactured dangling-`tool_use` worst case + `--resume`** → **green.** The
+   real transcript was truncated to end on a `tool_use` with its `tool_result`
+   dropped (`dangle_check` confirmed `records 129, tool_use 60, tool_result 59,
+   DANGLING 1`), the session renamed to a fresh UUID, and resumed from the
+   correct project cwd. `claude --resume` loaded it and the new turn **completed
+   successfully** (`WORST_RESUME_OK`).
+3. This is **conclusive**, not incidental: the Anthropic Messages API rejects a
+   conversation whose last assistant turn carries a `tool_use` with no matching
+   `tool_result`. For the resumed turn to reach the API and return a reply,
+   **Claude Code's resume reconstruction must sanitize the trailing dangling
+   `tool_use`** (drop it or synthesize a cancelled `tool_result`) before sending.
+   The exact corruption case the ticket was gated on is therefore handled by
+   Claude Code itself — the runner's `pause`/`resume` apply path does **not** need
+   to pre-sanitize the transcript.
+
+Two harness bugs surfaced and were fixed during the run, for the record (neither
+affects the result): the committed script named the manufactured session
+`crew248worst-<ts>` — `claude --resume` rejects a non-UUID id on *format* before
+reading the transcript (false RED #1); and a trimmed re-test omitted `cd "$WORK"`,
+so `--resume` resolved the wrong project dir and reported "No conversation found"
+(false RED #2). With a real UUID **and** the correct cwd, the resume is green.
+
+**Gate verdict:** GREEN → build the apply paths + dashboard controls per the
+design below. The dangling-`tool_use` sanitization branch contemplated under
+*Recommendation* step 3 is **not needed** (Claude Code handles it).
+
+### In-sandbox blockage (historical — superseded by the host run above)
 
 The empirical spike **could not be completed inside the `crew run` dispatch
 sandbox**, for a concrete, reproducible environmental reason — not a Claude Code
-limitation. A standalone host run is required to close the gate. Until then the
-apply paths and dashboard controls are **not built** (this ticket ships the
-documented outcome only, per the acceptance criteria's primary deliverable).
+limitation. A standalone host run was required to close the gate; it has now run
+(green, above).
 
 ### What was empirically established (in-sandbox)
 
@@ -264,11 +305,19 @@ timeout 120 claude --dangerously-skip-permissions --setting-sources user,project
   outcome documented in a docs/tickets note") is satisfied by this file.
 - **The host confirmation script is committed inline** so the gate is closeable
   with one un-sandboxed run, testing the exact worst case deterministically.
+- **Gate closed GREEN on the host (2026-06-19); build is unblocked.** The
+  manufactured dangling-`tool_use` worst case resumed successfully
+  (`WORST_RESUME_OK`), proving Claude Code's resume reconstruction sanitizes a
+  trailing dangling `tool_use` before re-sending to the API. The apply path does
+  **not** need its own transcript-sanitization branch. See *Host confirmation
+  result* above.
 
 ## Open questions (for the host confirmation run + build)
 
-- [ ] Does `claude --resume` repair a transcript ending on a dangling `tool_use`,
-      or reject it? (The gate.)
+- [x] Does `claude --resume` repair a transcript ending on a dangling `tool_use`,
+      or reject it? (The gate.) **RESOLVED 2026-06-19 — it repairs/tolerates it.**
+      Host worst-case resume returned `WORST_RESUME_OK`; Claude Code sanitizes the
+      trailing dangling `tool_use` itself.
 - [ ] How should a *non-terminal* `paused` run state be represented so the run
       stays resumable — sentinel in `crew run` to suppress `completeRun`, a
       distinct pause signal, or a new daemon state? `paused` is a
