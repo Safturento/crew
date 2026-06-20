@@ -30,7 +30,9 @@ import {
   smokeEnabled,
   writeMcpFile,
 } from '../lib/mcp-config/index.js';
-import { maybeRunE2eGate } from './run.js';
+import { maybeRunE2eGate, resolveExitCode } from './run.js';
+import { consumePauseSentinel } from '../lib/pause-sentinel/index.js';
+import { emitRunStarted, emitDispatchExited, emitRunPausedSync } from '../lib/state-events/index.js';
 import { join } from 'node:path';
 
 interface ResumeOptions {
@@ -174,6 +176,10 @@ export async function runResume(key: string, opts: ResumeOptions): Promise<void>
         `  log:      ${logFile}\n\n` +
         `→ Watching ${session.transcriptPath} (new events only). Ctrl+C to abort.\n\n`,
     );
+    // Concrete state trigger: the resume is now live → `running`. Mirrors
+    // `crew run` (run.ts) emitting right before it streams; without it the
+    // daemon's reducer never flips an `error`-state row back to `running`.
+    await emitRunStarted(key);
     const sub = spawnClaudeResume({
       sessionId: session.sessionId,
       prompt,
@@ -181,19 +187,25 @@ export async function runResume(key: string, opts: ResumeOptions): Promise<void>
       cwd: worktree,
       env: claudeEnv,
     });
-    await streamUntilExit(sub, { transcriptPath: session.transcriptPath, startAtEnd: true });
-    await maybeRunE2eGate({
-      config,
+    const settlement = await streamUntilExit(
+      sub,
+      { transcriptPath: session.transcriptPath, startAtEnd: true },
       key,
-      worktree,
-      env: process.env,
-      skipDocker: Boolean(opts.skipDocker),
-      dockerUnavailable: false,
-      resolvedAppUrl: env.resolvedAppUrl,
-      repoPath: config.repo_path,
-      defaultBranch: config.default_branch,
-      baseline,
-    });
+    );
+    await settleResumeState(key, settlement, () =>
+      maybeRunE2eGate({
+        config,
+        key,
+        worktree,
+        env: process.env,
+        skipDocker: Boolean(opts.skipDocker),
+        dockerUnavailable: false,
+        resolvedAppUrl: env.resolvedAppUrl,
+        repoPath: config.repo_path,
+        defaultBranch: config.default_branch,
+        baseline,
+      }),
+    );
     return;
   }
 
@@ -213,29 +225,67 @@ export async function runResume(key: string, opts: ResumeOptions): Promise<void>
       `  log:      ${logFile}\n\n` +
       `→ Waiting for transcript at ${projectDir}…  Ctrl+C to abort.\n\n`,
   );
+  await emitRunStarted(key);
   const sub = spawnClaudeFresh({
     prompt,
     logFile,
     cwd: worktree,
     env: claudeEnv,
   });
-  await streamUntilExit(sub, {
-    projectDir,
-    onTranscriptResolved: (path) => {
-      process.stderr.write(pc.dim(`→ watching ${path}\n\n`));
+  const settlement = await streamUntilExit(
+    sub,
+    {
+      projectDir,
+      onTranscriptResolved: (path) => {
+        process.stderr.write(pc.dim(`→ watching ${path}\n\n`));
+      },
     },
-  });
-  await maybeRunE2eGate({
-    config,
     key,
-    worktree,
-    env: process.env,
-    skipDocker: Boolean(opts.skipDocker),
-    dockerUnavailable: false,
-    resolvedAppUrl: env.resolvedAppUrl,
-    repoPath: config.repo_path,
-    defaultBranch: config.default_branch,
-  });
+  );
+  await settleResumeState(key, settlement, () =>
+    maybeRunE2eGate({
+      config,
+      key,
+      worktree,
+      env: process.env,
+      skipDocker: Boolean(opts.skipDocker),
+      dockerUnavailable: false,
+      resolvedAppUrl: env.resolvedAppUrl,
+      repoPath: config.repo_path,
+      defaultBranch: config.default_branch,
+    }),
+  );
+}
+
+/** What a finished resume settled to — drives the exit-half state event. */
+interface ResumeSettlement {
+  /** A pause-interrupt (sentinel consumed): stays resumable, no terminal exit. */
+  paused: boolean;
+  /** Resolved exit code (130 on signal), routed to the daemon on a real exit. */
+  exitCode: number;
+}
+
+/**
+ * Emit the exit half of the resume lifecycle, mirroring `crew run` (run.ts).
+ * A pause-interrupt emits the non-terminal `run_paused` (daemon → `idle`) and
+ * skips the e2e gate — there's no finished work to verify. Any other exit runs
+ * the gate, then emits `run_exited` carrying the code so the daemon reduces a
+ * clean no-PR resume → `idle` and a non-zero (re-crash) → `error`.
+ */
+async function settleResumeState(
+  key: string,
+  settlement: ResumeSettlement,
+  runGate: () => Promise<void>,
+): Promise<void> {
+  if (settlement.paused) {
+    emitRunPausedSync(key);
+    process.stderr.write(
+      pc.yellow(`→ resume ${key} paused — resumable (run_paused emitted)\n`),
+    );
+    return;
+  }
+  await runGate();
+  await emitDispatchExited(key, 'run', settlement.exitCode);
 }
 
 interface KillableSubprocess extends PromiseLike<{ exitCode?: number | null }> {
@@ -260,11 +310,17 @@ interface StreamUntilExitTarget {
 async function streamUntilExit(
   sub: KillableSubprocess,
   target: StreamUntilExitTarget,
-): Promise<void> {
+  key: string,
+): Promise<ResumeSettlement> {
   let signaled = false;
+  let paused = false;
   const onSignal = (): void => {
     signaled = true;
-    process.stderr.write(pc.yellow('\n→ Aborting…\n'));
+    // A pause-interrupt: the runner leaves a sentinel before SIGTERMing the
+    // group, so this is a resumable pause rather than an aborting cancel.
+    // Mirrors run.ts's sigintHandler.
+    if (consumePauseSentinel(key)) paused = true;
+    process.stderr.write(pc.yellow(paused ? '\n→ Pausing…\n' : '\n→ Aborting…\n'));
     sub.kill('SIGTERM');
   };
   process.on('SIGINT', onSignal);
@@ -300,6 +356,8 @@ async function streamUntilExit(
   } else if (typeof exitCode === 'number') {
     process.exitCode = exitCode;
   }
+
+  return { paused, exitCode: resolveExitCode({ exitCode: exitCode ?? undefined }, signaled) };
 }
 
 export const resumeCommand = new Command('resume')

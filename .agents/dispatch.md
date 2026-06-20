@@ -1,7 +1,7 @@
 ---
 name: dispatch
 description: crew run prompt-build, skills injection, verification gates
-last_updated: 2026-06-19
+last_updated: 2026-06-20
 covers:
   - 'packages/cli/src/lib/run/**'
   - 'packages/cli/src/lib/prompts/**'
@@ -181,6 +181,7 @@ A second, parallel producer stream carries **concrete lifecycle facts** (as oppo
 
 - `crew run` — `run_started` right after `registerRun` succeeds; `run_exited` (carrying the resolved exit code) at the final `process.exit`, via the **sync** variant since the async append would never flush before teardown. **Pause exception (CREW-273):** when the interrupt is a pause rather than a cancel/finish — detected by consuming a `~/.crew/pause-sentinels/<key>` sentinel the runner writes before its SIGTERM (`lib/pause-sentinel/`) — `crew run` emits `run_paused` (`emitRunPausedSync`, carrying no exit code) and **suppresses** both `completeRun` and `run_exited`, so the daemon reduces the run to a resumable `idle` instead of erroring on the `130` exit. The live `paused` label is the runner's in-memory snapshot's job, not this run-state.
 - `crew fix-pr` — `fixpr_started` at dispatch; `fixpr_exited` (with the resolved exit code, `130` on a signaled abort) once the run drains — **async**, because fix-pr sets `process.exitCode` and returns rather than calling `process.exit()`.
+- `crew resume` — mirrors `crew run`'s lifecycle on an existing worktree: `run_started` right before the claude spawn (in both the session-resume and fresh-start branches), so the daemon reduces an `error`/`idle` row back to `running` — **without this emit a resumed `error` row stayed stuck in `error`**; then `run_exited` carrying the resolved exit code once the run drains (so a clean no-PR resume reduces to `idle`, a re-crash back to `error`) — **async**, since resume sets `process.exitCode` and returns rather than calling `process.exit()`. Same **pause exception** as `crew run`: a consumed pause sentinel makes it emit `run_paused` and suppress `run_exited`, keeping a paused resume resumable (CREW-275 follow-on).
 - `crew finish` — `finish_completed` once all post-merge cleanup steps succeed.
 
 The thin per-moment helpers (`emitRunStarted`, `emitFixprStarted`, `emitDispatchExited[Sync]`, `emitRunPausedSync`, `emitFinishCompleted`) live in `lib/state-events/dispatch.ts`; they encode the `event`+`source` so the command bodies stay thin. Emits are best-effort (mirroring `emitStartupEvent` — failures go to stderr, never into the dispatch flow). The writer fills `eventId`/`key`/`ts`; the producer only asserts the fact, never the target state.
