@@ -32,6 +32,7 @@ async function buildTestApp(opts: { dashboardDistDir?: string } = {}) {
       startupEventsDir: process.env.CREW_STARTUP_EVENTS_DIR ?? '/tmp/does-not-matter/startup',
       // Same blanket safety net for the state-event watcher (CREW-254).
       stateEventsDir: process.env.CREW_STATE_EVENTS_DIR ?? '/tmp/does-not-matter/state-events',
+      githubWebhookSecretsFile: '/tmp/does-not-matter/github-webhook-secrets.toml',
     },
     logger: createLogger(),
     db,
@@ -90,6 +91,7 @@ describe('buildApp', () => {
         runnerLogDir: '/tmp/does-not-matter/runner',
         startupEventsDir: process.env.CREW_STARTUP_EVENTS_DIR ?? '/tmp/does-not-matter/startup',
         stateEventsDir: process.env.CREW_STATE_EVENTS_DIR ?? '/tmp/does-not-matter/state-events',
+        githubWebhookSecretsFile: '/tmp/does-not-matter/github-webhook-secrets.toml',
       },
       logger: createLogger(),
       db,

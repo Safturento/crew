@@ -91,4 +91,16 @@ describe('parseDaemonConfig', () => {
     const config = parseDaemonConfig({ CREW_STATE_EVENTS_DIR: '/tmp/custom-state-events' });
     expect(config.stateEventsDir).toBe('/tmp/custom-state-events');
   });
+
+  it('defaults githubWebhookSecretsFile under ~/.config/crew', () => {
+    const config = parseDaemonConfig({});
+    expect(config.githubWebhookSecretsFile).toBe(
+      join(homedir(), '.config', 'crew', 'github-webhook-secrets.toml'),
+    );
+  });
+
+  it('honors CREW_GITHUB_WEBHOOK_SECRETS_FILE override', () => {
+    const config = parseDaemonConfig({ CREW_GITHUB_WEBHOOK_SECRETS_FILE: '/tmp/s.toml' });
+    expect(config.githubWebhookSecretsFile).toBe('/tmp/s.toml');
+  });
 });
