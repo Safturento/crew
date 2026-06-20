@@ -66,7 +66,7 @@
   },
   "enrichment": {
     "source": "plugin-api",
-    "capturedAt": "2026-06-10T01:13:49.662Z",
+    "capturedAt": "2026-06-20T14:12:01.048Z",
     "componentProperties": null,
     "mainComponent": null,
     "boundVariables": [],
@@ -824,6 +824,46 @@
         }
       },
       {
+        "id": "801:4070",
+        "name": "Pill",
+        "path": [
+          "state=error",
+          "action",
+          "Pill"
+        ],
+        "mainComponentSetId": "272:120",
+        "variantOverrides": "type=button-sm, color=running, intensity=mid, font=sans",
+        "componentPropertyOverrides": {
+          "Icon": "lucide/git-pull-request",
+          "Has Icon": false,
+          "Label": "Resume",
+          "type": "button-sm",
+          "color": "running",
+          "intensity": "mid",
+          "font": "sans"
+        },
+        "resolvedStyles": {
+          "fills": [
+            {
+              "hex": "#1C2538",
+              "tokenAlias": "slate-1050",
+              "opacity": 1
+            }
+          ],
+          "strokes": [
+            {
+              "hex": "#64748B",
+              "tokenAlias": "slate/500",
+              "opacity": 1
+            }
+          ],
+          "textColor": {
+            "hex": "#94A3B8",
+            "tokenAlias": "state/running"
+          }
+        }
+      },
+      {
         "id": "278:1553",
         "name": "Pill",
         "path": [
@@ -832,31 +872,19 @@
           "Pill"
         ],
         "mainComponentSetId": "272:120",
-        "variantOverrides": "type=button-sm, color=error, intensity=mid, font=sans",
+        "variantOverrides": "type=button-sm, color=error, intensity=ghost, font=sans",
         "componentPropertyOverrides": {
           "Icon": "lucide/git-pull-request",
           "Has Icon": false,
           "Label": "Inspect",
           "type": "button-sm",
           "color": "error",
-          "intensity": "mid",
+          "intensity": "ghost",
           "font": "sans"
         },
         "resolvedStyles": {
-          "fills": [
-            {
-              "hex": "#262031",
-              "tokenAlias": "red-1050",
-              "opacity": 1
-            }
-          ],
-          "strokes": [
-            {
-              "hex": "#EF4444",
-              "tokenAlias": "red/500",
-              "opacity": 1
-            }
-          ],
+          "fills": [],
+          "strokes": [],
           "textColor": {
             "hex": "#F87171",
             "tokenAlias": "state/error"

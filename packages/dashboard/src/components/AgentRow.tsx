@@ -209,12 +209,26 @@ function QuickActions({
         </QaGroup>
       );
     case 'error':
+      // An errored run keeps its worktree, so Resume (crew resume) continues
+      // it — crew run would bounce on "worktree already exists". Like the idle
+      // Resume it drains through the host runner, hence the connectivity gate.
+      // Inspect stays available (error-colored) for diagnosing the failure.
       return (
-        <SingleAction>
-          <Button color="error" intensity="mid" size="sm" onClick={fire('inspect')}>
+        <QaGroup>
+          <Button
+            color="running"
+            intensity="mid"
+            size="sm"
+            className={gateClass}
+            onClick={fire('resume')}
+            {...gate}
+          >
+            Resume
+          </Button>
+          <Button color="error" intensity="ghost" size="sm" onClick={fire('inspect')}>
             Inspect
           </Button>
-        </SingleAction>
+        </QaGroup>
       );
     default:
       return <span aria-hidden />;

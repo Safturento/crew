@@ -223,9 +223,29 @@ describe('AgentRow', () => {
     );
   });
 
-  it('renders an "Inspect" quick action for error state', () => {
+  it('renders "Resume" + "Inspect" quick actions for error state', () => {
     render(<AgentRow agent={{ ...baseAgent, state: 'error' }} onSelect={() => {}} />);
+    expect(screen.getByRole('button', { name: 'Resume' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Inspect' })).toBeInTheDocument();
+  });
+
+  // The error-state Resume re-enters the preserved worktree via crew resume, so
+  // it drains through the host runner and degrades to disabled when offline.
+  it('disables the error-state Resume when the runner is offline', () => {
+    render(
+      <AgentRow agent={{ ...baseAgent, state: 'error' }} onSelect={() => {}} runnerOnline={false} />,
+    );
+    expect(screen.getByRole('button', { name: 'Resume' })).toBeDisabled();
+  });
+
+  it('forwards a resume action from the error state', async () => {
+    const user = userEvent.setup();
+    const onAction = vi.fn();
+    render(
+      <AgentRow agent={{ ...baseAgent, state: 'error' }} onSelect={() => {}} onAction={onAction} />,
+    );
+    await user.click(screen.getByRole('button', { name: 'Resume' }));
+    expect(onAction).toHaveBeenCalledWith('resume', expect.objectContaining({ key: 'KAN-31' }));
   });
 
   it('forwards onAction events with kind + agent', async () => {
