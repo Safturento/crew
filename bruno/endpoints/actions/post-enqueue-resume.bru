@@ -38,6 +38,11 @@ docs {
   `crew` project. `resume` continues an interrupted run on its existing
   worktree via `crew resume <key>`, where `run` would bounce off the "worktree
   already exists" preflight. Carries no payload beyond the request envelope,
-  like `run`/`finish`. This row is left pending in the smoke run; the
-  get-pending step claims the older `run` row enqueued by post-enqueue.bru.
+  like `run`/`finish`.
+
+  Standalone reference card — intentionally NOT in the `bruno:smoke` chain: it
+  enqueues a row with no drain step, which would break the chain's get-pending
+  idempotency (the claim takes the oldest pending). The resume action's full
+  enqueue→claim round-trip is covered end-to-end by the Playwright e2e
+  (packages/dashboard/tests/e2e/agent-actions.spec.ts) against the live daemon.
 }
