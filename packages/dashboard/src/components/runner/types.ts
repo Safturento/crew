@@ -1,7 +1,7 @@
 import type { RunFailure } from 'crew-shared';
 
 /** The command a run/process was launched with. */
-export type RunnerCommandName = 'run' | 'fix-pr' | 'finish';
+export type RunnerCommandName = 'run' | 'fix-pr' | 'finish' | 'resume';
 
 /** A run that died during init/preflight — the Failed-to-start attention queue. */
 export interface FailedStartView {

@@ -201,13 +201,15 @@ describe('App — agent actions (CREW-217)', () => {
     window.location.hash = '';
   });
 
-  it('enqueues a run action when Resume is clicked (runner online)', async () => {
+  it('enqueues a resume action when Resume is clicked (runner online)', async () => {
     vi.spyOn(defaultClient, 'getRunnerStatus').mockResolvedValue({
       online: true,
       lastSeen: 1,
       processes: [],
     });
-    const enqueue = vi.spyOn(defaultClient, 'enqueueAction').mockResolvedValue(SAMPLE_ACTION);
+    const enqueue = vi
+      .spyOn(defaultClient, 'enqueueAction')
+      .mockResolvedValue({ ...SAMPLE_ACTION, kind: 'resume', payload: { kind: 'resume' } });
     const user = userEvent.setup();
 
     renderWithProviders(<App client={new MockDaemonClient({ projects, agents: idleAgents })} />);
@@ -217,7 +219,7 @@ describe('App — agent actions (CREW-217)', () => {
     await user.click(resume);
 
     expect(enqueue).toHaveBeenCalledWith({
-      kind: 'run',
+      kind: 'resume',
       project: 'kanban-api',
       ticketKey: 'KAN-50',
     });

@@ -9,7 +9,7 @@ import { LIVE_PROCESS_STATES, RUNNER_COMMAND_KINDS } from './types.js';
  */
 export const liveProcessSchema = z.object({
   agentKey: z.string().min(1),
-  command: z.enum(['run', 'fix-pr', 'finish']),
+  command: z.enum(['run', 'fix-pr', 'finish', 'resume']),
   pid: z.number().int(),
   pgid: z.number().int(),
   actionRequestId: z.number().int().nullable(),

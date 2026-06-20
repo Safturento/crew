@@ -59,7 +59,7 @@ export type RunStatus = (typeof RUN_STATUSES)[number];
  */
 export interface LiveProcess {
   agentKey: string;
-  command: 'run' | 'fix-pr' | 'finish';
+  command: 'run' | 'fix-pr' | 'finish' | 'resume';
   pid: number;
   pgid: number;
   /** The action_request that spawned this process, when it came from the queue. */

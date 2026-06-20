@@ -50,6 +50,7 @@ function toCommand(kind: ActionRequest['kind']): LiveProcess['command'] {
  * - `run`    → `crew run <key>`
  * - `fix_pr` → `gh pr comment <key> --body <comment>` **then** `crew fix-pr <key> --from-pr`
  * - `finish` → `crew finish <key>`
+ * - `resume` → `crew resume <key>` (continues an interrupted run on its worktree)
  *
  * The PR comment is posted before `fix-pr` so the resumed agent picks it up
  * from the PR thread (crew's fix-pr feedback channel). Any throw — an
@@ -81,6 +82,9 @@ export async function executeAction(
       }
       case 'finish':
         handle = await deps.launch('crew', ['finish', action.ticketKey], { cwd });
+        break;
+      case 'resume':
+        handle = await deps.launch('crew', ['resume', action.ticketKey], { cwd });
         break;
       default:
         return {

@@ -10,8 +10,12 @@
  * the `startup-events` convention.
  */
 
-/** The three agent verbs the dashboard can trigger. */
-export const ACTION_KINDS = ['run', 'fix_pr', 'finish'] as const;
+/**
+ * The agent verbs the dashboard can trigger. `resume` (CREW-275) continues an
+ * idle / interrupted run on an existing worktree via `crew resume`, where
+ * `run` would bounce off the "worktree already exists" preflight.
+ */
+export const ACTION_KINDS = ['run', 'fix_pr', 'finish', 'resume'] as const;
 export type ActionKind = (typeof ACTION_KINDS)[number];
 
 /** Lifecycle of a queued action, from enqueue through host-side launch. */
@@ -19,14 +23,15 @@ export const ACTION_STATUSES = ['pending', 'claimed', 'launching', 'launched', '
 export type ActionStatus = (typeof ACTION_STATUSES)[number];
 
 /**
- * Per-kind payload. `run` and `finish` carry nothing beyond the request
- * envelope; `fix_pr` carries the review comment posted to the PR before
+ * Per-kind payload. `run`, `finish`, and `resume` carry nothing beyond the
+ * request envelope; `fix_pr` carries the review comment posted to the PR before
  * `crew fix-pr` runs.
  */
 export type ActionPayload =
   | { kind: 'run' }
   | { kind: 'fix_pr'; comment: string }
-  | { kind: 'finish' };
+  | { kind: 'finish' }
+  | { kind: 'resume' };
 
 /** A queued action request as stored by the daemon and surfaced over HTTP. */
 export interface ActionRequest {

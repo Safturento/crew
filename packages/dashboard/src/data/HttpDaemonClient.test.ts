@@ -559,6 +559,35 @@ describe('HttpDaemonClient.enqueueAction (CREW-217)', () => {
     );
   });
 
+  it('parses a resume action response (CREW-275)', async () => {
+    const fetchSpy = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValue(
+        new Response(
+          JSON.stringify({ ...SAMPLE_ACTION, kind: 'resume', payload: { kind: 'resume' } }),
+          { status: 201, headers: { 'content-type': 'application/json' } },
+        ),
+      );
+
+    const action = await new HttpDaemonClient().enqueueAction({
+      kind: 'resume',
+      project: 'crew',
+      ticketKey: 'CREW-1',
+    });
+
+    expect(action).toMatchObject({
+      kind: 'resume',
+      payload: { kind: 'resume' },
+      status: 'pending',
+    });
+    expect(fetchSpy).toHaveBeenCalledWith(
+      '/api/actions',
+      expect.objectContaining({
+        body: JSON.stringify({ kind: 'resume', project: 'crew', ticketKey: 'CREW-1' }),
+      }),
+    );
+  });
+
   it('throws on non-2xx', async () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('bad', { status: 400 }));
     await expect(

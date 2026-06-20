@@ -71,7 +71,8 @@ function AppContent({ client }: { client: DaemonClient }) {
   // CREW-217: the action layer. `useActionToasts` surfaces the runner's
   // launch outcome (failed/launched) over SSE; `useRunnerStatus` drives the
   // no-runner degradation; `onAgentAction` finally backs the QuickAction
-  // thread (AgentRow → ProjectSection → AgentsList). Resume → `run`,
+  // thread (AgentRow → ProjectSection → AgentsList). Resume → `resume`
+  // (CREW-275: continues an interrupted run on its existing worktree),
   // Finish → `finish`; the other QuickActions belong to later tickets.
   const runner = useRunnerStatus();
   const enqueue = useEnqueueAction();
@@ -90,7 +91,8 @@ function AppContent({ client }: { client: DaemonClient }) {
   const onAgentAction = useCallback(
     (kind: QuickActionKind, agent: Agent) => {
       if (kind === 'resume') {
-        enqueue.mutate({ kind: 'run', project: agent.projectName, ticketKey: agent.key });
+        // CREW-275: continue an interrupted run on its existing worktree.
+        enqueue.mutate({ kind: 'resume', project: agent.projectName, ticketKey: agent.key });
       } else if (kind === 'finish') {
         enqueue.mutate({ kind: 'finish', project: agent.projectName, ticketKey: agent.key });
       } else if (kind === 'fix-pr') {

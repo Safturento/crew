@@ -8,7 +8,7 @@ import { defaultClient } from './queries.js';
 
 /**
  * CREW-217: the App-level action layer. `useEnqueueAction` POSTs a
- * dashboard-triggered verb (`run` / `fix_pr` / `finish`) to the daemon's
+ * dashboard-triggered verb (`run` / `fix_pr` / `finish` / `resume`) to the daemon's
  * queue and toasts the outcome; `useActionToasts` listens on the SSE
  * `action.changed` stream and toasts the terminal launch result (failed /
  * launched), since enqueue only confirms the request was *queued*, not run.
@@ -18,6 +18,7 @@ const ACTION_LABELS: Record<ActionKind, string> = {
   run: 'Run',
   fix_pr: 'Fix PR',
   finish: 'Finish',
+  resume: 'Resume',
 };
 
 interface ActionChangedPayload {
