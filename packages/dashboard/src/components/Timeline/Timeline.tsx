@@ -246,7 +246,11 @@ export function Timeline({
           /* Zero-height sticky anchor that pins the minimap stripe just below
              the pinned chrome while the timeline content scrolls past. */
           <div className="sticky z-10 h-0" style={{ top: PINNED_CHROME_PX }}>
-            <div className="relative" style={{ height: stripeHeight }}>
+            {/* Full-width, full-viewport-height anchor for the stripe. It must
+                stay transparent to pointer events or it swallows every click
+                meant for the section headers / transcript rows beneath it; the
+                stripe itself re-enables clicks (pointer-events-auto). */}
+            <div className="pointer-events-none relative" style={{ height: stripeHeight }}>
               <MinimapStripe
                 sections={minimapSections}
                 stripeHeight={stripeHeight}

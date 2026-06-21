@@ -65,7 +65,7 @@ export function MinimapStripe({ sections, stripeHeight, onSectionJump }: Minimap
       aria-label="Timeline minimap — click a section or use arrow keys to navigate"
       tabIndex={0}
       onKeyDown={onKeyDown}
-      className="absolute top-0 bottom-0 z-10 flex flex-col outline-none focus-visible:ring-1 focus-visible:ring-foreground/40"
+      className="pointer-events-auto absolute top-0 bottom-0 z-10 flex flex-col outline-none focus-visible:ring-1 focus-visible:ring-foreground/40"
       style={{ right: `${SCROLLBAR_GUTTER}px`, width: `${STRIPE_WIDTH}px` }}
     >
       {sections.map((sec, i) => (

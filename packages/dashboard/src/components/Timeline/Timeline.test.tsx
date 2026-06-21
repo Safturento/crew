@@ -743,6 +743,25 @@ describe('Timeline', () => {
     expect(anchor?.style.top).toBe(`${PINNED_CHROME_PX}px`);
   });
 
+  it('makes the full-height stripe overlay transparent to pointer events so section/row toggles stay clickable', () => {
+    mockUseTimeline.mockReturnValue(
+      timelineResult({
+        data: { events: [evt(1)] },
+        isSuccess: true,
+        status: 'success',
+      }),
+    );
+    render(<Timeline agentKey="KAN-1" agentState="running" />);
+    const stripe = screen.getByTestId('minimap-stripe');
+    // The full-width, full-viewport-height wrapper sits at z-10 over the
+    // timeline content — it must not swallow clicks meant for the sections
+    // and transcript rows beneath it.
+    const overlay = stripe.parentElement;
+    expect(overlay?.className).toContain('pointer-events-none');
+    // …but the stripe itself must remain clickable.
+    expect(stripe.className).toContain('pointer-events-auto');
+  });
+
   it('sizes the stripe to the scroll container height minus pinned chrome', () => {
     mockUseTimeline.mockReturnValue(
       timelineResult({
