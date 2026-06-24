@@ -72,34 +72,16 @@
   },
   "enrichment": {
     "source": "plugin-api",
-    "capturedAt": "2026-06-10T01:11:37.112Z",
-    "componentProperties": null,
-    "mainComponent": null,
-    "boundVariables": [],
+    "capturedAt": "2026-06-24T14:59:13.205Z",
     "componentInstances": [
       {
         "id": "231:105",
         "name": "chevron",
-        "path": [
-          "left",
-          "chevron"
-        ],
-        "mainComponentSetId": "231:100",
-        "variantOverrides": null,
-        "componentPropertyOverrides": {},
-        "resolvedStyles": {
-          "fills": [],
-          "strokes": [],
-          "textColor": null
-        }
+        "mainComponentSetId": "231:100"
       },
       {
         "id": "310:250",
         "name": "Pill",
-        "path": [
-          "left",
-          "Pill"
-        ],
         "mainComponentSetId": "272:120",
         "variantOverrides": "type=button-icon-xs, color=running, intensity=ghost, font=sans",
         "componentPropertyOverrides": {
@@ -110,14 +92,8 @@
           "color": "running",
           "intensity": "ghost",
           "font": "sans"
-        },
-        "resolvedStyles": {
-          "fills": [],
-          "strokes": [],
-          "textColor": null
         }
       }
-    ],
-    "depthWarnings": []
+    ]
   }
 }

@@ -131,9 +131,63 @@
   },
   "enrichment": {
     "source": "plugin-api",
-    "capturedAt": "2026-06-10T02:10:45.450Z",
-    "componentProperties": null,
-    "mainComponent": null,
+    "capturedAt": "2026-06-24T14:55:10.111Z",
+    "componentInstances": [
+      {
+        "id": "244:1136",
+        "name": "TopNav",
+        "mainComponentSetId": "245:133",
+        "variantOverrides": "Active Tab=projects",
+        "componentPropertyOverrides": {
+          "Show New Run": true,
+          "Attention Count": "3",
+          "Show Attention": true,
+          "Active Tab": "projects"
+        },
+        "resolvedStyles": {
+          "strokes": [
+            {
+              "hex": "#1E293B",
+              "tokenAlias": "border",
+              "opacity": 1
+            }
+          ],
+          "textColor": {
+            "hex": "#E2E8F0",
+            "tokenAlias": "foreground"
+          }
+        }
+      },
+      {
+        "id": "376:2465",
+        "name": "AlertModal",
+        "mainComponentSetId": "373:413",
+        "componentPropertyOverrides": {
+          "Description": "This deletes the registration TOML only. Your repo and worktrees are not touched.",
+          "Title": "Remove kanban-api?"
+        },
+        "resolvedStyles": {
+          "fills": [
+            {
+              "hex": "#020617",
+              "tokenAlias": "background",
+              "opacity": 1
+            }
+          ],
+          "strokes": [
+            {
+              "hex": "#1E293B",
+              "tokenAlias": "border",
+              "opacity": 1
+            }
+          ],
+          "textColor": {
+            "hex": "#E2E8F0",
+            "tokenAlias": "foreground"
+          }
+        }
+      }
+    ],
     "boundVariables": [
       {
         "path": "fills[0].color",
@@ -162,102 +216,6 @@
         "variableName": "background",
         "resolvedAlias": "background -> slate/950",
         "resolvedHex": "#020617"
-      }
-    ],
-    "componentInstances": [
-      {
-        "id": "244:1136",
-        "name": "TopNav",
-        "path": [
-          "Background+Border+Shadow",
-          "Container",
-          "TopNav"
-        ],
-        "mainComponentSetId": "245:133",
-        "variantOverrides": "Active Tab=projects",
-        "componentPropertyOverrides": {
-          "Show New Run": true,
-          "Attention Count": "3",
-          "Show Attention": true,
-          "Active Tab": "projects"
-        },
-        "resolvedStyles": {
-          "fills": [],
-          "strokes": [
-            {
-              "hex": "#1E293B",
-              "tokenAlias": "border",
-              "opacity": 1
-            }
-          ],
-          "textColor": {
-            "hex": "#E2E8F0",
-            "tokenAlias": "foreground"
-          }
-        }
-      },
-      {
-        "id": "376:2465",
-        "name": "AlertModal",
-        "path": [
-          "Background+Border+Shadow",
-          "Container",
-          "Main",
-          "Overlay",
-          "AlertModal"
-        ],
-        "mainComponentSetId": "373:413",
-        "variantOverrides": null,
-        "componentPropertyOverrides": {
-          "Description": "This deletes the registration TOML only. Your repo and worktrees are not touched.",
-          "Title": "Remove kanban-api?"
-        },
-        "resolvedStyles": {
-          "fills": [
-            {
-              "hex": "#020617",
-              "tokenAlias": "background",
-              "opacity": 1
-            }
-          ],
-          "strokes": [
-            {
-              "hex": "#1E293B",
-              "tokenAlias": "border",
-              "opacity": 1
-            }
-          ],
-          "textColor": {
-            "hex": "#E2E8F0",
-            "tokenAlias": "foreground"
-          }
-        }
-      }
-    ],
-    "depthWarnings": [
-      {
-        "depthExceeded": true,
-        "depth": 7,
-        "atNodeId": "18:34",
-        "atName": "Container"
-      },
-      {
-        "depthExceeded": true,
-        "depth": 7,
-        "atNodeId": "18:41",
-        "atName": "Container"
-      },
-      {
-        "depthExceeded": true,
-        "depth": 7,
-        "atNodeId": "18:49",
-        "atName": "Heading 2"
-      },
-      {
-        "depthExceeded": true,
-        "depth": 7,
-        "atNodeId": "18:51",
-        "atName": "Section"
       }
     ]
   }

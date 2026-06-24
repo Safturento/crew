@@ -131,48 +131,11 @@
   },
   "enrichment": {
     "source": "plugin-api",
-    "capturedAt": "2026-06-10T02:15:16.564Z",
-    "componentProperties": null,
-    "mainComponent": null,
-    "boundVariables": [
-      {
-        "path": "fills[0].color",
-        "variableId": "VariableID:217:213",
-        "variableName": "background",
-        "resolvedAlias": "background -> slate/950",
-        "resolvedHex": "#020617"
-      },
-      {
-        "path": "fills[1].color",
-        "variableId": "VariableID:217:213",
-        "variableName": "background",
-        "resolvedAlias": "background -> slate/950",
-        "resolvedHex": "#020617"
-      },
-      {
-        "path": "backgrounds[0].color",
-        "variableId": "VariableID:217:213",
-        "variableName": "background",
-        "resolvedAlias": "background -> slate/950",
-        "resolvedHex": "#020617"
-      },
-      {
-        "path": "backgrounds[1].color",
-        "variableId": "VariableID:217:213",
-        "variableName": "background",
-        "resolvedAlias": "background -> slate/950",
-        "resolvedHex": "#020617"
-      }
-    ],
+    "capturedAt": "2026-06-24T14:55:09.757Z",
     "componentInstances": [
       {
         "id": "244:1036",
         "name": "TopNav",
-        "path": [
-          "Background+Border+Shadow",
-          "Container",
-          "TopNav"
-        ],
         "mainComponentSetId": "245:133",
         "variantOverrides": "Active Tab=projects",
         "componentPropertyOverrides": {
@@ -182,7 +145,6 @@
           "Active Tab": "projects"
         },
         "resolvedStyles": {
-          "fills": [],
           "strokes": [
             {
               "hex": "#1E293B",
@@ -199,14 +161,6 @@
       {
         "id": "278:1431",
         "name": "Pill",
-        "path": [
-          "Background+Border+Shadow",
-          "Container",
-          "Main",
-          "Container",
-          "Container",
-          "Pill"
-        ],
         "mainComponentSetId": "272:120",
         "variantOverrides": "type=button-sm, color=running, intensity=mid, font=sans",
         "componentPropertyOverrides": {
@@ -242,15 +196,7 @@
       {
         "id": "365:2247",
         "name": "Modal",
-        "path": [
-          "Background+Border+Shadow",
-          "Container",
-          "Main",
-          "Overlay",
-          "Modal"
-        ],
         "mainComponentSetId": "355:238",
-        "variantOverrides": null,
         "componentPropertyOverrides": {
           "Show Close": true,
           "Content": "RegisterModalContent",
@@ -276,6 +222,36 @@
             "tokenAlias": "foreground"
           }
         }
+      }
+    ],
+    "boundVariables": [
+      {
+        "path": "fills[0].color",
+        "variableId": "VariableID:217:213",
+        "variableName": "background",
+        "resolvedAlias": "background -> slate/950",
+        "resolvedHex": "#020617"
+      },
+      {
+        "path": "fills[1].color",
+        "variableId": "VariableID:217:213",
+        "variableName": "background",
+        "resolvedAlias": "background -> slate/950",
+        "resolvedHex": "#020617"
+      },
+      {
+        "path": "backgrounds[0].color",
+        "variableId": "VariableID:217:213",
+        "variableName": "background",
+        "resolvedAlias": "background -> slate/950",
+        "resolvedHex": "#020617"
+      },
+      {
+        "path": "backgrounds[1].color",
+        "variableId": "VariableID:217:213",
+        "variableName": "background",
+        "resolvedAlias": "background -> slate/950",
+        "resolvedHex": "#020617"
       }
     ],
     "depthWarnings": [

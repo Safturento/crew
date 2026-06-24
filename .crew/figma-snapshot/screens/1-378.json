@@ -135,48 +135,11 @@
   },
   "enrichment": {
     "source": "plugin-api",
-    "capturedAt": "2026-06-10T02:15:15.909Z",
-    "componentProperties": null,
-    "mainComponent": null,
-    "boundVariables": [
-      {
-        "path": "fills[0].color",
-        "variableId": "VariableID:217:213",
-        "variableName": "background",
-        "resolvedAlias": "background -> slate/950",
-        "resolvedHex": "#020617"
-      },
-      {
-        "path": "fills[1].color",
-        "variableId": "VariableID:217:213",
-        "variableName": "background",
-        "resolvedAlias": "background -> slate/950",
-        "resolvedHex": "#020617"
-      },
-      {
-        "path": "backgrounds[0].color",
-        "variableId": "VariableID:217:213",
-        "variableName": "background",
-        "resolvedAlias": "background -> slate/950",
-        "resolvedHex": "#020617"
-      },
-      {
-        "path": "backgrounds[1].color",
-        "variableId": "VariableID:217:213",
-        "variableName": "background",
-        "resolvedAlias": "background -> slate/950",
-        "resolvedHex": "#020617"
-      }
-    ],
+    "capturedAt": "2026-06-24T14:50:51.065Z",
     "componentInstances": [
       {
         "id": "244:936",
         "name": "TopNav",
-        "path": [
-          "Background+Border+Shadow",
-          "Container",
-          "TopNav"
-        ],
         "mainComponentSetId": "245:133",
         "variantOverrides": "Active Tab=agents",
         "componentPropertyOverrides": {
@@ -186,7 +149,6 @@
           "Active Tab": "agents"
         },
         "resolvedStyles": {
-          "fills": [],
           "strokes": [
             {
               "hex": "#1E293B",
@@ -203,16 +165,7 @@
       {
         "id": "233:753",
         "name": "ProjectSection",
-        "path": [
-          "Background+Border+Shadow",
-          "Container",
-          "Main",
-          "Container",
-          "Section",
-          "ProjectSection"
-        ],
         "mainComponentSetId": "220:224",
-        "variantOverrides": null,
         "componentPropertyOverrides": {
           "Show Open Button": true,
           "Repo Path": "~/code/kanban-api",
@@ -220,8 +173,6 @@
           "Project Name": "kanban-api"
         },
         "resolvedStyles": {
-          "fills": [],
-          "strokes": [],
           "textColor": {
             "hex": "#E2E8F0",
             "tokenAlias": "foreground"
@@ -231,16 +182,7 @@
       {
         "id": "233:763",
         "name": "ProjectSection",
-        "path": [
-          "Background+Border+Shadow",
-          "Container",
-          "Main",
-          "Container",
-          "Section",
-          "ProjectSection"
-        ],
         "mainComponentSetId": "220:224",
-        "variantOverrides": null,
         "componentPropertyOverrides": {
           "Show Open Button": true,
           "Repo Path": "~/code/crew",
@@ -248,8 +190,6 @@
           "Project Name": "crew"
         },
         "resolvedStyles": {
-          "fills": [],
-          "strokes": [],
           "textColor": {
             "hex": "#E2E8F0",
             "tokenAlias": "foreground"
@@ -259,16 +199,7 @@
       {
         "id": "233:773",
         "name": "ProjectSection",
-        "path": [
-          "Background+Border+Shadow",
-          "Container",
-          "Main",
-          "Container",
-          "Section",
-          "ProjectSection"
-        ],
         "mainComponentSetId": "220:224",
-        "variantOverrides": null,
         "componentPropertyOverrides": {
           "Show Open Button": true,
           "Repo Path": "~/code/lighthouse",
@@ -276,8 +207,6 @@
           "Project Name": "lighthouse"
         },
         "resolvedStyles": {
-          "fills": [],
-          "strokes": [],
           "textColor": {
             "hex": "#E2E8F0",
             "tokenAlias": "foreground"
@@ -287,14 +216,6 @@
       {
         "id": "206:695",
         "name": "AgentRow: LH-08",
-        "path": [
-          "Background+Border+Shadow",
-          "Container",
-          "Main",
-          "Container",
-          "Section",
-          "AgentRow: LH-08"
-        ],
         "mainComponentSetId": "212:910",
         "variantOverrides": "state=error",
         "componentPropertyOverrides": {
@@ -324,16 +245,7 @@
       {
         "id": "233:783",
         "name": "ProjectSection",
-        "path": [
-          "Background+Border+Shadow",
-          "Container",
-          "Main",
-          "Container",
-          "Section",
-          "ProjectSection"
-        ],
         "mainComponentSetId": "220:224",
-        "variantOverrides": null,
         "componentPropertyOverrides": {
           "Show Open Button": true,
           "Repo Path": "~/code/mailer-svc",
@@ -341,8 +253,6 @@
           "Project Name": "mailer-svc"
         },
         "resolvedStyles": {
-          "fills": [],
-          "strokes": [],
           "textColor": {
             "hex": "#E2E8F0",
             "tokenAlias": "foreground"
@@ -352,14 +262,6 @@
       {
         "id": "206:731",
         "name": "AgentRow: MAIL-14",
-        "path": [
-          "Background+Border+Shadow",
-          "Container",
-          "Main",
-          "Container",
-          "Section",
-          "AgentRow: MAIL-14"
-        ],
         "mainComponentSetId": "212:910",
         "variantOverrides": "state=idle",
         "componentPropertyOverrides": {
@@ -389,15 +291,7 @@
       {
         "id": "587:2906",
         "name": "AgentBody (drawer)",
-        "path": [
-          "Background+Border+Shadow",
-          "Container",
-          "Background+VerticalBorder",
-          "AgentBody (drawer)"
-        ],
         "mainComponentSetId": "220:246",
-        "variantOverrides": null,
-        "componentPropertyOverrides": {},
         "resolvedStyles": {
           "fills": [
             {
@@ -418,6 +312,36 @@
             "tokenAlias": "muted-foreground"
           }
         }
+      }
+    ],
+    "boundVariables": [
+      {
+        "path": "fills[0].color",
+        "variableId": "VariableID:217:213",
+        "variableName": "background",
+        "resolvedAlias": "background -> slate/950",
+        "resolvedHex": "#020617"
+      },
+      {
+        "path": "fills[1].color",
+        "variableId": "VariableID:217:213",
+        "variableName": "background",
+        "resolvedAlias": "background -> slate/950",
+        "resolvedHex": "#020617"
+      },
+      {
+        "path": "backgrounds[0].color",
+        "variableId": "VariableID:217:213",
+        "variableName": "background",
+        "resolvedAlias": "background -> slate/950",
+        "resolvedHex": "#020617"
+      },
+      {
+        "path": "backgrounds[1].color",
+        "variableId": "VariableID:217:213",
+        "variableName": "background",
+        "resolvedAlias": "background -> slate/950",
+        "resolvedHex": "#020617"
       }
     ],
     "depthWarnings": [

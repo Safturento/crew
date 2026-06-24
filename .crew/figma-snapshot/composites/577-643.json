@@ -127,9 +127,177 @@
   },
   "enrichment": {
     "source": "plugin-api",
-    "capturedAt": "2026-06-10T02:08:44.672Z",
-    "componentProperties": null,
-    "mainComponent": null,
+    "capturedAt": "2026-06-24T14:50:51.951Z",
+    "componentInstances": [
+      {
+        "id": "580:675",
+        "name": "TokenBarRow",
+        "mainComponentSetId": "555:449",
+        "componentPropertyOverrides": {
+          "percent": "38.4%",
+          "cost": "$0.024",
+          "tokens": "18.4k",
+          "tool": "Bash"
+        },
+        "resolvedStyles": {
+          "strokes": [
+            {
+              "hex": "#1E293B",
+              "tokenAlias": "border",
+              "opacity": 1
+            }
+          ],
+          "textColor": {
+            "hex": "#E2E8F0",
+            "tokenAlias": "foreground"
+          }
+        }
+      },
+      {
+        "id": "580:685",
+        "name": "TokenBarRow",
+        "mainComponentSetId": "555:449",
+        "componentPropertyOverrides": {
+          "percent": "25.2%",
+          "cost": "$0.016",
+          "tokens": "12.1k",
+          "tool": "Read"
+        },
+        "resolvedStyles": {
+          "strokes": [
+            {
+              "hex": "#1E293B",
+              "tokenAlias": "border",
+              "opacity": 1
+            }
+          ],
+          "textColor": {
+            "hex": "#E2E8F0",
+            "tokenAlias": "foreground"
+          }
+        }
+      },
+      {
+        "id": "580:695",
+        "name": "TokenBarRow",
+        "mainComponentSetId": "555:449",
+        "componentPropertyOverrides": {
+          "percent": "20.1%",
+          "cost": "$0.013",
+          "tokens": "9.6k",
+          "tool": "Edit"
+        },
+        "resolvedStyles": {
+          "strokes": [
+            {
+              "hex": "#1E293B",
+              "tokenAlias": "border",
+              "opacity": 1
+            }
+          ],
+          "textColor": {
+            "hex": "#E2E8F0",
+            "tokenAlias": "foreground"
+          }
+        }
+      },
+      {
+        "id": "580:705",
+        "name": "TokenBarRow",
+        "mainComponentSetId": "555:449",
+        "componentPropertyOverrides": {
+          "percent": "8.8%",
+          "cost": "$0.0055",
+          "tokens": "4.2k",
+          "tool": "Grep"
+        },
+        "resolvedStyles": {
+          "strokes": [
+            {
+              "hex": "#1E293B",
+              "tokenAlias": "border",
+              "opacity": 1
+            }
+          ],
+          "textColor": {
+            "hex": "#E2E8F0",
+            "tokenAlias": "foreground"
+          }
+        }
+      },
+      {
+        "id": "580:715",
+        "name": "TokenBarRow",
+        "mainComponentSetId": "555:449",
+        "componentPropertyOverrides": {
+          "percent": "3.8%",
+          "cost": "$0.0024",
+          "tokens": "1.8k",
+          "tool": "Glob"
+        },
+        "resolvedStyles": {
+          "strokes": [
+            {
+              "hex": "#1E293B",
+              "tokenAlias": "border",
+              "opacity": 1
+            }
+          ],
+          "textColor": {
+            "hex": "#E2E8F0",
+            "tokenAlias": "foreground"
+          }
+        }
+      },
+      {
+        "id": "580:725",
+        "name": "TokenBarRow",
+        "mainComponentSetId": "555:449",
+        "componentPropertyOverrides": {
+          "percent": "2.6%",
+          "cost": "$0.0016",
+          "tokens": "1.2k",
+          "tool": "Question"
+        },
+        "resolvedStyles": {
+          "strokes": [
+            {
+              "hex": "#1E293B",
+              "tokenAlias": "border",
+              "opacity": 1
+            }
+          ],
+          "textColor": {
+            "hex": "#E2E8F0",
+            "tokenAlias": "foreground"
+          }
+        }
+      },
+      {
+        "id": "580:735",
+        "name": "TokenBarRow",
+        "mainComponentSetId": "555:449",
+        "componentPropertyOverrides": {
+          "percent": "1.1%",
+          "cost": "$0.0007",
+          "tokens": "510",
+          "tool": "Write"
+        },
+        "resolvedStyles": {
+          "strokes": [
+            {
+              "hex": "#1E293B",
+              "tokenAlias": "border",
+              "opacity": 1
+            }
+          ],
+          "textColor": {
+            "hex": "#E2E8F0",
+            "tokenAlias": "foreground"
+          }
+        }
+      }
+    ],
     "boundVariables": [
       {
         "path": "fills[0].color",
@@ -152,219 +320,6 @@
         "resolvedAlias": "card -> slate/900",
         "resolvedHex": "#0F172A"
       }
-    ],
-    "componentInstances": [
-      {
-        "id": "580:675",
-        "name": "TokenBarRow",
-        "path": [
-          "body",
-          "TokenBarRow"
-        ],
-        "mainComponentSetId": "555:449",
-        "variantOverrides": null,
-        "componentPropertyOverrides": {
-          "percent": "38.4%",
-          "cost": "$0.024",
-          "tokens": "18.4k",
-          "tool": "Bash"
-        },
-        "resolvedStyles": {
-          "fills": [],
-          "strokes": [
-            {
-              "hex": "#1E293B",
-              "tokenAlias": "border",
-              "opacity": 1
-            }
-          ],
-          "textColor": {
-            "hex": "#E2E8F0",
-            "tokenAlias": "foreground"
-          }
-        }
-      },
-      {
-        "id": "580:685",
-        "name": "TokenBarRow",
-        "path": [
-          "body",
-          "TokenBarRow"
-        ],
-        "mainComponentSetId": "555:449",
-        "variantOverrides": null,
-        "componentPropertyOverrides": {
-          "percent": "25.2%",
-          "cost": "$0.016",
-          "tokens": "12.1k",
-          "tool": "Read"
-        },
-        "resolvedStyles": {
-          "fills": [],
-          "strokes": [
-            {
-              "hex": "#1E293B",
-              "tokenAlias": "border",
-              "opacity": 1
-            }
-          ],
-          "textColor": {
-            "hex": "#E2E8F0",
-            "tokenAlias": "foreground"
-          }
-        }
-      },
-      {
-        "id": "580:695",
-        "name": "TokenBarRow",
-        "path": [
-          "body",
-          "TokenBarRow"
-        ],
-        "mainComponentSetId": "555:449",
-        "variantOverrides": null,
-        "componentPropertyOverrides": {
-          "percent": "20.1%",
-          "cost": "$0.013",
-          "tokens": "9.6k",
-          "tool": "Edit"
-        },
-        "resolvedStyles": {
-          "fills": [],
-          "strokes": [
-            {
-              "hex": "#1E293B",
-              "tokenAlias": "border",
-              "opacity": 1
-            }
-          ],
-          "textColor": {
-            "hex": "#E2E8F0",
-            "tokenAlias": "foreground"
-          }
-        }
-      },
-      {
-        "id": "580:705",
-        "name": "TokenBarRow",
-        "path": [
-          "body",
-          "TokenBarRow"
-        ],
-        "mainComponentSetId": "555:449",
-        "variantOverrides": null,
-        "componentPropertyOverrides": {
-          "percent": "8.8%",
-          "cost": "$0.0055",
-          "tokens": "4.2k",
-          "tool": "Grep"
-        },
-        "resolvedStyles": {
-          "fills": [],
-          "strokes": [
-            {
-              "hex": "#1E293B",
-              "tokenAlias": "border",
-              "opacity": 1
-            }
-          ],
-          "textColor": {
-            "hex": "#E2E8F0",
-            "tokenAlias": "foreground"
-          }
-        }
-      },
-      {
-        "id": "580:715",
-        "name": "TokenBarRow",
-        "path": [
-          "body",
-          "TokenBarRow"
-        ],
-        "mainComponentSetId": "555:449",
-        "variantOverrides": null,
-        "componentPropertyOverrides": {
-          "percent": "3.8%",
-          "cost": "$0.0024",
-          "tokens": "1.8k",
-          "tool": "Glob"
-        },
-        "resolvedStyles": {
-          "fills": [],
-          "strokes": [
-            {
-              "hex": "#1E293B",
-              "tokenAlias": "border",
-              "opacity": 1
-            }
-          ],
-          "textColor": {
-            "hex": "#E2E8F0",
-            "tokenAlias": "foreground"
-          }
-        }
-      },
-      {
-        "id": "580:725",
-        "name": "TokenBarRow",
-        "path": [
-          "body",
-          "TokenBarRow"
-        ],
-        "mainComponentSetId": "555:449",
-        "variantOverrides": null,
-        "componentPropertyOverrides": {
-          "percent": "2.6%",
-          "cost": "$0.0016",
-          "tokens": "1.2k",
-          "tool": "Question"
-        },
-        "resolvedStyles": {
-          "fills": [],
-          "strokes": [
-            {
-              "hex": "#1E293B",
-              "tokenAlias": "border",
-              "opacity": 1
-            }
-          ],
-          "textColor": {
-            "hex": "#E2E8F0",
-            "tokenAlias": "foreground"
-          }
-        }
-      },
-      {
-        "id": "580:735",
-        "name": "TokenBarRow",
-        "path": [
-          "body",
-          "TokenBarRow"
-        ],
-        "mainComponentSetId": "555:449",
-        "variantOverrides": null,
-        "componentPropertyOverrides": {
-          "percent": "1.1%",
-          "cost": "$0.0007",
-          "tokens": "510",
-          "tool": "Write"
-        },
-        "resolvedStyles": {
-          "fills": [],
-          "strokes": [
-            {
-              "hex": "#1E293B",
-              "tokenAlias": "border",
-              "opacity": 1
-            }
-          ],
-          "textColor": {
-            "hex": "#E2E8F0",
-            "tokenAlias": "foreground"
-          }
-        }
-      }
-    ],
-    "depthWarnings": []
+    ]
   }
 }

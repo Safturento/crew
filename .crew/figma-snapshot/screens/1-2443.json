@@ -134,9 +134,63 @@
   },
   "enrichment": {
     "source": "plugin-api",
-    "capturedAt": "2026-06-10T02:10:45.339Z",
-    "componentProperties": null,
-    "mainComponent": null,
+    "capturedAt": "2026-06-24T14:59:12.326Z",
+    "componentInstances": [
+      {
+        "id": "244:1011",
+        "name": "TopNav",
+        "mainComponentSetId": "245:133",
+        "variantOverrides": "Active Tab=projects",
+        "componentPropertyOverrides": {
+          "Show New Run": true,
+          "Attention Count": "3",
+          "Show Attention": true,
+          "Active Tab": "projects"
+        },
+        "resolvedStyles": {
+          "strokes": [
+            {
+              "hex": "#1E293B",
+              "tokenAlias": "border",
+              "opacity": 1
+            }
+          ],
+          "textColor": {
+            "hex": "#E2E8F0",
+            "tokenAlias": "foreground"
+          }
+        }
+      },
+      {
+        "id": "199:254",
+        "name": "ProjectHeader: kanban-api",
+        "mainComponentSetId": "220:315",
+        "resolvedStyles": {
+          "textColor": {
+            "hex": "#94A3B8",
+            "tokenAlias": "muted-foreground"
+          }
+        }
+      },
+      {
+        "id": "199:268",
+        "name": "ProjectConfigBlock",
+        "mainComponentSetId": "220:318",
+        "resolvedStyles": {
+          "fills": [
+            {
+              "hex": "#0F172A",
+              "tokenAlias": "card",
+              "opacity": 1
+            }
+          ],
+          "textColor": {
+            "hex": "#94A3B8",
+            "tokenAlias": "muted-foreground"
+          }
+        }
+      }
+    ],
     "boundVariables": [
       {
         "path": "fills[0].color",
@@ -165,89 +219,6 @@
         "variableName": "background",
         "resolvedAlias": "background -> slate/950",
         "resolvedHex": "#020617"
-      }
-    ],
-    "componentInstances": [
-      {
-        "id": "244:1011",
-        "name": "TopNav",
-        "path": [
-          "Background+Border+Shadow",
-          "Container",
-          "TopNav"
-        ],
-        "mainComponentSetId": "245:133",
-        "variantOverrides": "Active Tab=projects",
-        "componentPropertyOverrides": {
-          "Show New Run": true,
-          "Attention Count": "3",
-          "Show Attention": true,
-          "Active Tab": "projects"
-        },
-        "resolvedStyles": {
-          "fills": [],
-          "strokes": [
-            {
-              "hex": "#1E293B",
-              "tokenAlias": "border",
-              "opacity": 1
-            }
-          ],
-          "textColor": {
-            "hex": "#E2E8F0",
-            "tokenAlias": "foreground"
-          }
-        }
-      },
-      {
-        "id": "199:254",
-        "name": "ProjectHeader: kanban-api",
-        "path": [
-          "Background+Border+Shadow",
-          "Container",
-          "Main",
-          "Container",
-          "ProjectHeader: kanban-api"
-        ],
-        "mainComponentSetId": "220:315",
-        "variantOverrides": null,
-        "componentPropertyOverrides": {},
-        "resolvedStyles": {
-          "fills": [],
-          "strokes": [],
-          "textColor": {
-            "hex": "#94A3B8",
-            "tokenAlias": "muted-foreground"
-          }
-        }
-      },
-      {
-        "id": "199:268",
-        "name": "ProjectConfigBlock",
-        "path": [
-          "Background+Border+Shadow",
-          "Container",
-          "Main",
-          "Container",
-          "ProjectConfigBlock"
-        ],
-        "mainComponentSetId": "220:318",
-        "variantOverrides": null,
-        "componentPropertyOverrides": {},
-        "resolvedStyles": {
-          "fills": [
-            {
-              "hex": "#0F172A",
-              "tokenAlias": "card",
-              "opacity": 1
-            }
-          ],
-          "strokes": [],
-          "textColor": {
-            "hex": "#94A3B8",
-            "tokenAlias": "muted-foreground"
-          }
-        }
       }
     ],
     "depthWarnings": [

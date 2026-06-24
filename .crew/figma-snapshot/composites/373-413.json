@@ -151,40 +151,11 @@
   },
   "enrichment": {
     "source": "plugin-api",
-    "capturedAt": "2026-06-10T02:08:44.569Z",
-    "componentProperties": null,
-    "mainComponent": null,
-    "boundVariables": [
-      {
-        "path": "fills[0].color",
-        "variableId": "VariableID:217:213",
-        "variableName": "background",
-        "resolvedAlias": "background -> slate/950",
-        "resolvedHex": "#020617"
-      },
-      {
-        "path": "strokes[0].color",
-        "variableId": "VariableID:217:224",
-        "variableName": "border",
-        "resolvedAlias": "border -> slate/800",
-        "resolvedHex": "#1E293B"
-      },
-      {
-        "path": "backgrounds[0].color",
-        "variableId": "VariableID:217:213",
-        "variableName": "background",
-        "resolvedAlias": "background -> slate/950",
-        "resolvedHex": "#020617"
-      }
-    ],
+    "capturedAt": "2026-06-24T14:59:12.434Z",
     "componentInstances": [
       {
         "id": "373:417",
         "name": "cancel",
-        "path": [
-          "footer",
-          "cancel"
-        ],
         "mainComponentSetId": "272:120",
         "variantOverrides": "type=button-sm, color=running, intensity=mid, font=sans",
         "componentPropertyOverrides": {
@@ -220,10 +191,6 @@
       {
         "id": "373:422",
         "name": "action",
-        "path": [
-          "footer",
-          "action"
-        ],
         "mainComponentSetId": "272:120",
         "variantOverrides": "type=button-sm, color=error, intensity=loud, font=sans",
         "componentPropertyOverrides": {
@@ -243,7 +210,6 @@
               "opacity": 1
             }
           ],
-          "strokes": [],
           "textColor": {
             "hex": "#020617",
             "tokenAlias": "state/foreground"
@@ -251,6 +217,28 @@
         }
       }
     ],
-    "depthWarnings": []
+    "boundVariables": [
+      {
+        "path": "fills[0].color",
+        "variableId": "VariableID:217:213",
+        "variableName": "background",
+        "resolvedAlias": "background -> slate/950",
+        "resolvedHex": "#020617"
+      },
+      {
+        "path": "strokes[0].color",
+        "variableId": "VariableID:217:224",
+        "variableName": "border",
+        "resolvedAlias": "border -> slate/800",
+        "resolvedHex": "#1E293B"
+      },
+      {
+        "path": "backgrounds[0].color",
+        "variableId": "VariableID:217:213",
+        "variableName": "background",
+        "resolvedAlias": "background -> slate/950",
+        "resolvedHex": "#020617"
+      }
+    ]
   }
 }

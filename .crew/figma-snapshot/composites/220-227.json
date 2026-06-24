@@ -98,9 +98,8 @@
   },
   "enrichment": {
     "source": "plugin-api",
-    "capturedAt": "2026-06-10T01:11:37.165Z",
-    "componentProperties": null,
-    "mainComponent": null,
+    "capturedAt": "2026-06-24T14:36:25.170Z",
+    "componentInstances": [],
     "boundVariables": [
       {
         "path": "fills[0].color",
@@ -116,8 +115,6 @@
         "resolvedAlias": "background -> slate/950",
         "resolvedHex": "#020617"
       }
-    ],
-    "componentInstances": [],
-    "depthWarnings": []
+    ]
   }
 }

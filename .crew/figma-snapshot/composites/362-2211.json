@@ -56,25 +56,17 @@
   },
   "enrichment": {
     "source": "plugin-api",
-    "capturedAt": "2026-06-10T02:08:44.291Z",
-    "componentProperties": null,
-    "mainComponent": null,
-    "boundVariables": [],
+    "capturedAt": "2026-06-24T14:38:52.339Z",
     "componentInstances": [
       {
         "id": "379:417",
         "name": "stepper",
-        "path": [
-          "stepper"
-        ],
         "mainComponentSetId": "378:462",
         "variantOverrides": "active=1",
         "componentPropertyOverrides": {
           "active": "1"
         },
         "resolvedStyles": {
-          "fills": [],
-          "strokes": [],
           "textColor": {
             "hex": "#E2E8F0",
             "tokenAlias": "foreground"
@@ -84,12 +76,7 @@
       {
         "id": "351:2330",
         "name": "ModalSelectionRow",
-        "path": [
-          "Container",
-          "ModalSelectionRow"
-        ],
         "mainComponentSetId": "350:236",
-        "variantOverrides": null,
         "componentPropertyOverrides": {
           "Meta": "KAN",
           "Secondary": "~/code/kanban-api",
@@ -120,12 +107,7 @@
       {
         "id": "351:2342",
         "name": "ModalSelectionRow",
-        "path": [
-          "Container",
-          "ModalSelectionRow"
-        ],
         "mainComponentSetId": "350:236",
-        "variantOverrides": null,
         "componentPropertyOverrides": {
           "Meta": "CREW",
           "Secondary": "~/code/crew",
@@ -156,12 +138,7 @@
       {
         "id": "351:2352",
         "name": "ModalSelectionRow",
-        "path": [
-          "Container",
-          "ModalSelectionRow"
-        ],
         "mainComponentSetId": "350:236",
-        "variantOverrides": null,
         "componentPropertyOverrides": {
           "Meta": "LH",
           "Secondary": "~/code/lighthouse",
@@ -192,12 +169,7 @@
       {
         "id": "351:2362",
         "name": "ModalSelectionRow",
-        "path": [
-          "Container",
-          "ModalSelectionRow"
-        ],
         "mainComponentSetId": "350:236",
-        "variantOverrides": null,
         "componentPropertyOverrides": {
           "Meta": "MAIL",
           "Secondary": "~/code/mailer-svc",
@@ -225,7 +197,6 @@
           }
         }
       }
-    ],
-    "depthWarnings": []
+    ]
   }
 }

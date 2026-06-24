@@ -56,25 +56,17 @@
   },
   "enrichment": {
     "source": "plugin-api",
-    "capturedAt": "2026-06-10T01:11:37.698Z",
-    "componentProperties": null,
-    "mainComponent": null,
-    "boundVariables": [],
+    "capturedAt": "2026-06-24T14:59:12.488Z",
     "componentInstances": [
       {
         "id": "379:447",
         "name": "stepper",
-        "path": [
-          "stepper"
-        ],
         "mainComponentSetId": "378:462",
         "variantOverrides": "active=3",
         "componentPropertyOverrides": {
           "active": "3"
         },
         "resolvedStyles": {
-          "fills": [],
-          "strokes": [],
           "textColor": {
             "hex": "#94A3B8",
             "tokenAlias": "muted-foreground"
@@ -84,10 +76,6 @@
       {
         "id": "278:1465",
         "name": "Pill",
-        "path": [
-          "Container",
-          "Pill"
-        ],
         "mainComponentSetId": "272:120",
         "variantOverrides": "type=button-sm, color=running, intensity=mid, font=sans",
         "componentPropertyOverrides": {
@@ -123,10 +111,6 @@
       {
         "id": "278:1470",
         "name": "Pill",
-        "path": [
-          "Container",
-          "Pill"
-        ],
         "mainComponentSetId": "272:120",
         "variantOverrides": "type=button-sm, color=white, intensity=loud, font=sans",
         "componentPropertyOverrides": {
@@ -146,14 +130,12 @@
               "opacity": 1
             }
           ],
-          "strokes": [],
           "textColor": {
             "hex": "#09090B",
             "tokenAlias": "zinc/950"
           }
         }
       }
-    ],
-    "depthWarnings": []
+    ]
   }
 }

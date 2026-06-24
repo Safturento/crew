@@ -56,26 +56,16 @@
   },
   "enrichment": {
     "source": "plugin-api",
-    "capturedAt": "2026-06-10T02:08:44.204Z",
-    "componentProperties": null,
-    "mainComponent": null,
-    "boundVariables": [],
+    "capturedAt": "2026-06-24T14:55:10.062Z",
     "componentInstances": [
       {
         "id": "338:1709",
         "name": "FormField",
-        "path": [
-          "Container",
-          "FormField"
-        ],
         "mainComponentSetId": "337:234",
-        "variantOverrides": null,
         "componentPropertyOverrides": {
           "Label": "NAME"
         },
         "resolvedStyles": {
-          "fills": [],
-          "strokes": [],
           "textColor": {
             "hex": "#94A3B8",
             "tokenAlias": "muted-foreground"
@@ -85,18 +75,11 @@
       {
         "id": "338:1716",
         "name": "FormField",
-        "path": [
-          "Container",
-          "FormField"
-        ],
         "mainComponentSetId": "337:234",
-        "variantOverrides": null,
         "componentPropertyOverrides": {
           "Label": "REPO PATH"
         },
         "resolvedStyles": {
-          "fills": [],
-          "strokes": [],
           "textColor": {
             "hex": "#94A3B8",
             "tokenAlias": "muted-foreground"
@@ -106,18 +89,11 @@
       {
         "id": "338:1723",
         "name": "FormField",
-        "path": [
-          "Container",
-          "FormField"
-        ],
         "mainComponentSetId": "337:234",
-        "variantOverrides": null,
         "componentPropertyOverrides": {
           "Label": "DEFAULT BRANCH"
         },
         "resolvedStyles": {
-          "fills": [],
-          "strokes": [],
           "textColor": {
             "hex": "#94A3B8",
             "tokenAlias": "muted-foreground"
@@ -127,18 +103,11 @@
       {
         "id": "338:1730",
         "name": "FormField",
-        "path": [
-          "Container",
-          "FormField"
-        ],
         "mainComponentSetId": "337:234",
-        "variantOverrides": null,
         "componentPropertyOverrides": {
           "Label": "JIRA PROJECT KEY"
         },
         "resolvedStyles": {
-          "fills": [],
-          "strokes": [],
           "textColor": {
             "hex": "#94A3B8",
             "tokenAlias": "muted-foreground"
@@ -148,18 +117,11 @@
       {
         "id": "338:1737",
         "name": "FormField",
-        "path": [
-          "Container",
-          "FormField"
-        ],
         "mainComponentSetId": "337:234",
-        "variantOverrides": null,
         "componentPropertyOverrides": {
           "Label": "DOCKER COMPOSE FILE"
         },
         "resolvedStyles": {
-          "fills": [],
-          "strokes": [],
           "textColor": {
             "hex": "#94A3B8",
             "tokenAlias": "muted-foreground"
@@ -169,18 +131,11 @@
       {
         "id": "338:1744",
         "name": "FormField",
-        "path": [
-          "Container",
-          "FormField"
-        ],
         "mainComponentSetId": "337:234",
-        "variantOverrides": null,
         "componentPropertyOverrides": {
           "Label": "TEST COMMAND"
         },
         "resolvedStyles": {
-          "fills": [],
-          "strokes": [],
           "textColor": {
             "hex": "#94A3B8",
             "tokenAlias": "muted-foreground"
@@ -190,10 +145,6 @@
       {
         "id": "278:1511",
         "name": "Pill",
-        "path": [
-          "Container",
-          "Pill"
-        ],
         "mainComponentSetId": "272:120",
         "variantOverrides": "type=button-sm, color=running, intensity=mid, font=sans",
         "componentPropertyOverrides": {
@@ -229,10 +180,6 @@
       {
         "id": "278:1516",
         "name": "Pill",
-        "path": [
-          "Container",
-          "Pill"
-        ],
         "mainComponentSetId": "272:120",
         "variantOverrides": "type=button-sm, color=white, intensity=loud, font=sans",
         "componentPropertyOverrides": {
@@ -252,14 +199,12 @@
               "opacity": 1
             }
           ],
-          "strokes": [],
           "textColor": {
             "hex": "#09090B",
             "tokenAlias": "zinc/950"
           }
         }
       }
-    ],
-    "depthWarnings": []
+    ]
   }
 }
