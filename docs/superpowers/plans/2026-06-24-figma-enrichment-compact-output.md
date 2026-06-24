@@ -10,7 +10,7 @@
 
 ## Global Constraints
 
-- **Skill-only, interactive.** Edits land under `.claude/skills/`; author via interactive Write, branch `CREW-<key>`, PR like CREW-282. No `crew run`.
+- **Skill-only, interactive.** Edits land under `.claude/skills/`; author via interactive Write, branch `CREW-283`, PR like CREW-282. No `crew run`.
 - **Keep `source: 'plugin-api'` and `componentInstances` (array, even if `[]`) on every entry** — `mergeEnrichment` (`packages/cli/src/lib/figma-snapshot/merge.ts`) rejects an entry without them.
 - **Omit, don't null.** A field that would be null/empty is left out entirely. Key names are otherwise unchanged (no key-shortening).
 - **Drop per-instance `path` entirely** — the consumer never reads it.
@@ -183,7 +183,7 @@ git checkout .crew/figma-snapshot/
 
 ```bash
 git add .claude/skills/figma-snapshot-refresh/enrichment-script.js
-git commit -m "feat(skill): compact figma-snapshot enrichment output (CREW-<key>)"
+git commit -m "feat(skill): compact figma-snapshot enrichment output (CREW-283)"
 ```
 
 ---
@@ -205,7 +205,7 @@ Add a red-flags row (or a note under step 4's batching guidance): if the sizing 
 
 ```bash
 git add .claude/skills/figma-snapshot-refresh/SKILL.md
-git commit -m "docs(skill): note compact enrichment output + oversized-node signal (CREW-<key>)"
+git commit -m "docs(skill): note compact enrichment output + oversized-node signal (CREW-283)"
 ```
 
 ---
@@ -224,7 +224,7 @@ Where these docs show an example `enrichment` / `componentInstances` entry, remo
 
 ```bash
 git add .claude/skills/visual-fidelity-check/
-git commit -m "docs(skill): align visual-fidelity-check examples with compact enrichment (CREW-<key>)"
+git commit -m "docs(skill): align visual-fidelity-check examples with compact enrichment (CREW-283)"
 ```
 
 ---
@@ -237,10 +237,10 @@ git commit -m "docs(skill): align visual-fidelity-check examples with compact en
 
 - [ ] **Step 2: Push + PR**
 
-Branch `CREW-<key>`, PR against `main`. Body: the compaction rules, the before/after size for `665:864`, and the live round-trip evidence. Mark it interactive.
+Branch `CREW-283`, PR against `main`. Body: the compaction rules, the before/after size for `665:864`, and the live round-trip evidence. Mark it interactive.
 
 ## Self-Review
 
 - **Spec coverage:** compaction rules → Task 1 steps 1–2 (table mapped field-by-field); `source`/`componentInstances` retained → Task 1 step 2; drop `path` → Task 1 step 1; SKILL.md note + chunking signal → Task 2; consumer doc refresh → Task 3; backward-compat (omit-not-null) → inherent in conditional assignment; verification (probe + round-trip + spot-check) → Task 1 steps 4–5; doc parity → Task 4; out-of-scope (no CLI/test change) → respected (no such tasks). All covered.
-- **Placeholder scan:** none — `CREW-<key>` is a deliberate fill-in at ticket-creation, not a content gap; all code shown in full.
+- **Placeholder scan:** none — `CREW-283` is a deliberate fill-in at ticket-creation, not a content gap; all code shown in full.
 - **Type/shape consistency:** `instanceEntry` emits `{ id, name, mainComponentSetId, variantOverrides?, componentPropertyOverrides?, resolvedStyles? }`; top-level emits `{ source, capturedAt, componentInstances, componentProperties?, mainComponent?, boundVariables?, depthWarnings? }` — consistent across steps and matches the spec's two tables and the consumer's read set. `boundVariables[].path` (property-path string) explicitly distinguished from the dropped per-instance `path` array.

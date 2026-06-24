@@ -733,6 +733,8 @@ The "synthetic Unregistered section" feels right — single render path, no extr
 
 #### 2026-06-23 — Compact `use_figma` enrichment output + auto-batch sizing to cut snapshot-refresh round-trips
 
+**Ticket:** [CREW-283](https://safturento.atlassian.net/browse/CREW-283) — *interactive; covers the **compaction** half only. The auto-batch-sizing half remains deferred (this entry stays partly open until that ships or is abandoned).*
+
 **What:** Even after `crew figma-snapshot --enrich` (Epic CREW-280) removes the per-node hand-merge, a full snapshot refresh still costs ~9 `use_figma` round-trips because each response must stay under the ~20 KB cap and the agent eyeballs the batch size (~5–8 nodes). Two orthogonal reductions remain: (a) reshape `enrichment-script.js` to emit a more compact payload (drop null fields, shorten keys) so more nodes fit per batch; (b) have the skill/CLI run the existing sizing-probe and compute batch boundaries automatically instead of the agent guessing. Both shrink the number of `use_figma` calls a full refresh needs.
 
 **Why noticed:** Explicitly scoped *out* of Epic CREW-280 (the `--enrich` merge work) during the 2026-06-23 brainstorm — they change the per-node file format and/or the skill's batching flow, which the merge ticket deliberately avoids. Parked here so the round-trip-count half of the original friction isn't lost once the hand-merge half ships. See the Epic's "Out of scope" section and the spec's Non-goals.
