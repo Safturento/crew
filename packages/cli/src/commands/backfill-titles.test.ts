@@ -12,7 +12,7 @@ const baseConfig: ProjectConfig = {
   name: 'demo',
   repo_path: '/home/u/Repos/demo',
   default_branch: 'main',
-  jira: { project_key: 'DEMO', site: 'https://x.atlassian.net' },
+  jira: { project_key: 'DEMO', site: 'https://x.atlassian.net', ready_status: 'Ready for Development' },
   github: { repo: 'u/demo' },
   db_clone: {
     postgres_service: 'postgres',

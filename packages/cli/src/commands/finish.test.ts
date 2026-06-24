@@ -76,6 +76,7 @@ const sampleConfig: ProjectConfig = {
   jira: {
     project_key: 'KAN',
     site: 'https://safturento.atlassian.net',
+    ready_status: 'Ready for Development',
   },
   github: { repo: 'Safturento/Recipes' },
   db_clone: {

@@ -4,12 +4,29 @@ export interface JiraClientOptions {
   token: string;
 }
 
+export interface JiraLinkedIssue {
+  key: string;
+  fields: {
+    summary?: string;
+    status?: { name: string; statusCategory?: { key: string; name?: string } };
+  };
+}
+
+export interface JiraIssueLink {
+  type: { name: string; inward: string; outward: string };
+  inwardIssue?: JiraLinkedIssue;
+  outwardIssue?: JiraLinkedIssue;
+}
+
 export interface JiraIssue {
   key: string;
   fields: {
-    status: { name: string };
+    summary?: string;
+    status: { name: string; statusCategory?: { key: string; name?: string } };
     issuetype?: { name: string };
-    parent?: { key: string };
+    priority?: { name: string } | null;
+    parent?: { key: string; fields?: { summary?: string } };
+    issuelinks?: JiraIssueLink[];
     [k: string]: unknown;
   };
   [k: string]: unknown;
@@ -46,6 +63,20 @@ export class JiraClient {
       method: 'POST',
       body: JSON.stringify({ transition: { id: transitionId } }),
     });
+  }
+
+  /**
+   * JQL search via the v3 `/search/jql` endpoint. Single page of up to 100
+   * issues — the picker's Ready-for-Development list is small, so pagination
+   * is intentionally omitted (YAGNI). `fields` is the comma-joined field list
+   * to hydrate (e.g. `['summary','status','parent','priority','issuelinks']`).
+   */
+  async searchIssues(jql: string, fields: string[]): Promise<JiraIssue[]> {
+    const params = new URLSearchParams({ jql, fields: fields.join(','), maxResults: '100' });
+    const body = await this.request<{ issues?: JiraIssue[] }>(
+      `/rest/api/3/search/jql?${params.toString()}`,
+    );
+    return body.issues ?? [];
   }
 
   private async request<T>(path: string, init?: RequestInit): Promise<T> {

@@ -23,7 +23,7 @@ const stubConfig = (canonical: string): ProjectConfig =>
     name: 'test',
     repo_path: dir,
     default_branch: 'main',
-    jira: { project_key: 'KAN', site: 'https://x.atlassian.net' },
+    jira: { project_key: 'KAN', site: 'https://x.atlassian.net', ready_status: 'Ready for Development' },
     github: { repo: 'x/y' },
     docker: {
       canonical_worktree: canonical,

@@ -17,7 +17,7 @@ function baseConfig(): ProjectConfig {
     name: 'test',
     repo_path: '/repo',
     default_branch: 'main',
-    jira: { project_key: 'X', site: 'https://x.atlassian.net' },
+    jira: { project_key: 'X', site: 'https://x.atlassian.net', ready_status: 'Ready for Development' },
     github: { repo: 'a/b' },
     db_clone: {
       postgres_service: 'postgres',

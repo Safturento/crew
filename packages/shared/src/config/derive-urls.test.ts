@@ -7,7 +7,11 @@ function makeConfig(overrides: Partial<ProjectConfig> = {}): ProjectConfig {
     name: 'kanban-api',
     repo_path: '~/code/kanban-api',
     default_branch: 'main',
-    jira: { project_key: 'KAN', site: 'https://safturento.atlassian.net' },
+    jira: {
+      project_key: 'KAN',
+      site: 'https://safturento.atlassian.net',
+      ready_status: 'Ready for Development',
+    },
     github: { repo: 'safturento/kanban-api' },
     db_clone: {
       postgres_service: 'postgres',
@@ -69,7 +73,11 @@ describe('deriveJiraUrl', () => {
 
   it('strips trailing slash from site', () => {
     const cfg = makeConfig({
-      jira: { project_key: 'KAN', site: 'https://safturento.atlassian.net/' },
+      jira: {
+        project_key: 'KAN',
+        site: 'https://safturento.atlassian.net/',
+        ready_status: 'Ready for Development',
+      },
     });
     expect(deriveJiraUrl(cfg, 'KAN-23')).toBe('https://safturento.atlassian.net/browse/KAN-23');
   });

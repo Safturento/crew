@@ -62,7 +62,11 @@ const SAMPLE_PROJECT_DETAIL: ProjectDetailResponse = {
     name: 'kanban-api',
     repo_path: '~/code/kanban-api',
     default_branch: 'main',
-    jira: { project_key: 'KAN', site: 'https://example.atlassian.net' },
+    jira: {
+      project_key: 'KAN',
+      site: 'https://example.atlassian.net',
+      ready_status: 'Ready for Development',
+    },
     github: { repo: 'example/kanban-api' },
     db_clone: {
       postgres_service: 'postgres',
