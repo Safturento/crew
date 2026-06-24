@@ -760,6 +760,13 @@ Invoke the `agents-doc-parity-check` skill. Expect it to flag `.agents/architect
 - Consumes (from T2, at runtime): `GET /api/projects/:slug/tickets`.
 - Produces: `DaemonClient.listProjectTickets(slug)`; NewRunModal renders the picker.
 
+> **Final design reference (authoritative — supersedes the inline JSX sketch below where they differ).** The step-2 design was built in Figma on **2026-06-23** and approved. Source of truth: frame `1:3418` / component **`NewRunStep2Content`** (`362:2212`, Composites page) in Crew file `9FeJPriqdsdA4n9R5Xsrr8`; run `visual-fidelity-check` against it. Specifics the code must match:
+> - **"Available only" toggle on the "Pick a ticket" header row** (right-aligned, off by default), not a separate row under the search. Uses the DS `Switch`.
+> - **Epic group header** = key-prefixed (`KAN-30 · Drag-and-drop reordering`); the **KEY is a link** to the Jira ticket (`button/link-fg` token + underline). Parent-less tickets → an "Ungrouped" group.
+> - **Row anatomy:** `primary`=KEY, `secondary`=summary, `meta`=blocker (blocked rows only, inline before the badge), right `badge`=priority (normal) / `running` state badge (active). Blocked + running rows are `disabled` (which dims to opacity-50 and blocks selection). This replaces the earlier "`primary` = `KEY · summary`, blocker in `secondary`" sketch.
+> - Confirm step (`9:2`) already has the Title row — no Figma change there; the code change is only adding the Title `SummaryRow` (Step 10).
+> The `jiraBrowseBase` for the epic-key link isn't on the dashboard `Project` type today — surface it via the tickets response or the project-detail endpoint. **Note:** if this needs a field on the T1 `ProjectTicketsResponse` contract and T1 (CREW-277) has already merged, add it in T2 as a small shared-schema extension rather than reopening T1.
+
 ### 3a — Client method
 
 - [ ] **Step 1: Add to the `DaemonClient` interface**
@@ -1157,17 +1164,36 @@ function TicketList({
   if (groups.length === 0) return <p className="text-xs text-muted-foreground">No tickets match.</p>;
 
   return (
-    <div className="flex max-h-72 flex-col gap-3 overflow-y-auto">
+    <div className="flex max-h-72 flex-col gap-3.5 overflow-y-auto">
       {groups.map((g) => (
-        <div key={g.epicKey ?? '__ungrouped__'} className="flex flex-col gap-2">
-          <p className="text-[11px] uppercase text-muted-foreground">{g.epicSummary ?? 'Ungrouped'}</p>
+        <div key={g.epicKey ?? '__ungrouped__'} className="flex flex-col gap-1">
+          {/* Epic header: key-prefixed, uppercase muted; the KEY is a link to the Jira ticket.
+              The browse base (project's jira.site) isn't in the dashboard Project type today —
+              surface it via the tickets response or the project-detail endpoint; see the
+              "Final design reference" note above. Parent-less group → "Ungrouped". */}
+          <p className="text-[11px] uppercase tracking-wide text-muted-foreground">
+            {g.epicKey ? (
+              <>
+                <a href={`${jiraBrowseBase}/${g.epicKey}`} target="_blank" rel="noreferrer" className="text-link underline">
+                  {g.epicKey}
+                </a>{' '}· {g.epicSummary}
+              </>
+            ) : (
+              'Ungrouped'
+            )}
+          </p>
           {g.tickets.map((t) => {
             const disabled = !t.runnable || t.hasActiveAgent;
             return (
+              // Row anatomy (matches Figma NewRunStep2Content): primary=KEY, secondary=summary,
+              // meta=blocker (blocked only, inline before the badge). The `disabled` prop both
+              // dims the row (opacity-50, from Step 7) and blocks selection — covering the
+              // blocked + running states. Running swaps the badge to the running state badge.
               <ModalSelectionRow
                 key={t.key}
-                primary={`${t.key} · ${t.summary}`}
-                secondary={!t.runnable ? `blocked by ${t.blockedBy.map((b) => b.key).join(', ')}` : undefined}
+                primary={t.key}
+                secondary={t.summary}
+                meta={!t.runnable ? `blocked by ${t.blockedBy.map((b) => b.key).join(', ')}` : undefined}
                 badge={
                   t.hasActiveAgent ? <Badge color="running" intensity="mid">running</Badge>
                   : t.priority ? <Badge color="finished" intensity="mid">{t.priority}</Badge>
