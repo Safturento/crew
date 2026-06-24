@@ -344,6 +344,21 @@ describe('runFigmaSnapshot', () => {
       expect(readFileSync(join(snap, 'composites', '220-211.json'), 'utf8')).toBe(before);
     });
 
+    it('fails (ok:false) when the enrich file is an empty map', async () => {
+      const snap = setupSnapshot();
+      const before = readFileSync(join(snap, 'composites', '220-211.json'), 'utf8');
+      const enrichFile = join(dir, 'empty.json');
+      writeFileSync(enrichFile, JSON.stringify({}));
+
+      const result = await runFigmaSnapshot(
+        makeDeps({ worktree: dir, config: vfConfig, enrichFile }),
+      );
+
+      expect(result.ok).toBe(false);
+      expect(result.reason).toMatch(/no nodes/i);
+      expect(readFileSync(join(snap, 'composites', '220-211.json'), 'utf8')).toBe(before);
+    });
+
     it('fails cleanly when the enrich file is unparseable JSON', async () => {
       setupSnapshot();
       const enrichFile = join(dir, 'bad.json');

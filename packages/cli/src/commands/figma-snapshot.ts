@@ -136,6 +136,12 @@ function runEnrich(deps: FigmaSnapshotDeps, outDir: string): FigmaSnapshotResult
     return { ok: false, reason: `enrichment file is not valid JSON: ${(err as Error).message}` };
   }
 
+  // Fail-closed on an empty map: a zero-node enrich file is a mistake (wrong file
+  // or empty selection), and reporting `✓ enriched 0 node(s)` would mask it.
+  if (Object.keys(map).length === 0) {
+    return { ok: false, reason: `enrichment file ${enrichFile} contained no nodes` };
+  }
+
   let result;
   try {
     result = mergeEnrichment({ outDir, enrichmentMap: map });
