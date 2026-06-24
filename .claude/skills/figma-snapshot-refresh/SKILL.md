@@ -80,16 +80,25 @@ design feeds into code. (`visual-fidelity-check` is the consumer gate, after cod
     `out[id] = JSON.stringify(enrichment).length;` returns one byte count
     per node in a single small response.
 
-- [ ] **5. Merge.** For each returned entry, add its enrichment object as a
-  top-level `enrichment` field on that node's per-node JSON file (path is in
-  `index.json`'s `metadataPath`). Do NOT modify the `raw` field. Partial
-  refresh touches only the named nodes' files; siblings stay untouched.
+- [ ] **5. Merge.** Write the `use_figma` result (the `{ nodeId: enrichment }`
+  object) **verbatim** to a temp file, then run
+  `crew figma-snapshot --enrich <file>`. The command maps each node to its
+  per-node JSON via `index.json`, sets the top-level `enrichment` field
+  (leaving `raw` untouched), and writes **atomically**. One invocation per
+  batch — write the batch's result, enrich it, then fetch the next batch. Do
+  **not** hand-edit the per-node JSON files; `--enrich` is the only merge path.
 
-- [ ] **6. Verify — fail closed.** Confirm every refreshed node now has an
-  `enrichment` field carrying `componentInstances`. Partial refresh verifies
-  only the named nodes. If `use_figma` errored, any refreshed node is
-  unenriched, or the script returned `{ error }` for a node — STOP and
-  surface the failure. Do **not** commit a REST-only or partially-enriched
+  On success it prints `✓ figma-snapshot enrichment merged (N node(s))`.
+  Partial refresh touches only the named nodes' files; siblings stay untouched.
+  (`--enrich` does not update `meta.json` — same as `--node-id`.)
+
+- [ ] **6. Verify — fail closed (the command enforces it).** `--enrich` is
+  atomic and fail-closed: if any node carries an `{ error }`, is absent from
+  `index.json`, or has a malformed payload, it writes **nothing** and exits
+  non-zero with `✗ enrichment failed: <id> (<reason>), …`. A zero-node file
+  also fails. A non-zero exit means the batch did **not** merge — fix the
+  cause and re-run the whole batch. (If `use_figma` itself errored you have no
+  file to pass — re-run step 4.) Never commit a REST-only or partially-enriched
   snapshot.
 
 - [ ] **7. Commit.** `git add .crew/figma-snapshot/` then commit.
@@ -99,7 +108,7 @@ design feeds into code. (`visual-fidelity-check` is the consumer gate, after cod
 | Thought | Reality |
 |---|---|
 | "The export ran, just commit it" | A bare `crew figma-snapshot` is REST-only. Without enrichment (steps 4–6) the snapshot has no `enrichment` field and `visual-fidelity-check` can't use it. |
-| "use_figma half-failed — I'll commit what enriched" | Partial enrichment is a broken snapshot. Fail closed at step 6. |
-| "I'll hand-edit the JSON instead of re-exporting" | Don't. `raw` and `enrichment` must come from one consistent capture — run the procedure. |
+| "use_figma half-failed — I'll commit what enriched" | You can't — `--enrich` is atomic. One bad node ⇒ zero writes + non-zero exit. Fix the cause, re-run the whole batch. |
+| "I'll hand-edit the per-node JSON instead of running --enrich" | Don't. The command does the validation, the atomic write, and the fail-closed check. Hand-editing bypasses all three and risks a half-merged snapshot. |
 | "`--check` said fresh but I'll regenerate anyway" | Fresh means current. Stop at step 1. |
 | "I'll partial-refresh and update meta.json myself" | Don't. meta.json's staleness is the safe signal that siblings may have drifted. Full refresh is the way to clear stale. |
