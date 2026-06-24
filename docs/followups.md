@@ -731,6 +731,25 @@ The "synthetic Unregistered section" feels right — single render path, no extr
 
 ### Daemon, CLI & Dispatch
 
+#### 2026-06-23 — Compact `use_figma` enrichment output + auto-batch sizing to cut snapshot-refresh round-trips
+
+**What:** Even after `crew figma-snapshot --enrich` (Epic CREW-280) removes the per-node hand-merge, a full snapshot refresh still costs ~9 `use_figma` round-trips because each response must stay under the ~20 KB cap and the agent eyeballs the batch size (~5–8 nodes). Two orthogonal reductions remain: (a) reshape `enrichment-script.js` to emit a more compact payload (drop null fields, shorten keys) so more nodes fit per batch; (b) have the skill/CLI run the existing sizing-probe and compute batch boundaries automatically instead of the agent guessing. Both shrink the number of `use_figma` calls a full refresh needs.
+
+**Why noticed:** Explicitly scoped *out* of Epic CREW-280 (the `--enrich` merge work) during the 2026-06-23 brainstorm — they change the per-node file format and/or the skill's batching flow, which the merge ticket deliberately avoids. Parked here so the round-trip-count half of the original friction isn't lost once the hand-merge half ships. See the Epic's "Out of scope" section and the spec's Non-goals.
+
+**Anchors:**
+
+- `.claude/skills/figma-snapshot-refresh/enrichment-script.js` — the `out[id] = enrichment` shape (compact-output target) and the `JSON.stringify(enrichment).length` sizing-probe variant (auto-batch input).
+- `.claude/skills/figma-snapshot-refresh/SKILL.md` step 4 — the manual "≈5–8 nodes per batch" sizing guidance auto-batching would replace.
+- `docs/superpowers/specs/2026-06-23-figma-snapshot-enrich-design.md` — Non-goals; `docs/superpowers/plans/2026-06-23-figma-snapshot-enrich.md`.
+- Reminder `figma-snapshot-enrichment-friction` — the originating friction (the merge half is CREW-280; this is the round-trip half).
+
+**What's been considered:** Compact output complicates the per-node file format (the `enrichment` field would need re-expansion, or readers would have to understand the shortened keys) — the reason it was split off rather than bundled. Auto-batch sizing is lower-risk (it only automates an existing manual step) but only pays off once `--enrich` lands and the merge stops being the bottleneck. Neither is worth doing until CREW-280 ships and we can measure whether round-trips are still the pain.
+
+**Shape of work:** Two independent small changes. Auto-batch = a CLI helper (or skill step) that runs the sizing probe and emits batch groupings; touches the skill + maybe a `figma-snapshot` flag. Compact output = a format change to `enrichment-script.js` + the `enrichment` field reader/validator (`mergeEnrichment`), so it ripples into the snapshot artifact. Likely two tickets if pursued.
+
+**Open questions:** Is round-trip count still a real cost after the hand-merge is gone, or does the friction effectively disappear? If compact output changes the stored `enrichment` shape, does `visual-fidelity-check` (the consumer) need updating too?
+
 #### 2026-06-20 — `crew resume` emits `run_started` as source `cli-run`, blurring resume vs original-run in the audit trail
 
 **What:** The resume-from-error lifecycle fix (CREW-275 follow-on) made `crew resume` emit its lifecycle events by reusing the existing helpers: `emitRunStarted` (source `cli-run`) before each spawn, and `emitDispatchExited(key, 'run', …)` (source `runner-exit`) on exit. Functionally correct — the daemon reducer doesn't branch on `source` — but it means a resume's `state_transitions` audit rows are indistinguishable from an original `crew run`'s. A dedicated `cli-resume` source would let a timeline/audit view tell "operator resumed this from error" apart from "this is how the run first started."
