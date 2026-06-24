@@ -8,6 +8,8 @@ import {
   discoverProjectConfig,
   emitPartialSnapshot,
   emitSnapshot,
+  mergeEnrichment,
+  type EnrichmentEntry,
   type ProjectConfig,
   type SnapshotMeta,
 } from '../lib/index.js';
@@ -22,6 +24,10 @@ export interface FigmaSnapshotDeps {
   // the partial path instead of the full page-walk export.
   nodeIds?: string[];
   page?: string;
+  // Enrichment-merge input. When set, runFigmaSnapshot routes to the merge path:
+  // it reads this file ({ nodeId: enrichment } from use_figma) and merges it into
+  // the committed per-node files. Mutually exclusive with nodeIds.
+  enrichFile?: string;
 }
 
 export interface FigmaSnapshotResult {
@@ -29,6 +35,7 @@ export interface FigmaSnapshotResult {
   reason?: string;
   nodesExported?: number;
   nodesRefreshed?: number;
+  nodesEnriched?: number;
   outDir?: string;
 }
 
@@ -84,6 +91,11 @@ export async function runFigmaSnapshot(deps: FigmaSnapshotDeps): Promise<FigmaSn
   }
   const outDir = join(deps.worktree, vf.snapshot_path);
 
+  // Route to enrichment-merge path if enrichFile was supplied.
+  if (deps.enrichFile) {
+    return runEnrich(deps, outDir);
+  }
+
   // Route to partial path if nodeIds was supplied.
   if (deps.nodeIds && deps.nodeIds.length > 0) {
     return runPartial(deps, vf, outDir);
@@ -104,6 +116,39 @@ export async function runFigmaSnapshot(deps: FigmaSnapshotDeps): Promise<FigmaSn
   } catch (err) {
     return { ok: false, reason: (err as Error).message };
   }
+}
+
+function runEnrich(deps: FigmaSnapshotDeps, outDir: string): FigmaSnapshotResult {
+  const enrichFile = deps.enrichFile as string;
+  let raw: string;
+  try {
+    raw = readFileSync(enrichFile, 'utf8');
+  } catch (err) {
+    return {
+      ok: false,
+      reason: `cannot read enrichment file ${enrichFile}: ${(err as Error).message}`,
+    };
+  }
+  let map: Record<string, EnrichmentEntry>;
+  try {
+    map = JSON.parse(raw) as Record<string, EnrichmentEntry>;
+  } catch (err) {
+    return { ok: false, reason: `enrichment file is not valid JSON: ${(err as Error).message}` };
+  }
+
+  let result;
+  try {
+    result = mergeEnrichment({ outDir, enrichmentMap: map });
+  } catch (err) {
+    return { ok: false, reason: (err as Error).message };
+  }
+
+  if (result.failed.length > 0) {
+    const detail = result.failed.map((f) => `${f.id} (${f.reason})`).join(', ');
+    return { ok: false, reason: `enrichment failed: ${detail}` };
+  }
+  deps.log(`enriched ${result.refreshed.length} node(s) → ${outDir}`);
+  return { ok: true, nodesEnriched: result.refreshed.length, outDir };
 }
 
 async function runPartial(
@@ -200,9 +245,14 @@ export const figmaSnapshotCommand = new Command('figma-snapshot')
     '--page <name>',
     'page name for unknown IDs in --node-id (must match a configured page in [visual_fidelity].figma_pages)',
   )
-  .action(async (opts: { check?: boolean; nodeId?: string; page?: string }) => {
-    if (opts.check && opts.nodeId) {
-      console.error(pc.red('✗'), '--check and --node-id are mutually exclusive');
+  .option(
+    '--enrich <file>',
+    'merge a use_figma enrichment map (JSON file of { nodeId: enrichment }) into the committed per-node snapshot files. Atomic/fail-closed: writes nothing if any node fails. Does NOT update meta.json.',
+  )
+  .action(async (opts: { check?: boolean; nodeId?: string; page?: string; enrich?: string }) => {
+    const modes = [opts.check, opts.nodeId, opts.enrich].filter(Boolean).length;
+    if (modes > 1) {
+      console.error(pc.red('✗'), '--check, --node-id, and --enrich are mutually exclusive');
       process.exit(1);
     }
 
@@ -295,6 +345,7 @@ export const figmaSnapshotCommand = new Command('figma-snapshot')
       log: (msg) => console.log(pc.dim('→'), msg),
       nodeIds,
       page: opts.page,
+      enrichFile: opts.enrich,
     });
     if (!result.ok) {
       console.error(pc.red('✗'), result.reason ?? 'figma-snapshot failed');
@@ -303,7 +354,12 @@ export const figmaSnapshotCommand = new Command('figma-snapshot')
     if (result.reason) {
       console.log(pc.dim('→'), result.reason);
     }
-    if (typeof result.nodesRefreshed === 'number') {
+    if (typeof result.nodesEnriched === 'number') {
+      console.log(
+        pc.green('✓'),
+        `figma-snapshot enrichment merged (${result.nodesEnriched} node(s))`,
+      );
+    } else if (typeof result.nodesRefreshed === 'number') {
       console.log(
         pc.green('✓'),
         `figma-snapshot partial refresh complete (${result.nodesRefreshed} node(s))`,
