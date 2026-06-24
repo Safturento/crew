@@ -161,7 +161,7 @@ interface FilterRowProps {
   /** Subtree rendered after the row when `expanded` is true. */
   children?: React.ReactNode;
 }
-function FilterRow({
+export function FilterRow({
   id,
   label,
   title,
