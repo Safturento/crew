@@ -34,13 +34,13 @@
       "x": 618,
       "y": 2608,
       "width": 558,
-      "height": 402
+      "height": 476
     },
     "absoluteRenderBounds": {
       "x": 618,
       "y": 2608,
       "width": 558,
-      "height": 402
+      "height": 476
     },
     "constraints": {
       "vertical": "TOP",
@@ -56,25 +56,33 @@
   },
   "enrichment": {
     "source": "plugin-api",
-    "capturedAt": "2026-06-10T02:08:44.408Z",
-    "componentProperties": null,
-    "mainComponent": null,
-    "boundVariables": [],
+    "capturedAt": "2026-06-24T14:50:50.748Z",
     "componentInstances": [
       {
         "id": "379:432",
         "name": "stepper",
-        "path": [
-          "stepper"
-        ],
         "mainComponentSetId": "378:462",
         "variantOverrides": "active=2",
         "componentPropertyOverrides": {
           "active": "2"
         },
         "resolvedStyles": {
-          "fills": [],
-          "strokes": [],
+          "textColor": {
+            "hex": "#94A3B8",
+            "tokenAlias": "muted-foreground"
+          }
+        }
+      },
+      {
+        "id": "811:1174",
+        "name": "Switch",
+        "mainComponentSetId": "335:242",
+        "variantOverrides": "state=off",
+        "componentPropertyOverrides": {
+          "Label": "Available only",
+          "state": "off"
+        },
+        "resolvedStyles": {
           "textColor": {
             "hex": "#94A3B8",
             "tokenAlias": "muted-foreground"
@@ -84,11 +92,7 @@
       {
         "id": "319:1615",
         "name": "Input",
-        "path": [
-          "Input"
-        ],
         "mainComponentSetId": "318:230",
-        "variantOverrides": null,
         "componentPropertyOverrides": {
           "Icon": "lucide/search",
           "Has Icon": true,
@@ -118,12 +122,7 @@
       {
         "id": "351:2372",
         "name": "ModalSelectionRow",
-        "path": [
-          "Container",
-          "ModalSelectionRow"
-        ],
         "mainComponentSetId": "350:236",
-        "variantOverrides": null,
         "componentPropertyOverrides": {
           "Meta": "",
           "Secondary": "Drag-and-drop reordering keeps stale board state",
@@ -154,12 +153,7 @@
       {
         "id": "351:2382",
         "name": "ModalSelectionRow",
-        "path": [
-          "Container",
-          "ModalSelectionRow"
-        ],
         "mainComponentSetId": "350:236",
-        "variantOverrides": null,
         "componentPropertyOverrides": {
           "Meta": "",
           "Secondary": "Restore last session on reload",
@@ -188,50 +182,9 @@
         }
       },
       {
-        "id": "351:2392",
-        "name": "ModalSelectionRow",
-        "path": [
-          "Container",
-          "ModalSelectionRow"
-        ],
-        "mainComponentSetId": "350:236",
-        "variantOverrides": null,
-        "componentPropertyOverrides": {
-          "Meta": "",
-          "Secondary": "Add board archival endpoint",
-          "Show Badge": true,
-          "Primary": "KAN-33"
-        },
-        "resolvedStyles": {
-          "fills": [
-            {
-              "hex": "#0F172A",
-              "tokenAlias": "card",
-              "opacity": 1
-            }
-          ],
-          "strokes": [
-            {
-              "hex": "#1E293B",
-              "tokenAlias": "border",
-              "opacity": 1
-            }
-          ],
-          "textColor": {
-            "hex": "#E2E8F0",
-            "tokenAlias": "foreground"
-          }
-        }
-      },
-      {
         "id": "351:2402",
         "name": "ModalSelectionRow",
-        "path": [
-          "Container",
-          "ModalSelectionRow"
-        ],
         "mainComponentSetId": "350:236",
-        "variantOverrides": null,
         "componentPropertyOverrides": {
           "Meta": "",
           "Secondary": "Audit log timezones across regions",
@@ -262,12 +215,7 @@
       {
         "id": "351:2412",
         "name": "ModalSelectionRow",
-        "path": [
-          "Container",
-          "ModalSelectionRow"
-        ],
         "mainComponentSetId": "350:236",
-        "variantOverrides": null,
         "componentPropertyOverrides": {
           "Meta": "",
           "Secondary": "Theme switcher persistence",
@@ -296,12 +244,39 @@
         }
       },
       {
+        "id": "351:2392",
+        "name": "ModalSelectionRow",
+        "mainComponentSetId": "350:236",
+        "componentPropertyOverrides": {
+          "Meta": "blocked by KAN-31",
+          "Secondary": "Add board archival endpoint",
+          "Show Badge": true,
+          "Primary": "KAN-33"
+        },
+        "resolvedStyles": {
+          "fills": [
+            {
+              "hex": "#0F172A",
+              "tokenAlias": "card",
+              "opacity": 1
+            }
+          ],
+          "strokes": [
+            {
+              "hex": "#1E293B",
+              "tokenAlias": "border",
+              "opacity": 1
+            }
+          ],
+          "textColor": {
+            "hex": "#E2E8F0",
+            "tokenAlias": "foreground"
+          }
+        }
+      },
+      {
         "id": "278:1458",
         "name": "Pill",
-        "path": [
-          "Container",
-          "Pill"
-        ],
         "mainComponentSetId": "272:120",
         "variantOverrides": "type=button-sm, color=running, intensity=mid, font=sans",
         "componentPropertyOverrides": {
@@ -334,7 +309,6 @@
           }
         }
       }
-    ],
-    "depthWarnings": []
+    ]
   }
 }

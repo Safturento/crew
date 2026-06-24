@@ -131,9 +131,132 @@
   },
   "enrichment": {
     "source": "plugin-api",
-    "capturedAt": "2026-06-10T02:17:31.789Z",
-    "componentProperties": null,
-    "mainComponent": null,
+    "capturedAt": "2026-06-24T14:52:59.523Z",
+    "componentInstances": [
+      {
+        "id": "244:1111",
+        "name": "TopNav",
+        "mainComponentSetId": "245:133",
+        "variantOverrides": "Active Tab=agents",
+        "componentPropertyOverrides": {
+          "Attention Count": "3",
+          "Show New Run": true,
+          "Show Attention": true,
+          "Active Tab": "agents"
+        },
+        "resolvedStyles": {
+          "strokes": [
+            {
+              "hex": "#1E293B",
+              "tokenAlias": "border",
+              "opacity": 1
+            }
+          ],
+          "textColor": {
+            "hex": "#E2E8F0",
+            "tokenAlias": "foreground"
+          }
+        }
+      },
+      {
+        "id": "233:873",
+        "name": "ProjectSection",
+        "mainComponentSetId": "220:224",
+        "componentPropertyOverrides": {
+          "Show Open Button": true,
+          "Repo Path": "~/code/kanban-api",
+          "Count Summary": "3 active · 4 total",
+          "Project Name": "kanban-api"
+        },
+        "resolvedStyles": {
+          "textColor": {
+            "hex": "#E2E8F0",
+            "tokenAlias": "foreground"
+          }
+        }
+      },
+      {
+        "id": "233:883",
+        "name": "ProjectSection",
+        "mainComponentSetId": "220:224",
+        "componentPropertyOverrides": {
+          "Show Open Button": true,
+          "Repo Path": "~/code/crew",
+          "Count Summary": "1 active · 2 total",
+          "Project Name": "crew"
+        },
+        "resolvedStyles": {
+          "textColor": {
+            "hex": "#E2E8F0",
+            "tokenAlias": "foreground"
+          }
+        }
+      },
+      {
+        "id": "233:893",
+        "name": "ProjectSection",
+        "mainComponentSetId": "220:224",
+        "componentPropertyOverrides": {
+          "Show Open Button": true,
+          "Repo Path": "~/code/lighthouse",
+          "Count Summary": "1 active · 1 total",
+          "Project Name": "lighthouse"
+        },
+        "resolvedStyles": {
+          "textColor": {
+            "hex": "#E2E8F0",
+            "tokenAlias": "foreground"
+          }
+        }
+      },
+      {
+        "id": "233:903",
+        "name": "ProjectSection",
+        "mainComponentSetId": "220:224",
+        "componentPropertyOverrides": {
+          "Show Open Button": true,
+          "Repo Path": "~/code/mailer-svc",
+          "Count Summary": "1 active · 1 total",
+          "Project Name": "mailer-svc"
+        },
+        "resolvedStyles": {
+          "textColor": {
+            "hex": "#E2E8F0",
+            "tokenAlias": "foreground"
+          }
+        }
+      },
+      {
+        "id": "365:2701",
+        "name": "Modal",
+        "mainComponentSetId": "355:238",
+        "componentPropertyOverrides": {
+          "Show Close": true,
+          "Content": "NewRunStep3Content",
+          "Title": "New Run"
+        },
+        "resolvedStyles": {
+          "fills": [
+            {
+              "hex": "#020617",
+              "tokenAlias": "background",
+              "opacity": 1
+            }
+          ],
+          "strokes": [
+            {
+              "hex": "#1E293B",
+              "tokenAlias": "border",
+              "opacity": 1
+            }
+          ],
+          "textColor": {
+            "hex": "#E2E8F0",
+            "tokenAlias": "foreground"
+          }
+        }
+      }
+    ],
     "boundVariables": [
       {
         "path": "fills[0].color",
@@ -162,188 +285,6 @@
         "variableName": "background",
         "resolvedAlias": "background -> slate/950",
         "resolvedHex": "#020617"
-      }
-    ],
-    "componentInstances": [
-      {
-        "id": "244:1111",
-        "name": "TopNav",
-        "path": [
-          "Background+Border+Shadow",
-          "Container",
-          "TopNav"
-        ],
-        "mainComponentSetId": "245:133",
-        "variantOverrides": "Active Tab=agents",
-        "componentPropertyOverrides": {
-          "Attention Count": "3",
-          "Show New Run": true,
-          "Show Attention": true,
-          "Active Tab": "agents"
-        },
-        "resolvedStyles": {
-          "fills": [],
-          "strokes": [
-            {
-              "hex": "#1E293B",
-              "tokenAlias": "border",
-              "opacity": 1
-            }
-          ],
-          "textColor": {
-            "hex": "#E2E8F0",
-            "tokenAlias": "foreground"
-          }
-        }
-      },
-      {
-        "id": "233:873",
-        "name": "ProjectSection",
-        "path": [
-          "Background+Border+Shadow",
-          "Container",
-          "Main",
-          "Container",
-          "Section",
-          "ProjectSection"
-        ],
-        "mainComponentSetId": "220:224",
-        "variantOverrides": null,
-        "componentPropertyOverrides": {
-          "Show Open Button": true,
-          "Repo Path": "~/code/kanban-api",
-          "Count Summary": "3 active · 4 total",
-          "Project Name": "kanban-api"
-        },
-        "resolvedStyles": {
-          "fills": [],
-          "strokes": [],
-          "textColor": {
-            "hex": "#E2E8F0",
-            "tokenAlias": "foreground"
-          }
-        }
-      },
-      {
-        "id": "233:883",
-        "name": "ProjectSection",
-        "path": [
-          "Background+Border+Shadow",
-          "Container",
-          "Main",
-          "Container",
-          "Section",
-          "ProjectSection"
-        ],
-        "mainComponentSetId": "220:224",
-        "variantOverrides": null,
-        "componentPropertyOverrides": {
-          "Show Open Button": true,
-          "Repo Path": "~/code/crew",
-          "Count Summary": "1 active · 2 total",
-          "Project Name": "crew"
-        },
-        "resolvedStyles": {
-          "fills": [],
-          "strokes": [],
-          "textColor": {
-            "hex": "#E2E8F0",
-            "tokenAlias": "foreground"
-          }
-        }
-      },
-      {
-        "id": "233:893",
-        "name": "ProjectSection",
-        "path": [
-          "Background+Border+Shadow",
-          "Container",
-          "Main",
-          "Container",
-          "Section",
-          "ProjectSection"
-        ],
-        "mainComponentSetId": "220:224",
-        "variantOverrides": null,
-        "componentPropertyOverrides": {
-          "Show Open Button": true,
-          "Repo Path": "~/code/lighthouse",
-          "Count Summary": "1 active · 1 total",
-          "Project Name": "lighthouse"
-        },
-        "resolvedStyles": {
-          "fills": [],
-          "strokes": [],
-          "textColor": {
-            "hex": "#E2E8F0",
-            "tokenAlias": "foreground"
-          }
-        }
-      },
-      {
-        "id": "233:903",
-        "name": "ProjectSection",
-        "path": [
-          "Background+Border+Shadow",
-          "Container",
-          "Main",
-          "Container",
-          "Section",
-          "ProjectSection"
-        ],
-        "mainComponentSetId": "220:224",
-        "variantOverrides": null,
-        "componentPropertyOverrides": {
-          "Show Open Button": true,
-          "Repo Path": "~/code/mailer-svc",
-          "Count Summary": "1 active · 1 total",
-          "Project Name": "mailer-svc"
-        },
-        "resolvedStyles": {
-          "fills": [],
-          "strokes": [],
-          "textColor": {
-            "hex": "#E2E8F0",
-            "tokenAlias": "foreground"
-          }
-        }
-      },
-      {
-        "id": "365:2701",
-        "name": "Modal",
-        "path": [
-          "Background+Border+Shadow",
-          "Container",
-          "Overlay",
-          "Modal"
-        ],
-        "mainComponentSetId": "355:238",
-        "variantOverrides": null,
-        "componentPropertyOverrides": {
-          "Show Close": true,
-          "Content": "NewRunStep3Content",
-          "Title": "New Run"
-        },
-        "resolvedStyles": {
-          "fills": [
-            {
-              "hex": "#020617",
-              "tokenAlias": "background",
-              "opacity": 1
-            }
-          ],
-          "strokes": [
-            {
-              "hex": "#1E293B",
-              "tokenAlias": "border",
-              "opacity": 1
-            }
-          ],
-          "textColor": {
-            "hex": "#E2E8F0",
-            "tokenAlias": "foreground"
-          }
-        }
       }
     ],
     "depthWarnings": [

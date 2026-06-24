@@ -121,42 +121,14 @@
   },
   "enrichment": {
     "source": "plugin-api",
-    "capturedAt": "2026-06-10T01:11:37.175Z",
-    "componentProperties": null,
-    "mainComponent": null,
-    "boundVariables": [
-      {
-        "path": "fills[0].color",
-        "variableId": "VariableID:217:213",
-        "variableName": "background",
-        "resolvedAlias": "background -> slate/950",
-        "resolvedHex": "#020617"
-      },
-      {
-        "path": "strokes[0].color",
-        "variableId": "VariableID:217:224",
-        "variableName": "border",
-        "resolvedAlias": "border -> slate/800",
-        "resolvedHex": "#1E293B"
-      },
-      {
-        "path": "backgrounds[0].color",
-        "variableId": "VariableID:217:213",
-        "variableName": "background",
-        "resolvedAlias": "background -> slate/950",
-        "resolvedHex": "#020617"
-      }
-    ],
+    "capturedAt": "2026-06-24T14:52:59.723Z",
     "componentInstances": [
       {
         "id": "594:1196",
         "name": "AgentHeader",
-        "path": [
-          "AgentHeader"
-        ],
         "mainComponentSetId": "594:803",
-        "variantOverrides": null,
         "componentPropertyOverrides": {
+          "Show Cancel": true,
           "Show close button": true,
           "Show Open as page": true
         },
@@ -184,13 +156,7 @@
       {
         "id": "579:655",
         "name": "TokensByTool",
-        "path": [
-          "BodyContainer",
-          "Section: TOKENS BY TOOL",
-          "TokensByTool"
-        ],
         "mainComponentSetId": "577:643",
-        "variantOverrides": null,
         "componentPropertyOverrides": {
           "totalCost": "$0.06",
           "total": "48k"
@@ -219,17 +185,8 @@
       {
         "id": "573:543",
         "name": "TimelineToolbar",
-        "path": [
-          "BodyContainer",
-          "Section: TIMELINE",
-          "TimelineToolbar"
-        ],
         "mainComponentSetId": "558:477",
-        "variantOverrides": null,
-        "componentPropertyOverrides": {},
         "resolvedStyles": {
-          "fills": [],
-          "strokes": [],
           "textColor": {
             "hex": "#64748B",
             "tokenAlias": "state/idle"
@@ -239,12 +196,6 @@
       {
         "id": "573:561",
         "name": "Section: initializing",
-        "path": [
-          "BodyContainer",
-          "Section: TIMELINE",
-          "sections",
-          "Section: initializing"
-        ],
         "mainComponentSetId": "559:650",
         "variantOverrides": "state=initializing",
         "componentPropertyOverrides": {
@@ -253,7 +204,6 @@
           "state": "initializing"
         },
         "resolvedStyles": {
-          "fills": [],
           "strokes": [
             {
               "hex": "#60A5FA",
@@ -270,12 +220,6 @@
       {
         "id": "573:587",
         "name": "Section: running",
-        "path": [
-          "BodyContainer",
-          "Section: TIMELINE",
-          "sections",
-          "Section: running"
-        ],
         "mainComponentSetId": "559:650",
         "variantOverrides": "state=running",
         "componentPropertyOverrides": {
@@ -284,7 +228,6 @@
           "state": "running"
         },
         "resolvedStyles": {
-          "fills": [],
           "strokes": [
             {
               "hex": "#94A3B8",
@@ -301,12 +244,6 @@
       {
         "id": "573:611",
         "name": "Section: waiting",
-        "path": [
-          "BodyContainer",
-          "Section: TIMELINE",
-          "sections",
-          "Section: waiting"
-        ],
         "mainComponentSetId": "559:650",
         "variantOverrides": "state=waiting",
         "componentPropertyOverrides": {
@@ -315,7 +252,6 @@
           "state": "waiting"
         },
         "resolvedStyles": {
-          "fills": [],
           "strokes": [
             {
               "hex": "#FBBF24",
@@ -332,12 +268,6 @@
       {
         "id": "573:635",
         "name": "Section: pr-open",
-        "path": [
-          "BodyContainer",
-          "Section: TIMELINE",
-          "sections",
-          "Section: pr-open"
-        ],
         "mainComponentSetId": "559:650",
         "variantOverrides": "state=pr-open",
         "componentPropertyOverrides": {
@@ -346,7 +276,6 @@
           "state": "pr-open"
         },
         "resolvedStyles": {
-          "fills": [],
           "strokes": [
             {
               "hex": "#A78BFA",
@@ -361,6 +290,28 @@
         }
       }
     ],
-    "depthWarnings": []
+    "boundVariables": [
+      {
+        "path": "fills[0].color",
+        "variableId": "VariableID:217:213",
+        "variableName": "background",
+        "resolvedAlias": "background -> slate/950",
+        "resolvedHex": "#020617"
+      },
+      {
+        "path": "strokes[0].color",
+        "variableId": "VariableID:217:224",
+        "variableName": "border",
+        "resolvedAlias": "border -> slate/800",
+        "resolvedHex": "#1E293B"
+      },
+      {
+        "path": "backgrounds[0].color",
+        "variableId": "VariableID:217:213",
+        "variableName": "background",
+        "resolvedAlias": "background -> slate/950",
+        "resolvedHex": "#020617"
+      }
+    ]
   }
 }

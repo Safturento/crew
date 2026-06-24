@@ -92,32 +92,11 @@
   },
   "enrichment": {
     "source": "plugin-api",
-    "capturedAt": "2026-06-17T01:49:32.758Z",
-    "componentProperties": null,
-    "mainComponent": null,
-    "boundVariables": [
-      {
-        "path": "fills[0].color",
-        "variableId": "VariableID:217:213",
-        "variableName": "background",
-        "resolvedAlias": "background -> slate/950",
-        "resolvedHex": "#020617"
-      },
-      {
-        "path": "backgrounds[0].color",
-        "variableId": "VariableID:217:213",
-        "variableName": "background",
-        "resolvedAlias": "background -> slate/950",
-        "resolvedHex": "#020617"
-      }
-    ],
+    "capturedAt": "2026-06-24T14:42:00.739Z",
     "componentInstances": [
       {
         "id": "775:3716",
         "name": "TopNav",
-        "path": [
-          "TopNav"
-        ],
         "mainComponentSetId": "245:133",
         "variantOverrides": "Active Tab=runner",
         "componentPropertyOverrides": {
@@ -127,7 +106,6 @@
           "Active Tab": "runner"
         },
         "resolvedStyles": {
-          "fills": [],
           "strokes": [
             {
               "hex": "#1E293B",
@@ -144,10 +122,6 @@
       {
         "id": "775:3780",
         "name": "SupervisorCard",
-        "path": [
-          "body",
-          "SupervisorCard"
-        ],
         "mainComponentSetId": "789:1190",
         "variantOverrides": "state=running",
         "componentPropertyOverrides": {
@@ -178,14 +152,7 @@
       {
         "id": "775:3811",
         "name": "FailedStartCard",
-        "path": [
-          "body",
-          "Failed to start",
-          "Frame",
-          "FailedStartCard"
-        ],
         "mainComponentSetId": "771:1142",
-        "variantOverrides": null,
         "componentPropertyOverrides": {
           "Show Remediation": true,
           "Headline": "Remote ‘origin’ not found in project config",
@@ -217,14 +184,7 @@
       {
         "id": "775:3847",
         "name": "FailedStartCard",
-        "path": [
-          "body",
-          "Failed to start",
-          "Frame",
-          "FailedStartCard"
-        ],
         "mainComponentSetId": "771:1142",
-        "variantOverrides": null,
         "componentPropertyOverrides": {
           "Show Remediation": true,
           "Headline": "GH_TOKEN missing from agent environment",
@@ -256,12 +216,6 @@
       {
         "id": "776:3810",
         "name": "ProcessRow",
-        "path": [
-          "body",
-          "Live processes",
-          "rows",
-          "ProcessRow"
-        ],
         "mainComponentSetId": "767:1179",
         "variantOverrides": "state=running",
         "componentPropertyOverrides": {
@@ -294,12 +248,6 @@
       {
         "id": "776:3844",
         "name": "ProcessRow",
-        "path": [
-          "body",
-          "Live processes",
-          "rows",
-          "ProcessRow"
-        ],
         "mainComponentSetId": "767:1179",
         "variantOverrides": "state=cancelling",
         "componentPropertyOverrides": {
@@ -332,14 +280,6 @@
       {
         "id": "776:3903",
         "name": "Pill",
-        "path": [
-          "body",
-          "⚠  Unmanaged runs",
-          "rows",
-          "row-CREW-228",
-          "Frame",
-          "Pill"
-        ],
         "mainComponentSetId": "272:120",
         "variantOverrides": "type=button-sm, color=waiting, intensity=muted, font=sans",
         "componentPropertyOverrides": {
@@ -359,7 +299,6 @@
               "opacity": 1
             }
           ],
-          "strokes": [],
           "textColor": {
             "hex": "#FBBF24",
             "tokenAlias": "state/waiting"
@@ -369,14 +308,6 @@
       {
         "id": "776:3941",
         "name": "Pill",
-        "path": [
-          "body",
-          "Queued actions",
-          "rows",
-          "row-CREW-240",
-          "Frame",
-          "Pill"
-        ],
         "mainComponentSetId": "272:120",
         "variantOverrides": "type=button-sm, color=idle, intensity=ghost, font=sans",
         "componentPropertyOverrides": {
@@ -389,8 +320,6 @@
           "font": "sans"
         },
         "resolvedStyles": {
-          "fills": [],
-          "strokes": [],
           "textColor": {
             "hex": "#64748B",
             "tokenAlias": "state/idle"
@@ -400,14 +329,6 @@
       {
         "id": "776:3976",
         "name": "Pill",
-        "path": [
-          "body",
-          "Recently ended",
-          "rows",
-          "row-CREW-227",
-          "Frame",
-          "Pill"
-        ],
         "mainComponentSetId": "272:120",
         "variantOverrides": "type=button-sm, color=pr-open, intensity=mid, font=sans",
         "componentPropertyOverrides": {
@@ -443,14 +364,6 @@
       {
         "id": "776:4030",
         "name": "Pill",
-        "path": [
-          "body",
-          "Recently ended",
-          "rows",
-          "row-CREW-217",
-          "Frame",
-          "Pill"
-        ],
         "mainComponentSetId": "272:120",
         "variantOverrides": "type=button-sm, color=error, intensity=mid, font=sans",
         "componentPropertyOverrides": {
@@ -482,6 +395,22 @@
             "tokenAlias": "state/error"
           }
         }
+      }
+    ],
+    "boundVariables": [
+      {
+        "path": "fills[0].color",
+        "variableId": "VariableID:217:213",
+        "variableName": "background",
+        "resolvedAlias": "background -> slate/950",
+        "resolvedHex": "#020617"
+      },
+      {
+        "path": "backgrounds[0].color",
+        "variableId": "VariableID:217:213",
+        "variableName": "background",
+        "resolvedAlias": "background -> slate/950",
+        "resolvedHex": "#020617"
       }
     ],
     "depthWarnings": [

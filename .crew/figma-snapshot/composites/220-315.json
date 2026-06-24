@@ -100,33 +100,11 @@
   },
   "enrichment": {
     "source": "plugin-api",
-    "capturedAt": "2026-06-10T01:11:37.403Z",
-    "componentProperties": null,
-    "mainComponent": null,
-    "boundVariables": [
-      {
-        "path": "fills[0].color",
-        "variableId": "VariableID:217:215",
-        "variableName": "card",
-        "resolvedAlias": "card -> slate/900",
-        "resolvedHex": "#0F172A"
-      },
-      {
-        "path": "backgrounds[0].color",
-        "variableId": "VariableID:217:215",
-        "variableName": "card",
-        "resolvedAlias": "card -> slate/900",
-        "resolvedHex": "#0F172A"
-      }
-    ],
+    "capturedAt": "2026-06-24T14:53:00.058Z",
     "componentInstances": [
       {
         "id": "278:1520",
         "name": "Pill",
-        "path": [
-          "actions-block",
-          "Pill"
-        ],
         "mainComponentSetId": "272:120",
         "variantOverrides": "type=button-sm, color=running, intensity=mid, font=sans",
         "componentPropertyOverrides": {
@@ -162,10 +140,6 @@
       {
         "id": "278:1524",
         "name": "Pill",
-        "path": [
-          "actions-block",
-          "Pill"
-        ],
         "mainComponentSetId": "272:120",
         "variantOverrides": "type=button-sm, color=error, intensity=mid, font=sans",
         "componentPropertyOverrides": {
@@ -199,6 +173,21 @@
         }
       }
     ],
-    "depthWarnings": []
+    "boundVariables": [
+      {
+        "path": "fills[0].color",
+        "variableId": "VariableID:217:215",
+        "variableName": "card",
+        "resolvedAlias": "card -> slate/900",
+        "resolvedHex": "#0F172A"
+      },
+      {
+        "path": "backgrounds[0].color",
+        "variableId": "VariableID:217:215",
+        "variableName": "card",
+        "resolvedAlias": "card -> slate/900",
+        "resolvedHex": "#0F172A"
+      }
+    ]
   }
 }

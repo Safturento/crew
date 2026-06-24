@@ -127,9 +127,37 @@
   },
   "enrichment": {
     "source": "plugin-api",
-    "capturedAt": "2026-06-10T01:11:37.362Z",
-    "componentProperties": null,
-    "mainComponent": null,
+    "capturedAt": "2026-06-24T14:59:13.092Z",
+    "componentInstances": [
+      {
+        "id": "281:146",
+        "name": "Pill",
+        "mainComponentSetId": "272:120",
+        "variantOverrides": "type=pill, color=initializing, intensity=muted, font=mono",
+        "componentPropertyOverrides": {
+          "Icon": "lucide/git-pull-request",
+          "Has Icon": false,
+          "Label": "6",
+          "type": "pill",
+          "color": "initializing",
+          "intensity": "muted",
+          "font": "mono"
+        },
+        "resolvedStyles": {
+          "fills": [
+            {
+              "hex": "#17253F",
+              "tokenAlias": "blue-1050",
+              "opacity": 1
+            }
+          ],
+          "textColor": {
+            "hex": "#60A5FA",
+            "tokenAlias": "state/initializing"
+          }
+        }
+      }
+    ],
     "boundVariables": [
       {
         "path": "fills[0].color",
@@ -152,41 +180,6 @@
         "resolvedAlias": "card -> slate/900",
         "resolvedHex": "#0F172A"
       }
-    ],
-    "componentInstances": [
-      {
-        "id": "281:146",
-        "name": "Pill",
-        "path": [
-          "Pill"
-        ],
-        "mainComponentSetId": "272:120",
-        "variantOverrides": "type=pill, color=initializing, intensity=muted, font=mono",
-        "componentPropertyOverrides": {
-          "Icon": "lucide/git-pull-request",
-          "Has Icon": false,
-          "Label": "6",
-          "type": "pill",
-          "color": "initializing",
-          "intensity": "muted",
-          "font": "mono"
-        },
-        "resolvedStyles": {
-          "fills": [
-            {
-              "hex": "#17253F",
-              "tokenAlias": "blue-1050",
-              "opacity": 1
-            }
-          ],
-          "strokes": [],
-          "textColor": {
-            "hex": "#60A5FA",
-            "tokenAlias": "state/initializing"
-          }
-        }
-      }
-    ],
-    "depthWarnings": []
+    ]
   }
 }

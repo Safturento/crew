@@ -54,17 +54,11 @@
   },
   "enrichment": {
     "source": "plugin-api",
-    "capturedAt": "2026-06-10T02:08:44.622Z",
-    "componentProperties": null,
-    "mainComponent": null,
-    "boundVariables": [],
+    "capturedAt": "2026-06-24T14:42:01.635Z",
     "componentInstances": [
       {
         "id": "558:478",
         "name": "Filters",
-        "path": [
-          "Filters"
-        ],
         "mainComponentSetId": "272:120",
         "variantOverrides": "type=button-sm, color=idle, intensity=mid, font=sans",
         "componentPropertyOverrides": {
@@ -100,11 +94,7 @@
       {
         "id": "558:483",
         "name": "Search",
-        "path": [
-          "Search"
-        ],
         "mainComponentSetId": "318:230",
-        "variantOverrides": null,
         "componentPropertyOverrides": {
           "Icon": "lucide/search",
           "Has Icon": true,
@@ -134,9 +124,6 @@
       {
         "id": "558:488",
         "name": "CollapseAll",
-        "path": [
-          "CollapseAll"
-        ],
         "mainComponentSetId": "272:120",
         "variantOverrides": "type=button-sm, color=idle, intensity=mid, font=sans",
         "componentPropertyOverrides": {
@@ -172,9 +159,6 @@
       {
         "id": "558:492",
         "name": "Live",
-        "path": [
-          "Live"
-        ],
         "mainComponentSetId": "335:242",
         "variantOverrides": "state=on",
         "componentPropertyOverrides": {
@@ -182,15 +166,12 @@
           "state": "on"
         },
         "resolvedStyles": {
-          "fills": [],
-          "strokes": [],
           "textColor": {
             "hex": "#94A3B8",
             "tokenAlias": "muted-foreground"
           }
         }
       }
-    ],
-    "depthWarnings": []
+    ]
   }
 }

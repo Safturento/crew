@@ -79,20 +79,11 @@
   },
   "enrichment": {
     "source": "plugin-api",
-    "capturedAt": "2026-06-17T01:48:16.256Z",
-    "componentProperties": null,
-    "mainComponent": null,
-    "boundVariables": [],
+    "capturedAt": "2026-06-24T14:42:01.435Z",
     "componentInstances": [
       {
         "id": "766:1131",
         "name": "Pill",
-        "path": [
-          "state=running",
-          "left",
-          "state-slot",
-          "Pill"
-        ],
         "mainComponentSetId": "272:120",
         "variantOverrides": "type=pill, color=running, intensity=mid, font=mono",
         "componentPropertyOverrides": {
@@ -128,13 +119,6 @@
       {
         "id": "766:1143",
         "name": "command",
-        "path": [
-          "state=running",
-          "left",
-          "identity",
-          "meta",
-          "command"
-        ],
         "mainComponentSetId": "272:120",
         "variantOverrides": "type=tag, color=idle, intensity=muted, font=mono",
         "componentPropertyOverrides": {
@@ -154,7 +138,6 @@
               "opacity": 1
             }
           ],
-          "strokes": [],
           "textColor": {
             "hex": "#64748B",
             "tokenAlias": "state/idle"
@@ -164,11 +147,6 @@
       {
         "id": "766:1155",
         "name": "Pill",
-        "path": [
-          "state=running",
-          "controls",
-          "Pill"
-        ],
         "mainComponentSetId": "272:120",
         "variantOverrides": "type=button-sm, color=idle, intensity=ghost, font=sans",
         "componentPropertyOverrides": {
@@ -181,8 +159,6 @@
           "font": "sans"
         },
         "resolvedStyles": {
-          "fills": [],
-          "strokes": [],
           "textColor": {
             "hex": "#64748B",
             "tokenAlias": "state/idle"
@@ -192,11 +168,6 @@
       {
         "id": "766:1163",
         "name": "Pill",
-        "path": [
-          "state=running",
-          "controls",
-          "Pill"
-        ],
         "mainComponentSetId": "272:120",
         "variantOverrides": "type=button-sm, color=error, intensity=muted, font=sans",
         "componentPropertyOverrides": {
@@ -216,7 +187,6 @@
               "opacity": 1
             }
           ],
-          "strokes": [],
           "textColor": {
             "hex": "#F87171",
             "tokenAlias": "state/error"
@@ -226,12 +196,6 @@
       {
         "id": "767:1139",
         "name": "Pill",
-        "path": [
-          "state=cancelling",
-          "left",
-          "state-slot",
-          "Pill"
-        ],
         "mainComponentSetId": "272:120",
         "variantOverrides": "type=pill, color=waiting, intensity=mid, font=mono",
         "componentPropertyOverrides": {
@@ -267,13 +231,6 @@
       {
         "id": "767:1143",
         "name": "command",
-        "path": [
-          "state=cancelling",
-          "left",
-          "identity",
-          "meta",
-          "command"
-        ],
         "mainComponentSetId": "272:120",
         "variantOverrides": "type=tag, color=idle, intensity=muted, font=mono",
         "componentPropertyOverrides": {
@@ -293,7 +250,6 @@
               "opacity": 1
             }
           ],
-          "strokes": [],
           "textColor": {
             "hex": "#64748B",
             "tokenAlias": "state/idle"
@@ -303,11 +259,6 @@
       {
         "id": "767:1170",
         "name": "Pill",
-        "path": [
-          "state=cancelling",
-          "controls",
-          "Pill"
-        ],
         "mainComponentSetId": "272:120",
         "variantOverrides": "type=button-sm, color=error, intensity=loud, font=sans",
         "componentPropertyOverrides": {
@@ -327,7 +278,6 @@
               "opacity": 1
             }
           ],
-          "strokes": [],
           "textColor": {
             "hex": "#020617",
             "tokenAlias": "state/foreground"
@@ -337,12 +287,6 @@
       {
         "id": "790:1162",
         "name": "Pill",
-        "path": [
-          "state=launching",
-          "left",
-          "state-slot",
-          "Pill"
-        ],
         "mainComponentSetId": "272:120",
         "variantOverrides": "type=pill, color=initializing, intensity=mid, font=mono",
         "componentPropertyOverrides": {
@@ -378,13 +322,6 @@
       {
         "id": "790:1166",
         "name": "command",
-        "path": [
-          "state=launching",
-          "left",
-          "identity",
-          "meta",
-          "command"
-        ],
         "mainComponentSetId": "272:120",
         "variantOverrides": "type=tag, color=idle, intensity=muted, font=mono",
         "componentPropertyOverrides": {
@@ -404,7 +341,6 @@
               "opacity": 1
             }
           ],
-          "strokes": [],
           "textColor": {
             "hex": "#64748B",
             "tokenAlias": "state/idle"
@@ -414,11 +350,6 @@
       {
         "id": "790:1193",
         "name": "Pill",
-        "path": [
-          "state=launching",
-          "controls",
-          "Pill"
-        ],
         "mainComponentSetId": "272:120",
         "variantOverrides": "type=button-sm, color=error, intensity=muted, font=sans",
         "componentPropertyOverrides": {
@@ -438,14 +369,12 @@
               "opacity": 1
             }
           ],
-          "strokes": [],
           "textColor": {
             "hex": "#F87171",
             "tokenAlias": "state/error"
           }
         }
       }
-    ],
-    "depthWarnings": []
+    ]
   }
 }

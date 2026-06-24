@@ -74,19 +74,11 @@
   },
   "enrichment": {
     "source": "plugin-api",
-    "capturedAt": "2026-06-10T01:13:50.031Z",
-    "componentProperties": null,
-    "mainComponent": null,
-    "boundVariables": [],
+    "capturedAt": "2026-06-24T14:38:52.176Z",
     "componentInstances": [
       {
         "id": "559:493",
         "name": "Pill",
-        "path": [
-          "state=initializing",
-          "Header",
-          "Pill"
-        ],
         "mainComponentSetId": "272:120",
         "variantOverrides": "type=pill, color=initializing, intensity=mid, font=mono",
         "componentPropertyOverrides": {
@@ -122,13 +114,7 @@
       {
         "id": "559:501",
         "name": "TranscriptRow",
-        "path": [
-          "state=initializing",
-          "Body",
-          "TranscriptRow"
-        ],
         "mainComponentSetId": "553:445",
-        "variantOverrides": null,
         "componentPropertyOverrides": {
           "Pill": "type=tag, color=waiting, intensity=mid, font=mono",
           "tokens": "180 tok",
@@ -136,8 +122,6 @@
           "text": "docker compose -f docker-compose.dev.yml up -d"
         },
         "resolvedStyles": {
-          "fills": [],
-          "strokes": [],
           "textColor": {
             "hex": "#FBBF24",
             "tokenAlias": "state/waiting"
@@ -147,11 +131,6 @@
       {
         "id": "559:516",
         "name": "Pill",
-        "path": [
-          "state=running",
-          "Header",
-          "Pill"
-        ],
         "mainComponentSetId": "272:120",
         "variantOverrides": "type=pill, color=running, intensity=mid, font=mono",
         "componentPropertyOverrides": {
@@ -187,13 +166,7 @@
       {
         "id": "559:524",
         "name": "TranscriptRow",
-        "path": [
-          "state=running",
-          "Body",
-          "TranscriptRow"
-        ],
         "mainComponentSetId": "553:445",
-        "variantOverrides": null,
         "componentPropertyOverrides": {
           "Pill": "type=tag, color=waiting, intensity=mid, font=mono",
           "tokens": "180 tok",
@@ -201,8 +174,6 @@
           "text": "docker compose -f docker-compose.dev.yml up -d"
         },
         "resolvedStyles": {
-          "fills": [],
-          "strokes": [],
           "textColor": {
             "hex": "#FBBF24",
             "tokenAlias": "state/waiting"
@@ -212,11 +183,6 @@
       {
         "id": "559:539",
         "name": "Pill",
-        "path": [
-          "state=waiting",
-          "Header",
-          "Pill"
-        ],
         "mainComponentSetId": "272:120",
         "variantOverrides": "type=pill, color=waiting, intensity=mid, font=mono",
         "componentPropertyOverrides": {
@@ -252,13 +218,7 @@
       {
         "id": "559:547",
         "name": "TranscriptRow",
-        "path": [
-          "state=waiting",
-          "Body",
-          "TranscriptRow"
-        ],
         "mainComponentSetId": "553:445",
-        "variantOverrides": null,
         "componentPropertyOverrides": {
           "Pill": "type=tag, color=waiting, intensity=mid, font=mono",
           "tokens": "180 tok",
@@ -266,8 +226,6 @@
           "text": "docker compose -f docker-compose.dev.yml up -d"
         },
         "resolvedStyles": {
-          "fills": [],
-          "strokes": [],
           "textColor": {
             "hex": "#FBBF24",
             "tokenAlias": "state/waiting"
@@ -277,11 +235,6 @@
       {
         "id": "559:562",
         "name": "Pill",
-        "path": [
-          "state=pr-open",
-          "Header",
-          "Pill"
-        ],
         "mainComponentSetId": "272:120",
         "variantOverrides": "type=pill, color=pr-open, intensity=mid, font=mono",
         "componentPropertyOverrides": {
@@ -317,13 +270,7 @@
       {
         "id": "559:570",
         "name": "TranscriptRow",
-        "path": [
-          "state=pr-open",
-          "Body",
-          "TranscriptRow"
-        ],
         "mainComponentSetId": "553:445",
-        "variantOverrides": null,
         "componentPropertyOverrides": {
           "Pill": "type=tag, color=waiting, intensity=mid, font=mono",
           "tokens": "180 tok",
@@ -331,8 +278,6 @@
           "text": "docker compose -f docker-compose.dev.yml up -d"
         },
         "resolvedStyles": {
-          "fills": [],
-          "strokes": [],
           "textColor": {
             "hex": "#FBBF24",
             "tokenAlias": "state/waiting"
@@ -342,11 +287,6 @@
       {
         "id": "559:585",
         "name": "Pill",
-        "path": [
-          "state=error",
-          "Header",
-          "Pill"
-        ],
         "mainComponentSetId": "272:120",
         "variantOverrides": "type=pill, color=error, intensity=mid, font=mono",
         "componentPropertyOverrides": {
@@ -382,13 +322,7 @@
       {
         "id": "559:593",
         "name": "TranscriptRow",
-        "path": [
-          "state=error",
-          "Body",
-          "TranscriptRow"
-        ],
         "mainComponentSetId": "553:445",
-        "variantOverrides": null,
         "componentPropertyOverrides": {
           "Pill": "type=tag, color=waiting, intensity=mid, font=mono",
           "tokens": "180 tok",
@@ -396,8 +330,6 @@
           "text": "docker compose -f docker-compose.dev.yml up -d"
         },
         "resolvedStyles": {
-          "fills": [],
-          "strokes": [],
           "textColor": {
             "hex": "#FBBF24",
             "tokenAlias": "state/waiting"
@@ -407,11 +339,6 @@
       {
         "id": "559:608",
         "name": "Pill",
-        "path": [
-          "state=finished",
-          "Header",
-          "Pill"
-        ],
         "mainComponentSetId": "272:120",
         "variantOverrides": "type=pill, color=finished, intensity=mid, font=mono",
         "componentPropertyOverrides": {
@@ -447,13 +374,7 @@
       {
         "id": "559:616",
         "name": "TranscriptRow",
-        "path": [
-          "state=finished",
-          "Body",
-          "TranscriptRow"
-        ],
         "mainComponentSetId": "553:445",
-        "variantOverrides": null,
         "componentPropertyOverrides": {
           "Pill": "type=tag, color=waiting, intensity=mid, font=mono",
           "tokens": "180 tok",
@@ -461,8 +382,6 @@
           "text": "docker compose -f docker-compose.dev.yml up -d"
         },
         "resolvedStyles": {
-          "fills": [],
-          "strokes": [],
           "textColor": {
             "hex": "#FBBF24",
             "tokenAlias": "state/waiting"
@@ -472,11 +391,6 @@
       {
         "id": "559:631",
         "name": "Pill",
-        "path": [
-          "state=idle",
-          "Header",
-          "Pill"
-        ],
         "mainComponentSetId": "272:120",
         "variantOverrides": "type=pill, color=idle, intensity=mid, font=mono",
         "componentPropertyOverrides": {
@@ -512,13 +426,7 @@
       {
         "id": "559:639",
         "name": "TranscriptRow",
-        "path": [
-          "state=idle",
-          "Body",
-          "TranscriptRow"
-        ],
         "mainComponentSetId": "553:445",
-        "variantOverrides": null,
         "componentPropertyOverrides": {
           "Pill": "type=tag, color=waiting, intensity=mid, font=mono",
           "tokens": "180 tok",
@@ -526,15 +434,12 @@
           "text": "docker compose -f docker-compose.dev.yml up -d"
         },
         "resolvedStyles": {
-          "fills": [],
-          "strokes": [],
           "textColor": {
             "hex": "#FBBF24",
             "tokenAlias": "state/waiting"
           }
         }
       }
-    ],
-    "depthWarnings": []
+    ]
   }
 }

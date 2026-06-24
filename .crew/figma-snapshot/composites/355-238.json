@@ -151,9 +151,35 @@
   },
   "enrichment": {
     "source": "plugin-api",
-    "capturedAt": "2026-06-10T01:11:37.648Z",
-    "componentProperties": null,
-    "mainComponent": null,
+    "capturedAt": "2026-06-24T14:59:13.030Z",
+    "componentInstances": [
+      {
+        "id": "355:241",
+        "name": "close",
+        "mainComponentSetId": "272:120",
+        "variantOverrides": "type=button-icon-sm, color=running, intensity=ghost, font=sans",
+        "componentPropertyOverrides": {
+          "Has Icon": false,
+          "Label": "Label",
+          "Icon": "lucide/x",
+          "type": "button-icon-sm",
+          "color": "running",
+          "intensity": "ghost",
+          "font": "sans"
+        }
+      },
+      {
+        "id": "364:375",
+        "name": "content",
+        "mainComponentSetId": "362:2209",
+        "resolvedStyles": {
+          "textColor": {
+            "hex": "#94A3B8",
+            "tokenAlias": "muted-foreground"
+          }
+        }
+      }
+    ],
     "boundVariables": [
       {
         "path": "fills[0].color",
@@ -176,51 +202,6 @@
         "resolvedAlias": "background -> slate/950",
         "resolvedHex": "#020617"
       }
-    ],
-    "componentInstances": [
-      {
-        "id": "355:241",
-        "name": "close",
-        "path": [
-          "header",
-          "close"
-        ],
-        "mainComponentSetId": "272:120",
-        "variantOverrides": "type=button-icon-sm, color=running, intensity=ghost, font=sans",
-        "componentPropertyOverrides": {
-          "Has Icon": false,
-          "Label": "Label",
-          "Icon": "lucide/x",
-          "type": "button-icon-sm",
-          "color": "running",
-          "intensity": "ghost",
-          "font": "sans"
-        },
-        "resolvedStyles": {
-          "fills": [],
-          "strokes": [],
-          "textColor": null
-        }
-      },
-      {
-        "id": "364:375",
-        "name": "content",
-        "path": [
-          "content"
-        ],
-        "mainComponentSetId": "362:2209",
-        "variantOverrides": null,
-        "componentPropertyOverrides": {},
-        "resolvedStyles": {
-          "fills": [],
-          "strokes": [],
-          "textColor": {
-            "hex": "#94A3B8",
-            "tokenAlias": "muted-foreground"
-          }
-        }
-      }
-    ],
-    "depthWarnings": []
+    ]
   }
 }

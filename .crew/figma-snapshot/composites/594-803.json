@@ -177,27 +177,11 @@
   },
   "enrichment": {
     "source": "plugin-api",
-    "capturedAt": "2026-06-17T01:45:24.491Z",
-    "componentProperties": null,
-    "mainComponent": null,
-    "boundVariables": [
-      {
-        "path": "strokes[0].color",
-        "variableId": "VariableID:217:224",
-        "variableName": "border",
-        "resolvedAlias": "border -> slate/800",
-        "resolvedHex": "#1E293B"
-      }
-    ],
+    "capturedAt": "2026-06-24T14:42:01.539Z",
     "componentInstances": [
       {
         "id": "581:2904",
         "name": "Pill",
-        "path": [
-          "Container",
-          "Container",
-          "Pill"
-        ],
         "mainComponentSetId": "272:120",
         "variantOverrides": "type=button-sm, color=running, intensity=ghost, font=sans",
         "componentPropertyOverrides": {
@@ -210,8 +194,6 @@
           "font": "sans"
         },
         "resolvedStyles": {
-          "fills": [],
-          "strokes": [],
           "textColor": {
             "hex": "#94A3B8",
             "tokenAlias": "state/running"
@@ -221,11 +203,6 @@
       {
         "id": "581:2905",
         "name": "Pill",
-        "path": [
-          "Container",
-          "Container",
-          "Pill"
-        ],
         "mainComponentSetId": "272:120",
         "variantOverrides": "type=button-sm, color=waiting, intensity=loud, font=sans",
         "componentPropertyOverrides": {
@@ -245,7 +222,6 @@
               "opacity": 1
             }
           ],
-          "strokes": [],
           "textColor": {
             "hex": "#020617",
             "tokenAlias": "state/foreground"
@@ -255,11 +231,6 @@
       {
         "id": "792:1165",
         "name": "cancel-action",
-        "path": [
-          "Container",
-          "Container",
-          "cancel-action"
-        ],
         "mainComponentSetId": "272:120",
         "variantOverrides": "type=button-sm, color=error, intensity=muted, font=sans",
         "componentPropertyOverrides": {
@@ -279,7 +250,6 @@
               "opacity": 1
             }
           ],
-          "strokes": [],
           "textColor": {
             "hex": "#F87171",
             "tokenAlias": "state/error"
@@ -289,11 +259,6 @@
       {
         "id": "581:2906",
         "name": "Pill",
-        "path": [
-          "Container",
-          "Container",
-          "Pill"
-        ],
         "mainComponentSetId": "272:120",
         "variantOverrides": "type=button-icon-sm, color=running, intensity=ghost, font=sans",
         "componentPropertyOverrides": {
@@ -304,20 +269,11 @@
           "color": "running",
           "intensity": "ghost",
           "font": "sans"
-        },
-        "resolvedStyles": {
-          "fills": [],
-          "strokes": [],
-          "textColor": null
         }
       },
       {
         "id": "581:2910",
         "name": "Pill",
-        "path": [
-          "Container",
-          "Pill"
-        ],
         "mainComponentSetId": "272:120",
         "variantOverrides": "type=pill, color=waiting, intensity=mid, font=mono",
         "componentPropertyOverrides": {
@@ -353,10 +309,6 @@
       {
         "id": "596:872",
         "name": "DockerPill",
-        "path": [
-          "Container",
-          "DockerPill"
-        ],
         "mainComponentSetId": "272:120",
         "variantOverrides": "type=button-default, color=idle, intensity=mid, font=mono",
         "componentPropertyOverrides": {
@@ -392,10 +344,6 @@
       {
         "id": "596:877",
         "name": "JiraPill",
-        "path": [
-          "Container",
-          "JiraPill"
-        ],
         "mainComponentSetId": "272:120",
         "variantOverrides": "type=button-default, color=idle, intensity=mid, font=sans",
         "componentPropertyOverrides": {
@@ -431,10 +379,6 @@
       {
         "id": "596:866",
         "name": "WorktreePill",
-        "path": [
-          "Container",
-          "WorktreePill"
-        ],
         "mainComponentSetId": "272:120",
         "variantOverrides": "type=button-default, color=idle, intensity=mid, font=mono",
         "componentPropertyOverrides": {
@@ -468,6 +412,14 @@
         }
       }
     ],
-    "depthWarnings": []
+    "boundVariables": [
+      {
+        "path": "strokes[0].color",
+        "variableId": "VariableID:217:224",
+        "variableName": "border",
+        "resolvedAlias": "border -> slate/800",
+        "resolvedHex": "#1E293B"
+      }
+    ]
   }
 }

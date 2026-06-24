@@ -70,20 +70,11 @@
   },
   "enrichment": {
     "source": "plugin-api",
-    "capturedAt": "2026-06-17T01:45:24.617Z",
-    "componentProperties": null,
-    "mainComponent": null,
-    "boundVariables": [],
+    "capturedAt": "2026-06-24T14:55:09.354Z",
     "componentInstances": [
       {
         "id": "765:1125",
         "name": "Pill",
-        "path": [
-          "state=running",
-          "left",
-          "state-slot",
-          "Pill"
-        ],
         "mainComponentSetId": "272:120",
         "variantOverrides": "type=pill, color=running, intensity=mid, font=mono",
         "componentPropertyOverrides": {
@@ -119,11 +110,6 @@
       {
         "id": "765:1138",
         "name": "Pill",
-        "path": [
-          "state=running",
-          "controls",
-          "Pill"
-        ],
         "mainComponentSetId": "272:120",
         "variantOverrides": "type=button-sm, color=idle, intensity=muted, font=sans",
         "componentPropertyOverrides": {
@@ -143,7 +129,6 @@
               "opacity": 1
             }
           ],
-          "strokes": [],
           "textColor": {
             "hex": "#64748B",
             "tokenAlias": "state/idle"
@@ -153,11 +138,6 @@
       {
         "id": "765:1146",
         "name": "Pill",
-        "path": [
-          "state=running",
-          "controls",
-          "Pill"
-        ],
         "mainComponentSetId": "272:120",
         "variantOverrides": "type=button-sm, color=error, intensity=muted, font=sans",
         "componentPropertyOverrides": {
@@ -177,7 +157,6 @@
               "opacity": 1
             }
           ],
-          "strokes": [],
           "textColor": {
             "hex": "#F87171",
             "tokenAlias": "state/error"
@@ -187,12 +166,6 @@
       {
         "id": "789:1158",
         "name": "Pill",
-        "path": [
-          "state=down",
-          "left",
-          "state-slot",
-          "Pill"
-        ],
         "mainComponentSetId": "272:120",
         "variantOverrides": "type=pill, color=error, intensity=mid, font=mono",
         "componentPropertyOverrides": {
@@ -228,11 +201,6 @@
       {
         "id": "789:1181",
         "name": "Pill",
-        "path": [
-          "state=down",
-          "controls",
-          "Pill"
-        ],
         "mainComponentSetId": "272:120",
         "variantOverrides": "type=button-sm, color=running, intensity=mid, font=sans",
         "componentPropertyOverrides": {
@@ -265,7 +233,6 @@
           }
         }
       }
-    ],
-    "depthWarnings": []
+    ]
   }
 }

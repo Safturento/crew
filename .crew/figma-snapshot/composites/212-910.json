@@ -66,19 +66,11 @@
   },
   "enrichment": {
     "source": "plugin-api",
-    "capturedAt": "2026-06-20T14:12:01.048Z",
-    "componentProperties": null,
-    "mainComponent": null,
-    "boundVariables": [],
+    "capturedAt": "2026-06-24T14:38:51.786Z",
     "componentInstances": [
       {
         "id": "281:155",
         "name": "Pill",
-        "path": [
-          "state=initializing",
-          "state-slot",
-          "Pill"
-        ],
         "mainComponentSetId": "272:120",
         "variantOverrides": "type=pill, color=initializing, intensity=mid, font=mono",
         "componentPropertyOverrides": {
@@ -114,68 +106,21 @@
       {
         "id": "212:918",
         "name": "lucide/hash",
-        "path": [
-          "state=initializing",
-          "content",
-          "metadata",
-          "KAN-23",
-          "lucide/hash"
-        ],
-        "mainComponentSetId": "202:130",
-        "variantOverrides": null,
-        "componentPropertyOverrides": {},
-        "resolvedStyles": {
-          "fills": [],
-          "strokes": [],
-          "textColor": null
-        }
+        "mainComponentSetId": "202:130"
       },
       {
         "id": "212:922",
         "name": "lucide/clock",
-        "path": [
-          "state=initializing",
-          "content",
-          "metadata",
-          "21m 04s",
-          "lucide/clock"
-        ],
-        "mainComponentSetId": "202:132",
-        "variantOverrides": null,
-        "componentPropertyOverrides": {},
-        "resolvedStyles": {
-          "fills": [],
-          "strokes": [],
-          "textColor": null
-        }
+        "mainComponentSetId": "202:132"
       },
       {
         "id": "212:926",
         "name": "lucide/currency",
-        "path": [
-          "state=initializing",
-          "content",
-          "metadata",
-          "48.2k",
-          "lucide/currency"
-        ],
-        "mainComponentSetId": "202:134",
-        "variantOverrides": null,
-        "componentPropertyOverrides": {},
-        "resolvedStyles": {
-          "fills": [],
-          "strokes": [],
-          "textColor": null
-        }
+        "mainComponentSetId": "202:134"
       },
       {
         "id": "281:160",
         "name": "Pill",
-        "path": [
-          "state=running",
-          "state-slot",
-          "Pill"
-        ],
         "mainComponentSetId": "272:120",
         "variantOverrides": "type=pill, color=running, intensity=mid, font=mono",
         "componentPropertyOverrides": {
@@ -211,68 +156,21 @@
       {
         "id": "212:937",
         "name": "lucide/hash",
-        "path": [
-          "state=running",
-          "content",
-          "metadata",
-          "KAN-23",
-          "lucide/hash"
-        ],
-        "mainComponentSetId": "202:130",
-        "variantOverrides": null,
-        "componentPropertyOverrides": {},
-        "resolvedStyles": {
-          "fills": [],
-          "strokes": [],
-          "textColor": null
-        }
+        "mainComponentSetId": "202:130"
       },
       {
         "id": "212:941",
         "name": "lucide/clock",
-        "path": [
-          "state=running",
-          "content",
-          "metadata",
-          "21m 04s",
-          "lucide/clock"
-        ],
-        "mainComponentSetId": "202:132",
-        "variantOverrides": null,
-        "componentPropertyOverrides": {},
-        "resolvedStyles": {
-          "fills": [],
-          "strokes": [],
-          "textColor": null
-        }
+        "mainComponentSetId": "202:132"
       },
       {
         "id": "212:945",
         "name": "lucide/currency",
-        "path": [
-          "state=running",
-          "content",
-          "metadata",
-          "48.2k",
-          "lucide/currency"
-        ],
-        "mainComponentSetId": "202:134",
-        "variantOverrides": null,
-        "componentPropertyOverrides": {},
-        "resolvedStyles": {
-          "fills": [],
-          "strokes": [],
-          "textColor": null
-        }
+        "mainComponentSetId": "202:134"
       },
       {
         "id": "281:165",
         "name": "Pill",
-        "path": [
-          "state=idle",
-          "state-slot",
-          "Pill"
-        ],
         "mainComponentSetId": "272:120",
         "variantOverrides": "type=pill, color=idle, intensity=mid, font=mono",
         "componentPropertyOverrides": {
@@ -308,68 +206,21 @@
       {
         "id": "212:956",
         "name": "lucide/hash",
-        "path": [
-          "state=idle",
-          "content",
-          "metadata",
-          "KAN-23",
-          "lucide/hash"
-        ],
-        "mainComponentSetId": "202:130",
-        "variantOverrides": null,
-        "componentPropertyOverrides": {},
-        "resolvedStyles": {
-          "fills": [],
-          "strokes": [],
-          "textColor": null
-        }
+        "mainComponentSetId": "202:130"
       },
       {
         "id": "212:960",
         "name": "lucide/clock",
-        "path": [
-          "state=idle",
-          "content",
-          "metadata",
-          "21m 04s",
-          "lucide/clock"
-        ],
-        "mainComponentSetId": "202:132",
-        "variantOverrides": null,
-        "componentPropertyOverrides": {},
-        "resolvedStyles": {
-          "fills": [],
-          "strokes": [],
-          "textColor": null
-        }
+        "mainComponentSetId": "202:132"
       },
       {
         "id": "212:964",
         "name": "lucide/currency",
-        "path": [
-          "state=idle",
-          "content",
-          "metadata",
-          "48.2k",
-          "lucide/currency"
-        ],
-        "mainComponentSetId": "202:134",
-        "variantOverrides": null,
-        "componentPropertyOverrides": {},
-        "resolvedStyles": {
-          "fills": [],
-          "strokes": [],
-          "textColor": null
-        }
+        "mainComponentSetId": "202:134"
       },
       {
         "id": "278:1529",
         "name": "Pill",
-        "path": [
-          "state=idle",
-          "action",
-          "Pill"
-        ],
         "mainComponentSetId": "272:120",
         "variantOverrides": "type=button-sm, color=running, intensity=mid, font=sans",
         "componentPropertyOverrides": {
@@ -405,11 +256,6 @@
       {
         "id": "278:1534",
         "name": "Pill",
-        "path": [
-          "state=idle",
-          "action",
-          "Pill"
-        ],
         "mainComponentSetId": "272:120",
         "variantOverrides": "type=button-sm, color=running, intensity=ghost, font=sans",
         "componentPropertyOverrides": {
@@ -422,8 +268,6 @@
           "font": "sans"
         },
         "resolvedStyles": {
-          "fills": [],
-          "strokes": [],
           "textColor": {
             "hex": "#94A3B8",
             "tokenAlias": "state/running"
@@ -433,11 +277,6 @@
       {
         "id": "281:175",
         "name": "Pill",
-        "path": [
-          "state=waiting",
-          "state-slot",
-          "Pill"
-        ],
         "mainComponentSetId": "272:120",
         "variantOverrides": "type=pill, color=waiting, intensity=mid, font=mono",
         "componentPropertyOverrides": {
@@ -473,68 +312,21 @@
       {
         "id": "212:977",
         "name": "lucide/hash",
-        "path": [
-          "state=waiting",
-          "content",
-          "metadata",
-          "KAN-23",
-          "lucide/hash"
-        ],
-        "mainComponentSetId": "202:130",
-        "variantOverrides": null,
-        "componentPropertyOverrides": {},
-        "resolvedStyles": {
-          "fills": [],
-          "strokes": [],
-          "textColor": null
-        }
+        "mainComponentSetId": "202:130"
       },
       {
         "id": "212:981",
         "name": "lucide/clock",
-        "path": [
-          "state=waiting",
-          "content",
-          "metadata",
-          "21m 04s",
-          "lucide/clock"
-        ],
-        "mainComponentSetId": "202:132",
-        "variantOverrides": null,
-        "componentPropertyOverrides": {},
-        "resolvedStyles": {
-          "fills": [],
-          "strokes": [],
-          "textColor": null
-        }
+        "mainComponentSetId": "202:132"
       },
       {
         "id": "212:985",
         "name": "lucide/currency",
-        "path": [
-          "state=waiting",
-          "content",
-          "metadata",
-          "48.2k",
-          "lucide/currency"
-        ],
-        "mainComponentSetId": "202:134",
-        "variantOverrides": null,
-        "componentPropertyOverrides": {},
-        "resolvedStyles": {
-          "fills": [],
-          "strokes": [],
-          "textColor": null
-        }
+        "mainComponentSetId": "202:134"
       },
       {
         "id": "278:1539",
         "name": "Pill",
-        "path": [
-          "state=waiting",
-          "action",
-          "Pill"
-        ],
         "mainComponentSetId": "272:120",
         "variantOverrides": "type=button-sm, color=waiting, intensity=loud, font=sans",
         "componentPropertyOverrides": {
@@ -554,7 +346,6 @@
               "opacity": 1
             }
           ],
-          "strokes": [],
           "textColor": {
             "hex": "#020617",
             "tokenAlias": "state/foreground"
@@ -564,11 +355,6 @@
       {
         "id": "281:182",
         "name": "Pill",
-        "path": [
-          "state=pr-open",
-          "state-slot",
-          "Pill"
-        ],
         "mainComponentSetId": "272:120",
         "variantOverrides": "type=pill, color=pr-open, intensity=mid, font=mono",
         "componentPropertyOverrides": {
@@ -604,68 +390,21 @@
       {
         "id": "212:997",
         "name": "lucide/hash",
-        "path": [
-          "state=pr-open",
-          "content",
-          "metadata",
-          "KAN-23",
-          "lucide/hash"
-        ],
-        "mainComponentSetId": "202:130",
-        "variantOverrides": null,
-        "componentPropertyOverrides": {},
-        "resolvedStyles": {
-          "fills": [],
-          "strokes": [],
-          "textColor": null
-        }
+        "mainComponentSetId": "202:130"
       },
       {
         "id": "212:1001",
         "name": "lucide/clock",
-        "path": [
-          "state=pr-open",
-          "content",
-          "metadata",
-          "21m 04s",
-          "lucide/clock"
-        ],
-        "mainComponentSetId": "202:132",
-        "variantOverrides": null,
-        "componentPropertyOverrides": {},
-        "resolvedStyles": {
-          "fills": [],
-          "strokes": [],
-          "textColor": null
-        }
+        "mainComponentSetId": "202:132"
       },
       {
         "id": "212:1005",
         "name": "lucide/currency",
-        "path": [
-          "state=pr-open",
-          "content",
-          "metadata",
-          "48.2k",
-          "lucide/currency"
-        ],
-        "mainComponentSetId": "202:134",
-        "variantOverrides": null,
-        "componentPropertyOverrides": {},
-        "resolvedStyles": {
-          "fills": [],
-          "strokes": [],
-          "textColor": null
-        }
+        "mainComponentSetId": "202:134"
       },
       {
         "id": "278:1544",
         "name": "Pill",
-        "path": [
-          "state=pr-open",
-          "action",
-          "Pill"
-        ],
         "mainComponentSetId": "272:120",
         "variantOverrides": "type=button-sm, color=running, intensity=mid, font=sans",
         "componentPropertyOverrides": {
@@ -701,11 +440,6 @@
       {
         "id": "278:1549",
         "name": "Pill",
-        "path": [
-          "state=pr-open",
-          "action",
-          "Pill"
-        ],
         "mainComponentSetId": "272:120",
         "variantOverrides": "type=button-sm, color=running, intensity=ghost, font=sans",
         "componentPropertyOverrides": {
@@ -718,8 +452,6 @@
           "font": "sans"
         },
         "resolvedStyles": {
-          "fills": [],
-          "strokes": [],
           "textColor": {
             "hex": "#94A3B8",
             "tokenAlias": "state/running"
@@ -729,11 +461,6 @@
       {
         "id": "281:188",
         "name": "Pill",
-        "path": [
-          "state=error",
-          "state-slot",
-          "Pill"
-        ],
         "mainComponentSetId": "272:120",
         "variantOverrides": "type=pill, color=error, intensity=mid, font=mono",
         "componentPropertyOverrides": {
@@ -769,68 +496,21 @@
       {
         "id": "212:1018",
         "name": "lucide/hash",
-        "path": [
-          "state=error",
-          "content",
-          "metadata",
-          "KAN-23",
-          "lucide/hash"
-        ],
-        "mainComponentSetId": "202:130",
-        "variantOverrides": null,
-        "componentPropertyOverrides": {},
-        "resolvedStyles": {
-          "fills": [],
-          "strokes": [],
-          "textColor": null
-        }
+        "mainComponentSetId": "202:130"
       },
       {
         "id": "212:1022",
         "name": "lucide/clock",
-        "path": [
-          "state=error",
-          "content",
-          "metadata",
-          "21m 04s",
-          "lucide/clock"
-        ],
-        "mainComponentSetId": "202:132",
-        "variantOverrides": null,
-        "componentPropertyOverrides": {},
-        "resolvedStyles": {
-          "fills": [],
-          "strokes": [],
-          "textColor": null
-        }
+        "mainComponentSetId": "202:132"
       },
       {
         "id": "212:1026",
         "name": "lucide/currency",
-        "path": [
-          "state=error",
-          "content",
-          "metadata",
-          "48.2k",
-          "lucide/currency"
-        ],
-        "mainComponentSetId": "202:134",
-        "variantOverrides": null,
-        "componentPropertyOverrides": {},
-        "resolvedStyles": {
-          "fills": [],
-          "strokes": [],
-          "textColor": null
-        }
+        "mainComponentSetId": "202:134"
       },
       {
         "id": "801:4070",
         "name": "Pill",
-        "path": [
-          "state=error",
-          "action",
-          "Pill"
-        ],
         "mainComponentSetId": "272:120",
         "variantOverrides": "type=button-sm, color=running, intensity=mid, font=sans",
         "componentPropertyOverrides": {
@@ -866,11 +546,6 @@
       {
         "id": "278:1553",
         "name": "Pill",
-        "path": [
-          "state=error",
-          "action",
-          "Pill"
-        ],
         "mainComponentSetId": "272:120",
         "variantOverrides": "type=button-sm, color=error, intensity=ghost, font=sans",
         "componentPropertyOverrides": {
@@ -883,8 +558,6 @@
           "font": "sans"
         },
         "resolvedStyles": {
-          "fills": [],
-          "strokes": [],
           "textColor": {
             "hex": "#F87171",
             "tokenAlias": "state/error"
@@ -894,11 +567,6 @@
       {
         "id": "281:196",
         "name": "Pill",
-        "path": [
-          "state=finished",
-          "state-slot",
-          "Pill"
-        ],
         "mainComponentSetId": "272:120",
         "variantOverrides": "type=pill, color=finished, intensity=mid, font=mono",
         "componentPropertyOverrides": {
@@ -934,61 +602,18 @@
       {
         "id": "212:1038",
         "name": "lucide/hash",
-        "path": [
-          "state=finished",
-          "content",
-          "metadata",
-          "KAN-23",
-          "lucide/hash"
-        ],
-        "mainComponentSetId": "202:130",
-        "variantOverrides": null,
-        "componentPropertyOverrides": {},
-        "resolvedStyles": {
-          "fills": [],
-          "strokes": [],
-          "textColor": null
-        }
+        "mainComponentSetId": "202:130"
       },
       {
         "id": "212:1042",
         "name": "lucide/clock",
-        "path": [
-          "state=finished",
-          "content",
-          "metadata",
-          "21m 04s",
-          "lucide/clock"
-        ],
-        "mainComponentSetId": "202:132",
-        "variantOverrides": null,
-        "componentPropertyOverrides": {},
-        "resolvedStyles": {
-          "fills": [],
-          "strokes": [],
-          "textColor": null
-        }
+        "mainComponentSetId": "202:132"
       },
       {
         "id": "212:1046",
         "name": "lucide/currency",
-        "path": [
-          "state=finished",
-          "content",
-          "metadata",
-          "48.2k",
-          "lucide/currency"
-        ],
-        "mainComponentSetId": "202:134",
-        "variantOverrides": null,
-        "componentPropertyOverrides": {},
-        "resolvedStyles": {
-          "fills": [],
-          "strokes": [],
-          "textColor": null
-        }
+        "mainComponentSetId": "202:134"
       }
-    ],
-    "depthWarnings": []
+    ]
   }
 }

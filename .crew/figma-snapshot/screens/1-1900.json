@@ -92,35 +92,11 @@
   },
   "enrichment": {
     "source": "plugin-api",
-    "capturedAt": "2026-06-10T02:10:44.940Z",
-    "componentProperties": null,
-    "mainComponent": null,
-    "boundVariables": [
-      {
-        "path": "fills[0].color",
-        "variableId": "VariableID:217:213",
-        "variableName": "background",
-        "resolvedAlias": "background -> slate/950",
-        "resolvedHex": "#020617"
-      },
-      {
-        "path": "backgrounds[0].color",
-        "variableId": "VariableID:217:213",
-        "variableName": "background",
-        "resolvedAlias": "background -> slate/950",
-        "resolvedHex": "#020617"
-      }
-    ],
+    "capturedAt": "2026-06-24T14:59:12.646Z",
     "componentInstances": [
       {
         "id": "244:961",
         "name": "TopNav",
-        "path": [
-          "Background",
-          "Background+Border+Shadow",
-          "Container",
-          "TopNav"
-        ],
         "mainComponentSetId": "245:133",
         "variantOverrides": "Active Tab=agents",
         "componentPropertyOverrides": {
@@ -130,7 +106,6 @@
           "Active Tab": "agents"
         },
         "resolvedStyles": {
-          "fills": [],
           "strokes": [
             {
               "hex": "#1E293B",
@@ -147,15 +122,7 @@
       {
         "id": "587:3177",
         "name": "AgentBody (full page)",
-        "path": [
-          "Background",
-          "Background+Border+Shadow",
-          "Container",
-          "AgentBody (full page)"
-        ],
         "mainComponentSetId": "220:246",
-        "variantOverrides": null,
-        "componentPropertyOverrides": {},
         "resolvedStyles": {
           "fills": [
             {
@@ -178,6 +145,21 @@
         }
       }
     ],
-    "depthWarnings": []
+    "boundVariables": [
+      {
+        "path": "fills[0].color",
+        "variableId": "VariableID:217:213",
+        "variableName": "background",
+        "resolvedAlias": "background -> slate/950",
+        "resolvedHex": "#020617"
+      },
+      {
+        "path": "backgrounds[0].color",
+        "variableId": "VariableID:217:213",
+        "variableName": "background",
+        "resolvedAlias": "background -> slate/950",
+        "resolvedHex": "#020617"
+      }
+    ]
   }
 }

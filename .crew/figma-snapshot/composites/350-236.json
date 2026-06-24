@@ -142,9 +142,37 @@
   },
   "enrichment": {
     "source": "plugin-api",
-    "capturedAt": "2026-06-10T01:11:37.617Z",
-    "componentProperties": null,
-    "mainComponent": null,
+    "capturedAt": "2026-06-24T14:59:13.122Z",
+    "componentInstances": [
+      {
+        "id": "350:242",
+        "name": "badge",
+        "mainComponentSetId": "272:120",
+        "variantOverrides": "type=tag, color=running, intensity=muted, font=mono",
+        "componentPropertyOverrides": {
+          "Icon": "lucide/git-pull-request",
+          "Has Icon": false,
+          "Label": "4 active",
+          "type": "tag",
+          "color": "running",
+          "intensity": "muted",
+          "font": "mono"
+        },
+        "resolvedStyles": {
+          "fills": [
+            {
+              "hex": "#1C2538",
+              "tokenAlias": "slate-1050",
+              "opacity": 1
+            }
+          ],
+          "textColor": {
+            "hex": "#94A3B8",
+            "tokenAlias": "state/running"
+          }
+        }
+      }
+    ],
     "boundVariables": [
       {
         "path": "fills[0].color",
@@ -167,42 +195,6 @@
         "resolvedAlias": "card -> slate/900",
         "resolvedHex": "#0F172A"
       }
-    ],
-    "componentInstances": [
-      {
-        "id": "350:242",
-        "name": "badge",
-        "path": [
-          "right",
-          "badge"
-        ],
-        "mainComponentSetId": "272:120",
-        "variantOverrides": "type=tag, color=running, intensity=muted, font=mono",
-        "componentPropertyOverrides": {
-          "Icon": "lucide/git-pull-request",
-          "Has Icon": false,
-          "Label": "4 active",
-          "type": "tag",
-          "color": "running",
-          "intensity": "muted",
-          "font": "mono"
-        },
-        "resolvedStyles": {
-          "fills": [
-            {
-              "hex": "#1C2538",
-              "tokenAlias": "slate-1050",
-              "opacity": 1
-            }
-          ],
-          "strokes": [],
-          "textColor": {
-            "hex": "#94A3B8",
-            "tokenAlias": "state/running"
-          }
-        }
-      }
-    ],
-    "depthWarnings": []
+    ]
   }
 }
