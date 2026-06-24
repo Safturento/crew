@@ -2,6 +2,14 @@
 // The skill substitutes <NODE_IDS_JSON> with a JSON array of node IDs and passes
 // the whole file to the mcp__plugin_figma_figma__use_figma MCP tool. The script
 // returns an object mapping each nodeId to its enrichment data (or { error }).
+//
+// Output is COMPACT: `source` and `componentInstances` are always present (the
+// `crew figma-snapshot --enrich` merge validates on them); every other top-level
+// field and every per-instance field is omitted when null/empty, and the
+// per-instance `path` array is not emitted at all (the visual-fidelity-check
+// consumer never reads it). This keeps a single node's payload well under the
+// ~20 KB use_figma response cap. A null-checking reader treats an omitted field
+// the same as an empty one, so this stays compatible with older verbose files.
 const ids = <NODE_IDS_JSON>;
 const out = {};
 
@@ -102,15 +110,18 @@ async function instanceEntry(node, path) {
       variantOverrides = null;
     }
   }
-  return {
-    id: node.id,
-    name: node.name,
-    path: path.slice(),
-    mainComponentSetId,
-    variantOverrides,
-    componentPropertyOverrides: propertyOverrides,
-    resolvedStyles: await resolvedStylesFor(node),
-  };
+  // Compact: drop `path` (visual-fidelity-check's tier-2 path disambiguation was
+  // removed in favor of Label -> Position); omit null/empty fields.
+  const entry = { id: node.id, name: node.name, mainComponentSetId };
+  if (variantOverrides !== null) entry.variantOverrides = variantOverrides;
+  if (Object.keys(propertyOverrides).length > 0) entry.componentPropertyOverrides = propertyOverrides;
+  const styles = await resolvedStylesFor(node);
+  const rs = {};
+  if (styles.fills.length > 0) rs.fills = styles.fills;
+  if (styles.strokes.length > 0) rs.strokes = styles.strokes;
+  if (styles.textColor) rs.textColor = styles.textColor;
+  if (Object.keys(rs).length > 0) entry.resolvedStyles = rs;
+  return entry;
 }
 
 async function walkChildren(node, depth, path, instances, depthWarnings) {
@@ -153,19 +164,17 @@ for (const id of ids) {
     const node = await figma.getNodeByIdAsync(id);
     if (!node) { out[id] = { error: 'not found' }; continue; }
 
+    // Compact: always keep `source` + `componentInstances`; add the rest only when non-empty.
     const enrichment = {
       source: 'plugin-api',
       capturedAt: new Date().toISOString(),
-      componentProperties: null,
-      mainComponent: null,
-      boundVariables: [],
       componentInstances: [],
-      depthWarnings: [],
     };
+    const depthWarnings = [];
 
     if (node.type === 'INSTANCE') {
       const cp = node.componentProperties || {};
-      enrichment.componentProperties = {};
+      const componentProperties = {};
       for (const key of Object.keys(cp)) {
         const prop = cp[key];
         let value = prop.value;
@@ -175,8 +184,9 @@ for (const id of ids) {
             if (ref) value = { id: prop.value, name: ref.name };
           } catch (e) { /* leave value as id */ }
         }
-        enrichment.componentProperties[key.split('#')[0]] = value;
+        componentProperties[key.split('#')[0]] = value;
       }
+      if (Object.keys(componentProperties).length > 0) enrichment.componentProperties = componentProperties;
       if (node.mainComponent) {
         enrichment.mainComponent = {
           id: node.mainComponent.id,
@@ -186,6 +196,7 @@ for (const id of ids) {
       }
     }
 
+    const boundVariables = [];
     const paintProps = ['fills', 'strokes', 'backgrounds'];
     for (const propName of paintProps) {
       const paints = node[propName];
@@ -195,16 +206,17 @@ for (const id of ids) {
         if (!paint || paint.visible === false) continue;
         const info = await paintTokenAlias(paint);
         if (info) {
-          enrichment.boundVariables.push({
-            path: `${propName}[${i}].color`,
-            ...info,
-          });
+          // `path` here is a property-path string (e.g. "fills[0].color"), not the
+          // dropped per-instance path array — the consumer reads boundVariables.
+          boundVariables.push({ path: `${propName}[${i}].color`, ...info });
         }
       }
     }
+    if (boundVariables.length > 0) enrichment.boundVariables = boundVariables;
 
     // §1: walk the composite's tree, emit nested-instance entries.
-    await walkChildren(node, 1, [], enrichment.componentInstances, enrichment.depthWarnings);
+    await walkChildren(node, 1, [], enrichment.componentInstances, depthWarnings);
+    if (depthWarnings.length > 0) enrichment.depthWarnings = depthWarnings;
 
     out[id] = enrichment;
   } catch (e) {

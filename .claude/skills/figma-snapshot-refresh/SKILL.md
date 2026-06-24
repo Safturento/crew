@@ -66,19 +66,25 @@ design feeds into code. (`visual-fidelity-check` is the consumer gate, after cod
   `use_figma` call), then call `mcp__plugin_figma_figma__use_figma` with the
   contents of `enrichment-script.js` (this skill's directory) — substitute
   `<NODE_IDS_JSON>` with a JSON array of node IDs, and pass the project's
-  `figma_file_key`. The script returns `{ nodeId: enrichmentObject }`.
+  `figma_file_key`. The script returns `{ nodeId: enrichmentObject }`. The
+  output is **compact** (null/empty fields omitted, per-instance `path`
+  dropped), so payloads are well under the ~20 KB response cap and pack denser
+  than the old rule of thumb.
 
   - For **partial refresh**, the ID list is exactly what you passed to
-    `--node-id`. Usually a single `use_figma` call (well under the ~20 KB
-    response budget).
+    `--node-id`. Usually a single `use_figma` call.
   - For **full refresh**, the ID list is every key of
     `.crew/figma-snapshot/index.json`. Split into batches sized so each result
-    stays under ~20 KB (≈5–8 nodes is typical) and call `use_figma` once per
-    batch — merging each batch (step 5) before fetching the next so only one
-    batch sits in context at a time. To size batches precisely, first run a
-    sizing probe: the same script with the final line changed to
-    `out[id] = JSON.stringify(enrichment).length;` returns one byte count
-    per node in a single small response.
+    stays under ~20 KB and call `use_figma` once per batch — merging each batch
+    (step 5) before fetching the next so only one batch sits in context at a
+    time. To size batches precisely, first run a sizing probe: the same script
+    with the final line changed to `out[id] = JSON.stringify(enrichment).length;`
+    returns one byte count per node in a single small response. With compact
+    output, ~10–15 small nodes per batch is realistic; let the probe drive it.
+    If the probe shows a **single node** at/over the cap even compacted (a huge
+    nested frame), enrich it **alone** in its own batch — and if even solo it
+    exceeds ~20 KB, STOP: per-node chunking is not yet built, so surface it
+    rather than fetch a truncated result.
 
 - [ ] **5. Merge.** Write the `use_figma` result (the `{ nodeId: enrichment }`
   object) **verbatim** to a temp file, then run
@@ -112,3 +118,4 @@ design feeds into code. (`visual-fidelity-check` is the consumer gate, after cod
 | "I'll hand-edit the per-node JSON instead of running --enrich" | Don't. The command does the validation, the atomic write, and the fail-closed check. Hand-editing bypasses all three and risks a half-merged snapshot. |
 | "`--check` said fresh but I'll regenerate anyway" | Fresh means current. Stop at step 1. |
 | "I'll partial-refresh and update meta.json myself" | Don't. meta.json's staleness is the safe signal that siblings may have drifted. Full refresh is the way to clear stale. |
+| "One node is ~20 KB even compacted — I'll just batch it anyway" | A single node at/over the cap can't share a batch and may truncate solo. Enrich it alone; if it still exceeds the cap, STOP and surface it — per-node chunking isn't built. |

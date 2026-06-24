@@ -21,7 +21,7 @@ Reshape the enrichment payload emitted by `enrichment-script.js` to drop null/em
 
 - **Changes:** `enrichment-script.js` (the `figma-snapshot-refresh` skill asset) — the only producer of the shape.
 - **Unchanged — `mergeEnrichment` (`packages/cli/src/lib/figma-snapshot/merge.ts`):** its validation requires only `source === 'plugin-api'` and `Array.isArray(componentInstances)`, both retained below; it writes the entry pass-through. No CLI code change, no test change.
-- **Unchanged behaviorally — `visual-fidelity-check`:** it reads `componentInstances` → `{ mainComponentSetId, variantOverrides, componentPropertyOverrides, resolvedStyles{…tokenAlias} }` and top-level `boundVariables`. It never reads `path`, `depthWarnings`, or `capturedAt`. Doc examples that show now-absent fields get a light refresh (below).
+- **`visual-fidelity-check`:** it reads `componentInstances` → `{ mainComponentSetId, variantOverrides, componentPropertyOverrides, resolvedStyles{…tokenAlias} }` and top-level `boundVariables`. It never reads `depthWarnings` or `capturedAt`. **Correction (found in implementation):** it *did* read the per-instance `path` as tier 2 of its nested-instance disambiguation ladder (Label → **Path** → Position). Since `path` is the single biggest per-instance saving and keeping it puts the worst node back at ~19.6 KB, this work **drops `path` and removes that tier**, collapsing the consumer's ladder to **Label → Position** (positional matching already covers most label collisions). `workflow.md` is updated accordingly.
 
 This is therefore a **single interactive ticket** — skill-file edits only. (Skill files under a project's own `.claude/skills/` can't be written by `crew run` dispatch.)
 
@@ -47,7 +47,7 @@ Build the enrichment object as today, then strip noise before returning. **Omit*
 |---|---|
 | `id`, `name` | keep |
 | `mainComponentSetId` | keep (consumer anchors on it) |
-| `path` | **drop entirely** — consumer never reads it; the single biggest per-instance saving |
+| `path` | **drop entirely** — biggest per-instance saving. Consumer's tier-2 disambiguation by `path` is removed (Label → Position only); see the correction above |
 | `variantOverrides` | omit when `null` |
 | `componentPropertyOverrides` | omit when `{}` |
 | `resolvedStyles.fills` / `.strokes` | omit when `[]` |
@@ -84,4 +84,4 @@ Empirical (matches CREW-282's validation style — no code tests change):
 
 - `.claude/skills/figma-snapshot-refresh/enrichment-script.js` — emit the compact shape (the substantive change).
 - `.claude/skills/figma-snapshot-refresh/SKILL.md` — note the compact output in step 4; add the "single node still near cap ⇒ revisit chunking" signal to the red-flags / notes.
-- `.claude/skills/visual-fidelity-check/workflow.md` + `examples/findings-report-example.md` — refresh any illustrative enrichment snippets that show now-omitted null/empty fields or `path`, so the docs match what's on disk.
+- `.claude/skills/visual-fidelity-check/workflow.md` — remove the tier-2 `path` disambiguation step (collapse the ladder to Label → Position). The `examples/` snippets don't reference `path`, so they need no change.

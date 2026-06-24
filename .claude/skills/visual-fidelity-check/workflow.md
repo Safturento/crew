@@ -80,8 +80,7 @@ For every caller in the touched-files diff, walk:
 
 3. **Find the relevant nested instance.** Inside the composite's `enrichment.componentInstances` array, match against the caller by:
    1. **Label first.** If the caller renders a Pill labelled `"New Run"`, find the entry where `componentPropertyOverrides.Label === "New Run"`.
-   2. **Path next.** If no Label match (or multiple matches), use the `path` breadcrumb to disambiguate by position in the composite tree.
-   3. **Position last.** If neither resolves, fall back to "the Nth instance of this mainComponentSetId in the composite", matching to the Nth call site in the caller's JSX.
+   2. **Position next.** If no Label match (or multiple matches), fall back to "the Nth instance of this `mainComponentSetId` in the composite", matching to the Nth call site in the caller's JSX. (Instance entries are emitted in tree order, so the Nth entry for a given `mainComponentSetId` is the Nth occurrence in the composite.)
 
    If no match resolves, surface as:
    > **MEDIUM (verification-gap):** caller `<file>:<line>` renders `<Primitive>` but no matching instance found in composite `<nodeId>`. Manual disambiguation required.
