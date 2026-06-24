@@ -5,13 +5,20 @@ afterEach(() => vi.restoreAllMocks());
 
 function mockFetchOnce(json: unknown) {
   return vi.spyOn(globalThis, 'fetch').mockResolvedValue(
-    new Response(JSON.stringify(json), { status: 200, headers: { 'Content-Type': 'application/json' } }),
+    new Response(JSON.stringify(json), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    }),
   );
 }
 
 describe('JiraClient.searchIssues', () => {
   it('builds /search/jql with jql + fields + maxResults and returns issues', async () => {
-    const spy = mockFetchOnce({ issues: [{ key: 'CREW-1', fields: { summary: 'A', status: { name: 'Ready for Development' } } }] });
+    const spy = mockFetchOnce({
+      issues: [
+        { key: 'CREW-1', fields: { summary: 'A', status: { name: 'Ready for Development' } } },
+      ],
+    });
     const client = new JiraClient({ site: 'https://x.atlassian.net', email: 'e@x', token: 't' });
 
     const issues = await client.searchIssues('project = "CREW"', ['summary', 'status']);

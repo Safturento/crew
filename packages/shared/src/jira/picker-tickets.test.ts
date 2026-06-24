@@ -10,7 +10,14 @@ describe('projectTicketsResponseSchema', () => {
           epicKey: 'CREW-100',
           epicSummary: 'Epic A',
           tickets: [
-            { key: 'CREW-101', summary: 'Do thing', priority: 'High', runnable: true, blockedBy: [], hasActiveAgent: false },
+            {
+              key: 'CREW-101',
+              summary: 'Do thing',
+              priority: 'High',
+              runnable: true,
+              blockedBy: [],
+              hasActiveAgent: false,
+            },
           ],
         },
       ],
@@ -19,11 +26,16 @@ describe('projectTicketsResponseSchema', () => {
   });
 
   it('accepts a degraded payload', () => {
-    const parsed = projectTicketsResponseSchema.parse({ available: false, reason: 'no_credentials' });
+    const parsed = projectTicketsResponseSchema.parse({
+      available: false,
+      reason: 'no_credentials',
+    });
     expect(parsed).toEqual({ available: false, reason: 'no_credentials' });
   });
 
   it('rejects an unknown degraded reason', () => {
-    expect(() => projectTicketsResponseSchema.parse({ available: false, reason: 'nope' })).toThrow();
+    expect(() =>
+      projectTicketsResponseSchema.parse({ available: false, reason: 'nope' }),
+    ).toThrow();
   });
 });
