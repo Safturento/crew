@@ -37,6 +37,39 @@ repo = "u/r"
     expect(config.default_branch).toBe('main');
   });
 
+  it('defaults jira.ready_status to "Ready for Development" when omitted', () => {
+    const raw = `
+name = "minimal"
+repo_path = "/x"
+
+[jira]
+project_key = "MIN"
+site = "https://x.atlassian.net"
+
+[github]
+repo = "u/r"
+`;
+    const config = parseProjectConfig(raw);
+    expect(config.jira.ready_status).toBe('Ready for Development');
+  });
+
+  it('reads an explicit jira.ready_status override', () => {
+    const raw = `
+name = "minimal"
+repo_path = "/x"
+
+[jira]
+project_key = "MIN"
+site = "https://x.atlassian.net"
+ready_status = "Ready"
+
+[github]
+repo = "u/r"
+`;
+    const config = parseProjectConfig(raw);
+    expect(config.jira.ready_status).toBe('Ready');
+  });
+
   it('throws a useful error on invalid TOML', () => {
     expect(() => parseProjectConfig('not = valid = toml')).toThrow();
   });

@@ -51,6 +51,10 @@ export const projectConfigSchema = z
     jira: z.object({
       project_key: z.string(),
       site: z.url(),
+      // CREW: the workflow status whose tickets the New Run picker lists as
+      // candidates. Team-managed boards name this differently, so it's
+      // configurable; the CREW board uses the default.
+      ready_status: z.string().default('Ready for Development'),
     }),
     github: z.object({
       repo: z.string(),

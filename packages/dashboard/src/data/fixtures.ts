@@ -24,7 +24,7 @@ export const FIXTURE_PROJECT_DETAILS: Record<string, ProjectDetailResponse> = {
       name: 'kanban-api',
       repo_path: '~/code/kanban-api',
       default_branch: 'main',
-      jira: { project_key: 'KAN', site: 'https://example.atlassian.net' },
+      jira: { project_key: 'KAN', site: 'https://example.atlassian.net', ready_status: 'Ready for Development' },
       github: { repo: 'example/kanban-api' },
       db_clone: {
         postgres_service: 'postgres',
@@ -41,7 +41,7 @@ export const FIXTURE_PROJECT_DETAILS: Record<string, ProjectDetailResponse> = {
       name: 'recipes-app',
       repo_path: '~/code/recipes-app',
       default_branch: 'main',
-      jira: { project_key: 'REC', site: 'https://example.atlassian.net' },
+      jira: { project_key: 'REC', site: 'https://example.atlassian.net', ready_status: 'Ready for Development' },
       github: { repo: 'example/recipes-app' },
       db_clone: {
         postgres_service: 'postgres',
@@ -58,7 +58,7 @@ export const FIXTURE_PROJECT_DETAILS: Record<string, ProjectDetailResponse> = {
       name: 'crew',
       repo_path: '~/code/crew',
       default_branch: 'main',
-      jira: { project_key: 'CREW', site: 'https://example.atlassian.net' },
+      jira: { project_key: 'CREW', site: 'https://example.atlassian.net', ready_status: 'Ready for Development' },
       github: { repo: 'example/crew' },
       db_clone: {
         postgres_service: 'postgres',

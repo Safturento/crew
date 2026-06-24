@@ -10,7 +10,7 @@ const config: ProjectConfig = {
   name: 'recipes-app',
   repo_path: '/home/u/Repos/Recipes-App',
   default_branch: 'main',
-  jira: { project_key: 'KAN', site: 'https://example.atlassian.net' },
+  jira: { project_key: 'KAN', site: 'https://example.atlassian.net', ready_status: 'Ready for Development' },
   github: { repo: 'u/r' },
   docker: {
     canonical_worktree: 'Recipes-App',
