@@ -429,6 +429,8 @@ Organization: Active is grouped by topic (not chronology) since the dominant acc
 
 #### 2026-06-04 — New Run modal step 2 is a text entry, not the Figma open-ticket picker
 
+**Ticket:** [CREW-276](https://safturento.atlassian.net/browse/CREW-276) — *Epic (children CREW-277 / CREW-278 / CREW-279). Resolution gated on Epic completion, not individual children.*
+
 **What:** CREW-218's New Run modal ships step 2 ("Pick a ticket") as a single `FormField` where the operator types a ticket key, and step 3 ("Confirm") omits the Figma's "Title" summary row. The Figma frames (`1:3418`, `9:2`) instead show a searchable list of the project's **open Jira tickets** (rows like `KAN-31 · Drag-and-drop reordering…` with a priority badge + a "Filter open tickets…" search input) and a ticket _title_ on the confirm step. Both gaps have the same root cause: no daemon endpoint serves open tickets or a ticket summary to the dashboard — `DaemonClient` exposes only `listProjects` / `listAgents` / `enqueueAction` / `getRunnerStatus`. The plan (T6 step 2) explicitly deferred live ticket fetching ("otherwise skip in v1").
 
 **Why noticed:** Implementing CREW-218. Step 1 (project picker) maps cleanly to `listProjects()`, but steps 2–3 need data the dashboard can't fetch yet, so the modal degrades to a typed key. Surfaced during the visual-fidelity pass as the largest code↔Figma divergence (medium, intentional).
