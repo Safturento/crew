@@ -1,7 +1,7 @@
 ---
 name: dispatch
 description: crew run prompt-build, skills injection, verification gates
-last_updated: 2026-06-20
+last_updated: 2026-06-24
 covers:
   - 'packages/cli/src/lib/run/**'
   - 'packages/cli/src/lib/prompts/**'
@@ -138,6 +138,8 @@ The visual-fidelity snapshot is a **committed artifact**, not a dispatch step. I
 **`crew figma-snapshot --check`** is a **content-scoped** freshness probe (`checkSnapshotFreshness` in `figma-snapshot/check.ts`): it re-fetches only the captured node trees via `getFileNodes` (`/files/{key}/nodes?ids=...` — JSON only, no image render), hashes each, and compares to the committed `meta.json`'s `nodeHashes`, exiting non-zero only when a captured node's content genuinely drifted (it names which nodes). Whole-file churn — idle autosaves, edits to unrelated pages — no longer triggers a false STALE, which is why it replaced the old whole-file `figmaFileVersion` comparison (CREW-174). `figmaFileVersion` is retained as informational only. A `meta.json` that predates `nodeHashes` reports `no-baseline` (exit non-zero) — run `figma-snapshot-refresh` to regenerate it. **Known narrower gap:** a Figma _variable redefinition_ (a token value change) does not alter a node's tree — the node references the variable by id — and resolved variable values are unavailable over the REST API on crew's Figma plan, so `--check` cannot detect token-value drift; the interactive `figma-snapshot-refresh` enrichment pass is where that surfaces.
 
 Regeneration — the REST export **plus** Plugin-API enrichment (component property metadata, computed effects, component instances; the REST API exposes none of these) — is the interactive `figma-snapshot-refresh` skill, run at the design→code handoff. Enrichment drives the figma MCP, which works reliably only in an interactive session, so regeneration is deliberately not a `crew run` step. `figma-snapshot-refresh` is intentionally absent from `CREW_OWNED_SKILLS` — dispatched agents must not regenerate the snapshot.
+
+**`crew figma-snapshot --enrich <file>`** is the mechanical merge half of that enrichment flow (`mergeEnrichment` in `figma-snapshot/merge.ts`): it reads a `{ nodeId: enrichment }` JSON map already dumped from `use_figma` and writes the top-level `enrichment` field onto each matching committed per-node file. It is pure-filesystem (no Figma network call), atomic / fail-closed (any errored, unknown-id, or malformed entry ⇒ zero files written and a non-zero exit listing the failures), preserves each node's `raw`, and never touches `meta.json`. `--enrich` is mutually exclusive with `--check` and `--node-id`. It folds the `figma-snapshot-refresh` skill's per-node hand-merge into the CLI; the `use_figma` capture that produces the map still requires the interactive session.
 
 ## Verification gates
 

@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -278,6 +278,98 @@ describe('runFigmaSnapshot', () => {
       } finally {
         rmSync(worktree, { recursive: true, force: true });
       }
+    });
+  });
+
+  describe('enrichment (--enrich)', () => {
+    let dir: string;
+    beforeEach(() => {
+      dir = mkdtempSync(join(tmpdir(), 'enrich-cmd-'));
+    });
+    afterEach(() => {
+      rmSync(dir, { recursive: true, force: true });
+    });
+
+    function setupSnapshot() {
+      const snap = join(dir, '.crew/figma-snapshot');
+      mkdirSync(join(snap, 'composites'), { recursive: true });
+      writeFileSync(
+        join(snap, 'composites', '220-211.json'),
+        `${JSON.stringify({ id: '220:211', name: 'BrandMark', type: 'COMPONENT', page: 'Composites', raw: {} }, null, 2)}\n`,
+      );
+      writeFileSync(
+        join(snap, 'index.json'),
+        `${JSON.stringify({ '220:211': { name: 'BrandMark', type: 'COMPONENT', page: 'Composites', screenshotPath: 'composites/220-211.png', metadataPath: 'composites/220-211.json' } }, null, 2)}\n`,
+      );
+      return snap;
+    }
+
+    const vfConfig = {
+      ...baseConfig,
+      visual_fidelity: {
+        figma_file_key: 'KEY',
+        figma_pages: ['Composites'],
+        snapshot_path: '.crew/figma-snapshot',
+      },
+    } as ProjectConfig;
+
+    it('merges a valid enrichment file and reports the count', async () => {
+      setupSnapshot();
+      const enrichFile = join(dir, 'batch.json');
+      writeFileSync(
+        enrichFile,
+        JSON.stringify({ '220:211': { source: 'plugin-api', componentInstances: [] } }),
+      );
+
+      const result = await runFigmaSnapshot(
+        makeDeps({ worktree: dir, config: vfConfig, enrichFile }),
+      );
+
+      expect(result.ok).toBe(true);
+      expect(result.nodesEnriched).toBe(1);
+    });
+
+    it('fails (ok:false) when an entry carries an error, writing nothing', async () => {
+      const snap = setupSnapshot();
+      const before = readFileSync(join(snap, 'composites', '220-211.json'), 'utf8');
+      const enrichFile = join(dir, 'batch.json');
+      writeFileSync(enrichFile, JSON.stringify({ '220:211': { error: 'not found' } }));
+
+      const result = await runFigmaSnapshot(
+        makeDeps({ worktree: dir, config: vfConfig, enrichFile }),
+      );
+
+      expect(result.ok).toBe(false);
+      expect(result.reason).toContain('220:211');
+      expect(readFileSync(join(snap, 'composites', '220-211.json'), 'utf8')).toBe(before);
+    });
+
+    it('fails (ok:false) when the enrich file is an empty map', async () => {
+      const snap = setupSnapshot();
+      const before = readFileSync(join(snap, 'composites', '220-211.json'), 'utf8');
+      const enrichFile = join(dir, 'empty.json');
+      writeFileSync(enrichFile, JSON.stringify({}));
+
+      const result = await runFigmaSnapshot(
+        makeDeps({ worktree: dir, config: vfConfig, enrichFile }),
+      );
+
+      expect(result.ok).toBe(false);
+      expect(result.reason).toMatch(/no nodes/i);
+      expect(readFileSync(join(snap, 'composites', '220-211.json'), 'utf8')).toBe(before);
+    });
+
+    it('fails cleanly when the enrich file is unparseable JSON', async () => {
+      setupSnapshot();
+      const enrichFile = join(dir, 'bad.json');
+      writeFileSync(enrichFile, '{ not json');
+
+      const result = await runFigmaSnapshot(
+        makeDeps({ worktree: dir, config: vfConfig, enrichFile }),
+      );
+
+      expect(result.ok).toBe(false);
+      expect(result.reason).toMatch(/JSON/i);
     });
   });
 });
