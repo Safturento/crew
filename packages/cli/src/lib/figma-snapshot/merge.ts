@@ -42,7 +42,7 @@ export function mergeEnrichment(opts: MergeEnrichmentOpts): MergeEnrichmentResul
   try {
     index = JSON.parse(readFileSync(indexPath, 'utf8')) as Record<string, IndexEntry>;
   } catch (err) {
-    throw new Error(`index.json is not valid JSON: ${(err as Error).message}`);
+    throw new Error(`index.json is not valid JSON: ${(err as Error).message}`, { cause: err });
   }
 
   const failed: Array<{ id: string; reason: string }> = [];
