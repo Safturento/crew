@@ -91,12 +91,20 @@ describe('NewRunModal', () => {
     expect(screen.getByText('Low')).toBeInTheDocument();
   });
 
-  it('"Available only" hides blocked + in-flight tickets', async () => {
+  it('disables an interactive row with an "interactive" reason', async () => {
+    await gotoStep2();
+    const interactive = (await screen.findByText('Interactive ticket')).closest('button')!;
+    expect(interactive).toBeDisabled();
+    expect(screen.getByText('interactive')).toBeInTheDocument();
+  });
+
+  it('"Available only" hides blocked + in-flight + interactive tickets', async () => {
     const { user } = await gotoStep2();
     await screen.findByText('Runnable ticket');
     await user.click(screen.getByRole('switch'));
     expect(screen.queryByText('Blocked ticket')).not.toBeInTheDocument();
     expect(screen.queryByText('In-flight ticket')).not.toBeInTheDocument();
+    expect(screen.queryByText('Interactive ticket')).not.toBeInTheDocument();
     expect(screen.getByText('Runnable ticket')).toBeInTheDocument();
   });
 
