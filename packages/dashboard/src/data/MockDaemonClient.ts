@@ -126,6 +126,7 @@ export class MockDaemonClient implements DaemonClient {
               runnable: true,
               blockedBy: [],
               hasActiveAgent: false,
+              interactive: false,
             },
             {
               key: 'CREW-102',
@@ -134,6 +135,7 @@ export class MockDaemonClient implements DaemonClient {
               runnable: false,
               blockedBy: [{ key: 'CREW-1', summary: 'Blocker' }],
               hasActiveAgent: false,
+              interactive: false,
             },
             {
               key: 'CREW-103',
@@ -142,6 +144,7 @@ export class MockDaemonClient implements DaemonClient {
               runnable: true,
               blockedBy: [],
               hasActiveAgent: true,
+              interactive: false,
             },
           ],
         },
@@ -156,6 +159,7 @@ export class MockDaemonClient implements DaemonClient {
               runnable: true,
               blockedBy: [],
               hasActiveAgent: false,
+              interactive: false,
             },
           ],
         },

@@ -771,6 +771,7 @@ describe('HttpDaemonClient.listProjectTickets', () => {
               runnable: true,
               blockedBy: [],
               hasActiveAgent: false,
+              interactive: false,
             },
           ],
         },

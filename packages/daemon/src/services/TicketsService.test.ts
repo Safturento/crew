@@ -97,6 +97,43 @@ describe('TicketsService.listProjectTickets', () => {
     });
   });
 
+  it('flags interactive from the interactive label', async () => {
+    const search = () =>
+      Promise.resolve([
+        {
+          key: 'CREW-2',
+          fields: {
+            summary: 's',
+            status: { name: 'Ready for Development' },
+            labels: ['interactive', 'frontend'],
+          },
+        },
+      ]);
+    const res = await svc({ search }).listProjectTickets(project);
+    if (!res.available) throw new Error('expected available');
+    expect(res.groups[0].tickets[0].interactive).toBe(true);
+  });
+
+  it('interactive is false when the label is absent', async () => {
+    const search = () =>
+      Promise.resolve([
+        {
+          key: 'CREW-3',
+          fields: { summary: 's', status: { name: 'Ready for Development' }, labels: ['frontend'] },
+        },
+      ]);
+    const res = await svc({ search }).listProjectTickets(project);
+    if (!res.available) throw new Error('expected available');
+    expect(res.groups[0].tickets[0].interactive).toBe(false);
+  });
+
+  it('requests the labels field from Jira', async () => {
+    const search = vi.fn().mockResolvedValue([]);
+    await svc({ search }).listProjectTickets(project);
+    const [, fields] = search.mock.calls[0];
+    expect(fields).toContain('labels');
+  });
+
   it('treats a Done blocker as not blocking', async () => {
     const search = () =>
       Promise.resolve([
