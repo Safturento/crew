@@ -4,7 +4,11 @@ import type { ProjectConfig } from 'crew-shared';
 
 const project = {
   name: 'crew',
-  jira: { project_key: 'CREW', site: 'https://x.atlassian.net', ready_status: 'Ready for Development' },
+  jira: {
+    project_key: 'CREW',
+    site: 'https://x.atlassian.net',
+    ready_status: 'Ready for Development',
+  },
 } as unknown as ProjectConfig;
 
 const logger = { warn: vi.fn(), info: vi.fn() } as never;
