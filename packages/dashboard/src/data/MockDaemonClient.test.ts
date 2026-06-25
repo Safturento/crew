@@ -36,7 +36,7 @@ describe('MockDaemonClient', () => {
 
   it('returns a canned available ticket list parseable by the contract', async () => {
     const client = new MockDaemonClient();
-    const res = await client.listProjectTickets('crew');
+    const res = await client.listProjectTickets();
     expect(() => projectTicketsResponseSchema.parse(res)).not.toThrow();
     if (!res.available) throw new Error('expected an available payload');
     // The canned payload exercises every row state the picker renders.

@@ -85,14 +85,21 @@ export function NewRunModal({ open, onOpenChange, projects, onConfirm, client }:
     queryKey: ['project-tickets', slug],
     queryFn: () => client.listProjectTickets(slug),
     enabled: queriesEnabled,
+    // Opt out of the app-wide `throwOnError` + retry defaults: a fetch failure
+    // here must degrade the modal to manual ticket-key entry (`isError` below),
+    // not bubble to the global error boundary or retry-spin behind a spinner.
+    throwOnError: false,
+    retry: false,
   });
 
   // Project detail supplies the Jira `site` for the epic-key link's browse base.
-  // Best-effort: a failure just leaves the epic key as plain (unlinked) text.
+  // Best-effort: a failure just leaves the epic key as plain (unlinked) text, so
+  // it must never throw to the error boundary either.
   const detailQuery = useQuery({
     queryKey: ['project-detail', slug],
     queryFn: () => client.getProject(slug),
     enabled: queriesEnabled,
+    throwOnError: false,
     retry: false,
   });
   const jiraBrowseBase = detailQuery.data?.project.jira.site

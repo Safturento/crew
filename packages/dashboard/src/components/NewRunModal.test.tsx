@@ -1,3 +1,4 @@
+import { QueryClient } from '@tanstack/react-query';
 import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
@@ -145,6 +146,34 @@ describe('NewRunModal', () => {
       };
       await gotoStep2({ client });
       expect(await screen.findByText(/live ticket list unavailable/i)).toBeInTheDocument();
+    });
+
+    // Regression: the production QueryClient sets `throwOnError: true`, so a
+    // ticket-fetch error would crash the whole dashboard to its error boundary
+    // instead of degrading the modal — unless the query opts out. Reproduce the
+    // production config here so the degrade path is actually exercised.
+    it('degrades (does not throw to the error boundary) under throwOnError', async () => {
+      const user = userEvent.setup();
+      const client = new MockDaemonClient();
+      client.listProjectTickets = async () => {
+        throw new Error('GET /api/projects/recipes/tickets: 404');
+      };
+      const queryClient = new QueryClient({
+        defaultOptions: { queries: { retry: false, throwOnError: true } },
+      });
+      renderWithProviders(
+        <NewRunModal
+          open
+          onOpenChange={() => {}}
+          projects={projects}
+          onConfirm={() => {}}
+          client={client}
+        />,
+        { queryClient },
+      );
+      await user.click(screen.getByRole('button', { name: /kanban-api/ }));
+      expect(await screen.findByText(/live ticket list unavailable/i)).toBeInTheDocument();
+      expect(screen.getByLabelText(/ticket key/i)).toBeInTheDocument();
     });
   });
 
