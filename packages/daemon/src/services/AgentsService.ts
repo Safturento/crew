@@ -494,6 +494,23 @@ export class AgentsService {
   }
 
   /**
+   * Ticket keys in `projectName` that currently have a NON-terminal agent —
+   * used by the New Run picker to badge tickets already in flight. Reuses
+   * `list()` so the terminal-state derivation (finish/error/pr_merged guards)
+   * isn't reimplemented. Low-frequency call (picker open), so the heavier
+   * `list()` joins are acceptable.
+   */
+  async activeTicketKeys(projectName: string): Promise<Set<string>> {
+    const TERMINAL = new Set<AgentState>(['finished', 'error', 'pr_merged']);
+    const agents = await this.list();
+    return new Set(
+      agents
+        .filter((a) => a.projectName === projectName && !TERMINAL.has(a.state))
+        .map((a) => a.key),
+    );
+  }
+
+  /**
    * Per-project agent count. Single GROUP BY pass over the `agents` table —
    * avoids the N+1 trap of calling `list()` (which carries heavy state-
    * derivation joins). Used by ProjectsService.list() to populate the
