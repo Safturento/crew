@@ -48,6 +48,8 @@ Organization: Active is grouped by topic (not chronology) since the dominant acc
     - [2026-04-28 — Dashboard New Run modal + projects route view](#2026-04-28--dashboard-new-run-modal--projects-route-view)
     - [2026-04-28 — `useAttention.clear()` snapshot semantic isn't directly tested](#2026-04-28--useattentionclear-snapshot-semantic-isnt-directly-tested)
   - [Daemon, CLI & Dispatch](#daemon-cli--dispatch)
+    - [2026-06-25 — `crew run` worktree creation is non-idempotent: an orphan branch silently wedges every future run of a ticket](#2026-06-25--crew-run-worktree-creation-is-non-idempotent-an-orphan-branch-silently-wedges-every-future-run-of-a-ticket)
+    - [2026-06-25 — Runner never reaps dead processes: phantom "running" entries linger, and early-death runs never settle to error](#2026-06-25--runner-never-reaps-dead-processes-phantom-running-entries-linger-and-early-death-runs-never-settle-to-error)
     - [2026-06-20 — `crew resume` emits `run_started` as source `cli-run`, blurring resume vs original-run in the audit trail](#2026-06-20--crew-resume-emits-run_started-as-source-cli-run-blurring-resume-vs-original-run-in-the-audit-trail)
     - [2026-06-20 — Headless `crew run` silently cuts off an agent that backgrounds work and yields via `ScheduleWakeup`](#2026-06-20--headless-crew-run-silently-cuts-off-an-agent-that-backgrounds-work-and-yields-via-schedulewakeup)
     - [2026-06-19 — Per-run worktree stacks leak anonymous `node_modules` volumes (Docker disk hit 210 GB; 182 GB reclaimed manually)](#2026-06-19--per-run-worktree-stacks-leak-anonymous-node_modules-volumes-docker-disk-hit-210-gb-182-gb-reclaimed-manually)
@@ -745,6 +747,34 @@ The "synthetic Unregistered section" feels right — single render path, no extr
 **Shape of work:** Tiny cleanup. Add 2–3 RTL test cases. Bundle into the cva-cleanup ticket above or stand alone.
 
 ### Daemon, CLI & Dispatch
+
+#### 2026-06-25 — `crew run` worktree creation is non-idempotent: an orphan branch silently wedges every future run of a ticket
+
+**Ticket:** [CREW-287](https://safturento.atlassian.net/browse/CREW-287)
+
+**What:** `crew run <KEY>` creates its worktree with `git worktree add -b <KEY> <worktree> origin/<default_branch>` (`packages/cli/src/commands/run.ts:301-314`). The `-b <KEY>` **creates a new branch**, so if a `<KEY>` branch already exists the command hard-fails with `fatal: a branch named '<KEY>' already exists`. A run that gets interrupted *after* its branch is created but *before* it completes (crash, kill, a later-step failure, manual worktree cleanup with `git worktree remove` which leaves the branch) orphans the branch — and then **every** subsequent `crew run <KEY>` dies at worktree creation. Two compounding failures make it invisible: (1) the host runner stamps the action `launched` when the child process *spawns*, not when it succeeds, so the dashboard/queue shows `launched`; (2) the failure happens before the run registers with the daemon, so there is **no `runs` row** — not even a failure row (migration 0010's failure fields only populate once a run registers). Net: the operator sees "launched", no agent ever appears, the ticket never moves to an error state, and nothing explains why.
+
+**Why noticed:** 2026-06-25 debugging session. The user picked CREW-270 in the New Run dialog; it showed 270 on confirm but no agent appeared, while a CREW-286 agent ran. Full trace: the picker→enqueue→runner→`crew run` path was all correct (no mapping bug); CREW-270 had an orphan local branch at main's HEAD (no worktree) left by an earlier interrupted run, so `git worktree add -b CREW-270` failed for actions 96/101/102/104 — each `launched`, none registered. Immediate unblock: `git branch -D CREW-270` then re-run.
+
+**Anchors:** `packages/cli/src/commands/run.ts:288-322` (the `fetch` + `git worktree add -b` block); the host runner stamps `launched` in `packages/cli/src/lib/runner/executor.ts` / `loop.ts`; run registration + failure fields in `packages/daemon/src/migrations/0010_run_failure_fields.ts` and `RunFailureService`. Sibling lifecycle gap: [[#2026-06-25--runner-never-reaps-dead-processes-phantom-running-entries-linger-and-early-death-runs-never-settle-to-error]].
+
+**What's been considered:** (a) Make worktree setup idempotent/resilient — before `git worktree add -b`, check `git show-ref --verify --quiet refs/heads/<KEY>`; if the branch exists with no worktree and no unique commits vs `origin/<default_branch>`, delete + recreate (or `git worktree add` onto the existing branch and reset it); if it has unique commits, fail loudly with a clear, actionable message rather than the raw git fatal. (b) Record the worktree-creation failure even though the run hasn't registered — write a failed-start row (or surface via the runner snapshot) so it's visible and the ticket can show error, not silent nothing. (b) overlaps the runner-reaping/visibility followup and CREW-249's "Failed to start" surface.
+
+**Shape of work:** Small-to-medium. Core fix is a pre-flight branch guard in `run.ts` worktree setup (CLI git lib) + a test. The "record the failure" half is larger (daemon run-failure record before registration) and may fold into the runner-observability work.
+
+**Open questions:** When an orphan branch *does* have unique commits (a partially-done interrupted run), reuse it (resume-like) or refuse + tell the operator to clean up manually? Lean: refuse with a clear message — silent reuse risks running on unexpected state.
+
+#### 2026-06-25 — Runner never reaps dead processes: phantom "running" entries linger, and early-death runs never settle to error
+
+**What:** The host runner's live-process `Registry` (`packages/cli/src/lib/runner/registry.ts`) has **no liveness reaping**. `toSnapshot()` returns every tracked process verbatim; an entry is dropped only when something *explicitly* calls `remove()` — a `cancel_hard`/`reap` runner command, or a daemon-driven settle. A `process.kill(pid, 0)` `isAlive` probe already exists but is wired only to supervise the *worker* process (`supervisor.ts`), never to reap dead *agent* processes. So any `crew run` child that ends **without** reaching a terminal state that triggers a `remove` — an early death (e.g. the worktree-creation failure above), a crash, an OOM-kill — stays in the heartbeat snapshot as a phantom **running** forever (until the runner restarts, which clears the in-memory map). Compounding: a run that dies before registering with the daemon has no `runs` row, so the daemon has nothing to move to **error** — the phantom registry entry is the only trace, and it lies.
+
+**Why noticed:** 2026-06-25 session — the Runner tab showed a "running" CREW-270 (which never actually launched — see the worktree followup above) plus several stale "running" processes that should have ended. Root-caused to the missing liveness sweep + the no-daemon-trace early-death path.
+
+**Anchors:** `packages/cli/src/lib/runner/registry.ts` (no liveness filter in `toSnapshot`); `packages/cli/src/lib/runner/supervisor.ts:18` (the existing `isAlive = process.kill(pid,0)` probe, reusable); `packages/cli/src/lib/runner/loop.ts` (heartbeat cadence — natural place for a reap sweep); daemon side `GET /api/runner/status`, `RunFailureService`. Trigger sibling: [[#2026-06-25--crew-run-worktree-creation-is-non-idempotent-an-orphan-branch-silently-wedges-every-future-run-of-a-ticket]]. Surfacing destination: CREW-249 (runner per-entity drawers) + the 2026-06-19 Runner-page-read-endpoints followup.
+
+**What's been considered:** Add a liveness sweep to the heartbeat loop — for each tracked proc, `isAlive(pid)`; drop the dead ones before `toSnapshot()` (defense-in-depth, independent of the daemon's terminal-state tracking). Separately, an early-death run should be recorded as a failed start so the ticket shows error rather than nothing. Strongly related to the worktree followup (its trigger) and to CREW-249 / the 2026-06-19 followup (where failures should surface). Candidate to plan together as a runner-lifecycle/observability slice rather than three disconnected fixes.
+
+**Open questions:** Reap purely on `isAlive`, or also require a grace period (a just-spawned pid that hasn't fully started)? Should the runner emit an explicit "process N ended unexpectedly" signal to the daemon so it can settle the run to error, or is the daemon's snapshot-diff enough?
 
 #### 2026-06-23 — Auto-batch sizing for snapshot-refresh round-trips (compaction half shipped)
 
