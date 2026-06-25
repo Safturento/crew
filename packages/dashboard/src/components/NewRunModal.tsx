@@ -33,7 +33,12 @@ import type { PickerTicket, ProjectTicketsResponse } from 'crew-shared';
 
 const STEPS = ['Project', 'Ticket', 'Confirm'];
 
-/** Jira priority → the state-pill color that reads it at a glance (Figma 362:2212). */
+/**
+ * Jira priority → the state-pill color that reads it at a glance (Figma 362:2212).
+ * Keyed on Jira's standard priority-scheme names (the CREW board's scheme). A
+ * priority outside this set (custom schemes — `P1`, etc.) falls back to a neutral
+ * `idle` badge that still shows the raw label — see the lookup in `TicketList`.
+ */
 const PRIORITY_COLOR: Record<string, PillColor> = {
   Highest: 'error',
   High: 'error',
