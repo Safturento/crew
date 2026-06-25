@@ -15,10 +15,8 @@ import type { DaemonApp } from '../app.js';
  */
 export async function registerWebhookRoutes(app: DaemonApp): Promise<void> {
   await app.register(async (scope) => {
-    scope.addContentTypeParser(
-      'application/json',
-      { parseAs: 'buffer' },
-      (_req, body, done) => done(null, body),
+    scope.addContentTypeParser('application/json', { parseAs: 'buffer' }, (_req, body, done) =>
+      done(null, body),
     );
     scope.post('/api/webhooks/github', async (req, reply) => {
       const service = req.diScope.resolve('githubWebhookService');

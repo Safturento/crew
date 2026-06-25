@@ -8,10 +8,7 @@ import { buildApp, type DaemonApp } from '../app.js';
 import { parseDaemonConfig } from '../config.js';
 import { createDb, runMigrations, type DaemonDatabase } from '../db.js';
 import { useTmpDir } from '../test/tmpdir.js';
-import {
-  signPayload,
-  pullRequestClosedPayload,
-} from '../services/github/webhook-fixtures.js';
+import { signPayload, pullRequestClosedPayload } from '../services/github/webhook-fixtures.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const MIGRATIONS_DIR = resolve(__dirname, '..', 'migrations');

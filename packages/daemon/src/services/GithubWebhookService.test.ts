@@ -1,6 +1,8 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, type Mock } from 'vitest';
 import pino from 'pino';
 import { GithubWebhookService } from './GithubWebhookService.js';
+import type { ProjectsService } from './ProjectsService.js';
+import type { PrTransitionService } from './PrTransitionService.js';
 import { pullRequestClosedPayload, pingPayload, signPayload } from './github/webhook-fixtures.js';
 
 const SECRET = 'top-secret';
@@ -8,22 +10,24 @@ const HOOK_ID = '999';
 const REPO = 'Owner/repo';
 
 function makeService(
-  over: Partial<{ markMerged: any; resolve: any; hookId: string | null; secret: string }> = {},
+  over: Partial<{ markMerged: Mock; resolve: Mock; hookId: string | null; secret: string }> = {},
 ) {
   const markMerged = over.markMerged ?? vi.fn().mockResolvedValue({ changed: true });
   const resolveOpenPrAgentByUrl = over.resolve ?? vi.fn().mockResolvedValue('CREW-1');
   const projectsService = {
-    findByRepo: vi.fn().mockReturnValue(
-      over.hookId === null
-        ? { github: { repo: REPO } }
-        : { github: { repo: REPO, webhook_hook_id: over.hookId ?? HOOK_ID } },
-    ),
+    findByRepo: vi
+      .fn()
+      .mockReturnValue(
+        over.hookId === null
+          ? { github: { repo: REPO } }
+          : { github: { repo: REPO, webhook_hook_id: over.hookId ?? HOOK_ID } },
+      ),
   };
   const secrets = new Map<string, string>([[REPO.toLowerCase(), over.secret ?? SECRET]]);
   const svc = new GithubWebhookService({
-    projectsService: projectsService as any,
+    projectsService: projectsService as unknown as ProjectsService,
     secrets,
-    prTransitions: { markMerged, resolveOpenPrAgentByUrl } as any,
+    prTransitions: { markMerged, resolveOpenPrAgentByUrl } as unknown as PrTransitionService,
     logger: pino({ level: 'silent' }),
   });
   return { svc, markMerged, resolveOpenPrAgentByUrl, projectsService };
@@ -50,7 +54,10 @@ describe('GithubWebhookService.handle', () => {
     const { svc, projectsService } = makeService();
     projectsService.findByRepo.mockReturnValue(null);
     const raw = rawOf(pullRequestClosedPayload({ repo: 'who/what' }));
-    const r = await svc.handle({ headers: hdr('pull_request', signPayload(raw, SECRET)), rawBody: raw });
+    const r = await svc.handle({
+      headers: hdr('pull_request', signPayload(raw, SECRET)),
+      rawBody: raw,
+    });
     expect(r.status).toBe(404);
   });
 
@@ -75,7 +82,10 @@ describe('GithubWebhookService.handle', () => {
   it('401s when the configured project has no webhook_hook_id', async () => {
     const { svc } = makeService({ hookId: null });
     const raw = rawOf(pullRequestClosedPayload({ repo: REPO }));
-    const r = await svc.handle({ headers: hdr('pull_request', signPayload(raw, SECRET)), rawBody: raw });
+    const r = await svc.handle({
+      headers: hdr('pull_request', signPayload(raw, SECRET)),
+      rawBody: raw,
+    });
     expect(r.status).toBe(401);
   });
 
@@ -90,7 +100,10 @@ describe('GithubWebhookService.handle', () => {
   it('200s + no-ops a verified pull_request whose action is not closed', async () => {
     const { svc, markMerged } = makeService();
     const raw = rawOf(pullRequestClosedPayload({ repo: REPO, action: 'synchronize' }));
-    const r = await svc.handle({ headers: hdr('pull_request', signPayload(raw, SECRET)), rawBody: raw });
+    const r = await svc.handle({
+      headers: hdr('pull_request', signPayload(raw, SECRET)),
+      rawBody: raw,
+    });
     expect(r.status).toBe(200);
     expect(markMerged).not.toHaveBeenCalled();
   });
@@ -98,7 +111,10 @@ describe('GithubWebhookService.handle', () => {
   it('200s + no-ops a verified closed PR with no matching pr_open agent', async () => {
     const { svc, markMerged } = makeService({ resolve: vi.fn().mockResolvedValue(null) });
     const raw = rawOf(pullRequestClosedPayload({ repo: REPO }));
-    const r = await svc.handle({ headers: hdr('pull_request', signPayload(raw, SECRET)), rawBody: raw });
+    const r = await svc.handle({
+      headers: hdr('pull_request', signPayload(raw, SECRET)),
+      rawBody: raw,
+    });
     expect(r.status).toBe(200);
     expect(r.body).toMatchObject({ matched: false });
     expect(markMerged).not.toHaveBeenCalled();
@@ -109,7 +125,10 @@ describe('GithubWebhookService.handle', () => {
     const raw = rawOf(
       pullRequestClosedPayload({ repo: REPO, htmlUrl: `https://github.com/${REPO}/pull/7` }),
     );
-    const r = await svc.handle({ headers: hdr('pull_request', signPayload(raw, SECRET)), rawBody: raw });
+    const r = await svc.handle({
+      headers: hdr('pull_request', signPayload(raw, SECRET)),
+      rawBody: raw,
+    });
     expect(r.status).toBe(200);
     expect(r.body).toMatchObject({ matched: true, changed: true });
     expect(resolveOpenPrAgentByUrl).toHaveBeenCalledWith(`https://github.com/${REPO}/pull/7`);
@@ -120,13 +139,19 @@ describe('GithubWebhookService.handle', () => {
     const svc = new GithubWebhookService({
       projectsService: {
         findByRepo: () => ({ github: { repo: REPO, webhook_hook_id: HOOK_ID } }),
-      } as any,
+      } as unknown as ProjectsService,
       secrets: new Map(), // no secret for this repo
-      prTransitions: { markMerged: vi.fn(), resolveOpenPrAgentByUrl: vi.fn() } as any,
+      prTransitions: {
+        markMerged: vi.fn(),
+        resolveOpenPrAgentByUrl: vi.fn(),
+      } as unknown as PrTransitionService,
       logger: pino({ level: 'silent' }),
     });
     const raw = rawOf(pullRequestClosedPayload({ repo: REPO }));
-    const r = await svc.handle({ headers: hdr('pull_request', signPayload(raw, SECRET)), rawBody: raw });
+    const r = await svc.handle({
+      headers: hdr('pull_request', signPayload(raw, SECRET)),
+      rawBody: raw,
+    });
     expect(r.status).toBe(401);
   });
 });
