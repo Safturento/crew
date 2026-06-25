@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import { writeFileSync, mkdirSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -14,6 +14,8 @@ const MIGRATIONS_DIR = resolve(__dirname, '..', 'migrations');
 const tmp = useTmpDir();
 const silentLogger: Logger = pino({ level: 'silent' });
 
+afterEach(() => vi.restoreAllMocks());
+
 const validToml = (name: string, repoPath: string) => `
 name = "${name}"
 repo_path = "${repoPath}"
@@ -26,13 +28,14 @@ site = "https://example.atlassian.net"
 repo = "example/${name}"
 `;
 
-async function setup() {
+async function setup(jira?: { email: string; token: string }) {
   const root = tmp();
   const projectsDir = join(root, 'projects');
   mkdirSync(projectsDir, { recursive: true });
   const config = parseDaemonConfig({
     CREW_CONFIG_DIR: projectsDir,
     CREW_DB_FILE: ':memory:',
+    ...(jira ? { CREW_JIRA_EMAIL: jira.email, CREW_JIRA_API_TOKEN: jira.token } : {}),
   });
   const db = createDb(config.dbFile);
   await runMigrations(db, MIGRATIONS_DIR);
@@ -219,6 +222,62 @@ describe('GET /api/projects/:slug/tickets', () => {
       const res = await app.inject({ method: 'GET', url: '/api/projects/nope/tickets' });
       expect(res.statusCode).toBe(404);
       expect(res.json()).toMatchObject({ resource: 'project', id: 'nope' });
+    } finally {
+      await app.close();
+      await db.destroy();
+    }
+  });
+
+  // With creds present, the full available payload must round-trip the
+  // discriminatedUnion response serializer — the branch the degraded tests
+  // don't exercise. JiraClient uses global fetch, so we mock that.
+  it('serializes the available grouped payload end-to-end (200)', async () => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          issues: [
+            {
+              key: 'KAN-2',
+              fields: {
+                summary: 'Child of epic',
+                status: { name: 'Ready for Development' },
+                parent: { key: 'KAN-100', fields: { summary: 'Epic A' } },
+                priority: { name: 'High' },
+              },
+            },
+          ],
+        }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } },
+      ),
+    );
+    const { app, db, projectsDir } = await setup({ email: 'e@x', token: 't' });
+    try {
+      writeFileSync(join(projectsDir, 'k.toml'), validToml('k', '/code/k'));
+      const res = await app.inject({ method: 'GET', url: '/api/projects/k/tickets' });
+      expect(res.statusCode).toBe(200);
+      expect(res.json()).toEqual({
+        available: true,
+        groups: [
+          {
+            epicKey: 'KAN-100',
+            epicSummary: 'Epic A',
+            tickets: [
+              {
+                key: 'KAN-2',
+                summary: 'Child of epic',
+                priority: 'High',
+                runnable: true,
+                blockedBy: [],
+                hasActiveAgent: false,
+              },
+            ],
+          },
+        ],
+      });
+      // The single search call carried the configured ready_status into the JQL.
+      // URLSearchParams encodes spaces as '+', so normalize before matching.
+      const jql = new URL(String(fetchSpy.mock.calls[0][0])).searchParams.get('jql');
+      expect(jql).toContain('status = "Ready for Development"');
     } finally {
       await app.close();
       await db.destroy();
