@@ -1,0 +1,541 @@
+{
+  "id": "844:4328",
+  "name": "FilterMenu",
+  "type": "COMPONENT_SET",
+  "page": "Composites",
+  "raw": {
+    "id": "844:4328",
+    "name": "FilterMenu",
+    "type": "COMPONENT_SET",
+    "scrollBehavior": "SCROLLS",
+    "componentPropertyDefinitions": {
+      "tools": {
+        "type": "VARIANT",
+        "defaultValue": "collapsed",
+        "variantOptions": [
+          "collapsed",
+          "expanded"
+        ]
+      }
+    },
+    "blendMode": "PASS_THROUGH",
+    "clipsContent": true,
+    "background": [],
+    "fills": [],
+    "strokes": [],
+    "cornerRadius": 5,
+    "cornerSmoothing": 0,
+    "strokeWeight": 1,
+    "strokeAlign": "INSIDE",
+    "backgroundColor": {
+      "r": 0,
+      "g": 0,
+      "b": 0,
+      "a": 0
+    },
+    "layoutMode": "HORIZONTAL",
+    "paddingLeft": 24,
+    "paddingRight": 24,
+    "paddingTop": 24,
+    "paddingBottom": 24,
+    "itemSpacing": 32,
+    "layoutWrap": "NO_WRAP",
+    "strokeDashes": [
+      10,
+      5
+    ],
+    "absoluteBoundingBox": {
+      "x": 5132,
+      "y": 0,
+      "width": 656,
+      "height": 467
+    },
+    "absoluteRenderBounds": {
+      "x": 5132,
+      "y": 0,
+      "width": 656,
+      "height": 467
+    },
+    "constraints": {
+      "vertical": "TOP",
+      "horizontal": "LEFT"
+    },
+    "layoutSizingHorizontal": "HUG",
+    "layoutSizingVertical": "HUG",
+    "effects": [],
+    "interactions": [],
+    "complexStrokeProperties": {
+      "strokeType": "BASIC"
+    }
+  },
+  "enrichment": {
+    "source": "plugin-api",
+    "capturedAt": "2026-06-24T16:27:07.988Z",
+    "componentInstances": [
+      {
+        "id": "843:1204",
+        "name": "Pill",
+        "mainComponentSetId": "272:120",
+        "variantOverrides": "type=button-xs, color=idle, intensity=ghost, font=sans",
+        "componentPropertyOverrides": {
+          "Has Icon": false,
+          "Icon": "lucide/git-pull-request",
+          "Label": "Select all",
+          "type": "button-xs",
+          "color": "idle",
+          "intensity": "ghost",
+          "font": "sans"
+        },
+        "resolvedStyles": {
+          "textColor": {
+            "hex": "#64748B",
+            "tokenAlias": "state/idle"
+          }
+        }
+      },
+      {
+        "id": "843:1208",
+        "name": "Pill",
+        "mainComponentSetId": "272:120",
+        "variantOverrides": "type=button-xs, color=idle, intensity=ghost, font=sans",
+        "componentPropertyOverrides": {
+          "Has Icon": false,
+          "Icon": "lucide/git-pull-request",
+          "Label": "Clear",
+          "type": "button-xs",
+          "color": "idle",
+          "intensity": "ghost",
+          "font": "sans"
+        },
+        "resolvedStyles": {
+          "textColor": {
+            "hex": "#64748B",
+            "tokenAlias": "state/idle"
+          }
+        }
+      },
+      {
+        "id": "843:4134",
+        "name": "Conversation",
+        "mainComponentSetId": "842:4125",
+        "variantOverrides": "state=on",
+        "componentPropertyOverrides": {
+          "Has Disclosure": false,
+          "Indent": false,
+          "Count": "3 / 11",
+          "Chevron Icon": "lucide/chevron-right",
+          "Has Count": false,
+          "state": "on"
+        },
+        "resolvedStyles": {
+          "textColor": {
+            "hex": "#020617",
+            "tokenAlias": "background"
+          }
+        }
+      },
+      {
+        "id": "843:4153",
+        "name": "Tools",
+        "mainComponentSetId": "842:4125",
+        "variantOverrides": "state=on",
+        "componentPropertyOverrides": {
+          "Has Disclosure": true,
+          "Indent": false,
+          "Count": "5 / 11",
+          "Chevron Icon": "lucide/chevron-right",
+          "Has Count": true,
+          "state": "on"
+        },
+        "resolvedStyles": {
+          "textColor": {
+            "hex": "#020617",
+            "tokenAlias": "background"
+          }
+        }
+      },
+      {
+        "id": "843:4171",
+        "name": "Thinking",
+        "mainComponentSetId": "842:4125",
+        "variantOverrides": "state=off",
+        "componentPropertyOverrides": {
+          "Has Disclosure": false,
+          "Indent": false,
+          "Count": "3 / 11",
+          "Chevron Icon": "lucide/chevron-right",
+          "Has Count": false,
+          "state": "off"
+        },
+        "resolvedStyles": {
+          "textColor": {
+            "hex": "#E2E8F0",
+            "tokenAlias": "foreground"
+          }
+        }
+      },
+      {
+        "id": "843:4180",
+        "name": "Hooks",
+        "mainComponentSetId": "842:4125",
+        "variantOverrides": "state=off",
+        "componentPropertyOverrides": {
+          "Has Disclosure": false,
+          "Indent": false,
+          "Count": "3 / 11",
+          "Chevron Icon": "lucide/chevron-right",
+          "Has Count": false,
+          "state": "off"
+        },
+        "resolvedStyles": {
+          "textColor": {
+            "hex": "#E2E8F0",
+            "tokenAlias": "foreground"
+          }
+        }
+      },
+      {
+        "id": "843:4189",
+        "name": "Skills",
+        "mainComponentSetId": "842:4125",
+        "variantOverrides": "state=off",
+        "componentPropertyOverrides": {
+          "Has Disclosure": false,
+          "Indent": false,
+          "Count": "3 / 11",
+          "Chevron Icon": "lucide/chevron-right",
+          "Has Count": false,
+          "state": "off"
+        },
+        "resolvedStyles": {
+          "textColor": {
+            "hex": "#E2E8F0",
+            "tokenAlias": "foreground"
+          }
+        }
+      },
+      {
+        "id": "843:4198",
+        "name": "System",
+        "mainComponentSetId": "842:4125",
+        "variantOverrides": "state=off",
+        "componentPropertyOverrides": {
+          "Has Disclosure": false,
+          "Indent": false,
+          "Count": "3 / 11",
+          "Chevron Icon": "lucide/chevron-right",
+          "Has Count": false,
+          "state": "off"
+        },
+        "resolvedStyles": {
+          "textColor": {
+            "hex": "#E2E8F0",
+            "tokenAlias": "foreground"
+          }
+        }
+      },
+      {
+        "id": "843:4207",
+        "name": "Startup",
+        "mainComponentSetId": "842:4125",
+        "variantOverrides": "state=on",
+        "componentPropertyOverrides": {
+          "Has Disclosure": false,
+          "Indent": false,
+          "Count": "3 / 11",
+          "Chevron Icon": "lucide/chevron-right",
+          "Has Count": false,
+          "state": "on"
+        },
+        "resolvedStyles": {
+          "textColor": {
+            "hex": "#020617",
+            "tokenAlias": "background"
+          }
+        }
+      },
+      {
+        "id": "844:1243",
+        "name": "Pill",
+        "mainComponentSetId": "272:120",
+        "variantOverrides": "type=button-xs, color=idle, intensity=ghost, font=sans",
+        "componentPropertyOverrides": {
+          "Has Icon": false,
+          "Icon": "lucide/git-pull-request",
+          "Label": "Select all",
+          "type": "button-xs",
+          "color": "idle",
+          "intensity": "ghost",
+          "font": "sans"
+        },
+        "resolvedStyles": {
+          "textColor": {
+            "hex": "#64748B",
+            "tokenAlias": "state/idle"
+          }
+        }
+      },
+      {
+        "id": "844:1244",
+        "name": "Pill",
+        "mainComponentSetId": "272:120",
+        "variantOverrides": "type=button-xs, color=idle, intensity=ghost, font=sans",
+        "componentPropertyOverrides": {
+          "Has Icon": false,
+          "Icon": "lucide/git-pull-request",
+          "Label": "Clear",
+          "type": "button-xs",
+          "color": "idle",
+          "intensity": "ghost",
+          "font": "sans"
+        },
+        "resolvedStyles": {
+          "textColor": {
+            "hex": "#64748B",
+            "tokenAlias": "state/idle"
+          }
+        }
+      },
+      {
+        "id": "844:1247",
+        "name": "Conversation",
+        "mainComponentSetId": "842:4125",
+        "variantOverrides": "state=on",
+        "componentPropertyOverrides": {
+          "Has Disclosure": false,
+          "Indent": false,
+          "Count": "3 / 11",
+          "Chevron Icon": "lucide/chevron-right",
+          "Has Count": false,
+          "state": "on"
+        },
+        "resolvedStyles": {
+          "textColor": {
+            "hex": "#020617",
+            "tokenAlias": "background"
+          }
+        }
+      },
+      {
+        "id": "844:1248",
+        "name": "Tools",
+        "mainComponentSetId": "842:4125",
+        "variantOverrides": "state=on",
+        "componentPropertyOverrides": {
+          "Has Disclosure": true,
+          "Indent": false,
+          "Count": "5 / 11",
+          "Chevron Icon": "lucide/chevron-down",
+          "Has Count": true,
+          "state": "on"
+        },
+        "resolvedStyles": {
+          "textColor": {
+            "hex": "#020617",
+            "tokenAlias": "background"
+          }
+        }
+      },
+      {
+        "id": "844:1322",
+        "name": "Bash",
+        "mainComponentSetId": "842:4125",
+        "variantOverrides": "state=on",
+        "componentPropertyOverrides": {
+          "Has Disclosure": false,
+          "Indent": true,
+          "Count": "3 / 11",
+          "Chevron Icon": "lucide/chevron-right",
+          "Has Count": false,
+          "state": "on"
+        },
+        "resolvedStyles": {
+          "textColor": {
+            "hex": "#020617",
+            "tokenAlias": "background"
+          }
+        }
+      },
+      {
+        "id": "844:1341",
+        "name": "Edit",
+        "mainComponentSetId": "842:4125",
+        "variantOverrides": "state=on",
+        "componentPropertyOverrides": {
+          "Has Disclosure": false,
+          "Indent": true,
+          "Count": "3 / 11",
+          "Chevron Icon": "lucide/chevron-right",
+          "Has Count": false,
+          "state": "on"
+        },
+        "resolvedStyles": {
+          "textColor": {
+            "hex": "#020617",
+            "tokenAlias": "background"
+          }
+        }
+      },
+      {
+        "id": "844:1360",
+        "name": "Read",
+        "mainComponentSetId": "842:4125",
+        "variantOverrides": "state=on",
+        "componentPropertyOverrides": {
+          "Has Disclosure": false,
+          "Indent": true,
+          "Count": "3 / 11",
+          "Chevron Icon": "lucide/chevron-right",
+          "Has Count": false,
+          "state": "on"
+        },
+        "resolvedStyles": {
+          "textColor": {
+            "hex": "#020617",
+            "tokenAlias": "background"
+          }
+        }
+      },
+      {
+        "id": "844:1379",
+        "name": "MCP:Jira",
+        "mainComponentSetId": "842:4125",
+        "variantOverrides": "state=on",
+        "componentPropertyOverrides": {
+          "Has Disclosure": false,
+          "Indent": true,
+          "Count": "3 / 11",
+          "Chevron Icon": "lucide/chevron-right",
+          "Has Count": false,
+          "state": "on"
+        },
+        "resolvedStyles": {
+          "textColor": {
+            "hex": "#020617",
+            "tokenAlias": "background"
+          }
+        }
+      },
+      {
+        "id": "844:1398",
+        "name": "MCP:Figma",
+        "mainComponentSetId": "842:4125",
+        "variantOverrides": "state=off",
+        "componentPropertyOverrides": {
+          "Has Disclosure": false,
+          "Indent": true,
+          "Count": "3 / 11",
+          "Chevron Icon": "lucide/chevron-right",
+          "Has Count": false,
+          "state": "off"
+        },
+        "resolvedStyles": {
+          "textColor": {
+            "hex": "#E2E8F0",
+            "tokenAlias": "foreground"
+          }
+        }
+      },
+      {
+        "id": "844:1249",
+        "name": "Thinking",
+        "mainComponentSetId": "842:4125",
+        "variantOverrides": "state=off",
+        "componentPropertyOverrides": {
+          "Has Disclosure": false,
+          "Indent": false,
+          "Count": "3 / 11",
+          "Chevron Icon": "lucide/chevron-right",
+          "Has Count": false,
+          "state": "off"
+        },
+        "resolvedStyles": {
+          "textColor": {
+            "hex": "#E2E8F0",
+            "tokenAlias": "foreground"
+          }
+        }
+      },
+      {
+        "id": "844:1250",
+        "name": "Hooks",
+        "mainComponentSetId": "842:4125",
+        "variantOverrides": "state=off",
+        "componentPropertyOverrides": {
+          "Has Disclosure": false,
+          "Indent": false,
+          "Count": "3 / 11",
+          "Chevron Icon": "lucide/chevron-right",
+          "Has Count": false,
+          "state": "off"
+        },
+        "resolvedStyles": {
+          "textColor": {
+            "hex": "#E2E8F0",
+            "tokenAlias": "foreground"
+          }
+        }
+      },
+      {
+        "id": "844:1251",
+        "name": "Skills",
+        "mainComponentSetId": "842:4125",
+        "variantOverrides": "state=off",
+        "componentPropertyOverrides": {
+          "Has Disclosure": false,
+          "Indent": false,
+          "Count": "3 / 11",
+          "Chevron Icon": "lucide/chevron-right",
+          "Has Count": false,
+          "state": "off"
+        },
+        "resolvedStyles": {
+          "textColor": {
+            "hex": "#E2E8F0",
+            "tokenAlias": "foreground"
+          }
+        }
+      },
+      {
+        "id": "844:1252",
+        "name": "System",
+        "mainComponentSetId": "842:4125",
+        "variantOverrides": "state=off",
+        "componentPropertyOverrides": {
+          "Has Disclosure": false,
+          "Indent": false,
+          "Count": "3 / 11",
+          "Chevron Icon": "lucide/chevron-right",
+          "Has Count": false,
+          "state": "off"
+        },
+        "resolvedStyles": {
+          "textColor": {
+            "hex": "#E2E8F0",
+            "tokenAlias": "foreground"
+          }
+        }
+      },
+      {
+        "id": "844:1253",
+        "name": "Startup",
+        "mainComponentSetId": "842:4125",
+        "variantOverrides": "state=on",
+        "componentPropertyOverrides": {
+          "Has Disclosure": false,
+          "Indent": false,
+          "Count": "3 / 11",
+          "Chevron Icon": "lucide/chevron-right",
+          "Has Count": false,
+          "state": "on"
+        },
+        "resolvedStyles": {
+          "textColor": {
+            "hex": "#020617",
+            "tokenAlias": "background"
+          }
+        }
+      }
+    ]
+  }
+}

@@ -1,7 +1,7 @@
 ---
 name: design-system
 description: Crew Figma DS + token bindings + Pill primitive contract
-last_updated: 2026-06-20
+last_updated: 2026-06-24
 covers:
   - 'packages/dashboard/src/components/**'
   - '*.figma.tsx'
@@ -143,6 +143,8 @@ Figma node IDs below are in the live consolidated file (`9FeJPriqdsdA4n9R5Xsrr8`
 | `ProjectConfigBlock` | `220:318`                       | `packages/dashboard/src/components/ProjectConfigBlock.tsx`       |
 | `TimelineSection`    | `559:650`                       | `packages/dashboard/src/components/Timeline/TimelineSection.tsx` |
 | `TranscriptRow`      | `553:445`                       | `packages/dashboard/src/components/Timeline/TranscriptRow.tsx`   |
+| `FilterRow`          | `842:4125`                      | `packages/dashboard/src/components/Timeline/Filters.tsx` (`FilterRow`) |
+| `FilterMenu`         | `844:4328`                      | `packages/dashboard/src/components/Timeline/Filters.tsx` (`Filters`)   |
 | `MinimapStripe`      | _(no Figma — feature-internal)_ | `packages/dashboard/src/components/Timeline/MinimapStripe.tsx`   |
 | `FormField`          | `337:234`                       | `packages/dashboard/src/components/FormField.tsx`                |
 | `Modal`              | `355:238`                       | `packages/dashboard/src/components/Modal.tsx`                    |
@@ -170,7 +172,9 @@ The Pause/Resume controls on the Runner-page `ProcessRow` (running → Pause; pa
 
 `Row` (`packages/dashboard/src/components/Row.tsx`, CREW-245) is the shared row anatomy — a 96px status slot · title + subheader · actions slot, plus an explicit `accent?: AgentState` that drives the `STATE_CLASSES` tint/border + the `animate-att-pulse` left bar when the accent is attention-worthy. Like `Drawer` / `PillBase` it's figma-less and stays out of the composites table — a structural primitive, not a designed composite. `AgentRow` and every Runner-page row compose it. The accent is kept explicit (not derived from the status-pill color) so a `cancelling` process — amber pill, plain row — isn't wrongly tinted; only Failed-to-start (`error`) and Unmanaged (`waiting`) carry the accent. The runner's section wrappers (`FailedToStartSection`, `LiveProcessList`, `UnmanagedRuns`, `QueuedActions`, `RecentlyEnded`) and `CommandBadge` / `Section` / `rowStates` are feature-internal (figma-less) and stay out of the table.
 
-`TopNav`, `AgentRow`, `TimelineSection`, `Stepper`, `SupervisorCard`, and `ProcessRow` resolve to component sets in the live file; the rest resolve to single components. `ErrorFallback` is the only un-built composite from the original Phase 4 inventory; it lands alongside the next fidelity ticket that surfaces a need.
+The Timeline `FilterRow` (`842:4125`) + `FilterMenu` (`844:4328`) composites (CREW-279 follow-on, the filter-menu cleanup) mirror `Filters.tsx`'s `FilterRow` sub-component and `PopoverContent`. `FilterRow` is a component set on a `state` axis (on/off/disabled) with `Has Count`/`Count`, `Has Disclosure`, `Chevron Icon` (INSTANCE_SWAP chevron-right/down — Figma has no boolean negation so the disclosure glyph is a swap, not a boolean), and `Indent` (a leading 12px spacer toggled by the boolean, since padding can't be boolean-driven) properties; it nests the `Checkbox` set. `FilterMenu` is a component set on a `tools` axis (collapsed/expanded) composing `FilterRow` + header `Pill` instances. The expanded variant's tool subtree (Bash/Edit/Read/MCP:Jira/MCP:Figma) is a static representative sample — in code it derives from `tokensByTool`. `FilterRow` is `export`ed from `Filters.tsx` solely so the inert Code Connect doc can reference it.
+
+`TopNav`, `AgentRow`, `TimelineSection`, `Stepper`, `SupervisorCard`, `ProcessRow`, `FilterRow`, and `FilterMenu` resolve to component sets in the live file; the rest resolve to single components. `ErrorFallback` is the only un-built composite from the original Phase 4 inventory; it lands alongside the next fidelity ticket that surfaces a need.
 
 `FinishSteps` (CREW-220) is the drawer's live `crew finish` step checklist (ok/skip/error rows). It is figma-less feature-internal — the same status as `MinimapStripe` — because no finish-checklist was ever designed in the Crew DS Figma; it borrows the `TokensByTool` card shell and the status palette (`emerald-500` / `muted-foreground` / `red-400`) directly. A future fidelity pass could add a Figma counterpart (tracked in `docs/followups.md`).
 
@@ -198,7 +202,7 @@ The canonical pill treatment. The Figma `Pill` component set (`272:120`) carries
 
 **`toolColor` axis (code-only refinement, CREW-192).** `PillBase` / `Tag` accept an optional `toolColor?: ToolColorKey` prop that overrides the state `color` lookup. The 15-entry palette lives in `packages/dashboard/src/data/tool-colors.ts` (`TOOL_COLOR_CLASSES`) and mirrors the `STATE_CLASSES` token shape so it slots into the same `pillSurfaceClasses` machinery. The `Timeline/TranscriptRow` aliases the raw tool name (`format/tool-alias.ts`) and maps the alias to a `ToolColorKey` via `colorForTool()` in `components/Timeline/event-palette.ts`. The Figma `Pill` set stays at the 8 state colors — tool colors are deliberately not mirrored in the DS today (out of scope: per-spec).
 
-**Hover axis (code-only refinement).** Interactive pills get a hover lift; static ones don't. There's no prop — `PillBase` derives `interactive = as === 'button' || asChild` (a `<button>` or an `asChild` link/trigger, vs the static `<span>`) and passes it as the `hover` flag to `pillSurfaceClasses`, which appends `hover:` utilities (`ghost` acquires the muted surface + `brightness-130`; `muted` / `mid` → `brightness-125`; `loud` → `brightness-110`) plus `cursor-pointer` + `transition`. A color-agnostic brightness filter, so it spans all colors with no new tokens. Figma can't carry a live CSS filter, so the documentation frame **Hover states** (`699:1039`, Composites page) shows the lifted colors baked as static fills — caption notes the live `hover:brightness-*` mechanism.
+**Hover axis (code-only refinement).** Interactive pills get a hover lift; static ones don't. There's no prop — `PillBase` derives `interactive = as === 'button' || asChild` (a `<button>` or an `asChild` link/trigger, vs the static `<span>`) and passes it as the `hover` flag to `pillSurfaceClasses`, which appends `hover:` utilities (`ghost` acquires the muted surface + `brightness-130`; `muted` / `mid` → `brightness-125`; `loud` → `brightness-110`) plus `cursor-pointer` + `transition`. A color-agnostic brightness filter, so it spans all colors with no new tokens. Figma can't carry a live CSS filter, so the documentation frame **Hover states** (`699:1039`, **Brainstorm page** — relocated there from Composites in the filter-menu cleanup, since it's an exploration/reference frame, not a composite) shows the lifted colors baked as static fills — caption notes the live `hover:brightness-*` mechanism.
 
 **Icon slot:** the pill icon is a `ReactNode` `icon` prop (a leading slot mapped to Figma's `Icon` INSTANCE_SWAP), never a CSS-drawn dot. State badges pass `lucide/circle`; the badge's color, not its glyph, carries the state.
 
@@ -278,6 +282,8 @@ figma.connect(
 | `ModalSelectionRow`  | `packages/dashboard/src/components/ModalSelectionRow.figma.tsx` | `ModalSelectionRow` (Crew file)                                    | `350:236`     |
 | `Stepper`            | `packages/dashboard/src/components/Stepper.figma.tsx`           | `Stepper` set (Crew file)                                          | `378:462`     |
 | `NewRunModal`        | `packages/dashboard/src/components/NewRunModal.figma.tsx`       | `New Run modal — 1. Select Project` (Crew file, Dashboard Screens) | `1:2980`      |
+| `FilterRow`          | `packages/dashboard/src/components/Timeline/Filters.figma.tsx`  | `FilterRow` set (Crew file)                                        | `842:4125`    |
+| `Filters`            | `packages/dashboard/src/components/Timeline/Filters.figma.tsx`  | `FilterMenu` set (Crew file)                                       | `844:4328`    |
 
 ### Pill mapping — color × intensity × type
 
