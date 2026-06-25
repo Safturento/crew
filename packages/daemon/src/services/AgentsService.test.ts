@@ -1490,3 +1490,58 @@ describe('AgentsService.updateTicketTitle', () => {
     }
   });
 });
+
+describe('AgentsService.activeTicketKeys', () => {
+  it('returns only non-terminal agents scoped to the project', async () => {
+    const db = await freshDb();
+    try {
+      // CREW-1: running (open run + tool call) → active.
+      await makeAgent(db, 'CREW-1', { projectName: 'crew' });
+      const running = await makeRun(db, 'CREW-1', 's-c1');
+      await makeToolCall(db, running, { tokens: 1 });
+
+      // CREW-2: a clean finish run → terminal (finished).
+      await makeAgent(db, 'CREW-2', { projectName: 'crew' });
+      await makeRun(db, 'CREW-2', 's-c2', {
+        completedAt: '2026-04-29T13:00:00Z',
+        exitCode: 0,
+      });
+      await makeRun(db, 'CREW-2', `finish-CREW-2-${'a'.repeat(8)}`, {
+        command: 'finish',
+        completedAt: '2026-04-29T14:00:00Z',
+        exitCode: 0,
+      });
+
+      // CREW-3: non-zero exit → terminal (error).
+      await makeAgent(db, 'CREW-3', { projectName: 'crew' });
+      const errored = await makeRun(db, 'CREW-3', 's-c3', {
+        completedAt: '2026-04-29T13:00:00Z',
+        exitCode: 1,
+      });
+      await makeToolCall(db, errored, { tokens: 1 });
+
+      // CREW-4: pr_merged transition → terminal.
+      await makeAgent(db, 'CREW-4', { projectName: 'crew' });
+      const merged = await makeRun(db, 'CREW-4', 's-c4', {
+        completedAt: '2026-04-29T13:00:00Z',
+        exitCode: 0,
+      });
+      await makeToolCall(db, merged, { tokens: 1 });
+      await makeStateTransition(db, 'CREW-4', 'pr_merged', 2000, 'pr_open');
+
+      // KAN-9: active but a different project → filtered out.
+      await makeAgent(db, 'KAN-9', { projectName: 'other' });
+      const otherRun = await makeRun(db, 'KAN-9', 's-k9');
+      await makeToolCall(db, otherRun, { tokens: 1 });
+
+      const keys = await new AgentsService({ db }).activeTicketKeys('crew');
+      expect(keys.has('CREW-1')).toBe(true);
+      expect(keys.has('CREW-2')).toBe(false);
+      expect(keys.has('CREW-3')).toBe(false);
+      expect(keys.has('CREW-4')).toBe(false);
+      expect(keys.has('KAN-9')).toBe(false);
+    } finally {
+      await db.destroy();
+    }
+  });
+});

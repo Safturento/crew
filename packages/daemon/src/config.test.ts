@@ -103,4 +103,13 @@ describe('parseDaemonConfig', () => {
     const config = parseDaemonConfig({ CREW_GITHUB_WEBHOOK_SECRETS_FILE: '/tmp/s.toml' });
     expect(config.githubWebhookSecretsFile).toBe('/tmp/s.toml');
   });
+
+  it('reads Jira credentials, defaulting to empty string', () => {
+    expect(parseDaemonConfig({}).jiraEmail).toBe('');
+    expect(parseDaemonConfig({}).jiraToken).toBe('');
+    expect(parseDaemonConfig({ CREW_JIRA_EMAIL: 'e@x', CREW_JIRA_API_TOKEN: 't' })).toMatchObject({
+      jiraEmail: 'e@x',
+      jiraToken: 't',
+    });
+  });
 });

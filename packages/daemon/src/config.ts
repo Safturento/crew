@@ -57,6 +57,13 @@ const daemonConfigSchema = z.object({
   CREW_GITHUB_WEBHOOK_SECRETS_FILE: z
     .string()
     .default(() => join(defaultCrewHome(), 'github-webhook-secrets.toml')),
+  // CREW-278: New Run ticket picker — Jira Basic-auth credentials the daemon
+  // uses to search a project's Ready-for-Development tickets. Empty by default →
+  // TicketsService returns { available: false, reason: 'no_credentials' } and
+  // the dashboard degrades to manual ticket-key entry. Threaded into the
+  // container via docker-compose `environment:` (${CREW_JIRA_EMAIL:-}).
+  CREW_JIRA_EMAIL: z.string().default(''),
+  CREW_JIRA_API_TOKEN: z.string().default(''),
 });
 
 export interface DaemonConfig {
@@ -76,6 +83,10 @@ export interface DaemonConfig {
   stateEventsDir: string;
   /** Path to the per-repo GitHub webhook HMAC secrets file (loaded at boot). */
   githubWebhookSecretsFile: string;
+  /** Jira Basic-auth email for the New Run ticket picker (empty → degraded). */
+  jiraEmail: string;
+  /** Jira API token for the New Run ticket picker (empty → degraded). */
+  jiraToken: string;
 }
 
 /**
@@ -99,5 +110,7 @@ export function parseDaemonConfig(
     startupEventsDir: parsed.CREW_STARTUP_EVENTS_DIR,
     stateEventsDir: parsed.CREW_STATE_EVENTS_DIR,
     githubWebhookSecretsFile: parsed.CREW_GITHUB_WEBHOOK_SECRETS_FILE,
+    jiraEmail: parsed.CREW_JIRA_EMAIL,
+    jiraToken: parsed.CREW_JIRA_API_TOKEN,
   };
 }
