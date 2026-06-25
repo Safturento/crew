@@ -1,0 +1,162 @@
+{
+  "id": "842:4125",
+  "name": "FilterRow",
+  "type": "COMPONENT_SET",
+  "page": "Composites",
+  "raw": {
+    "id": "842:4125",
+    "name": "FilterRow",
+    "type": "COMPONENT_SET",
+    "scrollBehavior": "SCROLLS",
+    "componentPropertyDefinitions": {
+      "Has Count#842:5": {
+        "type": "BOOLEAN",
+        "defaultValue": false
+      },
+      "Count#842:6": {
+        "type": "TEXT",
+        "defaultValue": "3 / 11"
+      },
+      "Has Disclosure#842:7": {
+        "type": "BOOLEAN",
+        "defaultValue": false
+      },
+      "Chevron Icon#842:8": {
+        "type": "INSTANCE_SWAP",
+        "defaultValue": "841:1175",
+        "preferredValues": []
+      },
+      "Indent#842:9": {
+        "type": "BOOLEAN",
+        "defaultValue": false
+      },
+      "state": {
+        "type": "VARIANT",
+        "defaultValue": "off",
+        "variantOptions": [
+          "off",
+          "on",
+          "disabled"
+        ]
+      }
+    },
+    "blendMode": "PASS_THROUGH",
+    "clipsContent": true,
+    "background": [],
+    "fills": [],
+    "strokes": [],
+    "cornerRadius": 5,
+    "cornerSmoothing": 0,
+    "strokeWeight": 1,
+    "strokeAlign": "INSIDE",
+    "backgroundColor": {
+      "r": 0,
+      "g": 0,
+      "b": 0,
+      "a": 0
+    },
+    "layoutMode": "VERTICAL",
+    "paddingLeft": 16,
+    "paddingRight": 16,
+    "paddingTop": 16,
+    "paddingBottom": 16,
+    "itemSpacing": 16,
+    "layoutWrap": "NO_WRAP",
+    "strokeDashes": [
+      10,
+      5
+    ],
+    "absoluteBoundingBox": {
+      "x": 0,
+      "y": 0,
+      "width": 288,
+      "height": 148
+    },
+    "absoluteRenderBounds": {
+      "x": 0,
+      "y": 0,
+      "width": 288,
+      "height": 148
+    },
+    "constraints": {
+      "vertical": "TOP",
+      "horizontal": "LEFT"
+    },
+    "layoutSizingHorizontal": "HUG",
+    "layoutSizingVertical": "HUG",
+    "effects": [],
+    "interactions": [],
+    "complexStrokeProperties": {
+      "strokeType": "BASIC"
+    }
+  },
+  "enrichment": {
+    "source": "plugin-api",
+    "capturedAt": "2026-06-24T16:27:07.868Z",
+    "componentInstances": [
+      {
+        "id": "842:1177",
+        "name": "Checkbox",
+        "mainComponentSetId": "663:869",
+        "variantOverrides": "state=off",
+        "componentPropertyOverrides": {
+          "Label": "Label",
+          "state": "off"
+        },
+        "resolvedStyles": {
+          "textColor": {
+            "hex": "#E2E8F0",
+            "tokenAlias": "foreground"
+          }
+        }
+      },
+      {
+        "id": "842:1182",
+        "name": "chevron",
+        "mainComponentSetId": "841:1175"
+      },
+      {
+        "id": "842:4106",
+        "name": "Checkbox",
+        "mainComponentSetId": "663:869",
+        "variantOverrides": "state=on",
+        "componentPropertyOverrides": {
+          "Label": "Label",
+          "state": "on"
+        },
+        "resolvedStyles": {
+          "textColor": {
+            "hex": "#020617",
+            "tokenAlias": "background"
+          }
+        }
+      },
+      {
+        "id": "842:4109",
+        "name": "chevron",
+        "mainComponentSetId": "841:1175"
+      },
+      {
+        "id": "842:4117",
+        "name": "Checkbox",
+        "mainComponentSetId": "663:869",
+        "variantOverrides": "state=disabled",
+        "componentPropertyOverrides": {
+          "Label": "Label",
+          "state": "disabled"
+        },
+        "resolvedStyles": {
+          "textColor": {
+            "hex": "#E2E8F0",
+            "tokenAlias": "foreground"
+          }
+        }
+      },
+      {
+        "id": "842:4120",
+        "name": "chevron",
+        "mainComponentSetId": "841:1175"
+      }
+    ]
+  }
+}
