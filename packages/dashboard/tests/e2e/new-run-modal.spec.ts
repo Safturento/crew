@@ -110,7 +110,7 @@ test.describe('New Run modal (CREW-218)', () => {
     // Interactive + blocked rows carry their tinted reason and are non-selectable.
     const interactive = dialog.getByRole('button', { name: /Interactive picker ticket/ });
     await expect(interactive).toBeDisabled();
-    await expect(dialog.getByText('interactive', { exact: true })).toBeVisible();
+    await expect(interactive.getByText('interactive', { exact: true })).toBeVisible();
 
     const blocked = dialog.getByRole('button', { name: /Blocked picker ticket/ });
     await expect(blocked).toBeDisabled();

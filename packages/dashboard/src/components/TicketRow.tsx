@@ -29,6 +29,10 @@ const PRIORITY_COLOR: Record<string, PillColor> = {
  * the rest of the UI.
  */
 function reasonFor(ticket: PickerTicket): { text: string; className: string } | null {
+  // The `blockedBy.length > 0` guard keeps a non-runnable row from rendering a
+  // bare "blocked by " with no keys. The daemon sets `runnable` ⇔ `blockedBy`
+  // is empty (TicketsService), so a disabled row always has a reason here — the
+  // guard just hardens against that invariant ever drifting.
   if (!ticket.runnable && ticket.blockedBy.length > 0)
     return {
       text: `blocked by ${ticket.blockedBy.map((b) => b.key).join(', ')}`,
