@@ -1,8 +1,10 @@
 import { asValue, asFunction, createContainer, type AwilixContainer } from 'awilix';
+import { loadGithubWebhookSecrets } from 'crew-shared';
 import type { Kysely } from 'kysely';
 import type { Logger } from 'pino';
 import type { DaemonConfig } from './config.js';
 import type { DaemonDatabase } from './db.js';
+import { GithubWebhookService } from './services/GithubWebhookService.js';
 import { ProjectsService } from './services/ProjectsService.js';
 import { AgentsService } from './services/AgentsService.js';
 import { IngestService } from './services/IngestService.js';
@@ -48,6 +50,8 @@ export interface DaemonCradle {
   runnerCommandsService: RunnerCommandsService;
   runFailureService: RunFailureService;
   ticketsService: TicketsService;
+  githubWebhookSecrets: Map<string, string>;
+  githubWebhookService: GithubWebhookService;
 }
 
 declare module '@fastify/awilix' {
@@ -168,6 +172,24 @@ export function buildContainer(deps: BuildContainerDeps): AwilixContainer<Daemon
           jiraEmail: config.jiraEmail,
           jiraToken: config.jiraToken,
           agentsService,
+          logger,
+        }),
+    ).scoped(),
+    // CREW-270: per-repo HMAC secrets for the GitHub webhook receiver. Loaded
+    // once at container build from the read-only secrets-file mount (CREW-269);
+    // a change requires a daemon restart, same lifecycle as the project TOMLs.
+    githubWebhookSecrets: asFunction(({ config }: DaemonCradle) =>
+      loadGithubWebhookSecrets(config.githubWebhookSecretsFile),
+    ).singleton(),
+    // CREW-270: verifies + dispatches GitHub pull_request webhook deliveries
+    // for PR-merge detection. Scoped — stateless over the injected projects
+    // service, secrets map, and the shared prTransitionService.
+    githubWebhookService: asFunction(
+      ({ projectsService, githubWebhookSecrets, prTransitionService, logger }: DaemonCradle) =>
+        new GithubWebhookService({
+          projectsService,
+          secrets: githubWebhookSecrets,
+          prTransitions: prTransitionService,
           logger,
         }),
     ).scoped(),
