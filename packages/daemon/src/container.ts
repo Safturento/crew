@@ -16,6 +16,7 @@ import { FinishStepsService } from './services/FinishStepsService.js';
 import { ActionService } from './services/ActionService.js';
 import { RunnerCommandsService } from './services/RunnerCommandsService.js';
 import { RunFailureService } from './services/RunFailureService.js';
+import { TicketsService } from './services/TicketsService.js';
 import { resolveJsonlPathForAgent } from './services/resolveJsonlPath.js';
 
 /**
@@ -46,6 +47,7 @@ export interface DaemonCradle {
   actionService: ActionService;
   runnerCommandsService: RunnerCommandsService;
   runFailureService: RunFailureService;
+  ticketsService: TicketsService;
 }
 
 declare module '@fastify/awilix' {
@@ -156,6 +158,18 @@ export function buildContainer(deps: BuildContainerDeps): AwilixContainer<Daemon
     // driven by the app lifecycle, not held here).
     runFailureService: asFunction(
       ({ db, eventBus }: DaemonCradle) => new RunFailureService({ db, eventBus }),
+    ).scoped(),
+    // CREW-278: New Run ticket picker — fetches a project's Ready-for-Development
+    // tickets from Jira, grouped + runnability-classified. Scoped — stateless
+    // over the injected creds + agentsService.
+    ticketsService: asFunction(
+      ({ config, agentsService, logger }: DaemonCradle) =>
+        new TicketsService({
+          jiraEmail: config.jiraEmail,
+          jiraToken: config.jiraToken,
+          agentsService,
+          logger,
+        }),
     ).scoped(),
   });
   return container;

@@ -1,0 +1,24 @@
+meta {
+  name: GET /api/projects/:slug/tickets
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{baseUrl}}/api/projects/{{projectSlug}}/tickets
+}
+
+assert {
+  res.status: eq 200
+  res.body.available: isBoolean
+}
+
+tests {
+  test("degraded payload carries a known reason; available payload carries groups", () => {
+    if (res.body.available === false) {
+      expect(res.body.reason).to.be.oneOf(["no_credentials", "jira_unreachable"]);
+    } else {
+      expect(res.body.groups).to.be.an("array");
+    }
+  });
+}

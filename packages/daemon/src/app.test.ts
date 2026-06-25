@@ -33,6 +33,8 @@ async function buildTestApp(opts: { dashboardDistDir?: string } = {}) {
       // Same blanket safety net for the state-event watcher (CREW-254).
       stateEventsDir: process.env.CREW_STATE_EVENTS_DIR ?? '/tmp/does-not-matter/state-events',
       githubWebhookSecretsFile: '/tmp/does-not-matter/github-webhook-secrets.toml',
+      jiraEmail: '',
+      jiraToken: '',
     },
     logger: createLogger(),
     db,

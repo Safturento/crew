@@ -53,6 +53,11 @@ services:
       - CREW_HOST=0.0.0.0
       - CREW_PORT=7773
       - CREW_SEED_FIXTURES=${CREW_SEED_FIXTURES:-0}
+      # CREW-278: New Run ticket picker — Jira Basic-auth creds the daemon uses to
+      # search a project's Ready-for-Development tickets. Interpolated from the
+      # host env at `docker compose up`; absent → the picker degrades to manual entry.
+      - CREW_JIRA_EMAIL=${CREW_JIRA_EMAIL:-}
+      - CREW_JIRA_API_TOKEN=${CREW_JIRA_API_TOKEN:-}
     ports:
       - '${CREW_PORT:-7773}:7773'
     healthcheck:

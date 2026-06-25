@@ -198,3 +198,30 @@ describe('GET /api/projects/:slug', () => {
     }
   });
 });
+
+describe('GET /api/projects/:slug/tickets', () => {
+  it('returns a degraded payload (200) when the daemon has no Jira creds', async () => {
+    const { app, db, projectsDir } = await setup();
+    try {
+      writeFileSync(join(projectsDir, 'k.toml'), validToml('k', '/code/k'));
+      const res = await app.inject({ method: 'GET', url: '/api/projects/k/tickets' });
+      expect(res.statusCode).toBe(200);
+      expect(res.json()).toEqual({ available: false, reason: 'no_credentials' });
+    } finally {
+      await app.close();
+      await db.destroy();
+    }
+  });
+
+  it('returns 404 for an unknown slug before touching Jira', async () => {
+    const { app, db } = await setup();
+    try {
+      const res = await app.inject({ method: 'GET', url: '/api/projects/nope/tickets' });
+      expect(res.statusCode).toBe(404);
+      expect(res.json()).toMatchObject({ resource: 'project', id: 'nope' });
+    } finally {
+      await app.close();
+      await db.destroy();
+    }
+  });
+});

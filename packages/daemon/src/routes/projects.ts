@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { projectConfigSchema } from 'crew-shared';
+import { projectConfigSchema, projectTicketsResponseSchema } from 'crew-shared';
 import type { DaemonApp } from '../app.js';
 
 const ProjectSchema = z.object({
@@ -64,6 +64,23 @@ export async function registerProjectsRoutes(app: DaemonApp): Promise<void> {
       const project = svc.getBySlug(req.params.slug);
       const configPath = svc.getConfigPath(req.params.slug);
       return { project, configPath };
+    },
+  );
+
+  // CREW-278: New Run ticket picker data path. `getBySlug` throws NotFoundError
+  // (→ 404) for an unknown slug before any Jira call; a degraded list (missing
+  // creds / Jira unreachable) is a 200 with `available: false`, never a 5xx.
+  app.get(
+    '/api/projects/:slug/tickets',
+    {
+      schema: {
+        params: SlugParamsSchema,
+        response: { 200: projectTicketsResponseSchema },
+      },
+    },
+    async (req) => {
+      const project = req.diScope.resolve('projectsService').getBySlug(req.params.slug);
+      return req.diScope.resolve('ticketsService').listProjectTickets(project);
     },
   );
 }

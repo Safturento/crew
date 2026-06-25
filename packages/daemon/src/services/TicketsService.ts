@@ -51,8 +51,10 @@ export class TicketsService {
 
     const activeKeys = await this.deps.agentsService.activeTicketKeys(project.name);
 
+    // Insertion-ordered groups: the Map dedupes by epic, the array preserves
+    // the first-seen order (issues already arrive `ORDER BY created ASC`).
     const groups = new Map<string, TicketGroup>();
-    const order: string[] = [];
+    const ordered: TicketGroup[] = [];
     for (const issue of issues) {
       const ticket = toPickerTicket(issue, activeKeys);
       const epicKey = issue.fields.parent?.key ?? null;
@@ -65,19 +67,20 @@ export class TicketsService {
           tickets: [],
         };
         groups.set(groupId, group);
-        order.push(groupId);
+        ordered.push(group);
       }
       group.tickets.push(ticket);
     }
 
-    return { available: true, groups: order.map((id) => groups.get(id)!) };
+    return { available: true, groups: ordered };
   }
 }
 
 function toPickerTicket(issue: JiraIssue, activeKeys: Set<string>): PickerTicket {
   const blockedBy = (issue.fields.issuelinks ?? [])
-    .filter((l) => l.type?.inward === 'is blocked by' && l.inwardIssue)
-    .map((l) => l.inwardIssue!)
+    .filter((l) => l.type?.inward === 'is blocked by')
+    .map((l) => l.inwardIssue)
+    .filter((b): b is NonNullable<typeof b> => b != null)
     .filter((b) => b.fields?.status?.statusCategory?.key !== 'done')
     .map((b) => ({ key: b.key, summary: b.fields?.summary ?? '' }));
 
