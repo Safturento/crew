@@ -3,6 +3,7 @@ import type {
   ActionRequest,
   EnqueueAction,
   EnqueueRunnerCommand,
+  ProjectTicketsResponse,
   RunnerCommand,
 } from 'crew-shared';
 
@@ -223,6 +224,36 @@ const RunnerCommandSchema = z.object({
 });
 
 const AcknowledgeRunSchema = z.object({ acknowledged: z.number() });
+
+/**
+ * CREW-279: wire shape of `GET /api/projects/:slug/tickets` (the New Run
+ * picker). Mirrors `crew-shared`'s `projectTicketsResponseSchema` inline, per
+ * this file's "only types cross over from crew-shared (the barrel re-exports a
+ * node-only loader Vite won't bundle)" convention. The daemon's Zod serializer
+ * guarantees the shape; this re-validates the browser-relevant subset.
+ */
+const PickerTicketSchema = z.object({
+  key: z.string(),
+  summary: z.string(),
+  priority: z.string().nullable(),
+  runnable: z.boolean(),
+  blockedBy: z.array(z.object({ key: z.string(), summary: z.string() })),
+  hasActiveAgent: z.boolean(),
+});
+
+const TicketGroupSchema = z.object({
+  epicKey: z.string().nullable(),
+  epicSummary: z.string().nullable(),
+  tickets: z.array(PickerTicketSchema),
+});
+
+const ProjectTicketsResponseSchema = z.discriminatedUnion('available', [
+  z.object({ available: z.literal(true), groups: z.array(TicketGroupSchema) }),
+  z.object({
+    available: z.literal(false),
+    reason: z.enum(['no_credentials', 'jira_unreachable']),
+  }),
+]);
 
 /**
  * CREW-220: `GET /api/agents/:key/finish-steps` response. Each step is the
@@ -452,5 +483,17 @@ export class HttpDaemonClient implements DaemonClient {
     });
     if (!res.ok) throw new Error(`POST /api/runs/${key}/acknowledge: ${res.status}`);
     return AcknowledgeRunSchema.parse(await res.json()).acknowledged;
+  }
+
+  /**
+   * CREW-279: the New Run picker's ticket list for one project. A degraded
+   * list (`available: false`) is still a 200 — the daemon returns it when it
+   * has no Jira creds or Jira is unreachable, and the modal degrades to manual
+   * ticket-key entry. Only a non-2xx is a real failure.
+   */
+  async listProjectTickets(slug: string): Promise<ProjectTicketsResponse> {
+    const res = await fetch(`${this.baseUrl}/api/projects/${encodeURIComponent(slug)}/tickets`);
+    if (!res.ok) throw new Error(`GET /api/projects/${slug}/tickets: ${res.status}`);
+    return ProjectTicketsResponseSchema.parse(await res.json());
   }
 }
