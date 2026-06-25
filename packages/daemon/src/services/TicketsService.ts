@@ -9,7 +9,15 @@ import {
 } from 'crew-shared';
 import type { AgentsService } from './AgentsService.js';
 
-const SEARCH_FIELDS = ['summary', 'status', 'parent', 'issuetype', 'priority', 'issuelinks'];
+const SEARCH_FIELDS = [
+  'summary',
+  'status',
+  'parent',
+  'issuetype',
+  'priority',
+  'issuelinks',
+  'labels',
+];
 const UNGROUPED = '__ungrouped__';
 
 export interface TicketsServiceDeps {
@@ -91,5 +99,6 @@ function toPickerTicket(issue: JiraIssue, activeKeys: Set<string>): PickerTicket
     runnable: blockedBy.length === 0,
     blockedBy,
     hasActiveAgent: activeKeys.has(issue.key),
+    interactive: (issue.fields.labels ?? []).includes('interactive'),
   };
 }

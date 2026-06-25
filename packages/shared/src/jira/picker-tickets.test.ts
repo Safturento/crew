@@ -1,5 +1,20 @@
 import { describe, it, expect } from 'vitest';
-import { projectTicketsResponseSchema } from './picker-tickets.js';
+import { pickerTicketSchema, projectTicketsResponseSchema } from './picker-tickets.js';
+
+describe('pickerTicketSchema', () => {
+  it('requires interactive on a picker ticket', () => {
+    const base = {
+      key: 'CREW-1',
+      summary: 's',
+      priority: null,
+      runnable: true,
+      blockedBy: [],
+      hasActiveAgent: false,
+    };
+    expect(pickerTicketSchema.safeParse(base).success).toBe(false); // interactive missing
+    expect(pickerTicketSchema.safeParse({ ...base, interactive: true }).success).toBe(true);
+  });
+});
 
 describe('projectTicketsResponseSchema', () => {
   it('accepts an available payload with grouped tickets', () => {
@@ -17,6 +32,7 @@ describe('projectTicketsResponseSchema', () => {
               runnable: true,
               blockedBy: [],
               hasActiveAgent: false,
+              interactive: false,
             },
           ],
         },

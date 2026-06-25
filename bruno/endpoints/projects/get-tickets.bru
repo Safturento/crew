@@ -21,4 +21,14 @@ tests {
       expect(res.body.groups).to.be.an("array");
     }
   });
+
+  test("each ticket carries a boolean interactive flag", () => {
+    if (res.body.available === true) {
+      for (const group of res.body.groups) {
+        for (const ticket of group.tickets) {
+          expect(ticket.interactive).to.be.a("boolean");
+        }
+      }
+    }
+  });
 }

@@ -1,7 +1,7 @@
 ---
 name: architecture
 description: 4-package layering rules + dependency direction
-last_updated: 2026-06-24
+last_updated: 2026-06-25
 covers:
   - 'packages/*/src/**/*.ts'
   - 'package.json'
@@ -65,7 +65,7 @@ The config encodes: repo path, default branch, Jira project key + site + `ready_
 
 Per-repo GitHub **webhook secrets** live outside the project TOMLs, in a single daemon-loaded `~/.config/crew/github-webhook-secrets.toml` (`repo → secret` map, loaded by `loadGithubWebhookSecrets` in `crew-shared`; `CREW_GITHUB_WEBHOOK_SECRETS_FILE` overrides the path). A missing file is tolerated (zero configured webhooks); a present-but-malformed file throws.
 
-The daemon's own **Jira credentials** (`CREW_JIRA_EMAIL` / `CREW_JIRA_API_TOKEN`, threaded through `docker-compose` `environment:`, CREW-278) back the New Run ticket picker: `GET /api/projects/:slug/tickets` → `TicketsService.listProjectTickets` runs one `JiraClient.searchIssues` for the project's `ready_status` tickets, groups them by parent Epic, classifies each runnable-vs-blocked from its `is blocked by` links (a `done`-category blocker doesn't block), and overlays `AgentsService.activeTicketKeys` (ticket keys with a non-terminal agent). A degraded list is a **200** with `{available:false, reason:'no_credentials'|'jira_unreachable'}` — missing creds or an unreachable Jira are expected states, never a 5xx — so the dashboard degrades to manual ticket-key entry; an unknown slug still 404s before any Jira call.
+The daemon's own **Jira credentials** (`CREW_JIRA_EMAIL` / `CREW_JIRA_API_TOKEN`, threaded through `docker-compose` `environment:`, CREW-278) back the New Run ticket picker: `GET /api/projects/:slug/tickets` → `TicketsService.listProjectTickets` runs one `JiraClient.searchIssues` for the project's `ready_status` tickets, groups them by parent Epic, classifies each runnable-vs-blocked from its `is blocked by` links (a `done`-category blocker doesn't block), flags each `interactive` from the Jira `interactive` label (CREW-285 — must be driven live, not via `crew run`), and overlays `AgentsService.activeTicketKeys` (ticket keys with a non-terminal agent). A degraded list is a **200** with `{available:false, reason:'no_credentials'|'jira_unreachable'}` — missing creds or an unreachable Jira are expected states, never a 5xx — so the dashboard degrades to manual ticket-key entry; an unknown slug still 404s before any Jira call.
 
 ## State store
 

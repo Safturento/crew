@@ -239,6 +239,7 @@ const PickerTicketSchema = z.object({
   runnable: z.boolean(),
   blockedBy: z.array(z.object({ key: z.string(), summary: z.string() })),
   hasActiveAgent: z.boolean(),
+  interactive: z.boolean(),
 });
 
 const TicketGroupSchema = z.object({

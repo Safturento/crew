@@ -27,6 +27,7 @@ export interface JiraIssue {
     priority?: { name: string } | null;
     parent?: { key: string; fields?: { summary?: string } };
     issuelinks?: JiraIssueLink[];
+    labels?: string[];
     [k: string]: unknown;
   };
   [k: string]: unknown;

@@ -269,6 +269,7 @@ describe('GET /api/projects/:slug/tickets', () => {
                 runnable: true,
                 blockedBy: [],
                 hasActiveAgent: false,
+                interactive: false,
               },
             ],
           },

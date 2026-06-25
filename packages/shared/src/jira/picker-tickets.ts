@@ -10,6 +10,8 @@ export const pickerTicketSchema = z.object({
   blockedBy: z.array(z.object({ key: z.string(), summary: z.string() })),
   /** true → a non-terminal agent already exists for this ticket. */
   hasActiveAgent: z.boolean(),
+  /** true → carries the `interactive` Jira label; must be driven live, not via `crew run`. */
+  interactive: z.boolean(),
 });
 
 /** Tickets grouped under their parent Epic; epicKey null → "Ungrouped". */
