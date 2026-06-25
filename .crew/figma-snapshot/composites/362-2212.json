@@ -33,14 +33,14 @@
     "absoluteBoundingBox": {
       "x": 618,
       "y": 2608,
-      "width": 558,
-      "height": 476
+      "width": 620,
+      "height": 571
     },
     "absoluteRenderBounds": {
       "x": 618,
       "y": 2608,
-      "width": 558,
-      "height": 476
+      "width": 620,
+      "height": 571
     },
     "constraints": {
       "vertical": "TOP",
@@ -56,7 +56,7 @@
   },
   "enrichment": {
     "source": "plugin-api",
-    "capturedAt": "2026-06-24T14:50:50.748Z",
+    "capturedAt": "2026-06-25T14:58:08.880Z",
     "componentInstances": [
       {
         "id": "379:432",
@@ -120,14 +120,14 @@
         }
       },
       {
-        "id": "351:2372",
-        "name": "ModalSelectionRow",
-        "mainComponentSetId": "350:236",
+        "id": "862:1141",
+        "name": "TicketRow",
+        "mainComponentSetId": "861:1134",
         "componentPropertyOverrides": {
-          "Meta": "",
-          "Secondary": "Drag-and-drop reordering keeps stale board state",
-          "Show Badge": true,
-          "Primary": "KAN-31"
+          "Show Reason": false,
+          "Reason": "blocked by KEY-000",
+          "Key": "KAN-31",
+          "Title": "Drag-and-drop reordering keeps stale board state"
         },
         "resolvedStyles": {
           "fills": [
@@ -151,14 +151,14 @@
         }
       },
       {
-        "id": "351:2382",
-        "name": "ModalSelectionRow",
-        "mainComponentSetId": "350:236",
+        "id": "862:1161",
+        "name": "TicketRow",
+        "mainComponentSetId": "861:1134",
         "componentPropertyOverrides": {
-          "Meta": "",
-          "Secondary": "Restore last session on reload",
-          "Show Badge": true,
-          "Primary": "KAN-32"
+          "Show Reason": false,
+          "Reason": "blocked by KEY-000",
+          "Key": "KAN-32",
+          "Title": "Restore last session on reload"
         },
         "resolvedStyles": {
           "fills": [
@@ -182,14 +182,14 @@
         }
       },
       {
-        "id": "351:2402",
-        "name": "ModalSelectionRow",
-        "mainComponentSetId": "350:236",
+        "id": "862:1188",
+        "name": "TicketRow",
+        "mainComponentSetId": "861:1134",
         "componentPropertyOverrides": {
-          "Meta": "",
-          "Secondary": "Audit log timezones across regions",
-          "Show Badge": true,
-          "Primary": "KAN-34"
+          "Show Reason": true,
+          "Reason": "running",
+          "Key": "KAN-34",
+          "Title": "Audit log timezones across regions"
         },
         "resolvedStyles": {
           "fills": [
@@ -213,14 +213,14 @@
         }
       },
       {
-        "id": "351:2412",
-        "name": "ModalSelectionRow",
-        "mainComponentSetId": "350:236",
+        "id": "862:1210",
+        "name": "TicketRow",
+        "mainComponentSetId": "861:1134",
         "componentPropertyOverrides": {
-          "Meta": "",
-          "Secondary": "Theme switcher persistence",
-          "Show Badge": true,
-          "Primary": "KAN-35"
+          "Show Reason": true,
+          "Reason": "interactive",
+          "Key": "KAN-35",
+          "Title": "Theme switcher persistence"
         },
         "resolvedStyles": {
           "fills": [
@@ -244,14 +244,14 @@
         }
       },
       {
-        "id": "351:2392",
-        "name": "ModalSelectionRow",
-        "mainComponentSetId": "350:236",
+        "id": "862:1232",
+        "name": "TicketRow",
+        "mainComponentSetId": "861:1134",
         "componentPropertyOverrides": {
-          "Meta": "blocked by KAN-31",
-          "Secondary": "Add board archival endpoint",
-          "Show Badge": true,
-          "Primary": "KAN-33"
+          "Show Reason": true,
+          "Reason": "blocked by KAN-31",
+          "Key": "KAN-33",
+          "Title": "Add board archival endpoint"
         },
         "resolvedStyles": {
           "fills": [
