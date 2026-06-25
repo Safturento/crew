@@ -15,9 +15,15 @@ import type { DaemonApp } from '../app.js';
  */
 export async function registerWebhookRoutes(app: DaemonApp): Promise<void> {
   await app.register(async (scope) => {
-    scope.addContentTypeParser('application/json', { parseAs: 'buffer' }, (_req, body, done) =>
-      done(null, body),
-    );
+    // Buffer every content-type in this scope, not just application/json: GitHub
+    // sends application/json, but a stray content-type must still yield a Buffer
+    // for `req.body as Buffer` to hold (and to avoid a 500 — the verification
+    // then rejects it cleanly via the HMAC/hook-id path). The catch-all also
+    // pre-empts Fastify's default 415 on an unknown media type.
+    const toBuffer = (_req: unknown, body: Buffer, done: (err: null, body: Buffer) => void) =>
+      done(null, body);
+    scope.addContentTypeParser('application/json', { parseAs: 'buffer' }, toBuffer);
+    scope.addContentTypeParser('*', { parseAs: 'buffer' }, toBuffer);
     scope.post('/api/webhooks/github', async (req, reply) => {
       const service = req.diScope.resolve('githubWebhookService');
       const result = await service.handle({

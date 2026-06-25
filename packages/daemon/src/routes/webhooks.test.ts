@@ -140,6 +140,32 @@ describe('POST /api/webhooks/github', () => {
     }
   });
 
+  it('buffers a non-application/json content-type instead of 500ing', async () => {
+    const { app, db } = await setup();
+    try {
+      await seedOpenPrAgent(db);
+      const raw = JSON.stringify(pullRequestClosedPayload({ repo: REPO, htmlUrl: PR_URL }));
+      const res = await app.inject({
+        method: 'POST',
+        url: '/api/webhooks/github',
+        headers: {
+          // GitHub always sends application/json; a stray content-type must
+          // still be buffered so the HMAC sees the raw bytes — never a 500.
+          'content-type': 'application/octet-stream',
+          'x-github-event': 'pull_request',
+          'x-github-hook-id': HOOK_ID,
+          'x-hub-signature-256': signPayload(raw, SECRET),
+        },
+        payload: raw,
+      });
+      expect(res.statusCode).toBe(200);
+      expect(res.json()).toMatchObject({ matched: true, changed: true });
+    } finally {
+      await app.close();
+      await db.destroy();
+    }
+  });
+
   it('200 { matched: false } for a verified delivery targeting an unknown PR', async () => {
     const { app, db } = await setup();
     try {
