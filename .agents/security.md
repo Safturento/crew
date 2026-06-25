@@ -1,7 +1,7 @@
 ---
 name: security
 description: Secrets handling, sandbox model + known limitations
-last_updated: 2026-06-19
+last_updated: 2026-06-25
 covers:
   - '**/.env*'
   - '**/secrets/**'
@@ -17,6 +17,15 @@ Don't read files whose name contains `secret`, `secrets`, `credentials`, `token`
 If a task requires inspecting one, ask the user to paste the relevant lines with sensitive values masked. The only override is an explicit user instruction ("go ahead and read it", "open the secrets file"); don't infer authorization from the surrounding task.
 
 Full rule + reasoning lives in the user-level `~/.claude/CLAUDE.md` "Secrets" section. Do **not** duplicate it here.
+
+## Inbound webhook authentication
+
+`POST /api/webhooks/github` (CREW-270) is the **one** daemon path published to the public internet, via a path-scoped Tailscale Funnel mapping; the rest of the daemon stays tailnet-only. It has no session/bearer auth — its identity boundary is two checks GitHub computes per delivery, both required:
+
+1. **HMAC** — `X-Hub-Signature-256` is SHA-256 HMAC over the **raw** request body keyed by a per-repo secret (`~/.config/crew/github-webhook-secrets.toml`, a read-only mount). Verified with `crypto.timingSafeEqual`, never `===`. The raw bytes must reach the HMAC unmodified, which is why the route uses an encapsulated `parseAs: 'buffer'` parser.
+2. **Hook-id pin** — `X-GitHub-Hook-ID` must equal the project's non-secret `webhook_hook_id` (project TOML). This scopes a verified delivery to the exact webhook crew created, not any other hook on the repo.
+
+Together they reject any other GitHub webhook on the internet pointed at the Funnel URL. Funnel does **not** surface the originating client IP (the daemon sees loopback/ingress), so there is no IP allowlist — HMAC + hook-id carry the full weight. **Secrets and signatures never enter a log line**: on rejection the service logs only `repository.full_name` and the failing check name (`hmac` / `hook_id`). A repo with no configured secret 401s. The secrets file is governed by the same "don't read secrets" rule above; its mount + Funnel setup live in [`local-dev.md`](local-dev.md) and `docs/runbooks/github-webhook-funnel.md`.
 
 ## Sandbox model
 
