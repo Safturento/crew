@@ -17,6 +17,7 @@ Organization: Active is grouped by topic (not chronology) since the dominant acc
     - [2026-05-12 — Explore intensity-axis for Button (parallels StateBadge muted/mid/loud)](#2026-05-12--explore-intensity-axis-for-button-parallels-statebadge-mutedmidloud)
     - [2026-05-09 — Crew Dashboard Screens: 3 remaining ad-hoc modal frames need DS Modal swap + semantic-token bindings](#2026-05-09--crew-dashboard-screens-3-remaining-ad-hoc-modal-frames-need-ds-modal-swap--semantic-token-bindings)
   - [Visual Fidelity Tooling](#visual-fidelity-tooling)
+    - [2026-06-24 — figma-snapshot compact enrichment can't represent non-instance affordances (hyperlinks, bespoke text)](#2026-06-24--figma-snapshot-compact-enrichment-cant-represent-non-instance-affordances-hyperlinks-bespoke-text)
     - [2026-06-06 — figma-snapshot committed baseline predates content-scoped freshness (full re-enrich needed)](#2026-06-06--figma-snapshot-committed-baseline-predates-content-scoped-freshness-full-re-enrich-needed)
     - [2026-06-04 — chrome MCP browser fails to auto-start on port 9223 in crew dispatches](#2026-06-04--chrome-mcp-browser-fails-to-auto-start-on-port-9223-in-crew-dispatches)
     - [2026-06-03 — No live render surface for caller-less DS primitives (visual-fidelity Step 5 gap)](#2026-06-03--no-live-render-surface-for-caller-less-ds-primitives-visual-fidelity-step-5-gap)
@@ -231,6 +232,20 @@ Organization: Active is grouped by topic (not chronology) since the dominant acc
 - [ ] Padding/gap/radius FLOAT bindings in the same pass, or deferred?
 
 ### Visual Fidelity Tooling
+
+#### 2026-06-24 — figma-snapshot compact enrichment can't represent non-instance affordances (hyperlinks, bespoke text)
+
+**What:** The compact enrichment script (`.claude/skills/figma-snapshot-refresh/enrichment-script.js`) records only `componentInstances` (plus `boundVariables`/`depthWarnings` on the captured node). Any load-bearing affordance built from **non-instance** nodes — a bespoke `TEXT` node carrying a `hyperlink`, a frame whose fill is bound to a link token — has **zero JSON representation**; it survives only in the PNG. Surfaced concretely on the New Run ticket-picker: the epic group headers ("KAN-30 · DRAG-AND-DROP REORDERING") with their key-range hyperlink bound to `button/link-fg` are invisible in `composites/362-2212.json`, which lists the 6 `ModalSelectionRow` instances flat with no group wrappers and no linked-key header. An implementer reading only the JSON would not know the grouped-with-linked-epic-key structure exists.
+
+**Why noticed:** Auditing the 2026-06-24 full-enrichment snapshot (PR #410) for New Run picker coverage at the user's request. The composite captured the rows/toggle/states faithfully (Available-only Switch, blocked-by `Meta`, running Pill), but the epic-grouping + Jira-link affordance — a spec'd CREW-279 feature — appears nowhere in JSON. Not a picker blocker (the PNG carries it for visual-fidelity-check, and CREW-279's plan specifies the linked-key behavior in prose), so deferred rather than fixed inline.
+
+**Anchors:** `.claude/skills/figma-snapshot-refresh/enrichment-script.js` (`walkChildren`, depth-6 cap at L128–130, `componentInstances`-only capture); `.crew/figma-snapshot/composites/362-2212.json`; `.crew/figma-snapshot/screens/1-3418.json` (4 `depthWarnings` at the picker `Container` rows); memory `project_new_run_picker_figma`; the design spec/plan `docs/superpowers/*/2026-06-23-figma-snapshot-enrich*`; CREW-283 (compact-output ticket that set the `componentInstances`-only shape).
+
+**What's been considered:** The compact shape was a deliberate CREW-283 decision (drop everything but instances + bound vars to keep the artifact small). Capturing *every* non-instance text node would re-bloat it — the win was the trim. The targeted version is narrower: capture a non-instance node **only when it carries signal** — a `hyperlink` (URL or node link) or a fill/stroke bound to a link-category token (e.g. `button/link-fg`). That's a small, high-value set: interactive affordances that aren't DS instances. Open whether to also emit a minimal group-structure outline (per-epic wrapper frames) or leave layout grouping screenshot-only.
+
+**Shape of work:** Small change to `enrichment-script.js` — in `walkChildren`, when a node has a non-empty `hyperlink` or a bound variable resolving to a link-category token, push a compact `linkAffordances` (or fold into a thin `annotations`) entry `{id, name, text, href|nodeLink, tokenAlias}`. Add a unit fixture under the snapshot lib tests. One ticket; touches the skill script + a test, no CLI-lib change. Mind the depth-6 cap — deep affordances would still need a `depthWarning`, so the screen-vs-composite scope split (composite captures depth-reset detail) stays the recovery path.
+
+**Open questions:** (1) New top-level key (`linkAffordances`) vs. extend each instance entry — link headers aren't instances, so probably top-level. (2) Capture group-wrapper structure too, or only the interactive link nodes? (3) Does the depth-6 cap need raising for screen-scope nodes, or is the composite-scope capture a sufficient recovery path (lean: sufficient, keep the cap)?
 
 #### 2026-06-06 — figma-snapshot committed baseline predates content-scoped freshness (full re-enrich needed)
 
