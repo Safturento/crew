@@ -18,14 +18,7 @@ type ModalProps = {
   children: React.ReactNode;
 };
 
-function Modal({
-  title,
-  open,
-  onOpenChange,
-  showClose = true,
-  width = 560,
-  children,
-}: ModalProps) {
+function Modal({ title, open, onOpenChange, showClose = true, width = 560, children }: ModalProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent

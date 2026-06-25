@@ -82,7 +82,11 @@ export function TicketRow({
         </span>
       </div>
       {ticket.priority && (
-        <Badge className="shrink-0" color={PRIORITY_COLOR[ticket.priority] ?? 'idle'} intensity="mid">
+        <Badge
+          className="shrink-0"
+          color={PRIORITY_COLOR[ticket.priority] ?? 'idle'}
+          intensity="mid"
+        >
           {ticket.priority}
         </Badge>
       )}
