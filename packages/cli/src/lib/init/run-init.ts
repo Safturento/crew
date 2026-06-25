@@ -8,6 +8,7 @@ import { renderProjectToml } from './write-project-toml.js';
 import { renderEnvToml } from './write-env-toml.js';
 import { scaffoldPlaywright } from './scaffold-playwright.js';
 import { scaffoldBruno } from './scaffold-bruno.js';
+import { scaffoldGhToken } from './scaffold-gh-token.js';
 import { writeSettingsJson } from './write-settings-json.js';
 import type { InitAnswers } from './types.js';
 
@@ -99,7 +100,9 @@ async function convergeManagedFile(
  *     `runEnvInit` when a `[docker]` block is configured,
  *  3. the Playwright skeleton (only when opted in and not already present),
  *  4. the Bruno collection skeleton (same gate),
- *  5. `.claude/settings.json` (array-merged — never clobbers).
+ *  5. `.claude/settings.json` (array-merged — never clobbers),
+ *  6. the gh-token secret scaffold (an empty `0600` placeholder + an idempotent
+ *     `.claude/secrets/` gitignore entry — never clobbers an existing token).
  *
  * Steps 1–2 are converge-aware: a diverged on-disk file is only overwritten
  * when `confirmOverwrite` accepts. Finally it runs the `baseline-present`
@@ -165,7 +168,21 @@ export async function runInit(options: RunInitOptions): Promise<InitResult> {
   // 5. .claude/settings.json — the writer array-merges, so this is always safe
   result.written.push(writeSettingsJson(answers, cwd));
 
-  // 6. materialize .env via the existing `crew env init` path. Materialization
+  // 6. gh-token secret scaffold — an empty 0600 placeholder + an idempotent
+  //    `.claude/secrets/` gitignore entry. Never clobbers an existing token; the
+  //    empty placeholder still trips the run-path `requireGhToken` gate, so the
+  //    user is prompted to paste a real PAT. Secret-safe: no token is ever
+  //    written or read here.
+  const ghToken = scaffoldGhToken(cwd);
+  result.written.push(...ghToken.written);
+  if (ghToken.needsToken) {
+    log(
+      `gh-token: paste a GitHub PAT (Contents + Pull-requests read/write on the repo) ` +
+        `into ${ghToken.tokenPath} — dispatch can't authorize without it`,
+    );
+  }
+
+  // 7. materialize .env via the existing `crew env init` path. Materialization
   //    derives a worktree id from the canonical worktree, so it only applies to
   //    docker-backed projects; env.toml is written regardless for later use.
   if (answers.docker) {
@@ -173,7 +190,7 @@ export async function runInit(options: RunInitOptions): Promise<InitResult> {
     result.env = await runEnvInit({ worktree: cwd, config, log });
   }
 
-  // 7. baseline detect → warning (never created here)
+  // 8. baseline detect → warning (never created here)
   const baseline = await baselinePresent.detect({ worktree: cwd } as HealthContext);
   if (baseline.status !== 'ok') {
     result.baselineWarning = baseline.remediation
