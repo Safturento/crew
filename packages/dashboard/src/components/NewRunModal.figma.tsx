@@ -1,6 +1,7 @@
 import { figma } from '@figma/code-connect';
 
 import { NewRunModal } from '@/components/NewRunModal';
+import { MockDaemonClient } from '@/data/MockDaemonClient';
 
 // The New Run flow is three frames in the Crew screens file (Select Project /
 // Select Ticket / Confirm). Code Connect maps to a single node — we point at
@@ -26,6 +27,7 @@ figma.connect(
           },
         ]}
         onConfirm={() => {}}
+        client={new MockDaemonClient()}
       />
     ),
   },
