@@ -48,7 +48,6 @@ Organization: Active is grouped by topic (not chronology) since the dominant acc
     - [2026-04-28 — Dashboard New Run modal + projects route view](#2026-04-28--dashboard-new-run-modal--projects-route-view)
     - [2026-04-28 — `useAttention.clear()` snapshot semantic isn't directly tested](#2026-04-28--useattentionclear-snapshot-semantic-isnt-directly-tested)
   - [Daemon, CLI & Dispatch](#daemon-cli--dispatch)
-    - [2026-06-25 — `crew run` worktree creation is non-idempotent: an orphan branch silently wedges every future run of a ticket](#2026-06-25--crew-run-worktree-creation-is-non-idempotent-an-orphan-branch-silently-wedges-every-future-run-of-a-ticket)
     - [2026-06-25 — Runner never reaps dead processes: phantom "running" entries linger, and early-death runs never settle to error](#2026-06-25--runner-never-reaps-dead-processes-phantom-running-entries-linger-and-early-death-runs-never-settle-to-error)
     - [2026-06-20 — `crew resume` emits `run_started` as source `cli-run`, blurring resume vs original-run in the audit trail](#2026-06-20--crew-resume-emits-run_started-as-source-cli-run-blurring-resume-vs-original-run-in-the-audit-trail)
     - [2026-06-20 — Headless `crew run` silently cuts off an agent that backgrounds work and yields via `ScheduleWakeup`](#2026-06-20--headless-crew-run-silently-cuts-off-an-agent-that-backgrounds-work-and-yields-via-schedulewakeup)
@@ -102,6 +101,7 @@ Organization: Active is grouped by topic (not chronology) since the dominant acc
     - [2026-05-15 — `.agents/` topic-doc system vs native `.claude/rules/` and agents.md alignment](#2026-05-15--agents-topic-doc-system-vs-native-clauderules-and-agentsmd-alignment)
     - [2026-05-12 — Rethink followup-tracking system (priority tier + Jira backlog sync)](#2026-05-12--rethink-followup-tracking-system-priority-tier--jira-backlog-sync)
 - [Resolved](#resolved)
+  - [2026-06-25 — `crew run` worktree creation is non-idempotent: an orphan branch silently wedges every future run of a ticket](#2026-06-25--crew-run-worktree-creation-is-non-idempotent-an-orphan-branch-silently-wedges-every-future-run-of-a-ticket)
   - [2026-06-19 — `AgentsService.deriveState` terminal guards silently revert a state override out of `finished`/`error`/`pr_merged`](#2026-06-19--agentsservicederivestate-terminal-guards-silently-revert-a-state-override-out-of-finishederrorpr_merged)
   - [2026-06-03 — `deriveState` falls through to `finished` when PR-create isn't detected](#2026-06-03--derivestate-falls-through-to-finished-when-pr-create-isnt-detected)
   - [2026-05-11 — `idle` and `waiting` agent states not reachable from daemon fixtures](#2026-05-11--idle-and-waiting-agent-states-not-reachable-from-daemon-fixtures)
@@ -747,22 +747,6 @@ The "synthetic Unregistered section" feels right — single render path, no extr
 **Shape of work:** Tiny cleanup. Add 2–3 RTL test cases. Bundle into the cva-cleanup ticket above or stand alone.
 
 ### Daemon, CLI & Dispatch
-
-#### 2026-06-25 — `crew run` worktree creation is non-idempotent: an orphan branch silently wedges every future run of a ticket
-
-**Ticket:** [CREW-287](https://safturento.atlassian.net/browse/CREW-287)
-
-**What:** `crew run <KEY>` creates its worktree with `git worktree add -b <KEY> <worktree> origin/<default_branch>` (`packages/cli/src/commands/run.ts:301-314`). The `-b <KEY>` **creates a new branch**, so if a `<KEY>` branch already exists the command hard-fails with `fatal: a branch named '<KEY>' already exists`. A run that gets interrupted *after* its branch is created but *before* it completes (crash, kill, a later-step failure, manual worktree cleanup with `git worktree remove` which leaves the branch) orphans the branch — and then **every** subsequent `crew run <KEY>` dies at worktree creation. Two compounding failures make it invisible: (1) the host runner stamps the action `launched` when the child process *spawns*, not when it succeeds, so the dashboard/queue shows `launched`; (2) the failure happens before the run registers with the daemon, so there is **no `runs` row** — not even a failure row (migration 0010's failure fields only populate once a run registers). Net: the operator sees "launched", no agent ever appears, the ticket never moves to an error state, and nothing explains why.
-
-**Why noticed:** 2026-06-25 debugging session. The user picked CREW-270 in the New Run dialog; it showed 270 on confirm but no agent appeared, while a CREW-286 agent ran. Full trace: the picker→enqueue→runner→`crew run` path was all correct (no mapping bug); CREW-270 had an orphan local branch at main's HEAD (no worktree) left by an earlier interrupted run, so `git worktree add -b CREW-270` failed for actions 96/101/102/104 — each `launched`, none registered. Immediate unblock: `git branch -D CREW-270` then re-run.
-
-**Anchors:** `packages/cli/src/commands/run.ts:288-322` (the `fetch` + `git worktree add -b` block); the host runner stamps `launched` in `packages/cli/src/lib/runner/executor.ts` / `loop.ts`; run registration + failure fields in `packages/daemon/src/migrations/0010_run_failure_fields.ts` and `RunFailureService`. Sibling lifecycle gap: [[#2026-06-25--runner-never-reaps-dead-processes-phantom-running-entries-linger-and-early-death-runs-never-settle-to-error]].
-
-**What's been considered:** (a) Make worktree setup idempotent/resilient — before `git worktree add -b`, check `git show-ref --verify --quiet refs/heads/<KEY>`; if the branch exists with no worktree and no unique commits vs `origin/<default_branch>`, delete + recreate (or `git worktree add` onto the existing branch and reset it); if it has unique commits, fail loudly with a clear, actionable message rather than the raw git fatal. (b) Record the worktree-creation failure even though the run hasn't registered — write a failed-start row (or surface via the runner snapshot) so it's visible and the ticket can show error, not silent nothing. (b) overlaps the runner-reaping/visibility followup and CREW-249's "Failed to start" surface.
-
-**Shape of work:** Small-to-medium. Core fix is a pre-flight branch guard in `run.ts` worktree setup (CLI git lib) + a test. The "record the failure" half is larger (daemon run-failure record before registration) and may fold into the runner-observability work.
-
-**Open questions:** When an orphan branch *does* have unique commits (a partially-done interrupted run), reuse it (resume-like) or refuse + tell the operator to clean up manually? Lean: refuse with a clear message — silent reuse risks running on unexpected state.
 
 #### 2026-06-25 — Runner never reaps dead processes: phantom "running" entries linger, and early-death runs never settle to error
 
@@ -1728,6 +1712,22 @@ The other two open questions (sandbox config drift, Phase 2 + Phase 3 separation
 - Should priority on the markdown side map directly to Jira priority, or stay a separate signal?
 
 ## Resolved
+
+### 2026-06-25 — `crew run` worktree creation is non-idempotent: an orphan branch silently wedges every future run of a ticket
+
+**Resolved 2026-06-25:** Closed by [CREW-287](https://safturento.atlassian.net/browse/CREW-287). Added `reconcileOrphanBranch` (`packages/cli/src/lib/run/reconcile-orphan-branch.ts`), called in `run.ts` after `git fetch` and before `git worktree add -b <KEY>`: a **safe orphan** (`<KEY>` branch with zero commits beyond `origin/<default>`) is deleted so the add recreates it cleanly; a branch with **unique commits** (or one whose commit count can't be computed) throws an actionable error (`git log origin/<default>..<KEY>` to inspect, `git branch -D <KEY>` to discard) instead of the raw git fatal. The worktree `bracketStartupPhase` is now wrapped so any throw records the `crew_startup_worktree` **failed** event and exits 1 cleanly — covering the cheap part of the "record the failure" half (the dashboard sees a failed phase, not a silent "launched"). The larger pre-registration daemon-trace half (b) was deliberately left to the runner-observability work / CREW-249. Unit tests cover absent / safe-orphan / unique-commits / uncomputable-count / delete-failure / cwd.
+
+**What:** `crew run <KEY>` creates its worktree with `git worktree add -b <KEY> <worktree> origin/<default_branch>` (`packages/cli/src/commands/run.ts:301-314`). The `-b <KEY>` **creates a new branch**, so if a `<KEY>` branch already exists the command hard-fails with `fatal: a branch named '<KEY>' already exists`. A run that gets interrupted _after_ its branch is created but _before_ it completes (crash, kill, a later-step failure, manual worktree cleanup with `git worktree remove` which leaves the branch) orphans the branch — and then **every** subsequent `crew run <KEY>` dies at worktree creation. Two compounding failures make it invisible: (1) the host runner stamps the action `launched` when the child process _spawns_, not when it succeeds, so the dashboard/queue shows `launched`; (2) the failure happens before the run registers with the daemon, so there is **no `runs` row** — not even a failure row (migration 0010's failure fields only populate once a run registers). Net: the operator sees "launched", no agent ever appears, the ticket never moves to an error state, and nothing explains why.
+
+**Why noticed:** 2026-06-25 debugging session. The user picked CREW-270 in the New Run dialog; it showed 270 on confirm but no agent appeared, while a CREW-286 agent ran. Full trace: the picker→enqueue→runner→`crew run` path was all correct (no mapping bug); CREW-270 had an orphan local branch at main's HEAD (no worktree) left by an earlier interrupted run, so `git worktree add -b CREW-270` failed for actions 96/101/102/104 — each `launched`, none registered. Immediate unblock: `git branch -D CREW-270` then re-run.
+
+**Anchors:** `packages/cli/src/commands/run.ts:288-322` (the `fetch` + `git worktree add -b` block); the host runner stamps `launched` in `packages/cli/src/lib/runner/executor.ts` / `loop.ts`; run registration + failure fields in `packages/daemon/src/migrations/0010_run_failure_fields.ts` and `RunFailureService`. Sibling lifecycle gap: [[#2026-06-25--runner-never-reaps-dead-processes-phantom-running-entries-linger-and-early-death-runs-never-settle-to-error]].
+
+**What's been considered:** (a) Make worktree setup idempotent/resilient — before `git worktree add -b`, check `git show-ref --verify --quiet refs/heads/<KEY>`; if the branch exists with no worktree and no unique commits vs `origin/<default_branch>`, delete + recreate (or `git worktree add` onto the existing branch and reset it); if it has unique commits, fail loudly with a clear, actionable message rather than the raw git fatal. (b) Record the worktree-creation failure even though the run hasn't registered — write a failed-start row (or surface via the runner snapshot) so it's visible and the ticket can show error, not silent nothing. (b) overlaps the runner-reaping/visibility followup and CREW-249's "Failed to start" surface. _Resolution took (a) in full; (b) only partially — the worktree phase now records a `failed` startup event, but the pre-registration daemon `runs`-row trace stays with the runner-observability work._
+
+**Shape of work:** Small-to-medium. Core fix is a pre-flight branch guard in `run.ts` worktree setup (CLI git lib) + a test. The "record the failure" half is larger (daemon run-failure record before registration) and may fold into the runner-observability work.
+
+**Open questions:** When an orphan branch _does_ have unique commits (a partially-done interrupted run), reuse it (resume-like) or refuse + tell the operator to clean up manually? Lean: refuse with a clear message — silent reuse risks running on unexpected state. _Resolved: refuse with the actionable message._
 
 ### 2026-06-19 — `AgentsService.deriveState` terminal guards silently revert a state override out of `finished`/`error`/`pr_merged`
 

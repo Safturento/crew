@@ -1,7 +1,7 @@
 ---
 name: dispatch
 description: crew run prompt-build, skills injection, verification gates
-last_updated: 2026-06-24
+last_updated: 2026-06-25
 covers:
   - 'packages/cli/src/lib/run/**'
   - 'packages/cli/src/lib/prompts/**'
@@ -26,7 +26,7 @@ The companion commands `crew fix-pr` (resume from PR feedback) and the gate-driv
 
 1. **Resolve project config.** `discoverProjectConfig(process.cwd())` walks parents for `~/.config/crew/projects/<name>.toml`. Fail-fast if absent.
 2. **Tool preflight.** `preflightTools(['claude','gh','jq','bwrap'], PATH)` — bare-binary existence check; no version logic.
-3. **Worktree create.** `git fetch origin <default_branch>` then `git worktree add -b <KEY> <worktree> origin/<default_branch>`. Worktree path is `worktreePathFor(repoPath, KEY)` — sibling dir `<repo>-<KEY>`. The sibling layout matters: the docker port allocator hashes the basename, so `-<KEY>` deterministically produces a distinct port set per worktree.
+3. **Worktree create.** `git fetch origin <default_branch>`, then `reconcileOrphanBranch` (`lib/run/reconcile-orphan-branch.ts`, CREW-287), then `git worktree add -b <KEY> <worktree> origin/<default_branch>`. Worktree path is `worktreePathFor(repoPath, KEY)` — sibling dir `<repo>-<KEY>`. The sibling layout matters: the docker port allocator hashes the basename, so `-<KEY>` deterministically produces a distinct port set per worktree. **Orphan-branch guard:** `-b <KEY>` hard-fails if a `<KEY>` branch already exists — orphaned by an earlier run interrupted after branch creation (crash, kill, or a `git worktree remove` that left the branch) — wedging _every_ subsequent run of that key with no `runs` row to explain it. `reconcileOrphanBranch` runs after the fetch (so `origin/<default>` is fresh): a **safe orphan** (branch with zero commits beyond `origin/<default>`) is deleted so the add recreates it cleanly; a branch carrying **unique commits** (unrecovered work) or one whose commit count can't be computed makes it throw an actionable error rather than letting the raw git fatal surface. The whole worktree phase is wrapped so any throw (the refusal, or any other setup failure) records the `crew_startup_worktree` `failed` event and exits 1 cleanly instead of an unhandled rejection.
 4. **GH token copy.** Read-only source at `<repo>/.claude/secrets/gh-token` → `<worktree>/.claude/secrets/gh-token` (chmod 0600). Passed as `GH_TOKEN` env to the agent's claude process — never written into the prompt.
 5. **Env materialization.** `bringUpWorktreeEnv()` in `commands/run.ts`. Prefers `env.toml` via `env-spec/` (`loadEnvSpec` → `materialize` → `emit`); falls back to legacy `writeDockerEnv` when no `env.toml` exists. Output is `<worktree>/.env` consumed by docker-compose; the resolved `base` map is also returned for downstream URL resolution.
 6. **Bruno env write.** When `[bruno_smoke].enabled`, `writeBrunoEnvFile()` writes `bruno/environments/crew-<key-lower>.bru` with `baseUrl` (resolved from `APP_URL` / docker ports) and (if configured) a `smokeUser` block. `CREW_BRUNO_ENV` is passed to the agent's env.
@@ -199,6 +199,7 @@ The daemon-side consumer — a chokidar watcher + a pure reducer `(currentState,
 - **Docker bringup hangs.** Post-stream wait is capped at 120s. Beyond that, the run continues but `dockerFailed = true` disables the e2e gate.
 - **`render()` throws "missing var '...'".** A template variable wasn't passed. Every slot in `ticket.md` must be in `buildTicketPrompt`'s call site — empty string is fine, missing is not.
 - **Worktree dir already exists.** `requireWorktreeAvailable` fails fast before `git worktree add`. Run `crew restart <KEY>` or remove the dir.
+- **Orphan `<KEY>` branch wedges the run (CREW-287).** A branch left behind with no worktree breaks `git worktree add -b <KEY>`. `reconcileOrphanBranch` auto-reclaims a safe orphan (no commits beyond `origin/<default>`); one with unique commits refuses with a clear message (inspect via `git log origin/<default>..<KEY>`, discard via `git branch -D <KEY>`). Either way the `crew_startup_worktree` phase records a `failed` event, so it's no longer a silent "launched".
 - **Excluded-commands check rejects a settings.json.** The entry must be the canonical `command*` form (e.g. `npm run bruno:smoke*`) — `command` alone or `command **` will be rejected even when they'd work behaviorally. The check is exact-string.
 
 ## Pointers
