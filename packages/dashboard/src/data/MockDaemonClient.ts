@@ -107,7 +107,8 @@ export class MockDaemonClient implements DaemonClient {
   /**
    * CREW-279: a canned available ticket list for the New Run picker. Exercises
    * every row state the picker renders — a runnable ticket, a blocked ticket
-   * (disabled + blocker hint), an in-flight ticket (running badge), and an
+   * (disabled + blocker hint), an in-flight ticket (running reason), an
+   * interactive ticket (CREW-286: disabled + interactive reason), and an
    * Ungrouped (parent-less) group. Tests that need the degraded branch override
    * this method per-instance.
    */
@@ -145,6 +146,15 @@ export class MockDaemonClient implements DaemonClient {
               blockedBy: [],
               hasActiveAgent: true,
               interactive: false,
+            },
+            {
+              key: 'CREW-105',
+              summary: 'Interactive ticket',
+              priority: 'Medium',
+              runnable: true,
+              blockedBy: [],
+              hasActiveAgent: false,
+              interactive: true,
             },
           ],
         },

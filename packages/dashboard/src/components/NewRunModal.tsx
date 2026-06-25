@@ -6,11 +6,11 @@ import { FormField } from '@/components/FormField';
 import { Modal } from '@/components/Modal';
 import { ModalSelectionRow } from '@/components/ModalSelectionRow';
 import { Stepper } from '@/components/Stepper';
+import { TicketRow } from '@/components/TicketRow';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
-import type { PillColor } from '@/lib/pill-variants';
 
 import type { DaemonClient } from '../data/DaemonClient.js';
 import type { Project } from '../data/types.js';
@@ -32,20 +32,6 @@ import type { PickerTicket, ProjectTicketsResponse } from 'crew-shared';
  */
 
 const STEPS = ['Project', 'Ticket', 'Confirm'];
-
-/**
- * Jira priority → the state-pill color that reads it at a glance (Figma 362:2212).
- * Keyed on Jira's standard priority-scheme names (the CREW board's scheme). A
- * priority outside this set (custom schemes — `P1`, etc.) falls back to a neutral
- * `idle` badge that still shows the raw label — see the lookup in `TicketList`.
- */
-const PRIORITY_COLOR: Record<string, PillColor> = {
-  Highest: 'error',
-  High: 'error',
-  Medium: 'waiting',
-  Low: 'initializing',
-  Lowest: 'initializing',
-};
 
 export interface NewRunConfirm {
   project: string;
@@ -136,7 +122,7 @@ export function NewRunModal({ open, onOpenChange, projects, onConfirm, client }:
   }
 
   return (
-    <Modal title="New Run" open={open} onOpenChange={onOpenChange}>
+    <Modal title="New Run" open={open} onOpenChange={onOpenChange} width={620}>
       <div className="flex flex-col gap-4">
         <Stepper steps={STEPS} current={step} />
 
@@ -298,8 +284,9 @@ function TicketList({
     .map((g) => ({
       ...g,
       tickets: g.tickets.filter((t) => {
-        // "Available only" hides anything not selectable (blocked or in-flight).
-        if (availableOnly && (!t.runnable || t.hasActiveAgent)) return false;
+        // "Available only" hides anything not selectable — blocked, in-flight,
+        // or `interactive` (CREW-286: interactive work must be driven live).
+        if (availableOnly && (!t.runnable || t.hasActiveAgent || t.interactive)) return false;
         if (!q) return true;
         return t.key.toLowerCase().includes(q) || t.summary.toLowerCase().includes(q);
       }),
@@ -310,9 +297,9 @@ function TicketList({
     return <p className="text-xs text-muted-foreground">No tickets match.</p>;
 
   return (
-    <div className="flex max-h-72 flex-col gap-3.5 overflow-y-auto">
+    <div className="flex max-h-[28rem] flex-col gap-3.5 overflow-y-auto">
       {groups.map((g) => (
-        <div key={g.epicKey ?? '__ungrouped__'} className="flex flex-col gap-1">
+        <div key={g.epicKey ?? '__ungrouped__'} className="flex flex-col gap-1.5">
           {/* Epic header: key-prefixed, uppercase muted; the KEY links to the Jira
               ticket when a browse base is known (from the project-detail endpoint).
               Parent-less group → "Ungrouped". */}
@@ -337,37 +324,9 @@ function TicketList({
               'Ungrouped'
             )}
           </p>
-          {g.tickets.map((t) => {
-            const disabled = !t.runnable || t.hasActiveAgent;
-            return (
-              // Row anatomy (Figma NewRunStep2Content): primary=KEY, secondary=summary,
-              // meta=blocker hint (blocked rows only, inline before the badge). `disabled`
-              // dims (opacity-50) + blocks selection, covering blocked + in-flight rows.
-              // In-flight swaps the badge to the running state badge; otherwise the badge
-              // is the priority, colored to read at a glance.
-              <ModalSelectionRow
-                key={t.key}
-                primary={t.key}
-                secondary={t.summary}
-                meta={
-                  !t.runnable ? `blocked by ${t.blockedBy.map((b) => b.key).join(', ')}` : undefined
-                }
-                badge={
-                  t.hasActiveAgent ? (
-                    <Badge color="running" intensity="mid">
-                      running
-                    </Badge>
-                  ) : t.priority ? (
-                    <Badge color={PRIORITY_COLOR[t.priority] ?? 'idle'} intensity="mid">
-                      {t.priority}
-                    </Badge>
-                  ) : undefined
-                }
-                disabled={disabled}
-                onClick={disabled ? undefined : () => onSelect(t)}
-              />
-            );
-          })}
+          {g.tickets.map((t) => (
+            <TicketRow key={t.key} ticket={t} onSelect={onSelect} />
+          ))}
         </div>
       ))}
     </div>
