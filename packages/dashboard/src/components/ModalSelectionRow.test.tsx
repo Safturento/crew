@@ -41,4 +41,18 @@ describe('ModalSelectionRow', () => {
     render(<ModalSelectionRow primary="static" />);
     expect(screen.queryByRole('button')).not.toBeInTheDocument();
   });
+
+  it('renders a disabled, non-interactive button when disabled (even without onClick)', () => {
+    const h = vi.fn();
+    render(<ModalSelectionRow primary="blocked" onClick={h} disabled />);
+    const row = screen.getByRole('button', { name: /blocked/ });
+    expect(row).toBeDisabled();
+    fireEvent.click(row);
+    expect(h).not.toHaveBeenCalled();
+  });
+
+  it('renders a disabled button when disabled and onClick is omitted', () => {
+    render(<ModalSelectionRow primary="running-row" disabled />);
+    expect(screen.getByRole('button', { name: /running-row/ })).toBeDisabled();
+  });
 });
