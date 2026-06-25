@@ -1,5 +1,13 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { mkdtempSync, mkdirSync, rmSync, readFileSync, writeFileSync, existsSync } from 'node:fs';
+import {
+  mkdtempSync,
+  mkdirSync,
+  rmSync,
+  readFileSync,
+  writeFileSync,
+  existsSync,
+  statSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { basename, join } from 'node:path';
 import { runInit } from './run-init.js';
@@ -152,6 +160,43 @@ describe('runInit', () => {
     // nothing was written — the guard runs before any scaffolding
     expect(existsSync(join(projectsDir, 'demo.toml'))).toBe(false);
     expect(existsSync(join(repo, 'env.toml'))).toBe(false);
+  });
+
+  it('scaffolds an empty 0600 gh-token placeholder and gitignores .claude/secrets/', async () => {
+    const logs: string[] = [];
+    const result = await runInit({
+      cwd: repo,
+      answers: answersFor(repo),
+      projectsDir,
+      log: (m) => logs.push(m),
+    });
+
+    const tokenPath = join(repo, '.claude', 'secrets', 'gh-token');
+    expect(existsSync(tokenPath)).toBe(true);
+    expect(readFileSync(tokenPath, 'utf8')).toBe(''); // empty placeholder
+    expect(statSync(tokenPath).mode & 0o777).toBe(0o600);
+
+    // .gitignore appended (created here since the bare repo had none)
+    expect(readFileSync(join(repo, '.gitignore'), 'utf8')).toContain('.claude/secrets/');
+
+    expect(result.written).toContain(tokenPath);
+    // a populate-the-PAT instruction is surfaced
+    expect(logs.join('\n')).toMatch(/gh-token|PAT/i);
+  });
+
+  it('leaves an existing non-empty gh-token untouched and appends gitignore idempotently', async () => {
+    const tokenPath = join(repo, '.claude', 'secrets', 'gh-token');
+    mkdirSync(join(repo, '.claude', 'secrets'), { recursive: true });
+    writeFileSync(tokenPath, 'github_pat_REAL\n', 'utf8');
+    writeFileSync(join(repo, '.gitignore'), 'node_modules\n.claude/secrets/\n', 'utf8');
+
+    const result = await runInit({ cwd: repo, answers: answersFor(repo), projectsDir });
+
+    expect(readFileSync(tokenPath, 'utf8')).toBe('github_pat_REAL\n'); // never clobbered
+    expect(result.written).not.toContain(tokenPath);
+    // gitignore entry not duplicated
+    const gi = readFileSync(join(repo, '.gitignore'), 'utf8');
+    expect(gi.match(/\.claude\/secrets\//g)).toHaveLength(1);
   });
 
   it('materializes .env via runEnvInit for a docker-backed project', async () => {

@@ -10,6 +10,7 @@ import { chromiumInstalled } from './checks/chromium-installed.js';
 // P2 (dispatch-gate migration) appends its checks here too.
 import { excludedCommands } from './checks/excluded-commands.js';
 import { appUrlResolves } from './checks/app-url-resolves.js';
+import { ghTokenPresent } from './checks/gh-token-present.js';
 // P3 (remaining checks) appends its checks here.
 
 const ALL: HealthCheck[] = [
@@ -22,7 +23,8 @@ const ALL: HealthCheck[] = [
   aptDeps,
   chromiumInstalled,
   excludedCommands,
-  appUrlResolves
+  appUrlResolves,
+  ghTokenPresent,
 ];
 
 /**

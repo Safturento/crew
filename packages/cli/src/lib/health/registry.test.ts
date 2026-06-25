@@ -8,6 +8,10 @@ describe('checksFor', () => {
     expect(names).toContain('env-materialized');
   });
 
+  it('project scope includes the gh-token-present check', () => {
+    expect(checksFor('project').map((c) => c.name)).toContain('gh-token-present');
+  });
+
   it('every project-scope check is actually project-scoped', () => {
     expect(checksFor('project').every((c) => c.scope === 'project')).toBe(true);
   });
