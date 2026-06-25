@@ -754,3 +754,75 @@ describe('HttpDaemonClient.getRunnerLogs (CREW-221)', () => {
     await expect(new HttpDaemonClient().getRunnerLogs()).rejects.toThrow();
   });
 });
+
+describe('HttpDaemonClient.listProjectTickets', () => {
+  it('GETs /api/projects/:slug/tickets and parses an available payload', async () => {
+    const payload = {
+      available: true,
+      groups: [
+        {
+          epicKey: 'CREW-100',
+          epicSummary: 'Epic A',
+          tickets: [
+            {
+              key: 'CREW-101',
+              summary: 'Do thing',
+              priority: 'High',
+              runnable: true,
+              blockedBy: [],
+              hasActiveAgent: false,
+            },
+          ],
+        },
+      ],
+    };
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify(payload), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      }),
+    );
+
+    expect(await new HttpDaemonClient().listProjectTickets('crew')).toEqual(payload);
+    expect(fetchSpy).toHaveBeenCalledWith('/api/projects/crew/tickets');
+  });
+
+  it('parses a degraded payload (still a 200)', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify({ available: false, reason: 'no_credentials' }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      }),
+    );
+    expect(await new HttpDaemonClient().listProjectTickets('crew')).toEqual({
+      available: false,
+      reason: 'no_credentials',
+    });
+  });
+
+  it('encodes the slug', async () => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify({ available: true, groups: [] }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      }),
+    );
+    await new HttpDaemonClient().listProjectTickets('a/b');
+    expect(fetchSpy).toHaveBeenCalledWith('/api/projects/a%2Fb/tickets');
+  });
+
+  it('throws on non-2xx', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('boom', { status: 500 }));
+    await expect(new HttpDaemonClient().listProjectTickets('crew')).rejects.toThrow(/500/);
+  });
+
+  it('throws on schema mismatch', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify({ available: true, groups: [{ wrong: 'shape' }] }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      }),
+    );
+    await expect(new HttpDaemonClient().listProjectTickets('crew')).rejects.toThrow();
+  });
+});

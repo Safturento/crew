@@ -154,7 +154,9 @@ describe('App', () => {
     });
     const failingClient: DaemonClient = {
       listProjects: () => Promise.reject(new Error('daemon unreachable')),
+      getProject: () => Promise.reject(new Error('daemon unreachable')),
       listAgents: () => Promise.reject(new Error('daemon unreachable')),
+      listProjectTickets: () => Promise.reject(new Error('daemon unreachable')),
       enqueueAction: () => Promise.reject(new Error('daemon unreachable')),
       getRunnerStatus: () => Promise.reject(new Error('daemon unreachable')),
       getRunnerLogs: () => Promise.reject(new Error('daemon unreachable')),

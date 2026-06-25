@@ -2,6 +2,7 @@ import type {
   ActionRequest,
   EnqueueAction,
   EnqueueRunnerCommand,
+  ProjectTicketsResponse,
   RunnerCommand,
 } from 'crew-shared';
 
@@ -101,5 +102,64 @@ export class MockDaemonClient implements DaemonClient {
   async acknowledgeRun(key: string): Promise<number> {
     this.acknowledged.push(key);
     return 1;
+  }
+
+  /**
+   * CREW-279: a canned available ticket list for the New Run picker. Exercises
+   * every row state the picker renders — a runnable ticket, a blocked ticket
+   * (disabled + blocker hint), an in-flight ticket (running badge), and an
+   * Ungrouped (parent-less) group. Tests that need the degraded branch override
+   * this method per-instance.
+   */
+  async listProjectTickets(): Promise<ProjectTicketsResponse> {
+    return {
+      available: true,
+      groups: [
+        {
+          epicKey: 'CREW-100',
+          epicSummary: 'Sample Epic',
+          tickets: [
+            {
+              key: 'CREW-101',
+              summary: 'Runnable ticket',
+              priority: 'High',
+              runnable: true,
+              blockedBy: [],
+              hasActiveAgent: false,
+            },
+            {
+              key: 'CREW-102',
+              summary: 'Blocked ticket',
+              priority: 'Medium',
+              runnable: false,
+              blockedBy: [{ key: 'CREW-1', summary: 'Blocker' }],
+              hasActiveAgent: false,
+            },
+            {
+              key: 'CREW-103',
+              summary: 'In-flight ticket',
+              priority: null,
+              runnable: true,
+              blockedBy: [],
+              hasActiveAgent: true,
+            },
+          ],
+        },
+        {
+          epicKey: null,
+          epicSummary: null,
+          tickets: [
+            {
+              key: 'CREW-104',
+              summary: 'Ungrouped ticket',
+              priority: 'Low',
+              runnable: true,
+              blockedBy: [],
+              hasActiveAgent: false,
+            },
+          ],
+        },
+      ],
+    };
   }
 }

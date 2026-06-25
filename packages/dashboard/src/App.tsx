@@ -141,6 +141,7 @@ function AppContent({ client }: { client: DaemonClient }) {
         open={newRunOpen}
         onOpenChange={setNewRunOpen}
         projects={projects}
+        client={client}
         onConfirm={({ project, ticketKey }) => enqueue.mutate({ kind: 'run', project, ticketKey })}
       />
       {drawerKey !== null && (

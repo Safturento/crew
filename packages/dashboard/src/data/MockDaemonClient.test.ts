@@ -1,3 +1,4 @@
+import { projectTicketsResponseSchema } from 'crew-shared';
 import { describe, expect, it } from 'vitest';
 
 import { MockDaemonClient } from './MockDaemonClient.js';
@@ -31,5 +32,17 @@ describe('MockDaemonClient', () => {
     await expect(client.getProject('does-not-exist')).rejects.toMatchObject({
       name: 'ProjectNotFoundError',
     });
+  });
+
+  it('returns a canned available ticket list parseable by the contract', async () => {
+    const client = new MockDaemonClient();
+    const res = await client.listProjectTickets();
+    expect(() => projectTicketsResponseSchema.parse(res)).not.toThrow();
+    if (!res.available) throw new Error('expected an available payload');
+    // The canned payload exercises every row state the picker renders.
+    const tickets = res.groups.flatMap((g) => g.tickets);
+    expect(tickets.some((t) => t.runnable && !t.hasActiveAgent)).toBe(true);
+    expect(tickets.some((t) => !t.runnable && t.blockedBy.length > 0)).toBe(true);
+    expect(tickets.some((t) => t.hasActiveAgent)).toBe(true);
   });
 });
