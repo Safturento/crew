@@ -8,6 +8,7 @@ export * from './paths.js';
 export * from './skill-injection-step.js';
 export * from './state-event-hook-injection.js';
 export * from './preconditions.js';
+export * from './reconcile-orphan-branch.js';
 export * from './preflight.js';
 export * from './preflight-tracking.js';
 export * from './stream-transcript.js';

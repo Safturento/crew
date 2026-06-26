@@ -63,6 +63,7 @@ import {
   prepareAgentEnvironment,
   preflightTools,
   readWorktreeState,
+  reconcileOrphanBranch,
   requireGhToken,
   injectStateEventHook,
   requireWorktreeAvailable,
@@ -278,48 +279,72 @@ export async function runRun(key: string, opts: RunOptions): Promise<never> {
 
   const childEnv = { ...process.env, PATH: childPath };
 
-  await bracketStartupPhase(
-    key,
-    {
-      subtype: 'crew_startup_worktree',
-      startedSummary: `creating worktree at ${worktree}`,
-      completedSummary: () => `worktree at ${worktree} (branch ${key})`,
-    },
-    async () => {
-      console.log(pc.dim(`→ fetching origin/${config.default_branch}…`));
-      await execa('git', ['-C', config.repo_path, 'fetch', 'origin', config.default_branch], {
-        stdout: 'inherit',
-        stderr: 'inherit',
-        env: childEnv,
-      });
+  try {
+    await bracketStartupPhase(
+      key,
+      {
+        subtype: 'crew_startup_worktree',
+        startedSummary: `creating worktree at ${worktree}`,
+        completedSummary: () => `worktree at ${worktree} (branch ${key})`,
+      },
+      async () => {
+        console.log(pc.dim(`→ fetching origin/${config.default_branch}…`));
+        await execa('git', ['-C', config.repo_path, 'fetch', 'origin', config.default_branch], {
+          stdout: 'inherit',
+          stderr: 'inherit',
+          env: childEnv,
+        });
 
-      console.log(
-        pc.dim(
-          `→ creating worktree at ${worktree} on branch ${key} (from origin/${config.default_branch})…`,
-        ),
-      );
-      await execa(
-        'git',
-        [
-          '-C',
-          config.repo_path,
-          'worktree',
-          'add',
-          '-b',
+        // CREW-287: `git worktree add -b <KEY>` hard-fails if a <KEY> branch
+        // already exists (orphaned by an earlier interrupted run), wedging every
+        // later run of the key. Reclaim a safe orphan (no unique commits vs
+        // origin/<default>) before the add; refuse loudly if it carries
+        // unrecovered work, so the clean message surfaces instead of the raw git
+        // fatal. Runs after fetch so origin/<default> is fresh.
+        await reconcileOrphanBranch({
+          repoPath: config.repo_path,
           key,
-          worktree,
-          `origin/${config.default_branch}`,
-        ],
-        { stdout: 'inherit', stderr: 'inherit', env: childEnv },
-      );
+          defaultBranch: config.default_branch,
+          env: childEnv,
+        });
 
-      const secretsDir = join(worktree, '.claude', 'secrets');
-      mkdirSync(secretsDir, { recursive: true });
-      const ghTokenDest = join(secretsDir, 'gh-token');
-      copyFileSync(ghTokenSource, ghTokenDest);
-      chmodSync(ghTokenDest, 0o600);
-    },
-  );
+        console.log(
+          pc.dim(
+            `→ creating worktree at ${worktree} on branch ${key} (from origin/${config.default_branch})…`,
+          ),
+        );
+        await execa(
+          'git',
+          [
+            '-C',
+            config.repo_path,
+            'worktree',
+            'add',
+            '-b',
+            key,
+            worktree,
+            `origin/${config.default_branch}`,
+          ],
+          { stdout: 'inherit', stderr: 'inherit', env: childEnv },
+        );
+
+        const secretsDir = join(worktree, '.claude', 'secrets');
+        mkdirSync(secretsDir, { recursive: true });
+        const ghTokenDest = join(secretsDir, 'gh-token');
+        copyFileSync(ghTokenSource, ghTokenDest);
+        chmodSync(ghTokenDest, 0o600);
+      },
+    );
+  } catch (err) {
+    // bracketStartupPhase already recorded the `failed` worktree phase event
+    // (so the dashboard sees the failed phase, not a silent "launched"); render
+    // the message cleanly and exit 1 instead of crashing with an unhandled
+    // rejection. Bare `fail()` here, not `failStartupPhase()` — the latter would
+    // emit a *second* failed event on top of the one bracketStartupPhase wrote.
+    // Covers the CREW-287 orphan-branch refusal and any other
+    // worktree-setup failure (e.g. the raw git fatal).
+    fail(err instanceof Error ? err.message : String(err));
+  }
 
   const ghTokenDest = join(worktree, '.claude', 'secrets', 'gh-token');
 
