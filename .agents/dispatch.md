@@ -4,6 +4,7 @@ description: crew run prompt-build, skills injection, verification gates
 last_updated: 2026-06-26
 covers:
   - 'packages/cli/src/lib/run/**'
+  - 'packages/cli/src/lib/github-auth/**'
   - 'packages/cli/src/lib/prompts/**'
   - 'packages/cli/src/lib/mcp-config/**'
   - 'packages/cli/src/lib/startup-events/**'

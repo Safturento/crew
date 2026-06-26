@@ -21,7 +21,7 @@ function looksLikeGithub(name: string, entry: unknown): boolean {
   if (/github/i.test(name)) return true;
   if (entry && typeof entry === 'object') {
     const url = (entry as { url?: unknown }).url;
-    if (typeof url === 'string' && /github(copilot)?\.com|github\.com/i.test(url)) return true;
+    if (typeof url === 'string' && /github(copilot)?\.com/i.test(url)) return true;
     const command = (entry as { command?: unknown }).command;
     const args = (entry as { args?: unknown }).args;
     const blob = `${typeof command === 'string' ? command : ''} ${Array.isArray(args) ? args.join(' ') : ''}`;
