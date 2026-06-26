@@ -17,6 +17,9 @@
  * still-pending action request (no live process); `reap` settles an orphan
  * terminal without signalling. `pause`/`resume`/`message` are designed-for
  * and carried from day one, but applied only in the fast-follow (CREW-248).
+ * `supervisor_stop`/`supervisor_restart` are queue-level (null `agentKey`):
+ * they target the supervisor process itself (CREW-293) — stop = graceful exit,
+ * restart = exit-and-respawn via the runner's self-respawn loop.
  */
 export const RUNNER_COMMAND_KINDS = [
   'cancel_soft',
@@ -26,6 +29,8 @@ export const RUNNER_COMMAND_KINDS = [
   'pause',
   'resume',
   'message',
+  'supervisor_stop',
+  'supervisor_restart',
 ] as const;
 export type RunnerCommandKind = (typeof RUNNER_COMMAND_KINDS)[number];
 
