@@ -14,8 +14,9 @@ export interface GhTokenScaffold {
   tokenPath: string;
   /**
    * `true` when the placeholder is still empty (freshly created, or an existing
-   * 0-byte file) — i.e. the user must still paste a real PAT. Mirrors the
-   * run-path `requireGhToken` condition (`!exists || size === 0`).
+   * 0-byte file) — i.e. no per-repo PAT is staged. Informational only: as of
+   * Epic CREW-296 dispatch is authorized by a GitHub MCP **or** this token
+   * (`requireGithubAuth`), so an empty token is no longer blocking on its own.
    */
   needsToken: boolean;
 }
@@ -55,12 +56,13 @@ function appendGitignoreEntry(repoDir: string): boolean {
  *  - appends `.claude/secrets/` to `<repoDir>/.gitignore` exactly once.
  *
  * Secret-safe: never writes a real token and never echoes file contents. The
- * empty placeholder deliberately trips the run-path `requireGhToken` gate
- * (`packages/cli/src/lib/run/preconditions.ts`) so the user is prompted to paste
- * a real PAT — `fix()`/`init` can scaffold the path but can't supply the secret.
+ * empty placeholder is an *optional* fallback slot, not a blocking requirement:
+ * dispatch is authorized by a user-level GitHub MCP **or** this per-repo token
+ * (the run-path `requireGithubAuth` gate, `lib/github-auth/`, CREW-297). `fix()`
+ * / `init` scaffold the path but can't supply the secret.
  *
  * Mirrors `scaffoldBruno`/`scaffoldPlaywright`: a single-source scaffolder shared
- * by `crew init` (`run-init.ts`) and the `gh-token-present` health-check `fix()`.
+ * by `crew init` (`run-init.ts`) and the `github-auth-present` health-check `fix()`.
  *
  * @param repoDir the repo root to scaffold into
  */

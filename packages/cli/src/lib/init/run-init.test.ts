@@ -180,8 +180,10 @@ describe('runInit', () => {
     expect(readFileSync(join(repo, '.gitignore'), 'utf8')).toContain('.claude/secrets/');
 
     expect(result.written).toContain(tokenPath);
-    // a populate-the-PAT instruction is surfaced
-    expect(logs.join('\n')).toMatch(/gh-token|PAT/i);
+    // dual-channel guidance is surfaced: the MCP (preferred) or the optional PAT
+    const log = logs.join('\n');
+    expect(log).toMatch(/GitHub MCP/i);
+    expect(log).toMatch(/PAT/i);
   });
 
   it('leaves an existing non-empty gh-token untouched and appends gitignore idempotently', async () => {
