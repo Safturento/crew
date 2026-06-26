@@ -9,12 +9,12 @@ const GH_TOKEN_REL = join('.claude', 'secrets', 'gh-token');
 /**
  * Require a populated gh-token secret at `<worktree>/.claude/secrets/gh-token`.
  *
- * Mirrors the run-path `requireGhToken` gate (`lib/run/preconditions.ts`):
- * `fail` when the file is missing or empty. `requireGhToken` stays a parallel
- * fast gate (it runs before worktree creation with its own hard-throw shape);
- * this check is the registry-resident equivalent so `crew doctor` and the
- * dispatch preflight gate surface the same gap. Both share the identical
- * `!exists || size === 0` condition.
+ * `fail` when the file is missing or empty (`!exists || size === 0`). As of
+ * CREW-297 the run-path fast gate is `requireGithubAuth` (`lib/github-auth/`),
+ * which clears on a per-repo token **or** a user-level GitHub MCP server — so
+ * its condition intentionally diverges from this token-only check: a token-less
+ * MCP machine passes the run-path gate while this check still flags. Broadening
+ * this check to the same OR-logic is the rest of Epic CREW-296.
  *
  * `fix()` is **limited**: it scaffolds the empty `0600` placeholder + the
  * `.claude/secrets/` gitignore entry (via the shared `scaffoldGhToken`), but the

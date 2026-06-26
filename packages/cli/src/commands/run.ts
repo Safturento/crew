@@ -64,7 +64,6 @@ import {
   preflightTools,
   readWorktreeState,
   reconcileOrphanBranch,
-  requireGhToken,
   injectStateEventHook,
   requireWorktreeAvailable,
   runLogPathFor,
@@ -77,6 +76,7 @@ import {
   type BaselineCheckResult,
 } from '../lib/run/index.js';
 import { PreflightError, renderPreflightError } from '../lib/preflight/index.js';
+import { requireGithubAuth, hasRepoToken } from '../lib/github-auth/index.js';
 
 interface RunOptions {
   skipDocker?: boolean;
@@ -246,7 +246,7 @@ export async function runRun(key: string, opts: RunOptions): Promise<never> {
 
   const ghTokenSource = join(config.repo_path, '.claude', 'secrets', 'gh-token');
   try {
-    requireGhToken(ghTokenSource);
+    requireGithubAuth({ tokenPath: ghTokenSource });
   } catch (err) {
     failStartupPhase(
       key,
@@ -273,7 +273,7 @@ export async function runRun(key: string, opts: RunOptions): Promise<never> {
     subtype: 'crew_startup_preflight',
     status: 'completed',
     timestamp: new Date().toISOString(),
-    summary: `project=${config.name}; tools ok; gh token present`,
+    summary: `project=${config.name}; tools ok; github auth ok`,
     durationMs: Date.now() - preflightStartedAt,
   });
 
@@ -328,11 +328,13 @@ export async function runRun(key: string, opts: RunOptions): Promise<never> {
           { stdout: 'inherit', stderr: 'inherit', env: childEnv },
         );
 
-        const secretsDir = join(worktree, '.claude', 'secrets');
-        mkdirSync(secretsDir, { recursive: true });
-        const ghTokenDest = join(secretsDir, 'gh-token');
-        copyFileSync(ghTokenSource, ghTokenDest);
-        chmodSync(ghTokenDest, 0o600);
+        if (hasRepoToken(ghTokenSource)) {
+          const secretsDir = join(worktree, '.claude', 'secrets');
+          mkdirSync(secretsDir, { recursive: true });
+          const ghTokenDest = join(secretsDir, 'gh-token');
+          copyFileSync(ghTokenSource, ghTokenDest);
+          chmodSync(ghTokenDest, 0o600);
+        }
       },
     );
   } catch (err) {
@@ -562,7 +564,7 @@ export async function runRun(key: string, opts: RunOptions): Promise<never> {
     log: (msg) => console.log(pc.dim(`    ${msg}`)),
   });
 
-  const ghToken = readFileSync(ghTokenDest, 'utf8').trim();
+  const ghToken = hasRepoToken(ghTokenDest) ? readFileSync(ghTokenDest, 'utf8').trim() : undefined;
   const prompt = buildTicketPrompt({
     key,
     githubRepo: config.github.repo,
@@ -630,7 +632,7 @@ export async function runRun(key: string, opts: RunOptions): Promise<never> {
     stderr: 'pipe',
     env: {
       ...childEnv,
-      GH_TOKEN: ghToken,
+      ...(ghToken ? { GH_TOKEN: ghToken } : {}),
       ...(resolvedAppUrl ? { CREW_APP_URL: resolvedAppUrl } : {}),
       ...(resolvedAppUrl ? { PLAYWRIGHT_BASE_URL: resolvedAppUrl } : {}),
       ...(brunoEnvName ? { CREW_BRUNO_ENV: brunoEnvName } : {}),
