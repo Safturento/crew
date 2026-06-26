@@ -26,11 +26,21 @@ describe('injectStateEventHook', () => {
     };
     const post = settings.hooks.PostToolUse;
     expect(post).toHaveLength(1);
-    expect(post[0].matcher).toBe('Bash');
+    expect(post[0].matcher).toBe('Bash|mcp__github__create_pull_request');
     const command = post[0].hooks[0].command;
     expect(command).toContain('CREW_AGENT_KEY=CREW-256');
     expect(command).toContain('$CLAUDE_PROJECT_DIR/hooks/state-events/pr-create-postuse.mjs');
     expect(post[0].hooks[0].type).toBe('command');
+  });
+
+  it('registers the PostToolUse hook against both Bash and the GitHub MCP tool', () => {
+    const worktree = makeWorktree();
+    injectStateEventHook({ worktree, key: 'CREW-7', log: () => {} });
+    const settings = readLocal(worktree) as {
+      hooks: { PostToolUse: { matcher: string }[] };
+    };
+    const entry = settings.hooks.PostToolUse.at(-1);
+    expect(entry?.matcher).toBe('Bash|mcp__github__create_pull_request');
   });
 
   it('writes into the gitignored settings.local.json, never the tracked settings.json', () => {

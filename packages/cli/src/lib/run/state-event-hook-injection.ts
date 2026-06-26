@@ -37,8 +37,9 @@ function hookCommandFor(key: string): string {
 }
 
 /**
- * Inject the `pr_created` PostToolUse(Bash) hook into the dispatched session by
- * **array-merging** it into `<worktree>/.claude/settings.local.json`.
+ * Inject the `pr_created` PostToolUse hook (matching `Bash` and the GitHub MCP
+ * PR-create tool) into the dispatched session by **array-merging** it into
+ * `<worktree>/.claude/settings.local.json`.
  *
  * Targets `settings.local.json` (gitignored by `.claude/*`) rather than the
  * tracked `settings.json`: the key is per-dispatch and must never be committed,
@@ -69,8 +70,11 @@ export function injectStateEventHook(opts: StateEventHookInjectionOptions): stri
     (entry) => !entry.hooks?.some((h) => h.command?.includes(HOOK_PATH)),
   );
 
+  // Fire on a `gh pr create` Bash call OR the GitHub MCP's PR-create tool — the
+  // dual-path hook (pr-create-postuse.mjs) recognises both. Claude Code treats a
+  // `|`-joined matcher as an alternation of tool names.
   const entry: HookMatcher = {
-    matcher: 'Bash',
+    matcher: 'Bash|mcp__github__create_pull_request',
     hooks: [{ type: 'command', command: hookCommandFor(key) }],
   };
 
