@@ -29,6 +29,7 @@ import { registerMetricsRoutes } from './routes/metrics.js';
 import { registerRunnerRoutes } from './routes/runner.js';
 import { registerFinishStepsRoutes } from './routes/finish-steps.js';
 import { registerActionsRoutes } from './routes/actions.js';
+import { registerWebhookRoutes } from './routes/webhooks.js';
 
 const PLACEHOLDER_HTML = `<!DOCTYPE html>
 <html>
@@ -223,6 +224,7 @@ export async function buildApp({
   await registerRunnerRoutes(app);
   await registerFinishStepsRoutes(app);
   await registerActionsRoutes(app);
+  await registerWebhookRoutes(app);
 
   if (dashboardDistDir && existsSync(join(dashboardDistDir, 'index.html'))) {
     await app.register(fastifyStatic, { root: dashboardDistDir, prefix: '/' });

@@ -1,0 +1,46 @@
+meta {
+  name: POST /api/webhooks/github
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/api/webhooks/github
+  body: json
+}
+
+headers {
+  x-github-event: pull_request
+  x-github-hook-id: {{githubWebhookHookId}}
+  x-hub-signature-256: {{githubWebhookSignature}}
+}
+
+body:json {
+  {
+    "action": "closed",
+    "pull_request": { "html_url": "https://github.com/Owner/repo/pull/999999", "merged": true, "state": "closed" },
+    "repository": { "full_name": "Owner/repo" }
+  }
+}
+
+assert {
+  res.status: eq 200
+  res.body.matched: eq false
+}
+
+docs {
+  GitHub pull_request webhook receiver (CREW-270). A verified delivery is
+  authenticated by HMAC over the raw body (per-repo secret) + an
+  X-GitHub-Hook-ID pin equal to the project's webhook_hook_id.
+
+  This example targets a non-existent PR (#999999) so a *verified* delivery is
+  a deterministic no-op: 200 { matched: false } without seeding an agent.
+
+  Not part of `npm run bruno:smoke`: the signature is environment-specific
+  (it must be precomputed for these exact body bytes with the repo's smoke
+  secret, supplied via `githubWebhookSignature`), and the smoke env requires a
+  matching `["Owner/repo"] secret` + `webhook_hook_id` to be configured. Run it
+  manually once those webhook vars are set. Behavior contract: an unknown repo
+  404s; a bad signature or hook-id mismatch (or a repo with no configured
+  secret) 401s; only a verified delivery reaches 200.
+}
