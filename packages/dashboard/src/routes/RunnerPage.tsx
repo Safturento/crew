@@ -1,3 +1,5 @@
+import { toast } from 'sonner';
+
 import type { Agent } from '../data/types.js';
 import {
   useArchiveFailedStart,
@@ -6,7 +8,9 @@ import {
   useForceKill,
   usePauseRun,
   useReap,
+  useRestartSupervisor,
   useResumeRun,
+  useStopSupervisor,
 } from '../data/runnerControls.js';
 import { FailedToStartSection } from '../components/runner/FailedToStartSection.js';
 import { LiveProcessList } from '../components/runner/LiveProcessList.js';
@@ -38,6 +42,8 @@ export function RunnerPage({ agents, loading = false }: RunnerPageProps) {
   const reap = useReap();
   const dequeue = useDequeue();
   const archive = useArchiveFailedStart();
+  const stopSupervisor = useStopSupervisor();
+  const restartSupervisor = useRestartSupervisor();
 
   return (
     <div className="mx-auto flex w-full max-w-5xl flex-col gap-6 p-6">
@@ -48,7 +54,17 @@ export function RunnerPage({ agents, loading = false }: RunnerPageProps) {
         </p>
       </div>
 
-      <SupervisorCard supervisor={data.supervisor} />
+      <SupervisorCard
+        supervisor={data.supervisor}
+        onStop={() => stopSupervisor.mutate()}
+        onRestart={() => restartSupervisor.mutate()}
+        // Cold Start can't be enqueued — once the supervisor is fully stopped
+        // nothing drains the queue, and the containerized daemon can't spawn a
+        // host process. Point the operator at the CLI instead (CREW-293).
+        onStart={() =>
+          toast.message('Run `crew runner start` on the host to start the supervisor')
+        }
+      />
       <FailedToStartSection failures={data.failedToStart} onArchive={(k) => archive.mutate(k)} />
       <LiveProcessList
         processes={data.liveProcesses}

@@ -7,9 +7,11 @@ import type { SupervisorView } from './types.js';
 interface SupervisorCardProps {
   supervisor: SupervisorView;
   /**
-   * Lifecycle controls. Unwired in v1 (supervisor start/stop/restart are
-   * `crew runner` CLI ops with no daemon control route yet) — omitting a
-   * handler renders the button disabled with an explanatory title.
+   * Lifecycle controls (CREW-293). `onRestart`/`onStop` enqueue the supervisor
+   * reverse-queue commands; `onStart` is the cold-Start CLI hint (the supervisor
+   * can't be started from the dashboard — once it's stopped nothing drains the
+   * queue). Omitting a handler renders the button disabled with an explanatory
+   * title.
    */
   onRestart?: () => void;
   onStop?: () => void;

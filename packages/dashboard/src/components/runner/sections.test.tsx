@@ -27,12 +27,41 @@ describe('SupervisorCard', () => {
     expect(screen.getByRole('button', { name: 'Stop' })).toBeInTheDocument();
   });
 
-  it('renders down + a disabled "Runner offline" Start when offline', () => {
+  it('renders down + a disabled "Runner offline" Start when no handler is wired', () => {
     render(<SupervisorCard supervisor={{ online: false, lastSeen: null }} />);
     expect(screen.getByRole('status')).toHaveAccessibleName('down');
     const start = screen.getByRole('button', { name: 'Start' });
     expect(start).toBeDisabled();
     expect(start).toHaveAttribute('title', 'Runner offline');
+  });
+
+  it('fires onRestart / onStop when online and the handlers are wired', async () => {
+    const user = userEvent.setup();
+    const onRestart = vi.fn();
+    const onStop = vi.fn();
+    render(
+      <SupervisorCard
+        supervisor={{ online: true, lastSeen: Date.now() }}
+        onRestart={onRestart}
+        onStop={onStop}
+      />,
+    );
+    await user.click(screen.getByRole('button', { name: 'Restart' }));
+    await user.click(screen.getByRole('button', { name: 'Stop' }));
+    expect(onRestart).toHaveBeenCalledTimes(1);
+    expect(onStop).toHaveBeenCalledTimes(1);
+  });
+
+  it('fires onStart (the cold-Start CLI hint) when offline and wired', async () => {
+    const user = userEvent.setup();
+    const onStart = vi.fn();
+    render(
+      <SupervisorCard supervisor={{ online: false, lastSeen: null }} onStart={onStart} />,
+    );
+    const start = screen.getByRole('button', { name: 'Start' });
+    expect(start).toBeEnabled();
+    await user.click(start);
+    expect(onStart).toHaveBeenCalledTimes(1);
   });
 });
 
