@@ -1,8 +1,9 @@
 // Concrete state trigger: the only in-session emitter (CREW-256, plan Task 5).
 //
-// A Claude Code PostToolUse(Bash) hook injected into every dispatched session.
-// When the agent runs a successful `gh pr create`, it appends a `pr_created`
-// fact to ~/.crew/state-events/<key>.jsonl — the same durable per-key log the
+// A Claude Code PostToolUse hook injected into every dispatched session, firing
+// on both `Bash` and `mcp__github__create_pull_request`. When the agent opens a
+// PR — via a successful `gh pr create` or the GitHub MCP — it appends a
+// `pr_created` fact to ~/.crew/state-events/<key>.jsonl — the same durable per-key log the
 // CLI/runner emitters write — which the daemon tails and reduces into the
 // agent's state. Dependency-free on purpose: it ships in the worktree and runs
 // under bare `node` at dispatch with no build step and no crew-cli import, so
@@ -50,27 +51,59 @@ export function prCreateFailureLine(dir, key, err) {
 }
 
 /**
- * Append the `pr_created` event iff a successful `gh pr create` is detected in
- * the Bash tool call. Best-effort: never throws into the hook process — a
- * failed append is written to stderr, matching the writer's contract.
+ * Extract a PR URL from an `mcp__github__create_pull_request` tool_response.
+ * Prefers an explicit `html_url` field (the github-mcp-server `create_pull_request`
+ * success shape); falls back to scanning the serialized response so a future
+ * field rename can't silently drop the signal. The `tool_response` may arrive as
+ * an object or as a JSON string depending on how Claude Code serializes it.
  *
- * @param {{tool_name?: string, tool_input?: {command?: string}, tool_response?: {stdout?: string}}} payload
+ * @param {unknown} resp  the PostToolUse `tool_response`
+ * @returns {string | undefined} the first PR URL found, or undefined
+ */
+export function extractMcpPrUrl(resp) {
+  if (!resp) return undefined;
+  if (typeof resp === 'object' && typeof resp.html_url === 'string') {
+    const m = resp.html_url.match(URL_RE);
+    if (m) return m[0];
+  }
+  const serialized = typeof resp === 'string' ? resp : JSON.stringify(resp);
+  return (serialized.match(URL_RE) ?? [])[0];
+}
+
+/**
+ * Append the `pr_created` event iff a successful PR creation is detected — via
+ * either a `gh pr create` Bash invocation or an `mcp__github__create_pull_request`
+ * MCP tool call. Best-effort: never throws into the hook process — a failed
+ * append is written to stderr, matching the writer's contract.
+ *
+ * @param {{tool_name?: string, tool_input?: {command?: string}, tool_response?: unknown}} payload
  * @param {string} key   the dispatched agent's key (templated in at injection)
  * @param {string} [home] override for ~ (tests)
  */
 export function handlePostToolUse(payload, key, home = homedir()) {
-  if (payload?.tool_name !== 'Bash') return;
-  const command = payload.tool_input?.command ?? '';
-  if (!PR_CREATE.test(command)) return;
+  const toolName = payload?.tool_name;
+  let prUrl;
 
-  // Claude Code's PostToolUse(Bash) payload does NOT expose an exit code
-  // (`tool_response` carries only stdout/stderr/interrupted/isImage/
-  // noOutputExpected — empirically captured, CREW-261). So success is keyed off
-  // the parsed PR URL instead: a successful `gh pr create` prints the PR URL to
-  // stdout; a failed one does not. The parsed URL is therefore a self-validating
-  // success signal — no exitCode gate.
-  const stdout = payload.tool_response?.stdout ?? '';
-  const prUrl = (stdout.match(URL_RE) ?? [])[0];
+  if (toolName === 'Bash') {
+    const command = payload.tool_input?.command ?? '';
+    if (!PR_CREATE.test(command)) return;
+    // Claude Code's PostToolUse(Bash) payload does NOT expose an exit code
+    // (`tool_response` carries only stdout/stderr/interrupted/isImage/
+    // noOutputExpected — empirically captured, CREW-261). So success is keyed off
+    // the parsed PR URL instead: a successful `gh pr create` prints the PR URL to
+    // stdout; a failed one does not. The parsed URL is therefore a self-validating
+    // success signal — no exitCode gate.
+    const stdout = payload.tool_response?.stdout ?? '';
+    prUrl = (stdout.match(URL_RE) ?? [])[0];
+  } else if (toolName === 'mcp__github__create_pull_request') {
+    // The MCP success response carries the new PR's URL; a failed call (bad
+    // creds, validation error) carries no PR URL, so the same URL gate that
+    // discriminates a successful `gh pr create` works here too.
+    prUrl = extractMcpPrUrl(payload.tool_response);
+  } else {
+    return;
+  }
+
   if (!prUrl) return;
 
   const file = join(home, '.crew', 'state-events', `${key}.jsonl`);
