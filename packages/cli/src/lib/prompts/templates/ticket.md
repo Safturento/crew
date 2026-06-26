@@ -37,10 +37,18 @@ You are required to use these Superpowers skills as appropriate. Invoke each via
 
 10. **Self-review.** Invoke `superpowers:requesting-code-review`.
 
-11. **Push and PR.**
+11. **Push and open the PR.**
+
+    Push the branch over SSH, then open the PR through the **GitHub MCP** —
+    call the `mcp__github__create_pull_request` tool (owner/repo from the
+    `origin` remote, `base: main`, `head: {{key}}`, a title, and a body with
+    Summary + Test Plan). If the GitHub MCP is unavailable, fall back to
+    `gh pr create`:
 
     ```
     git push -u origin {{key}}
+    # then: mcp__github__create_pull_request  (base main, head {{key}})
+    # fallback if no MCP:
     gh pr create --base main --head {{key}} --title "<title>" --body "<Summary + Test Plan>"
     ```
 

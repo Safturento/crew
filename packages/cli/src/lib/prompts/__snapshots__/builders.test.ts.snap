@@ -436,10 +436,18 @@ You are required to use these Superpowers skills as appropriate. Invoke each via
 
 10. **Self-review.** Invoke \`superpowers:requesting-code-review\`.
 
-11. **Push and PR.**
+11. **Push and open the PR.**
+
+    Push the branch over SSH, then open the PR through the **GitHub MCP** —
+    call the \`mcp__github__create_pull_request\` tool (owner/repo from the
+    \`origin\` remote, \`base: main\`, \`head: KAN-23\`, a title, and a body with
+    Summary + Test Plan). If the GitHub MCP is unavailable, fall back to
+    \`gh pr create\`:
 
     \`\`\`
     git push -u origin KAN-23
+    # then: mcp__github__create_pull_request  (base main, head KAN-23)
+    # fallback if no MCP:
     gh pr create --base main --head KAN-23 --title "<title>" --body "<Summary + Test Plan>"
     \`\`\`
 
@@ -511,10 +519,18 @@ You are required to use these Superpowers skills as appropriate. Invoke each via
 
 10. **Self-review.** Invoke \`superpowers:requesting-code-review\`.
 
-11. **Push and PR.**
+11. **Push and open the PR.**
+
+    Push the branch over SSH, then open the PR through the **GitHub MCP** —
+    call the \`mcp__github__create_pull_request\` tool (owner/repo from the
+    \`origin\` remote, \`base: main\`, \`head: KAN-23\`, a title, and a body with
+    Summary + Test Plan). If the GitHub MCP is unavailable, fall back to
+    \`gh pr create\`:
 
     \`\`\`
     git push -u origin KAN-23
+    # then: mcp__github__create_pull_request  (base main, head KAN-23)
+    # fallback if no MCP:
     gh pr create --base main --head KAN-23 --title "<title>" --body "<Summary + Test Plan>"
     \`\`\`
 
@@ -626,10 +642,18 @@ A failed \`npm run test:e2e\` that produced \`ECONNREFUSED\` while the same flow
 
 10. **Self-review.** Invoke \`superpowers:requesting-code-review\`.
 
-11. **Push and PR.**
+11. **Push and open the PR.**
+
+    Push the branch over SSH, then open the PR through the **GitHub MCP** —
+    call the \`mcp__github__create_pull_request\` tool (owner/repo from the
+    \`origin\` remote, \`base: main\`, \`head: KAN-23\`, a title, and a body with
+    Summary + Test Plan). If the GitHub MCP is unavailable, fall back to
+    \`gh pr create\`:
 
     \`\`\`
     git push -u origin KAN-23
+    # then: mcp__github__create_pull_request  (base main, head KAN-23)
+    # fallback if no MCP:
     gh pr create --base main --head KAN-23 --title "<title>" --body "<Summary + Test Plan>"
     \`\`\`
 
@@ -746,10 +770,18 @@ A failed \`npm run test:e2e\` that produced \`ECONNREFUSED\` while the same flow
 
 10. **Self-review.** Invoke \`superpowers:requesting-code-review\`.
 
-11. **Push and PR.**
+11. **Push and open the PR.**
+
+    Push the branch over SSH, then open the PR through the **GitHub MCP** —
+    call the \`mcp__github__create_pull_request\` tool (owner/repo from the
+    \`origin\` remote, \`base: main\`, \`head: KAN-23\`, a title, and a body with
+    Summary + Test Plan). If the GitHub MCP is unavailable, fall back to
+    \`gh pr create\`:
 
     \`\`\`
     git push -u origin KAN-23
+    # then: mcp__github__create_pull_request  (base main, head KAN-23)
+    # fallback if no MCP:
     gh pr create --base main --head KAN-23 --title "<title>" --body "<Summary + Test Plan>"
     \`\`\`
 
@@ -851,10 +883,18 @@ A failed \`npm run test:e2e\` that produced \`ECONNREFUSED\` while the same flow
 
 10. **Self-review.** Invoke \`superpowers:requesting-code-review\`.
 
-11. **Push and PR.**
+11. **Push and open the PR.**
+
+    Push the branch over SSH, then open the PR through the **GitHub MCP** —
+    call the \`mcp__github__create_pull_request\` tool (owner/repo from the
+    \`origin\` remote, \`base: main\`, \`head: KAN-23\`, a title, and a body with
+    Summary + Test Plan). If the GitHub MCP is unavailable, fall back to
+    \`gh pr create\`:
 
     \`\`\`
     git push -u origin KAN-23
+    # then: mcp__github__create_pull_request  (base main, head KAN-23)
+    # fallback if no MCP:
     gh pr create --base main --head KAN-23 --title "<title>" --body "<Summary + Test Plan>"
     \`\`\`
 
@@ -936,10 +976,18 @@ If your change is _clearly_ backend-only (no observable user effect), say so exp
 
 10. **Self-review.** Invoke \`superpowers:requesting-code-review\`.
 
-11. **Push and PR.**
+11. **Push and open the PR.**
+
+    Push the branch over SSH, then open the PR through the **GitHub MCP** —
+    call the \`mcp__github__create_pull_request\` tool (owner/repo from the
+    \`origin\` remote, \`base: main\`, \`head: KAN-23\`, a title, and a body with
+    Summary + Test Plan). If the GitHub MCP is unavailable, fall back to
+    \`gh pr create\`:
 
     \`\`\`
     git push -u origin KAN-23
+    # then: mcp__github__create_pull_request  (base main, head KAN-23)
+    # fallback if no MCP:
     gh pr create --base main --head KAN-23 --title "<title>" --body "<Summary + Test Plan>"
     \`\`\`
 
@@ -1021,10 +1069,18 @@ If your change is _clearly_ backend-only (no observable user effect), say so exp
 
 10. **Self-review.** Invoke \`superpowers:requesting-code-review\`.
 
-11. **Push and PR.**
+11. **Push and open the PR.**
+
+    Push the branch over SSH, then open the PR through the **GitHub MCP** —
+    call the \`mcp__github__create_pull_request\` tool (owner/repo from the
+    \`origin\` remote, \`base: main\`, \`head: CREW-99\`, a title, and a body with
+    Summary + Test Plan). If the GitHub MCP is unavailable, fall back to
+    \`gh pr create\`:
 
     \`\`\`
     git push -u origin CREW-99
+    # then: mcp__github__create_pull_request  (base main, head CREW-99)
+    # fallback if no MCP:
     gh pr create --base main --head CREW-99 --title "<title>" --body "<Summary + Test Plan>"
     \`\`\`
 
@@ -1126,10 +1182,18 @@ A failed \`npm run test:e2e\` that produced \`ECONNREFUSED\` while the same flow
 
 10. **Self-review.** Invoke \`superpowers:requesting-code-review\`.
 
-11. **Push and PR.**
+11. **Push and open the PR.**
+
+    Push the branch over SSH, then open the PR through the **GitHub MCP** —
+    call the \`mcp__github__create_pull_request\` tool (owner/repo from the
+    \`origin\` remote, \`base: main\`, \`head: KAN-23\`, a title, and a body with
+    Summary + Test Plan). If the GitHub MCP is unavailable, fall back to
+    \`gh pr create\`:
 
     \`\`\`
     git push -u origin KAN-23
+    # then: mcp__github__create_pull_request  (base main, head KAN-23)
+    # fallback if no MCP:
     gh pr create --base main --head KAN-23 --title "<title>" --body "<Summary + Test Plan>"
     \`\`\`
 

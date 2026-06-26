@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { mkdtempSync, readFileSync, existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { handlePostToolUse, prCreateFailureLine } from './pr-create-postuse.mjs';
+import { handlePostToolUse, prCreateFailureLine, extractMcpPrUrl } from './pr-create-postuse.mjs';
 // Cross-import the canonical TS remediation so the drift guard below fails if
 // the dependency-free hook's inlined copy diverges from the shared wording.
 import { stateEventsChownRemediation } from '../../packages/cli/src/lib/state-events/writer.ts';
@@ -171,6 +171,79 @@ describe('handlePostToolUse', () => {
     expect(() =>
       handlePostToolUse(ev('gh pr create', 'https://github.com/o/r/pull/1'), 'CREW-1', '/dev/null/nope'),
     ).not.toThrow();
+  });
+});
+
+describe('handlePostToolUse — GitHub MCP branch', () => {
+  const PR_URL = 'https://github.com/Safturento/crew/pull/123';
+
+  it('emits pr_created from an mcp__github__create_pull_request response with html_url', () => {
+    const home = mkHome();
+    handlePostToolUse(
+      { tool_name: 'mcp__github__create_pull_request', tool_response: { html_url: PR_URL } },
+      'CREW-1',
+      home,
+    );
+    const parsed = JSON.parse(readFileSync(eventsFile(home, 'CREW-1'), 'utf8').trim());
+    expect(parsed.event).toBe('pr_created');
+    expect(parsed.prUrl).toBe(PR_URL);
+    expect(parsed.source).toBe('hook-pr-create');
+  });
+
+  it('yields the URL when the MCP response is serialized as a string', () => {
+    const home = mkHome();
+    handlePostToolUse(
+      { tool_name: 'mcp__github__create_pull_request', tool_response: `{"html_url":"${PR_URL}"}` },
+      'CREW-2',
+      home,
+    );
+    const parsed = JSON.parse(readFileSync(eventsFile(home, 'CREW-2'), 'utf8').trim());
+    expect(parsed.prUrl).toBe(PR_URL);
+  });
+
+  it('extracts the URL from a content-block-wrapped MCP response (the real Claude Code envelope)', () => {
+    // Claude Code often delivers an MCP tool_response as a content-block array
+    // ({ content: [{ type: 'text', text: '<serialized PR object>' }] }) rather
+    // than the raw PR object. There is no top-level `html_url`, so the
+    // serialized-scan fallback is what catches the URL here.
+    const home = mkHome();
+    handlePostToolUse(
+      {
+        tool_name: 'mcp__github__create_pull_request',
+        tool_response: { content: [{ type: 'text', text: `{"html_url":"${PR_URL}"}` }] },
+      },
+      'CREW-4',
+      home,
+    );
+    const parsed = JSON.parse(readFileSync(eventsFile(home, 'CREW-4'), 'utf8').trim());
+    expect(parsed.prUrl).toBe(PR_URL);
+  });
+
+  it('is a no-op when the MCP response carries no PR URL', () => {
+    const home = mkHome();
+    handlePostToolUse(
+      { tool_name: 'mcp__github__create_pull_request', tool_response: { error: 'bad creds' } },
+      'CREW-3',
+      home,
+    );
+    expect(existsSync(eventsFile(home, 'CREW-3'))).toBe(false);
+  });
+});
+
+describe('extractMcpPrUrl', () => {
+  const PR_URL = 'https://github.com/Safturento/crew/pull/77';
+
+  it('prefers an explicit html_url field', () => {
+    expect(extractMcpPrUrl({ html_url: PR_URL })).toBe(PR_URL);
+  });
+
+  it('scans a serialized response when html_url is absent', () => {
+    expect(extractMcpPrUrl(JSON.stringify({ data: { url: PR_URL } }))).toBe(PR_URL);
+  });
+
+  it('returns undefined when there is no PR URL', () => {
+    expect(extractMcpPrUrl({ error: 'nope' })).toBeUndefined();
+    expect(extractMcpPrUrl(undefined)).toBeUndefined();
   });
 });
 
