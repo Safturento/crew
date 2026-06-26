@@ -28,6 +28,7 @@ Organization: Active is grouped by topic (not chronology) since the dominant acc
     - [2026-05-16 — figma-snapshot `resolvedStylesFor` text-color heuristic picks the first TEXT descendant](#2026-05-16--figma-snapshot-resolvedstylesfor-text-color-heuristic-picks-the-first-text-descendant)
     - [2026-05-15 — `crew fix-pr` does not refresh `.mcp.json` — chrome wiring goes stale on resume](#2026-05-15--crew-fix-pr-does-not-refresh-mcpjson--chrome-wiring-goes-stale-on-resume)
   - [Dashboard UI](#dashboard-ui)
+    - [2026-06-25 — Supervisor Stop/Restart effect lags up to one action long-poll cycle](#2026-06-25--supervisor-stoprestart-effect-lags-up-to-one-action-long-poll-cycle)
     - [2026-06-19 — Runner page: Failed-to-start / Queued / Recently-ended need read endpoints; supervisor controls unwired](#2026-06-19--runner-page-failed-to-start--queued--recently-ended-need-read-endpoints-supervisor-controls-unwired)
     - [2026-06-08 — Filters popover open inside the agent drawer makes the drawer click-dead (trigger/outside click dismisses the drawer)](#2026-06-08--filters-popover-open-inside-the-agent-drawer-makes-the-drawer-click-dead-triggeroutside-click-dismisses-the-drawer)
     - [2026-06-05 — Drawer `liveMode` + section-collapse leak across an in-place agent switch](#2026-06-05--drawer-livemode--section-collapse-leak-across-an-in-place-agent-switch)
@@ -385,6 +386,18 @@ Organization: Active is grouped by topic (not chronology) since the dominant acc
 **Open questions:** Does `fix-pr` resume into a worktree fresh enough that re-asserting `.mcp.json` is always safe? Should `browsing` skill re-injection ride along?
 
 ### Dashboard UI
+
+#### 2026-06-25 — Supervisor Stop/Restart effect lags up to one action long-poll cycle
+
+**What:** CREW-293 wired the SupervisorCard Stop/Restart to the `runner_commands` reverse-queue. The command is *applied* + reported quickly (the command-drain runs on its own ~2s timer), but the actual effect — the worker process exiting so the supervisor stops (exit 0) or respawns (non-zero) — is gated on the worker's **main loop** noticing the abort, which only happens after the in-flight `claimPendingAction` long-poll returns (up to a full poll cycle, ~25s). So the dashboard can show the command `applied` well before the supervisor actually goes down / comes back. Functionally correct, just laggy.
+
+**Why noticed:** CREW-293 self-review (code-reviewer subagent). The `supervisorControl` boundary calls `controller.abort()`, but `runLoop`'s `while (!signal.aborted)` re-checks only between `runOnce` iterations, and `claimPendingAction(timeoutMs)` isn't passed the abort signal. This is **pre-existing** loop behavior — `crew runner stop` (SIGTERM → same abort) lags identically — surfaced now because the dashboard makes it operator-visible.
+
+**Anchors:** `packages/cli/src/lib/runner/loop.ts` (`runOnce` long-poll, `runLoop` while-loop, `startCommandDrain` 2s timer); `packages/cli/src/commands/runner.ts` (`workerAction` abort + exit code); `packages/cli/src/lib/daemon-client` (`claimPendingAction` — would need to accept an `AbortSignal`).
+
+**Shape of work:** small — thread the worker's `AbortSignal` into `claimPendingAction` (abort the fetch) so an aborted loop unwinds immediately instead of waiting out the long-poll. Touches the daemon client + `runOnce`. Verify a queued `supervisor_stop` brings the runner down within ~2s.
+
+**Open questions:** does aborting the long-poll fetch race with a just-claimed action (claimed server-side but never received client-side → orphan)? May need the claim to be idempotent/re-pollable, or only abort between polls.
 
 #### 2026-06-19 — Runner page: Failed-to-start / Queued / Recently-ended need read endpoints; supervisor controls unwired
 
