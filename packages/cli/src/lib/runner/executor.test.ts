@@ -47,14 +47,42 @@ describe('executeAction', () => {
     const { deps: d, launch, exec } = deps();
     const result = await executeAction(makeAction({ kind: 'run' }), d);
     expect(result).toEqual({ status: 'launched' });
-    expect(launch).toHaveBeenCalledWith('crew', ['run', 'CREW-9'], { cwd: '/repos/crew' });
+    expect(launch).toHaveBeenCalledWith(
+      'crew',
+      ['run', 'CREW-9'],
+      expect.objectContaining({ cwd: '/repos/crew' }),
+    );
     expect(exec).not.toHaveBeenCalled();
+  });
+
+  it('directs the spawned run stdio to the per-key startup log via launch opts', async () => {
+    const { deps: d, launch } = deps();
+    await executeAction(makeAction({ kind: 'run' }), d);
+    const opts = launch.mock.calls[0][2];
+    expect(opts.logFile).toContain('/.crew/startup/CREW-9.log');
+  });
+
+  it('passes the per-key startup log for fix-pr, finish, and resume launches', async () => {
+    for (const kind of ['fix_pr', 'finish', 'resume'] as const) {
+      const { deps: d, launch } = deps();
+      const payload =
+        kind === 'fix_pr'
+          ? ({ kind: 'fix_pr', comment: 'c' } as const)
+          : ({ kind } as ActionRequest['payload']);
+      await executeAction(makeAction({ kind, payload }), d);
+      const opts = launch.mock.calls[0][2];
+      expect(opts.logFile).toContain('/.crew/startup/CREW-9.log');
+    }
   });
 
   it('launches `crew finish <key>`', async () => {
     const { deps: d, launch } = deps();
     await executeAction(makeAction({ kind: 'finish', payload: { kind: 'finish' } }), d);
-    expect(launch).toHaveBeenCalledWith('crew', ['finish', 'CREW-9'], { cwd: '/repos/crew' });
+    expect(launch).toHaveBeenCalledWith(
+      'crew',
+      ['finish', 'CREW-9'],
+      expect.objectContaining({ cwd: '/repos/crew' }),
+    );
   });
 
   it('launches `crew resume <key>` (continues an interrupted run on its worktree)', async () => {
@@ -64,7 +92,11 @@ describe('executeAction', () => {
       d,
     );
     expect(result).toEqual({ status: 'launched' });
-    expect(launch).toHaveBeenCalledWith('crew', ['resume', 'CREW-9'], { cwd: '/repos/crew' });
+    expect(launch).toHaveBeenCalledWith(
+      'crew',
+      ['resume', 'CREW-9'],
+      expect.objectContaining({ cwd: '/repos/crew' }),
+    );
     expect(exec).not.toHaveBeenCalled();
   });
 
@@ -95,9 +127,11 @@ describe('executeAction', () => {
       ['pr', 'comment', 'CREW-9', '--body', 'please fix the thing'],
       { cwd: '/repos/crew' },
     );
-    expect(launch).toHaveBeenCalledWith('crew', ['fix-pr', 'CREW-9', '--from-pr'], {
-      cwd: '/repos/crew',
-    });
+    expect(launch).toHaveBeenCalledWith(
+      'crew',
+      ['fix-pr', 'CREW-9', '--from-pr'],
+      expect.objectContaining({ cwd: '/repos/crew' }),
+    );
   });
 
   it('returns failed with the error message when a launch throws', async () => {
