@@ -52,10 +52,13 @@ export function prCreateFailureLine(dir, key, err) {
 
 /**
  * Extract a PR URL from an `mcp__github__create_pull_request` tool_response.
- * Prefers an explicit `html_url` field (the github-mcp-server `create_pull_request`
- * success shape); falls back to scanning the serialized response so a future
- * field rename can't silently drop the signal. The `tool_response` may arrive as
- * an object or as a JSON string depending on how Claude Code serializes it.
+ * Prefers an explicit top-level `html_url` field (the github-mcp-server
+ * `create_pull_request` success shape), then falls back to scanning the whole
+ * serialized response. The fallback is load-bearing, not just a rename guard:
+ * Claude Code commonly wraps an MCP result as a content-block envelope
+ * (`{ content: [{ type: 'text', text: '<serialized PR object>' }] }`) with no
+ * top-level `html_url`, and the scan still finds the PR URL nested inside. The
+ * `tool_response` may also arrive as a JSON string rather than an object.
  *
  * @param {unknown} resp  the PostToolUse `tool_response`
  * @returns {string | undefined} the first PR URL found, or undefined

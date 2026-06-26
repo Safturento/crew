@@ -201,6 +201,24 @@ describe('handlePostToolUse — GitHub MCP branch', () => {
     expect(parsed.prUrl).toBe(PR_URL);
   });
 
+  it('extracts the URL from a content-block-wrapped MCP response (the real Claude Code envelope)', () => {
+    // Claude Code often delivers an MCP tool_response as a content-block array
+    // ({ content: [{ type: 'text', text: '<serialized PR object>' }] }) rather
+    // than the raw PR object. There is no top-level `html_url`, so the
+    // serialized-scan fallback is what catches the URL here.
+    const home = mkHome();
+    handlePostToolUse(
+      {
+        tool_name: 'mcp__github__create_pull_request',
+        tool_response: { content: [{ type: 'text', text: `{"html_url":"${PR_URL}"}` }] },
+      },
+      'CREW-4',
+      home,
+    );
+    const parsed = JSON.parse(readFileSync(eventsFile(home, 'CREW-4'), 'utf8').trim());
+    expect(parsed.prUrl).toBe(PR_URL);
+  });
+
   it('is a no-op when the MCP response carries no PR URL', () => {
     const home = mkHome();
     handlePostToolUse(
