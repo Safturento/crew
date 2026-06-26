@@ -199,17 +199,40 @@ async function superviseAction(env: Env = process.env): Promise<void> {
   });
 }
 
-/** The foreground long-poll worker process. */
+/**
+ * Exit code the worker uses to ask the supervisor to respawn it (CREW-293
+ * `supervisor_restart`). Any non-zero code triggers the supervisor's
+ * self-respawn loop; this named value documents the intent and keeps it
+ * distinct from a 1 that would read as an ordinary crash.
+ */
+export const WORKER_RESTART_EXIT_CODE = 75;
+
+/**
+ * The foreground long-poll worker process. A SIGTERM/SIGINT or a queue-level
+ * supervisor command aborts the loop; the worker then exits with a code the
+ * supervisor reads: 0 (stop) ends the supervisor loop, non-zero (restart)
+ * triggers its self-respawn (CREW-293).
+ */
 async function workerAction(env: Env = process.env): Promise<void> {
   const controller = new AbortController();
+  let restartRequested = false;
   const abort = (): void => controller.abort();
   process.on('SIGTERM', abort);
   process.on('SIGINT', abort);
   await runWorker({
     env,
     signal: controller.signal,
+    // Supervisor-control boundary: a drained `supervisor_stop` aborts the loop
+    // for a clean (exit 0) shutdown; `supervisor_restart` also flags a non-zero
+    // exit so the supervisor respawns a fresh worker. The abort fires after the
+    // command's `applied` result is reported, so the queue row never sticks.
+    supervisorControl: (action) => {
+      if (action === 'restart') restartRequested = true;
+      controller.abort();
+    },
     log: (line) => process.stdout.write(formatLogLine(line)),
   });
+  if (restartRequested) process.exitCode = WORKER_RESTART_EXIT_CODE;
 }
 
 export const runnerCommand = new Command('runner').description(

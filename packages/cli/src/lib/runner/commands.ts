@@ -35,6 +35,18 @@ export interface ApplyCommandDeps {
    * terminal cancel on the `crew run` side.
    */
   writePauseSentinel?: (agentKey: string) => void;
+  /**
+   * Supervisor-control boundary (CREW-293). Called for the queue-level
+   * `supervisor_stop` / `supervisor_restart` commands, which target the
+   * supervisor process itself rather than a tracked agent. `stop` requests a
+   * graceful runner shutdown; `restart` requests an exit-and-respawn (the
+   * worker exits non-zero and the supervisor's self-respawn loop relaunches
+   * it). Injected so the mapping is unit-tested without exiting the process.
+   * Optional: a runner wired before supervisor-control support — or a test
+   * exercising only the per-process kinds — can omit it, in which case a
+   * `supervisor_*` command fails cleanly rather than throwing.
+   */
+  supervisorControl?: (action: 'stop' | 'restart') => void;
 }
 
 /**
@@ -59,6 +71,10 @@ export interface ApplyCommandDeps {
  *   `crew resume <key> -m <message>` (the steer/inject path).
  * - `reap` → stop tracking an orphan terminal without signalling (idempotent;
  *   `applied` even when nothing is tracked — the process is already gone).
+ * - `supervisor_stop` / `supervisor_restart` → queue-level (no `agentKey`):
+ *   invoke the injected `supervisorControl` boundary to gracefully stop the
+ *   runner (`stop`) or exit-and-respawn it (`restart`). `failed` when no
+ *   boundary is wired.
  * - `dequeue` → `failed` "not yet supported": it needs a daemon action-drop
  *   route (out of the host runner's scope).
  *
@@ -86,6 +102,10 @@ export async function applyCommand(
       // No signal — the orphan is already dead; just stop tracking it.
       if (command.agentKey) deps.registry.remove(command.agentKey);
       return { status: 'applied' };
+    case 'supervisor_stop':
+      return supervisorControl(command, deps, 'stop');
+    case 'supervisor_restart':
+      return supervisorControl(command, deps, 'restart');
     default:
       return {
         status: 'failed',
@@ -163,5 +183,32 @@ async function resumeAgent(
     return { status: 'failed', error: (err as Error).message };
   }
   deps.registry.add({ ...proc, pid: handle.pid, pgid: handle.pgid, state: 'running' });
+  return { status: 'applied' };
+}
+
+/**
+ * Supervisor-control path (CREW-293): hand a `stop`/`restart` request to the
+ * injected `supervisorControl` boundary, which translates it into the worker's
+ * exit behavior (`stop` → clean exit ends the supervisor loop; `restart` →
+ * non-zero exit triggers the supervisor's self-respawn). Queue-level — no
+ * `agentKey`. A missing boundary or one that throws yields a `failed` result so
+ * a runner wired before supervisor-control support never crashes the drain loop.
+ */
+function supervisorControl(
+  command: RunnerCommand,
+  deps: ApplyCommandDeps,
+  action: 'stop' | 'restart',
+): ApplyResult {
+  if (!deps.supervisorControl) {
+    return {
+      status: 'failed',
+      error: `runner has no supervisorControl boundary configured for '${command.kind}'`,
+    };
+  }
+  try {
+    deps.supervisorControl(action);
+  } catch (err) {
+    return { status: 'failed', error: (err as Error).message };
+  }
   return { status: 'applied' };
 }

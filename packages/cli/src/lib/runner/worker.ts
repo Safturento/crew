@@ -86,6 +86,16 @@ export interface WorkerDeps {
   env: NodeJS.ProcessEnv | Record<string, string | undefined>;
   /** Aborting this stops the loop after the in-flight iteration. */
   signal: AbortSignal;
+  /**
+   * Supervisor-control boundary (CREW-293): forwarded to the command-apply path
+   * so a queue-level `supervisor_stop`/`supervisor_restart` can stop or respawn
+   * the runner. The owner (`workerAction`) translates the request into the
+   * worker's exit code (`stop` → clean exit ends the supervisor loop; `restart`
+   * → non-zero exit triggers the supervisor's self-respawn). Optional — absent
+   * in a standalone/test worker, in which case `supervisor_*` commands fail
+   * cleanly.
+   */
+  supervisorControl?: (action: 'stop' | 'restart') => void;
   /** Override the log sink (tests); defaults to appending runner.log. */
   log?: (line: string) => void;
 }
@@ -140,6 +150,10 @@ export async function runWorker(deps: WorkerDeps): Promise<void> {
       const args = message ? ['resume', agentKey, '-m', message] : ['resume', agentKey];
       return launchDetached('crew', args, { cwd, logFile: startupLogFilePath(agentKey) });
     },
+    // Supervisor-control boundary (CREW-293): forward the owner's stop/restart
+    // handler so a queue-level supervisor command can shut down or respawn the
+    // runner. Unset in a standalone/test worker — `supervisor_*` fails cleanly.
+    supervisorControl: deps.supervisorControl,
     execute: (action) =>
       executeAction(action, {
         exec: runToCompletion,

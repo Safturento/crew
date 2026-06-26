@@ -205,6 +205,51 @@ describe('applyCommand', () => {
     });
   });
 
+  describe('supervisor control', () => {
+    it('supervisor_stop invokes the boundary with "stop" and applies', async () => {
+      const supervisorControl = vi.fn();
+      const { deps: d } = deps({ supervisorControl });
+      // Queue-level command — no agentKey (targets the supervisor itself).
+      const result = await applyCommand(
+        command({ kind: 'supervisor_stop', agentKey: null }),
+        d,
+      );
+      expect(result).toEqual({ status: 'applied' });
+      expect(supervisorControl).toHaveBeenCalledWith('stop');
+    });
+
+    it('supervisor_restart invokes the boundary with "restart" and applies', async () => {
+      const supervisorControl = vi.fn();
+      const { deps: d } = deps({ supervisorControl });
+      const result = await applyCommand(
+        command({ kind: 'supervisor_restart', agentKey: null }),
+        d,
+      );
+      expect(result).toEqual({ status: 'applied' });
+      expect(supervisorControl).toHaveBeenCalledWith('restart');
+    });
+
+    it('fails when no supervisorControl boundary is configured', async () => {
+      const { deps: d } = deps();
+      const result = await applyCommand(command({ kind: 'supervisor_stop', agentKey: null }), d);
+      expect(result.status).toBe('failed');
+      if (result.status === 'failed') expect(result.error).toMatch(/supervisorControl boundary/i);
+    });
+
+    it('reports a boundary that throws as failed without crashing', async () => {
+      const supervisorControl = vi.fn(() => {
+        throw new Error('already exiting');
+      });
+      const { deps: d } = deps({ supervisorControl });
+      const result = await applyCommand(
+        command({ kind: 'supervisor_restart', agentKey: null }),
+        d,
+      );
+      expect(result.status).toBe('failed');
+      if (result.status === 'failed') expect(result.error).toBe('already exiting');
+    });
+  });
+
   describe('message', () => {
     it('re-dispatches via the resume boundary forwarding payload.message', async () => {
       const resume = vi.fn().mockResolvedValue({ pid: 77, pgid: 77 });
