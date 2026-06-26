@@ -48,6 +48,7 @@ Organization: Active is grouped by topic (not chronology) since the dominant acc
     - [2026-04-28 — Dashboard New Run modal + projects route view](#2026-04-28--dashboard-new-run-modal--projects-route-view)
     - [2026-04-28 — `useAttention.clear()` snapshot semantic isn't directly tested](#2026-04-28--useattentionclear-snapshot-semantic-isnt-directly-tested)
   - [Daemon, CLI & Dispatch](#daemon-cli--dispatch)
+    - [2026-06-25 — Third `isProcessAlive` copy in `commands/daemon.ts` not yet consolidated](#2026-06-25--third-isprocessalive-copy-in-commandsdaemonts-not-yet-consolidated)
     - [2026-06-20 — `crew resume` emits `run_started` as source `cli-run`, blurring resume vs original-run in the audit trail](#2026-06-20--crew-resume-emits-run_started-as-source-cli-run-blurring-resume-vs-original-run-in-the-audit-trail)
     - [2026-06-20 — Headless `crew run` silently cuts off an agent that backgrounds work and yields via `ScheduleWakeup`](#2026-06-20--headless-crew-run-silently-cuts-off-an-agent-that-backgrounds-work-and-yields-via-schedulewakeup)
     - [2026-06-19 — Per-run worktree stacks leak anonymous `node_modules` volumes (Docker disk hit 210 GB; 182 GB reclaimed manually)](#2026-06-19--per-run-worktree-stacks-leak-anonymous-node_modules-volumes-docker-disk-hit-210-gb-182-gb-reclaimed-manually)
@@ -747,6 +748,16 @@ The "synthetic Unregistered section" feels right — single render path, no extr
 **Shape of work:** Tiny cleanup. Add 2–3 RTL test cases. Bundle into the cva-cleanup ticket above or stand alone.
 
 ### Daemon, CLI & Dispatch
+
+#### 2026-06-25 — Third `isProcessAlive` copy in `commands/daemon.ts` not yet consolidated
+
+**What:** CREW-288 factored the runner's `process.kill(pid, 0)` liveness probe out of `commands/runner.ts` into a canonical `packages/cli/src/lib/runner/liveness.ts`. A byte-identical third copy still lives in `packages/cli/src/commands/daemon.ts` (`isProcessAlive`, same EPERM-means-alive semantics). Now that a canonical home exists, that copy is the obvious next consolidation target.
+
+**Why noticed:** Flagged as a Minor finding in the CREW-288 code review — out of scope for that ticket (which only touched the runner side).
+
+**Anchors:** `packages/cli/src/commands/daemon.ts:51` (the duplicate); `packages/cli/src/lib/runner/liveness.ts` (the canonical probe); `packages/cli/src/commands/daemon.test.ts:42-47` (tests that would move/retarget). Note the daemon copy is imported by `daemon.test.ts`, so consolidating means re-pointing that import — a `commands → lib` import is fine for a command file.
+
+**Shape of work:** Tiny. Delete the daemon copy, import from `lib/runner/liveness.ts` (or relocate the probe to a more neutral `lib/` home if `lib/runner/` feels wrong for a daemon-command import), retarget the test. One small commit.
 
 #### 2026-06-23 — Auto-batch sizing for snapshot-refresh round-trips (compaction half shipped)
 

@@ -229,6 +229,23 @@ describe('runLoop', () => {
     expect(d.client.heartbeat.mock.calls[0][0].processes).toHaveLength(1);
   });
 
+  it('keeps a paused dead-pid process in the heartbeat snapshot (resumable)', async () => {
+    const controller = new AbortController();
+    const registry = trackedRegistry();
+    registry.setState('CREW-231', 'paused'); // pid 10, paused — its crew run has exited
+    // Dead pid, but the paused entry must survive so a later resume can re-dispatch it.
+    const d = runLoopDeps({ signal: controller.signal, registry, isAlive: () => false });
+    d.client.claimPendingAction.mockImplementation(async () => {
+      controller.abort();
+      return { action: null };
+    });
+
+    await runLoop(d);
+
+    expect(d.client.heartbeat.mock.calls[0][0].processes).toHaveLength(1);
+    expect(d.client.heartbeat.mock.calls[0][0].processes[0].state).toBe('paused');
+  });
+
   it('drains pending commands each cycle', async () => {
     const controller = new AbortController();
     const d = runLoopDeps({ signal: controller.signal, registry: trackedRegistry() });

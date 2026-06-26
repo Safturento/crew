@@ -92,5 +92,23 @@ describe('Registry', () => {
       r.add(proc({ agentKey: 'CREW-1', pid: 100 }));
       expect(r.reapDead(() => true)).toEqual([]);
     });
+
+    it('never reaps a paused entry, even with a dead pid (resumable handle)', () => {
+      // A paused `crew run` process exits (process.exit on the pause path), so
+      // its pid is legitimately dead — but the entry is deliberately kept so the
+      // operator can later resume it. Reaping it would destroy that.
+      const r = new Registry();
+      r.add(proc({ agentKey: 'CREW-paused', pid: 100, state: 'paused' }));
+      const reaped = r.reapDead(() => false);
+      expect(reaped).toEqual([]);
+      expect(r.get('CREW-paused')?.state).toBe('paused');
+    });
+
+    it('still reaps a dead cancelling entry (only paused is exempt)', () => {
+      const r = new Registry();
+      r.add(proc({ agentKey: 'CREW-cancelling', pid: 100, state: 'cancelling' }));
+      expect(r.reapDead(() => false)).toEqual(['CREW-cancelling']);
+      expect(r.get('CREW-cancelling')).toBeUndefined();
+    });
   });
 });

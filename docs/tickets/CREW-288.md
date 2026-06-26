@@ -19,6 +19,7 @@ The runner's heartbeat snapshot stops lying about phantom "running" agents. Each
 - **Method name `reapDead`, not `reap`** — there's already a `reap` _command_ kind (`applyCommand`, daemon-driven single-orphan untrack). `reapDead` names the liveness sweep distinctly to avoid confusion.
 - **Pure `isAlive`, no grace period** — the registry only holds an entry after the child has actually spawned (`executeAction` records the pid post-spawn), so a just-spawned pid already probes alive. No grace window needed (resolves the followup's open question).
 - **Sweep lives in the heartbeat tick** — defense-in-depth, independent of the daemon's terminal-state tracking, exactly where the ticket scopes it.
+- **`paused` entries are exempt from the sweep** — a paused `crew run` `process.exit`s on the pause path (`run.ts:693,746`), so its pid is legitimately dead, but the entry is deliberately kept tracked (CREW-273) as a resumable handle for a later `resume`/`message`. Reaping it would silently destroy the resumable state. `reapDead` skips `paused`; every other state (`running`/`cancelling`/`launching`) with a dead pid is a genuine reap target. (Caught in code review.)
 - **Factor `isProcessAlive` into `liveness.ts`** rather than into `supervisor.ts` — keeps `supervisor.ts`'s "pure over injected boundaries" doc honest; the concrete `process.kill(pid, 0)` probe gets its own tiny home. `commands/daemon.ts` keeps its own copy (out of scope).
 
 ## Out of scope
