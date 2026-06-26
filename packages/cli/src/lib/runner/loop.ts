@@ -127,6 +127,13 @@ export interface RunLoopDeps extends RunnerLoopDeps {
   registry: Registry;
   /** Signal boundary for command apply (negative pid = process group). */
   kill: (target: number, signal: NodeJS.Signals) => void;
+  /**
+   * `process.kill(pid, 0)` liveness probe — true when the pid is alive. Used
+   * by the heartbeat's reap sweep to drop dead tracked processes before each
+   * snapshot, so an agent that died without a terminal remove (early death,
+   * crash, OOM-kill) doesn't linger as a phantom "running".
+   */
+  isAlive: (pid: number) => boolean;
   /** Resume boundary for command apply (re-dispatch `crew resume <key>`). */
   resume?: (agentKey: string, message?: string) => Promise<LaunchHandle>;
   /** Pause-sentinel boundary for command apply (CREW-273 pause marker). */
@@ -156,17 +163,26 @@ const defaultSleep = (ms: number): Promise<void> => new Promise((r) => setTimeou
 
 /**
  * Start a heartbeat that pushes the current live-process snapshot to the
- * daemon immediately and then every `intervalMs`, until `signal` aborts. The
- * snapshot is re-serialized from the registry on each tick so it always
- * reflects the latest tracked processes. Returns a stop fn (idempotent).
+ * daemon immediately and then every `intervalMs`, until `signal` aborts. Each
+ * tick first runs a liveness sweep (`registry.reapDead`) so a tracked process
+ * that died without a terminal remove is dropped before the snapshot — no
+ * phantom "running". The snapshot is re-serialized from the registry on each
+ * tick so it always reflects the latest tracked processes. Returns a stop fn
+ * (idempotent).
  */
 function startHeartbeat(
   client: Pick<CrewDaemonClient, 'heartbeat'>,
   registry: Registry,
+  isAlive: (pid: number) => boolean,
   intervalMs: number,
   signal: AbortSignal,
+  log: (line: string) => void,
 ): () => void {
-  const beat = (): void => void client.heartbeat(registry.toSnapshot());
+  const beat = (): void => {
+    const reaped = registry.reapDead(isAlive);
+    if (reaped.length > 0) log(`reaped ${reaped.length} dead process(es): ${reaped.join(', ')}`);
+    void client.heartbeat(registry.toSnapshot());
+  };
   beat();
   const timer = setInterval(beat, intervalMs);
   const stop = (): void => clearInterval(timer);
@@ -216,8 +232,10 @@ export async function runLoop(deps: RunLoopDeps): Promise<void> {
   const stopHeartbeat = startHeartbeat(
     deps.client,
     deps.registry,
+    deps.isAlive,
     deps.heartbeatMs ?? 5_000,
     deps.signal,
+    deps.log,
   );
   const stopCommandDrain = startCommandDrain(
     {

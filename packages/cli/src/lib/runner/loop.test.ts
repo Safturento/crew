@@ -147,6 +147,7 @@ function runLoopDeps(over: Partial<RunLoopDeps> = {}): RunLoopDeps & {
     client,
     registry: new Registry(),
     kill: vi.fn(),
+    isAlive: vi.fn().mockReturnValue(true),
     signal: new AbortController().signal,
     ...over,
   } as never;
@@ -196,6 +197,53 @@ describe('runLoop', () => {
 
     expect(d.client.heartbeat).toHaveBeenCalledWith(registry.toSnapshot());
     expect(d.client.heartbeat.mock.calls[0][0].processes).toHaveLength(1);
+  });
+
+  it('reaps a dead-pid process before the heartbeat snapshot (no phantom running)', async () => {
+    const controller = new AbortController();
+    const registry = trackedRegistry(); // one entry, pid 10
+    // pid 10 is dead; the sweep must drop it before serializing the snapshot.
+    const d = runLoopDeps({ signal: controller.signal, registry, isAlive: () => false });
+    d.client.claimPendingAction.mockImplementation(async () => {
+      controller.abort();
+      return { action: null };
+    });
+
+    await runLoop(d);
+
+    expect(d.client.heartbeat).toHaveBeenCalled();
+    expect(d.client.heartbeat.mock.calls[0][0].processes).toHaveLength(0);
+  });
+
+  it('retains a live-pid process in the heartbeat snapshot', async () => {
+    const controller = new AbortController();
+    const registry = trackedRegistry();
+    const d = runLoopDeps({ signal: controller.signal, registry, isAlive: () => true });
+    d.client.claimPendingAction.mockImplementation(async () => {
+      controller.abort();
+      return { action: null };
+    });
+
+    await runLoop(d);
+
+    expect(d.client.heartbeat.mock.calls[0][0].processes).toHaveLength(1);
+  });
+
+  it('keeps a paused dead-pid process in the heartbeat snapshot (resumable)', async () => {
+    const controller = new AbortController();
+    const registry = trackedRegistry();
+    registry.setState('CREW-231', 'paused'); // pid 10, paused — its crew run has exited
+    // Dead pid, but the paused entry must survive so a later resume can re-dispatch it.
+    const d = runLoopDeps({ signal: controller.signal, registry, isAlive: () => false });
+    d.client.claimPendingAction.mockImplementation(async () => {
+      controller.abort();
+      return { action: null };
+    });
+
+    await runLoop(d);
+
+    expect(d.client.heartbeat.mock.calls[0][0].processes).toHaveLength(1);
+    expect(d.client.heartbeat.mock.calls[0][0].processes[0].state).toBe('paused');
   });
 
   it('drains pending commands each cycle', async () => {

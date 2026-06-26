@@ -48,7 +48,7 @@ Organization: Active is grouped by topic (not chronology) since the dominant acc
     - [2026-04-28 — Dashboard New Run modal + projects route view](#2026-04-28--dashboard-new-run-modal--projects-route-view)
     - [2026-04-28 — `useAttention.clear()` snapshot semantic isn't directly tested](#2026-04-28--useattentionclear-snapshot-semantic-isnt-directly-tested)
   - [Daemon, CLI & Dispatch](#daemon-cli--dispatch)
-    - [2026-06-25 — Runner never reaps dead processes: phantom "running" entries linger, and early-death runs never settle to error](#2026-06-25--runner-never-reaps-dead-processes-phantom-running-entries-linger-and-early-death-runs-never-settle-to-error)
+    - [2026-06-25 — Third `isProcessAlive` copy in `commands/daemon.ts` not yet consolidated](#2026-06-25--third-isprocessalive-copy-in-commandsdaemonts-not-yet-consolidated)
     - [2026-06-20 — `crew resume` emits `run_started` as source `cli-run`, blurring resume vs original-run in the audit trail](#2026-06-20--crew-resume-emits-run_started-as-source-cli-run-blurring-resume-vs-original-run-in-the-audit-trail)
     - [2026-06-20 — Headless `crew run` silently cuts off an agent that backgrounds work and yields via `ScheduleWakeup`](#2026-06-20--headless-crew-run-silently-cuts-off-an-agent-that-backgrounds-work-and-yields-via-schedulewakeup)
     - [2026-06-19 — Per-run worktree stacks leak anonymous `node_modules` volumes (Docker disk hit 210 GB; 182 GB reclaimed manually)](#2026-06-19--per-run-worktree-stacks-leak-anonymous-node_modules-volumes-docker-disk-hit-210-gb-182-gb-reclaimed-manually)
@@ -101,6 +101,7 @@ Organization: Active is grouped by topic (not chronology) since the dominant acc
     - [2026-05-15 — `.agents/` topic-doc system vs native `.claude/rules/` and agents.md alignment](#2026-05-15--agents-topic-doc-system-vs-native-clauderules-and-agentsmd-alignment)
     - [2026-05-12 — Rethink followup-tracking system (priority tier + Jira backlog sync)](#2026-05-12--rethink-followup-tracking-system-priority-tier--jira-backlog-sync)
 - [Resolved](#resolved)
+  - [2026-06-25 — Runner never reaps dead processes: phantom "running" entries linger, and early-death runs never settle to error](#2026-06-25--runner-never-reaps-dead-processes-phantom-running-entries-linger-and-early-death-runs-never-settle-to-error)
   - [2026-06-25 — `crew run` worktree creation is non-idempotent: an orphan branch silently wedges every future run of a ticket](#2026-06-25--crew-run-worktree-creation-is-non-idempotent-an-orphan-branch-silently-wedges-every-future-run-of-a-ticket)
   - [2026-06-19 — `AgentsService.deriveState` terminal guards silently revert a state override out of `finished`/`error`/`pr_merged`](#2026-06-19--agentsservicederivestate-terminal-guards-silently-revert-a-state-override-out-of-finishederrorpr_merged)
   - [2026-06-03 — `deriveState` falls through to `finished` when PR-create isn't detected](#2026-06-03--derivestate-falls-through-to-finished-when-pr-create-isnt-detected)
@@ -748,19 +749,15 @@ The "synthetic Unregistered section" feels right — single render path, no extr
 
 ### Daemon, CLI & Dispatch
 
-#### 2026-06-25 — Runner never reaps dead processes: phantom "running" entries linger, and early-death runs never settle to error
+#### 2026-06-25 — Third `isProcessAlive` copy in `commands/daemon.ts` not yet consolidated
 
-**Ticket:** [CREW-288](https://safturento.atlassian.net/browse/CREW-288) — *liveness-sweep half; the "surface failures as error" half folds into CREW-249.*
+**What:** CREW-288 factored the runner's `process.kill(pid, 0)` liveness probe out of `commands/runner.ts` into a canonical `packages/cli/src/lib/runner/liveness.ts`. A byte-identical third copy still lives in `packages/cli/src/commands/daemon.ts` (`isProcessAlive`, same EPERM-means-alive semantics). Now that a canonical home exists, that copy is the obvious next consolidation target.
 
-**What:** The host runner's live-process `Registry` (`packages/cli/src/lib/runner/registry.ts`) has **no liveness reaping**. `toSnapshot()` returns every tracked process verbatim; an entry is dropped only when something *explicitly* calls `remove()` — a `cancel_hard`/`reap` runner command, or a daemon-driven settle. A `process.kill(pid, 0)` `isAlive` probe already exists but is wired only to supervise the *worker* process (`supervisor.ts`), never to reap dead *agent* processes. So any `crew run` child that ends **without** reaching a terminal state that triggers a `remove` — an early death (e.g. the worktree-creation failure above), a crash, an OOM-kill — stays in the heartbeat snapshot as a phantom **running** forever (until the runner restarts, which clears the in-memory map). Compounding: a run that dies before registering with the daemon has no `runs` row, so the daemon has nothing to move to **error** — the phantom registry entry is the only trace, and it lies.
+**Why noticed:** Flagged as a Minor finding in the CREW-288 code review — out of scope for that ticket (which only touched the runner side).
 
-**Why noticed:** 2026-06-25 session — the Runner tab showed a "running" CREW-270 (which never actually launched — see the worktree followup above) plus several stale "running" processes that should have ended. Root-caused to the missing liveness sweep + the no-daemon-trace early-death path.
+**Anchors:** `packages/cli/src/commands/daemon.ts:51` (the duplicate); `packages/cli/src/lib/runner/liveness.ts` (the canonical probe); `packages/cli/src/commands/daemon.test.ts:42-47` (tests that would move/retarget). Note the daemon copy is imported by `daemon.test.ts`, so consolidating means re-pointing that import — a `commands → lib` import is fine for a command file.
 
-**Anchors:** `packages/cli/src/lib/runner/registry.ts` (no liveness filter in `toSnapshot`); `packages/cli/src/lib/runner/supervisor.ts:18` (the existing `isAlive = process.kill(pid,0)` probe, reusable); `packages/cli/src/lib/runner/loop.ts` (heartbeat cadence — natural place for a reap sweep); daemon side `GET /api/runner/status`, `RunFailureService`. Trigger sibling: [[#2026-06-25--crew-run-worktree-creation-is-non-idempotent-an-orphan-branch-silently-wedges-every-future-run-of-a-ticket]]. Surfacing destination: CREW-249 (runner per-entity drawers) + the 2026-06-19 Runner-page-read-endpoints followup.
-
-**What's been considered:** Add a liveness sweep to the heartbeat loop — for each tracked proc, `isAlive(pid)`; drop the dead ones before `toSnapshot()` (defense-in-depth, independent of the daemon's terminal-state tracking). Separately, an early-death run should be recorded as a failed start so the ticket shows error rather than nothing. Strongly related to the worktree followup (its trigger) and to CREW-249 / the 2026-06-19 followup (where failures should surface). Candidate to plan together as a runner-lifecycle/observability slice rather than three disconnected fixes.
-
-**Open questions:** Reap purely on `isAlive`, or also require a grace period (a just-spawned pid that hasn't fully started)? Should the runner emit an explicit "process N ended unexpectedly" signal to the daemon so it can settle the run to error, or is the daemon's snapshot-diff enough?
+**Shape of work:** Tiny. Delete the daemon copy, import from `lib/runner/liveness.ts` (or relocate the probe to a more neutral `lib/` home if `lib/runner/` feels wrong for a daemon-command import), retarget the test. One small commit.
 
 #### 2026-06-23 — Auto-batch sizing for snapshot-refresh round-trips (compaction half shipped)
 
@@ -1714,6 +1711,16 @@ The other two open questions (sandbox config drift, Phase 2 + Phase 3 separation
 - Should priority on the markdown side map directly to Jira priority, or stay a separate signal?
 
 ## Resolved
+
+### 2026-06-25 — Runner never reaps dead processes: phantom "running" entries linger, and early-death runs never settle to error
+
+**Resolved 2026-06-25:** Liveness-sweep half closed by [CREW-288](https://safturento.atlassian.net/browse/CREW-288). The runner heartbeat (`packages/cli/src/lib/runner/loop.ts` → `startHeartbeat`) now runs `registry.reapDead(isAlive)` before each `toSnapshot()`: every tracked pid is probed with the `process.kill(pid, 0)` liveness check (factored into `packages/cli/src/lib/runner/liveness.ts` and injected through `worker.ts`) and the dead ones are dropped — so a `crew run` child that ended without a terminal `remove` (early death, crash, OOM-kill) no longer lingers as a phantom **running**, and a reap is logged. Reap is purely on `isAlive` with no grace period (the registry only holds an entry once the child has actually spawned, so a just-spawned pid already probes alive). Unit tests cover reaped-dead / retained-live at both the `Registry.reapDead` and `runLoop` heartbeat layers. **The surfacing half — recording an early-death run as an `error` state (daemon run-failure record + per-entity drawer) — was deliberately left to CREW-249;** the reap stops the snapshot from lying, but a run that dies before registering still has no `runs` row for the daemon to settle.
+
+**What:** The host runner's live-process `Registry` (`packages/cli/src/lib/runner/registry.ts`) had **no liveness reaping**. `toSnapshot()` returned every tracked process verbatim; an entry was dropped only when something *explicitly* called `remove()` — a `cancel_hard`/`reap` runner command, or a daemon-driven settle. A `process.kill(pid, 0)` `isAlive` probe already existed but was wired only to supervise the *worker* process (`supervisor.ts`), never to reap dead *agent* processes. So any `crew run` child that ended **without** reaching a terminal state that triggers a `remove` — an early death (e.g. the worktree-creation failure above), a crash, an OOM-kill — stayed in the heartbeat snapshot as a phantom **running** forever (until the runner restarts, which clears the in-memory map). Compounding: a run that dies before registering with the daemon has no `runs` row, so the daemon has nothing to move to **error** — the phantom registry entry is the only trace, and it lies.
+
+**Why noticed:** 2026-06-25 session — the Runner tab showed a "running" CREW-270 (which never actually launched — see the worktree followup below) plus several stale "running" processes that should have ended. Root-caused to the missing liveness sweep + the no-daemon-trace early-death path.
+
+**Anchors:** `packages/cli/src/lib/runner/registry.ts` (now `reapDead`); `packages/cli/src/lib/runner/liveness.ts` (the factored `isProcessAlive` probe); `packages/cli/src/lib/runner/loop.ts` (heartbeat sweep); daemon side `GET /api/runner/status`, `RunFailureService`. Trigger sibling: [[#2026-06-25--crew-run-worktree-creation-is-non-idempotent-an-orphan-branch-silently-wedges-every-future-run-of-a-ticket]]. Surfacing destination: CREW-249 (runner per-entity drawers) + the 2026-06-19 Runner-page-read-endpoints followup.
 
 ### 2026-06-25 — `crew run` worktree creation is non-idempotent: an orphan branch silently wedges every future run of a ticket
 

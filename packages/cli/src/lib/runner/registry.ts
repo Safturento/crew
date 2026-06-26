@@ -35,6 +35,33 @@ export class Registry {
     if (proc) this.procs.set(agentKey, { ...proc, state });
   }
 
+  /**
+   * Liveness sweep: drop every tracked entry whose pid the injected probe
+   * reports dead, returning the reaped agentKeys (for logging). Defense in
+   * depth against phantom "running" entries — a `crew run` child that ends
+   * without a terminal {@link remove} (early death, crash, OOM-kill) would
+   * otherwise linger in the snapshot until the runner restarts. Distinct from
+   * the daemon-driven `reap` command, which untracks one named orphan.
+   *
+   * `paused` entries are **exempt**: a paused `crew run` process exits (it
+   * `process.exit`s on the pause path), so its pid is legitimately dead — but
+   * the entry is deliberately kept tracked (CREW-273) as a resumable handle for
+   * a later `resume`/`message` command. Reaping it would destroy that, so the
+   * sweep skips paused state. Every other state with a dead pid is a genuine
+   * reap target (`cancelling` that has finished exiting included).
+   */
+  reapDead(isAlive: (pid: number) => boolean): string[] {
+    const reaped: string[] = [];
+    for (const [key, proc] of this.procs) {
+      if (proc.state === 'paused') continue;
+      if (!isAlive(proc.pid)) {
+        this.procs.delete(key);
+        reaped.push(key);
+      }
+    }
+    return reaped;
+  }
+
   /** Serialize the current live-process set for the heartbeat snapshot. */
   toSnapshot(): RunnerSnapshot {
     return { processes: [...this.procs.values()] };
