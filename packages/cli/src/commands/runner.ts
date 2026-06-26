@@ -7,6 +7,7 @@ import type { LiveProcess } from 'crew-shared';
 import {
   crewDaemonClientFromEnv,
   ensureRunnerLogDir,
+  isProcessAlive,
   runnerPaths,
   runWorker,
   formatLogLine,
@@ -28,16 +29,6 @@ export function readPidFile(path: string): number | null {
   }
   const pid = Number.parseInt(raw, 10);
   return Number.isInteger(pid) && pid > 0 ? pid : null;
-}
-
-/** `process.kill(pid, 0)` liveness probe. EPERM means alive-but-not-ours. */
-export function isProcessAlive(pid: number): boolean {
-  try {
-    process.kill(pid, 0);
-    return true;
-  } catch (err) {
-    return (err as NodeJS.ErrnoException).code === 'EPERM';
-  }
 }
 
 /**

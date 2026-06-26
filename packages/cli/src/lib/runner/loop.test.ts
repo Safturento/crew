@@ -147,6 +147,7 @@ function runLoopDeps(over: Partial<RunLoopDeps> = {}): RunLoopDeps & {
     client,
     registry: new Registry(),
     kill: vi.fn(),
+    isAlive: vi.fn().mockReturnValue(true),
     signal: new AbortController().signal,
     ...over,
   } as never;
@@ -195,6 +196,36 @@ describe('runLoop', () => {
     await runLoop(d);
 
     expect(d.client.heartbeat).toHaveBeenCalledWith(registry.toSnapshot());
+    expect(d.client.heartbeat.mock.calls[0][0].processes).toHaveLength(1);
+  });
+
+  it('reaps a dead-pid process before the heartbeat snapshot (no phantom running)', async () => {
+    const controller = new AbortController();
+    const registry = trackedRegistry(); // one entry, pid 10
+    // pid 10 is dead; the sweep must drop it before serializing the snapshot.
+    const d = runLoopDeps({ signal: controller.signal, registry, isAlive: () => false });
+    d.client.claimPendingAction.mockImplementation(async () => {
+      controller.abort();
+      return { action: null };
+    });
+
+    await runLoop(d);
+
+    expect(d.client.heartbeat).toHaveBeenCalled();
+    expect(d.client.heartbeat.mock.calls[0][0].processes).toHaveLength(0);
+  });
+
+  it('retains a live-pid process in the heartbeat snapshot', async () => {
+    const controller = new AbortController();
+    const registry = trackedRegistry();
+    const d = runLoopDeps({ signal: controller.signal, registry, isAlive: () => true });
+    d.client.claimPendingAction.mockImplementation(async () => {
+      controller.abort();
+      return { action: null };
+    });
+
+    await runLoop(d);
+
     expect(d.client.heartbeat.mock.calls[0][0].processes).toHaveLength(1);
   });
 
