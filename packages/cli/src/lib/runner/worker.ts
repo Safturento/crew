@@ -1,8 +1,10 @@
 import { appendFileSync, mkdirSync } from 'node:fs';
-import { execa } from 'execa';
+import { dirname } from 'node:path';
+import { execa, type Options } from 'execa';
 import { loadProjectConfigByName } from 'crew-shared';
 import { crewDaemonClientFromEnv } from '../daemon-client/index.js';
 import { writePauseSentinel } from '../pause-sentinel/index.js';
+import { startupLogFilePath } from '../startup-events/log-file.js';
 import { executeAction, type LaunchHandle } from './executor.js';
 import { runLoop } from './loop.js';
 import { runnerPaths } from './paths.js';
@@ -31,12 +33,35 @@ function runToCompletion(file: string, args: string[], opts: { cwd: string }): P
  * (claude, docker, …). Rejects if the spawn itself fails — e.g. `crew` not on
  * PATH — so the runner reports `failed`.
  */
-function launchDetached(
+export function launchDetached(
   file: string,
   args: string[],
-  opts: { cwd: string },
+  opts: { cwd: string; logFile?: string },
 ): Promise<LaunchHandle> {
-  const child = execa(file, args, { cwd: opts.cwd, detached: true, stdio: 'ignore' });
+  // When a per-key startup log is requested, append-redirect the detached
+  // child's stdout+stderr to it so the whole `crew run` lifetime — even a silent
+  // pre-registration death — is captured to disk. Both fds open in append mode
+  // (O_APPEND), so writes interleave in order without clobbering. stdin stays
+  // ignored. execa won't create the parent dir, so do that first.
+  //
+  // Best-effort, mirroring the sibling `emitStartupEvent` contract: an
+  // unwritable startup root must never wedge a dispatch. If the dir can't be
+  // prepared, log to stderr and degrade to `stdio: 'ignore'` (no capture).
+  let stdio: Options['stdio'] = 'ignore';
+  if (opts.logFile) {
+    try {
+      mkdirSync(dirname(opts.logFile), { recursive: true });
+      const sink = { file: opts.logFile, append: true } as const;
+      stdio = ['ignore', sink, sink];
+    } catch (err) {
+      process.stderr.write(
+        `crew: failed to open startup log ${opts.logFile}: ${
+          err instanceof Error ? err.message : String(err)
+        }\n`,
+      );
+    }
+  }
+  const child = execa(file, args, { cwd: opts.cwd, detached: true, stdio });
   // We don't track the detached run's completion; swallow its eventual
   // settle so a later non-zero exit can't surface as an unhandledRejection.
   child.catch(() => {});
@@ -108,7 +133,7 @@ export async function runWorker(deps: WorkerDeps): Promise<void> {
       if (!entry) throw new Error(`no tracked process for ${agentKey}`);
       const cwd = resolveRepoDir(entry.project);
       const args = message ? ['resume', agentKey, '-m', message] : ['resume', agentKey];
-      return launchDetached('crew', args, { cwd });
+      return launchDetached('crew', args, { cwd, logFile: startupLogFilePath(agentKey) });
     },
     execute: (action) =>
       executeAction(action, {

@@ -1,4 +1,5 @@
 import type { ActionRequest, LiveProcess } from 'crew-shared';
+import { startupLogFilePath } from '../startup-events/log-file.js';
 import type { Registry } from './registry.js';
 
 /** Outcome of shelling an action's verb — the runner reports this to the daemon. */
@@ -24,8 +25,16 @@ export interface ExecutorDeps {
    * run finished. Detached spawns get their own process group, so `pgid === pid`
    * and signalling `-pgid` reaches the whole tree. Rejects on spawn failure
    * (e.g. `crew` not on PATH).
+   *
+   * `logFile` (when set) is the per-key startup log the launcher opens
+   * append-mode and wires to the child's stdout+stderr, so the whole `crew run`
+   * lifetime — including a silent pre-registration death — is captured to disk.
    */
-  launch: (file: string, args: string[], opts: { cwd: string }) => Promise<LaunchHandle>;
+  launch: (
+    file: string,
+    args: string[],
+    opts: { cwd: string; logFile?: string },
+  ) => Promise<LaunchHandle>;
   /**
    * Resolve a project slug to its on-disk repo path. Throws when the project
    * has no registered config — the runner reports that as a `failed` launch
@@ -68,23 +77,30 @@ export async function executeAction(
     return { status: 'failed', error: (err as Error).message };
   }
 
+  // Capture every verb's whole-lifetime console output to the per-key startup
+  // log, so a death before daemon registration still leaves a non-empty log.
+  const logFile = startupLogFilePath(action.ticketKey);
+
   let handle: LaunchHandle;
   try {
     switch (action.kind) {
       case 'run':
-        handle = await deps.launch('crew', ['run', action.ticketKey], { cwd });
+        handle = await deps.launch('crew', ['run', action.ticketKey], { cwd, logFile });
         break;
       case 'fix_pr': {
         const comment = action.payload.kind === 'fix_pr' ? action.payload.comment : '';
         await deps.exec('gh', ['pr', 'comment', action.ticketKey, '--body', comment], { cwd });
-        handle = await deps.launch('crew', ['fix-pr', action.ticketKey, '--from-pr'], { cwd });
+        handle = await deps.launch('crew', ['fix-pr', action.ticketKey, '--from-pr'], {
+          cwd,
+          logFile,
+        });
         break;
       }
       case 'finish':
-        handle = await deps.launch('crew', ['finish', action.ticketKey], { cwd });
+        handle = await deps.launch('crew', ['finish', action.ticketKey], { cwd, logFile });
         break;
       case 'resume':
-        handle = await deps.launch('crew', ['resume', action.ticketKey], { cwd });
+        handle = await deps.launch('crew', ['resume', action.ticketKey], { cwd, logFile });
         break;
       default:
         return {
