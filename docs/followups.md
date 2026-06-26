@@ -766,6 +766,8 @@ The "synthetic Unregistered section" feels right — single render path, no extr
 
 #### 2026-06-25 — Runner never reaps dead processes: phantom "running" entries linger, and early-death runs never settle to error
 
+**Ticket:** [CREW-288](https://safturento.atlassian.net/browse/CREW-288) — *liveness-sweep half; the "surface failures as error" half folds into CREW-249.*
+
 **What:** The host runner's live-process `Registry` (`packages/cli/src/lib/runner/registry.ts`) has **no liveness reaping**. `toSnapshot()` returns every tracked process verbatim; an entry is dropped only when something *explicitly* calls `remove()` — a `cancel_hard`/`reap` runner command, or a daemon-driven settle. A `process.kill(pid, 0)` `isAlive` probe already exists but is wired only to supervise the *worker* process (`supervisor.ts`), never to reap dead *agent* processes. So any `crew run` child that ends **without** reaching a terminal state that triggers a `remove` — an early death (e.g. the worktree-creation failure above), a crash, an OOM-kill — stays in the heartbeat snapshot as a phantom **running** forever (until the runner restarts, which clears the in-memory map). Compounding: a run that dies before registering with the daemon has no `runs` row, so the daemon has nothing to move to **error** — the phantom registry entry is the only trace, and it lies.
 
 **Why noticed:** 2026-06-25 session — the Runner tab showed a "running" CREW-270 (which never actually launched — see the worktree followup above) plus several stale "running" processes that should have ended. Root-caused to the missing liveness sweep + the no-daemon-trace early-death path.
