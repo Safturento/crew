@@ -72,6 +72,14 @@ describe('enqueueRunnerCommandSchema', () => {
     expect(parsed.payload).toEqual({ message: 'wrap it up' });
   });
 
+  it.each(['supervisor_stop', 'supervisor_restart'] as const)(
+    'accepts the queue-level %s supervisor command (null agentKey)',
+    (kind) => {
+      const parsed = enqueueRunnerCommandSchema.parse({ agentKey: null, kind, payload: null });
+      expect(parsed).toEqual({ agentKey: null, kind, payload: null });
+    },
+  );
+
   it('rejects an unknown command kind', () => {
     expect(() =>
       enqueueRunnerCommandSchema.parse({ agentKey: 'CREW-231', kind: 'nuke' }),

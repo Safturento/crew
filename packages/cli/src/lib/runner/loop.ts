@@ -83,6 +83,13 @@ export interface DrainCommandsDeps {
    * it degrades to a terminal cancel on the `crew run` side.
    */
   writePauseSentinel?: (agentKey: string) => void;
+  /**
+   * Supervisor-control boundary forwarded to {@link applyCommand}: apply a
+   * queue-level `supervisor_stop`/`supervisor_restart` against the runner
+   * itself (CREW-293). Optional — a `supervisor_*` command fails cleanly when
+   * it's absent.
+   */
+  supervisorControl?: (action: 'stop' | 'restart') => void;
   /** Structured log sink — one line per applied/failed command. */
   log: (line: string) => void;
 }
@@ -110,6 +117,7 @@ export async function drainCommands(deps: DrainCommandsDeps): Promise<void> {
       kill: deps.kill,
       resume: deps.resume,
       writePauseSentinel: deps.writePauseSentinel,
+      supervisorControl: deps.supervisorControl,
     });
     if (result.status === 'applied') {
       await deps.client.reportCommandResult(command.id, 'applied');
@@ -138,6 +146,8 @@ export interface RunLoopDeps extends RunnerLoopDeps {
   resume?: (agentKey: string, message?: string) => Promise<LaunchHandle>;
   /** Pause-sentinel boundary for command apply (CREW-273 pause marker). */
   writePauseSentinel?: (agentKey: string) => void;
+  /** Supervisor-control boundary for command apply (CREW-293 stop/restart). */
+  supervisorControl?: (action: 'stop' | 'restart') => void;
   /** Aborting this signal stops the loop after the in-flight iteration. */
   signal: AbortSignal;
   /**
@@ -244,6 +254,7 @@ export async function runLoop(deps: RunLoopDeps): Promise<void> {
       kill: deps.kill,
       resume: deps.resume,
       writePauseSentinel: deps.writePauseSentinel,
+      supervisorControl: deps.supervisorControl,
       log: deps.log,
     },
     deps.commandDrainMs ?? 2_000,

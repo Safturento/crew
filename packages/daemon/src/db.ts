@@ -209,6 +209,20 @@ function isMigrationFile(name: string): boolean {
 }
 
 /**
+ * Filter a directory listing to migration files and return them in name order.
+ * `fs.readdir` gives no ordering guarantee, and Kysely's Migrator applies
+ * migrations in the order the provider returns them — then refuses to boot if a
+ * later run observes a *different* order than the one recorded in
+ * `kysely_migration` ("corrupted migrations: ... New migrations must always
+ * have a name that comes alphabetically after the last executed migration").
+ * Sorting here makes the apply order deterministic across boots so the daemon
+ * doesn't crash-loop after a restart.
+ */
+export function sortedMigrationFiles(entries: string[]): string[] {
+  return entries.filter(isMigrationFile).sort();
+}
+
+/**
  * Run any pending migrations from `migrationsPath` to the latest version.
  * Returns the list of applied migration results (empty when the folder
  * contains no migrations). Throws if any migration fails.
@@ -223,7 +237,7 @@ export async function runMigrations(
       fs: {
         readdir: async (folder) => {
           const entries = await fs.readdir(folder);
-          return entries.filter(isMigrationFile);
+          return sortedMigrationFiles(entries);
         },
       },
       path,

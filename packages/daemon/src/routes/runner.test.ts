@@ -158,6 +158,31 @@ describe('runner command routes', () => {
     }
   });
 
+  it.each(['supervisor_stop', 'supervisor_restart'] as const)(
+    'enqueues and claims a queue-level %s supervisor command (null agentKey)',
+    async (kind) => {
+      const { app, close } = await setupApp();
+      try {
+        const enq = await app.inject({
+          method: 'POST',
+          url: '/api/runner/commands',
+          payload: { agentKey: null, kind, payload: null },
+        });
+        expect(enq.statusCode).toBe(201);
+        expect(enq.json().kind).toBe(kind);
+        expect(enq.json().agentKey).toBeNull();
+
+        const claim = await app.inject({ method: 'GET', url: '/api/runner/commands/pending' });
+        expect(claim.statusCode).toBe(200);
+        expect(claim.json().id).toBe(enq.json().id);
+        expect(claim.json().kind).toBe(kind);
+        expect(claim.json().status).toBe('claimed');
+      } finally {
+        await close();
+      }
+    },
+  );
+
   it('rejects an unknown command kind with 400', async () => {
     const { app, close } = await setupApp();
     try {

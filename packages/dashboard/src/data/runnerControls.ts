@@ -85,6 +85,36 @@ export function useDequeue(): UseMutationResult<RunnerCommand, Error, string> {
   return useRunnerCommand('dequeue', 'dequeue');
 }
 
+/**
+ * Enqueue a queue-level supervisor command (CREW-293). Unlike the per-process
+ * controls above, `supervisor_stop` / `supervisor_restart` carry a null
+ * `agentKey` — they target the supervisor process itself. The host worker
+ * drains the command and exits (stop) or exits-and-respawns (restart); the
+ * SupervisorCard reconciles to its new online/offline state on the next
+ * heartbeat. Takes no input (void) since there's no agent to address.
+ */
+function useSupervisorCommand(
+  kind: 'supervisor_stop' | 'supervisor_restart',
+  verb: string,
+): UseMutationResult<RunnerCommand, Error, void> {
+  return useMutation<RunnerCommand, Error, void>({
+    mutationFn: () => defaultClient.enqueueRunnerCommand({ agentKey: null, kind, payload: null }),
+    onError: (error) => {
+      toast.error(`Couldn't ${verb} the supervisor: ${error.message}`);
+    },
+  });
+}
+
+/** Gracefully stop the supervisor — it drains the command and exits cleanly. */
+export function useStopSupervisor(): UseMutationResult<RunnerCommand, Error, void> {
+  return useSupervisorCommand('supervisor_stop', 'stop');
+}
+
+/** Restart the supervisor — the worker exits non-zero and the self-respawn loop relaunches it. */
+export function useRestartSupervisor(): UseMutationResult<RunnerCommand, Error, void> {
+  return useSupervisorCommand('supervisor_restart', 'restart');
+}
+
 /** Archive (acknowledge) a key's failed-start rows — moves them to Recently ended. */
 export function useArchiveFailedStart(): UseMutationResult<number, Error, string> {
   return useMutation<number, Error, string>({

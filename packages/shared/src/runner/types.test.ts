@@ -20,6 +20,8 @@ describe('runner constant tuples', () => {
       'pause',
       'resume',
       'message',
+      'supervisor_stop',
+      'supervisor_restart',
     ]);
   });
 

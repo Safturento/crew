@@ -3,7 +3,24 @@ import { mkdtempSync, rmSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { sql } from 'kysely';
-import { createDb, runMigrations } from './db.js';
+import { createDb, runMigrations, sortedMigrationFiles } from './db.js';
+
+describe('sortedMigrationFiles', () => {
+  it('drops co-located .test/.d files', () => {
+    expect(
+      sortedMigrationFiles(['0001_a.ts', '0001_a.test.ts', '0002_b.d.ts', '0002_b.ts']),
+    ).toEqual(['0001_a.ts', '0002_b.ts']);
+  });
+
+  it('returns migration files in name order regardless of readdir order', () => {
+    // node:fs readdir gives no ordering guarantee; Kysely applies migrations in
+    // the order this returns and refuses to boot if a later run sees a
+    // different order. Sorting makes the apply order deterministic.
+    expect(
+      sortedMigrationFiles(['0007_finish_steps.ts', '0006_action_requests.ts', '0001_a.ts']),
+    ).toEqual(['0001_a.ts', '0006_action_requests.ts', '0007_finish_steps.ts']);
+  });
+});
 
 describe('createDb', () => {
   it('opens an in-memory SQLite database when given ":memory:"', async () => {
