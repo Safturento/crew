@@ -61,9 +61,7 @@ export function RunnerPage({ agents, loading = false }: RunnerPageProps) {
         // Cold Start can't be enqueued — once the supervisor is fully stopped
         // nothing drains the queue, and the containerized daemon can't spawn a
         // host process. Point the operator at the CLI instead (CREW-293).
-        onStart={() =>
-          toast.message('Run `crew runner start` on the host to start the supervisor')
-        }
+        onStart={() => toast.message('Run `crew runner start` on the host to start the supervisor')}
       />
       <FailedToStartSection failures={data.failedToStart} onArchive={(k) => archive.mutate(k)} />
       <LiveProcessList

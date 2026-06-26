@@ -210,10 +210,7 @@ describe('applyCommand', () => {
       const supervisorControl = vi.fn();
       const { deps: d } = deps({ supervisorControl });
       // Queue-level command — no agentKey (targets the supervisor itself).
-      const result = await applyCommand(
-        command({ kind: 'supervisor_stop', agentKey: null }),
-        d,
-      );
+      const result = await applyCommand(command({ kind: 'supervisor_stop', agentKey: null }), d);
       expect(result).toEqual({ status: 'applied' });
       expect(supervisorControl).toHaveBeenCalledWith('stop');
     });
@@ -221,10 +218,7 @@ describe('applyCommand', () => {
     it('supervisor_restart invokes the boundary with "restart" and applies', async () => {
       const supervisorControl = vi.fn();
       const { deps: d } = deps({ supervisorControl });
-      const result = await applyCommand(
-        command({ kind: 'supervisor_restart', agentKey: null }),
-        d,
-      );
+      const result = await applyCommand(command({ kind: 'supervisor_restart', agentKey: null }), d);
       expect(result).toEqual({ status: 'applied' });
       expect(supervisorControl).toHaveBeenCalledWith('restart');
     });
@@ -241,10 +235,7 @@ describe('applyCommand', () => {
         throw new Error('already exiting');
       });
       const { deps: d } = deps({ supervisorControl });
-      const result = await applyCommand(
-        command({ kind: 'supervisor_restart', agentKey: null }),
-        d,
-      );
+      const result = await applyCommand(command({ kind: 'supervisor_restart', agentKey: null }), d);
       expect(result.status).toBe('failed');
       if (result.status === 'failed') expect(result.error).toBe('already exiting');
     });

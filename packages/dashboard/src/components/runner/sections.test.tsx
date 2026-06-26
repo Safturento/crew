@@ -55,9 +55,7 @@ describe('SupervisorCard', () => {
   it('fires onStart (the cold-Start CLI hint) when offline and wired', async () => {
     const user = userEvent.setup();
     const onStart = vi.fn();
-    render(
-      <SupervisorCard supervisor={{ online: false, lastSeen: null }} onStart={onStart} />,
-    );
+    render(<SupervisorCard supervisor={{ online: false, lastSeen: null }} onStart={onStart} />);
     const start = screen.getByRole('button', { name: 'Start' });
     expect(start).toBeEnabled();
     await user.click(start);
