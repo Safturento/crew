@@ -14,6 +14,12 @@ export interface CheckResult {
 export interface HealthContext {
   config: ProjectConfig;
   worktree: string;
+  /**
+   * Home dir for user-level credential lookups (e.g. the GitHub MCP entry in
+   * `~/.claude.json`). Defaults to `os.homedir()` at the call site; tests inject
+   * a clean temp dir to stay hermetic against the runner's real config.
+   */
+  homeDir?: string;
   /** Materialized env vars from env.toml (when the project uses one). */
   envVars?: Record<string, string>;
   /**

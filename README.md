@@ -312,17 +312,22 @@ When `[visual_fidelity]` is absent, `crew figma-snapshot` is a no-op with a frie
 
 Both passes run automatically when `crew run` dispatches a ticket with `[visual_fidelity]` configured.
 
-### GitHub token (once per project)
+### GitHub access for dispatch (MCP or token)
 
-`crew run` injects a GitHub token into the agent so it can push branches and open PRs. Each registered project needs one at `<repo>/.claude/secrets/gh-token`:
+A dispatched `crew run` agent opens PRs through **either** the GitHub MCP **or** a per-repo GitHub token — at least one is required. `crew run` fails fast at pre-flight if neither is configured. `git push` always uses SSH (`origin` is an SSH remote) and needs no token.
 
-```sh
-mkdir -p .claude/secrets
-gh auth token > .claude/secrets/gh-token
-chmod 600 .claude/secrets/gh-token
-```
+- **GitHub MCP (preferred, once per machine)** — configure a GitHub MCP server in `~/.claude.json`. The dispatch prompt steers PR creation to `mcp__github__create_pull_request`, and the `pr_created` hook recognises it. With the MCP configured, no per-repo token is needed and none is injected into the agent.
+- **Per-repo token (optional fallback, once per project)** — when present at `<repo>/.claude/secrets/gh-token`, it is copied into the worktree and injected as `GH_TOKEN` so the agent can fall back to `gh pr create`:
 
-The `.claude/secrets/` path is gitignored. Re-run after a token rotation.
+  ```sh
+  mkdir -p .claude/secrets
+  gh auth token > .claude/secrets/gh-token
+  chmod 600 .claude/secrets/gh-token
+  ```
+
+  The `.claude/secrets/` path is gitignored. Re-run after a token rotation.
+
+`crew doctor`'s `github-auth-present` check is green when either channel is configured.
 
 ## Project setup with `env.toml`
 

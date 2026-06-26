@@ -169,16 +169,17 @@ export async function runInit(options: RunInitOptions): Promise<InitResult> {
   result.written.push(writeSettingsJson(answers, cwd));
 
   // 6. gh-token secret scaffold — an empty 0600 placeholder + an idempotent
-  //    `.claude/secrets/` gitignore entry. Never clobbers an existing token; the
-  //    empty placeholder still trips the run-path `requireGhToken` gate, so the
-  //    user is prompted to paste a real PAT. Secret-safe: no token is ever
-  //    written or read here.
+  //    `.claude/secrets/` gitignore entry. Never clobbers an existing token. The
+  //    placeholder is an *optional* fallback slot: dispatch is authorized by a
+  //    GitHub MCP **or** this token (`requireGithubAuth`), so an empty placeholder
+  //    is no longer blocking. Secret-safe: no token is ever written or read here.
   const ghToken = scaffoldGhToken(cwd);
   result.written.push(...ghToken.written);
   if (ghToken.needsToken) {
     log(
-      `gh-token: paste a GitHub PAT (Contents + Pull-requests read/write on the repo) ` +
-        `into ${ghToken.tokenPath} — dispatch can't authorize without it`,
+      `GitHub access for dispatch: configure a GitHub MCP server in ~/.claude.json ` +
+        `(preferred), or paste a PAT (Contents + Pull-requests read/write on the repo) ` +
+        `into ${ghToken.tokenPath} (chmod 600). One channel is enough.`,
     );
   }
 
