@@ -10,7 +10,7 @@ covers:
 
 # Local development
 
-Crew runs as a docker compose stack on the host: a `daemon` service (Fastify + SQLite at `/state/state.db`) and a `dashboard` service (Vite). `crew run <KEY>` brings up a per-worktree stack via [`packages/cli/src/lib/docker/start-bringup.ts`](../packages/cli/src/lib/docker/start-bringup.ts); the canonical stack is started with `docker compose up --build --wait` from the repo root. User-facing setup lives in [`README.md`](../README.md); this file captures the rules agents need when touching the stack itself.
+Crew runs as a docker compose stack on the host: a `daemon` service (Fastify + SQLite at `/state/state.db`) and a `dashboard` service (Vite), plus an opt-in `webhook-proxy` front door (Caddy, `profiles: [webhook]` — see below). `crew run <KEY>` brings up a per-worktree stack via [`packages/cli/src/lib/docker/start-bringup.ts`](../packages/cli/src/lib/docker/start-bringup.ts); the canonical stack is started with `docker compose up --build --wait` from the repo root. User-facing setup lives in [`README.md`](../README.md); this file captures the rules agents need when touching the stack itself.
 
 ## Hot-reload is the default
 
@@ -67,6 +67,29 @@ missing bind-mount source as a *directory*. So the host file must exist as a fil
 loader's missing-file tolerance only covers the daemon-side absence (no mount); once the
 mount exists it must point at a real file. See `docs/runbooks/github-webhook-funnel.md`
 (authored in the interactive child ticket) for the operator setup.
+
+## The `webhook-proxy` front door (CREW-302)
+
+The `webhook-proxy` service (`caddy:2-alpine`) is the crew **public exposure
+boundary** for inbound GitHub webhooks. Its [`Caddyfile`](../packages/daemon/webhook-proxy/Caddyfile)
+is the entire allow-list: only `POST /api/webhooks/github` is reverse-proxied to
+`daemon:7773`; everything else 404s. So even when the published port is funnelled
+to the public internet, the daemon's tailnet-only routes stay invisible. Add a
+future public path by adding another `@matcher` + `handle` block — never widen the
+proxy itself.
+
+- **Opt-in via `profiles: [webhook]`** — it is *not* part of the default `dev`
+  bringup, so normal `crew run` / `docker compose up` stacks don't start it. Bring
+  it up explicitly: `docker compose --profile webhook up -d webhook-proxy`.
+- **Reverse-proxies to `daemon:7773`** (the container port over the compose
+  network), so the target is independent of per-worktree host-port hashing.
+- **Publishes `${CREW_WEBHOOK_PROXY_PORT:-8081}:8081`.** Unlike the daemon/vite
+  ports, `env.toml` does not hash this one today; override `CREW_WEBHOOK_PROXY_PORT`
+  by hand if you run the profile in more than one worktree at once.
+- **Boundary check** (host curl is sandboxed → `ECONNREFUSED`; curl from inside the
+  daemon container, which shares the network and has `curl`): a `POST` to the
+  webhook path reaches the daemon (a receiver status, *not* Caddy's 404), while
+  `/api/agents` and a wrong-method `GET` both return Caddy's 404.
 
 ## `env.toml` is the source of truth for per-worktree env
 

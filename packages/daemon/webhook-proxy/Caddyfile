@@ -1,0 +1,16 @@
+# The crew public exposure boundary. Only the paths allow-listed here are
+# reachable through the funnelled port; everything else 404s and the daemon's
+# unauthenticated routes stay invisible. Add future public paths as more
+# @matchers + handle blocks.
+:8081 {
+	@webhook {
+		method POST
+		path /api/webhooks/github
+	}
+	handle @webhook {
+		reverse_proxy daemon:7773
+	}
+	handle {
+		respond 404
+	}
+}

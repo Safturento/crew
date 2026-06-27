@@ -70,6 +70,25 @@ services:
     cpus: 1.0
     restart: unless-stopped
 
+  # Crew-owned Caddy front door (CREW-302). The Caddyfile is the entire public
+  # exposure boundary: it allow-lists exactly `POST /api/webhooks/github` →
+  # `daemon:7773` and 404s everything else, so the daemon's tailnet-only routes
+  # stay invisible even when this port is funnelled. Opt-in via `profiles:
+  # [webhook]` (not part of the default `dev` bringup); the funnel maps to :8081.
+  webhook-proxy:
+    profiles: [webhook]
+    image: caddy:2-alpine
+    volumes:
+      - ./packages/daemon/webhook-proxy/Caddyfile:/etc/caddy/Caddyfile:ro
+    ports:
+      - '${CREW_WEBHOOK_PROXY_PORT:-8081}:8081'
+    depends_on:
+      daemon:
+        condition: service_healthy
+    restart: unless-stopped
+    mem_limit: 128m
+    cpus: 0.25
+
   dashboard:
     profiles: [dev]
     build:
