@@ -49,6 +49,7 @@ Organization: Active is grouped by topic (not chronology) since the dominant acc
     - [2026-04-28 — Dashboard New Run modal + projects route view](#2026-04-28--dashboard-new-run-modal--projects-route-view)
     - [2026-04-28 — `useAttention.clear()` snapshot semantic isn't directly tested](#2026-04-28--useattentionclear-snapshot-semantic-isnt-directly-tested)
   - [Daemon, CLI & Dispatch](#daemon-cli--dispatch)
+    - [2026-06-27 — Auto-rebase open PRs on upstream merge via the new webhook (no manual fix-pr)](#2026-06-27--auto-rebase-open-prs-on-upstream-merge-via-the-new-webhook-no-manual-fix-pr)
     - [2026-06-27 — GitHub webhook receiver returns 500 (not a clean 4xx) on an unsigned/empty POST](#2026-06-27--github-webhook-receiver-returns-500-not-a-clean-4xx-on-an-unsignedempty-post)
     - [2026-06-25 — Third `isProcessAlive` copy in `commands/daemon.ts` not yet consolidated](#2026-06-25--third-isprocessalive-copy-in-commandsdaemonts-not-yet-consolidated)
     - [2026-06-20 — `crew resume` emits `run_started` as source `cli-run`, blurring resume vs original-run in the audit trail](#2026-06-20--crew-resume-emits-run_started-as-source-cli-run-blurring-resume-vs-original-run-in-the-audit-trail)
@@ -762,6 +763,20 @@ The "synthetic Unregistered section" feels right — single render path, no extr
 **Shape of work:** Tiny cleanup. Add 2–3 RTL test cases. Bundle into the cva-cleanup ticket above or stand alone.
 
 ### Daemon, CLI & Dispatch
+
+#### 2026-06-27 — Auto-rebase open PRs on upstream merge via the new webhook (no manual fix-pr)
+
+**What:** Now that the daemon receives GitHub `pull_request` events (CREW-303), a merge to `main` can trigger an automatic reaction: re-check every *other* open crew PR for conflicts against the new `main`, and for each one that's now conflicted, auto-dispatch a `fix-pr`-style agent to rebase + resolve — instead of the operator noticing the red "conflicts" badge and manually running `crew fix-pr`.
+
+**Why noticed:** Raised during the CREW-303 live verification (2026-06-27), immediately after the `pr_merged` webhook flip was confirmed working end-to-end. The realization: the webhook receiver isn't just for merge-detection — it's a general "the daemon now hears about GitHub events" capability, and the highest-value first use is killing the manual-rebase toil when one merge invalidates sibling PRs. Context: crew dispatches multiple parallel ticket branches off `main`; merging one routinely conflicts the others, and today each needs a hand-run `fix-pr`.
+
+**Anchors:** `packages/daemon/src/services/GithubWebhookService.ts` (the receiver — would branch on the `closed`/merged action beyond the current `markMerged`); `packages/daemon/src/services/github/github-client.ts` (the Octokit client — would query other open PRs' `mergeable_state`); the existing `crew fix-pr` dispatch path (the agent that does the rebase). The merge event already carries the base branch.
+
+**What's been considered:** Mergeability has a GitHub quirk — `mergeable_state` is recomputed *asynchronously* after a push to base, so the handler can't read it synchronously on the merge event; it'd need to poll/recompute (short delay) or attempt a trial rebase. Auto-dispatching agents off a webhook also needs guardrails: scope (only crew-tracked agents in `pr_open`?), a concurrency cap, and avoiding a dispatch storm when many PRs conflict at once. The `fix-pr` machinery already exists, so the work is mostly the trigger + scoping/safety, not the rebase itself.
+
+**Shape of work:** Likely its own Epic. Roughly: (1) extend the receiver to fire on merge with the base branch; (2) a daemon service that lists crew-tracked open PRs against that base and classifies the conflicted ones (Octokit `mergeable_state`, handling the async recompute); (3) an auto-dispatch path reusing `fix-pr`, gated by scope + concurrency policy; (4) operator controls (opt-in per project / a dashboard toggle).
+
+**Open questions:** Opt-in vs. automatic? Scope to crew-tracked `pr_open` agents only, or any open PR on the repo? How to handle the `mergeable_state` async-compute race? Concurrency cap on auto-dispatched rebases? Escalation path when the auto-rebase can't cleanly resolve?
 
 #### 2026-06-27 — GitHub webhook receiver returns 500 (not a clean 4xx) on an unsigned/empty POST
 
