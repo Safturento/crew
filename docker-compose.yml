@@ -37,10 +37,6 @@ services:
       # per host, so all stacks (canonical + worktree) bind the same host
       # path — worktree stacks just have no runner writing to it.
       - ${HOME}/.crew/runner:/root/.crew/runner:ro
-      # Read-only: host `gh` CLI auth so PrPoller's `gh pr view` calls
-      # (CREW-202) inherit the user's token without an in-container login.
-      # Daemon image installs gh; this mounts the credentials.
-      - ${HOME}/.config/gh:/root/.config/gh:ro
       # Read-only: per-repo GitHub webhook HMAC secrets (CREW-269). The daemon
       # loads these at boot to verify pull_request webhook deliveries. Host path
       # mirrors the other ~/.config/crew mounts; os.homedir() == /root in the
@@ -58,6 +54,10 @@ services:
       # host env at `docker compose up`; absent → the picker degrades to manual entry.
       - CREW_JIRA_EMAIL=${CREW_JIRA_EMAIL:-}
       - CREW_JIRA_API_TOKEN=${CREW_JIRA_API_TOKEN:-}
+      # CREW-301: GitHub token for the daemon's Octokit client (PrPoller). Replaces
+      # the ~/.config/gh mount; interpolated from host env at `docker compose up`.
+      # Seed it with: export CREW_GITHUB_TOKEN=$(gh auth token)
+      - CREW_GITHUB_TOKEN=${CREW_GITHUB_TOKEN:-}
     ports:
       - '${CREW_PORT:-7773}:7773'
     healthcheck:
