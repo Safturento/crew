@@ -164,7 +164,8 @@ export async function buildApp({
       logger.warn({ err, stateEventsDir }, 'state-event watcher failed to attach');
     }
     // CREW-202: start the background PR-status poller. Each round walks
-    // pr_open agents and asks `gh pr view` for the current PR state.
+    // pr_open agents and asks the injected GithubClient (Octokit) for the
+    // current PR state (CREW-301 replaced the old `gh pr view` shell-out).
     if (!prPollerDisabled) prPoller.start();
     // CREW-215: start the runner-status staleness timer (falling edge).
     runnerStatusService.start();
