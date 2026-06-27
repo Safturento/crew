@@ -104,6 +104,11 @@ describe('parseDaemonConfig', () => {
     expect(config.githubWebhookSecretsFile).toBe('/tmp/s.toml');
   });
 
+  it('parses CREW_GITHUB_TOKEN into githubToken (default empty)', () => {
+    expect(parseDaemonConfig({}).githubToken).toBe('');
+    expect(parseDaemonConfig({ CREW_GITHUB_TOKEN: 'ghp_x' }).githubToken).toBe('ghp_x');
+  });
+
   it('reads Jira credentials, defaulting to empty string', () => {
     expect(parseDaemonConfig({}).jiraEmail).toBe('');
     expect(parseDaemonConfig({}).jiraToken).toBe('');
