@@ -1,7 +1,7 @@
 ---
 name: local-dev
 description: Docker stack, env.toml, worktree isolation, sandbox baseline
-last_updated: 2026-06-19
+last_updated: 2026-06-27
 covers:
   - 'docker-compose*.yml'
   - 'env.toml'
@@ -46,7 +46,7 @@ The seed dir lives under `src/` so the `tsx watch` bind-mount picks up changes w
 ## Daemon bind mounts (and the single-compose-file caveat)
 
 The `daemon` service bind-mounts several host paths read-only — registered project
-TOMLs, host transcripts, `gh` auth, the per-repo GitHub webhook secrets file
+TOMLs, host transcripts, the per-repo GitHub webhook secrets file
 (`~/.config/crew/github-webhook-secrets.toml`, CREW-269, loaded at boot to verify
 PR-merge webhook deliveries), the CLI startup-event JSONLs (`~/.crew/startup`),
 the concrete state-event JSONLs (`~/.crew/state-events`, CREW-254, reduced into
