@@ -11,8 +11,10 @@ import { IngestService } from './services/IngestService.js';
 import { EventBus } from './services/EventBus.js';
 import { TimelineService } from './services/TimelineService.js';
 import { MetricsService } from './services/MetricsService.js';
+import { Octokit } from '@octokit/rest';
 import { PrPoller } from './services/PrPoller.js';
 import { PrTransitionService } from './services/PrTransitionService.js';
+import { GithubClient } from './services/github/github-client.js';
 import { RunnerStatusService } from './services/RunnerStatusService.js';
 import { FinishStepsService } from './services/FinishStepsService.js';
 import { ActionService } from './services/ActionService.js';
@@ -43,6 +45,7 @@ export interface DaemonCradle {
   timelineService: TimelineService;
   metricsService: MetricsService;
   prTransitionService: PrTransitionService;
+  githubClient: GithubClient;
   prPoller: PrPoller;
   runnerStatusService: RunnerStatusService;
   finishStepsService: FinishStepsService;
@@ -125,14 +128,21 @@ export function buildContainer(deps: BuildContainerDeps): AwilixContainer<Daemon
     prTransitionService: asFunction(
       ({ db, eventBus, logger }: DaemonCradle) => new PrTransitionService({ db, eventBus, logger }),
     ).singleton(),
+    // CREW-301: typed GitHub client (Octokit) for PrPoller's PR-state checks,
+    // replacing the in-container `gh pr view`. Singleton — one Octokit per
+    // process, authenticated by config.githubToken (empty → calls fail and
+    // PrPoller logs+no-ops).
+    githubClient: asFunction(
+      ({ config }: DaemonCradle) => new GithubClient(new Octokit({ auth: config.githubToken })),
+    ).singleton(),
     // CREW-202: background + on-demand poller of GitHub PR state. Singleton
     // because `start()` schedules a setInterval the app owns the lifetime
     // of — request-scoped instances would each schedule their own timer.
     // CREW-268: routes the transition through prTransitionService and runs at
     // a 30-min backstop cadence behind the webhook fast path.
     prPoller: asFunction(
-      ({ db, logger, prTransitionService }: DaemonCradle) =>
-        new PrPoller({ db, logger, prTransitions: prTransitionService }),
+      ({ db, logger, prTransitionService, githubClient }: DaemonCradle) =>
+        new PrPoller({ db, logger, prTransitions: prTransitionService, github: githubClient }),
     ).singleton(),
     // CREW-215: tracks the host runner's heartbeat → online/offline edges.
     // Singleton because the heartbeat state + falling-edge timer must be

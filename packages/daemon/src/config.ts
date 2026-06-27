@@ -64,6 +64,10 @@ const daemonConfigSchema = z.object({
   // container via docker-compose `environment:` (${CREW_JIRA_EMAIL:-}).
   CREW_JIRA_EMAIL: z.string().default(''),
   CREW_JIRA_API_TOKEN: z.string().default(''),
+  // GitHub token for the daemon's Octokit client (PrPoller PR-state checks).
+  // Replaces the ~/.config/gh creds mount; interpolated from host env at
+  // `docker compose up`. Empty → Octokit calls fail and PrPoller logs+no-ops.
+  CREW_GITHUB_TOKEN: z.string().default(''),
 });
 
 export interface DaemonConfig {
@@ -87,6 +91,8 @@ export interface DaemonConfig {
   jiraEmail: string;
   /** Jira API token for the New Run ticket picker (empty → degraded). */
   jiraToken: string;
+  /** GitHub token for the daemon's Octokit client (PrPoller). Empty → degraded. */
+  githubToken: string;
 }
 
 /**
@@ -112,5 +118,6 @@ export function parseDaemonConfig(
     githubWebhookSecretsFile: parsed.CREW_GITHUB_WEBHOOK_SECRETS_FILE,
     jiraEmail: parsed.CREW_JIRA_EMAIL,
     jiraToken: parsed.CREW_JIRA_API_TOKEN,
+    githubToken: parsed.CREW_GITHUB_TOKEN,
   };
 }

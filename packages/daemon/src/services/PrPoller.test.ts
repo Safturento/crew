@@ -8,18 +8,18 @@ import { useTmpDir } from '../test/tmpdir.js';
 import { EventBus, type SseEvent } from './EventBus.js';
 import { PrPoller } from './PrPoller.js';
 import { PrTransitionService } from './PrTransitionService.js';
-
-vi.mock('./github/fetch-pr-state.js', () => ({
-  fetchPrStateViaGh: vi.fn(),
-}));
-import { fetchPrStateViaGh } from './github/fetch-pr-state.js';
+import type { GithubClient } from './github/github-client.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const MIGRATIONS_DIR = resolve(__dirname, '..', 'migrations');
 
 const tmp = useTmpDir('crew-pr-poller-');
 const silentLogger: Logger = pino({ level: 'silent' });
-const mockedFetch = vi.mocked(fetchPrStateViaGh);
+// Stub for GithubClient.fetchPrState the tests program per-case; the poller is
+// constructed with a GithubClient-shaped stub wrapping it (CREW-301 replaces
+// the old `gh pr view` module mock with constructor injection).
+const mockedFetch = vi.fn();
+const githubStub = { fetchPrState: mockedFetch } as unknown as GithubClient;
 
 async function freshDb(): Promise<Kysely<DaemonDatabase>> {
   const dir = tmp();
@@ -40,7 +40,7 @@ function makePoller(
   intervalMs?: number,
 ): PrPoller {
   const prTransitions = new PrTransitionService({ db, eventBus: bus, logger });
-  return new PrPoller({ db, logger, prTransitions, intervalMs });
+  return new PrPoller({ db, logger, prTransitions, github: githubStub, intervalMs });
 }
 
 async function seedAgent(

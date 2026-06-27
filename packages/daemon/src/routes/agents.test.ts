@@ -9,11 +9,15 @@ import { parseDaemonConfig } from '../config.js';
 import { createDb, runMigrations } from '../db.js';
 import { useTmpDir } from '../test/tmpdir.js';
 
-vi.mock('../services/github/fetch-pr-state.js', () => ({
-  fetchPrStateViaGh: vi.fn(),
+// CREW-301: PrPoller resolves a GithubClient (Octokit) from the container
+// instead of shelling out to `gh pr view`. Mock the client class so the
+// refresh-pr-status route exercises a stubbed PR state without a real Octokit.
+const { mockedFetchPr } = vi.hoisted(() => ({ mockedFetchPr: vi.fn() }));
+vi.mock('../services/github/github-client.js', () => ({
+  GithubClient: class {
+    fetchPrState = mockedFetchPr;
+  },
 }));
-import { fetchPrStateViaGh } from '../services/github/fetch-pr-state.js';
-const mockedFetchPr = vi.mocked(fetchPrStateViaGh);
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const MIGRATIONS_DIR = resolve(__dirname, '..', 'migrations');
