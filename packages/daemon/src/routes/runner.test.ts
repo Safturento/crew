@@ -398,14 +398,21 @@ describe('GET /api/runner/supervisor-log', () => {
     const dir = tmp();
     const logDir = join(dir, 'runner');
     mkdirSync(logDir, { recursive: true });
+    // Lines below are the verbatim `deps.log(...)` strings the runner emits in
+    // packages/cli/src/lib/runner/{supervisor,loop}.ts — management lines plus
+    // the per-action/per-command noise the filter must drop.
     writeFileSync(
       join(logDir, 'runner.log'),
       [
         '[2026-06-25T00:00:00.000Z] runner started (pid 1)',
-        '[2026-06-25T00:00:01.000Z] launched action 5 (run CREW-1)',
-        '[2026-06-25T00:00:02.000Z] worker exited 1; respawning',
-        '[2026-06-25T00:00:03.000Z] reaped 2 dead process(es): CREW-2, CREW-3',
-        '[2026-06-25T00:00:04.000Z] poll error: timeout',
+        '[2026-06-25T00:00:01.000Z] runner already running (pid 1)',
+        '[2026-06-25T00:00:02.000Z] runner failed to start (no pid)',
+        '[2026-06-25T00:00:03.000Z] launched action 5 (run CREW-1)',
+        '[2026-06-25T00:00:04.000Z] worker exited 1; respawning',
+        '[2026-06-25T00:00:05.000Z] removed stale pidfile (pid 9)',
+        '[2026-06-25T00:00:06.000Z] reaped 2 dead process(es): CREW-2, CREW-3',
+        '[2026-06-25T00:00:07.000Z] poll error: timeout',
+        '[2026-06-25T00:00:08.000Z] applied command 7 (cancel_soft CREW-4)',
         '',
       ].join('\n'),
     );
@@ -414,11 +421,18 @@ describe('GET /api/runner/supervisor-log', () => {
       const res = await app.inject({ method: 'GET', url: '/api/runner/supervisor-log' });
       expect(res.statusCode).toBe(200);
       const { lines } = res.json() as { lines: string[] };
+      // Every supervisor-lifecycle line is kept, including the failed-to-start
+      // diagnostic and the already-running guard.
       expect(lines.some((l) => l.includes('runner started'))).toBe(true);
+      expect(lines.some((l) => l.includes('runner already running'))).toBe(true);
+      expect(lines.some((l) => l.includes('runner failed to start'))).toBe(true);
       expect(lines.some((l) => l.includes('respawning'))).toBe(true);
+      expect(lines.some((l) => l.includes('removed stale pidfile'))).toBe(true);
       expect(lines.some((l) => l.includes('reaped'))).toBe(true);
+      // Per-action/per-command noise is dropped.
       expect(lines.some((l) => l.includes('launched action'))).toBe(false);
       expect(lines.some((l) => l.includes('poll error'))).toBe(false);
+      expect(lines.some((l) => l.includes('applied command'))).toBe(false);
     } finally {
       await close();
     }

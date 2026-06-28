@@ -351,8 +351,11 @@ export async function registerRunsRoutes(app: DaemonApp): Promise<void> {
 
       // Poll for appended bytes. A short interval is deterministic and avoids
       // the watcher-readiness race a single-file FS watch would introduce;
-      // startup logs are short-lived and low-volume, so polling is cheap.
-      const timer = setInterval(() => void emitAppended(), STARTUP_LOG_TAIL_INTERVAL_MS);
+      // startup logs are short-lived and low-volume, so polling is cheap. A
+      // transient read error on one tick is swallowed — the next tick retries.
+      const timer = setInterval(() => {
+        emitAppended().catch(() => {});
+      }, STARTUP_LOG_TAIL_INTERVAL_MS);
 
       const cleanup = (): void => {
         clearInterval(timer);

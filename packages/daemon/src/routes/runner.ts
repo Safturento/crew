@@ -97,16 +97,20 @@ const SupervisorLogQuerySchema = z.object({
 });
 
 /**
- * Management lines the supervisor drawer cares about — process spawn/respawn,
- * the supervisor's own start/stop, dead-process reaping, and stale-pidfile
- * recovery. `runner.log` interleaves these with per-action/per-command noise
- * (`launched action ...`, `applied command ...`, `poll error ...`) that
+ * Management lines the supervisor drawer cares about — the supervisor's own
+ * lifecycle (`runner started|stopped|already running|failed to start ...`),
+ * worker respawn (`worker exited N; respawning`), stale-pidfile recovery
+ * (`stale pidfile ...` / `removed stale pidfile ...`), and dead-process
+ * reaping (`reaped N dead process(es) ...`). Matched against the actual
+ * `deps.log(...)` strings the runner emits in `packages/cli/src/lib/runner/
+ * {supervisor,loop}.ts`. `runner.log` interleaves these with per-action /
+ * per-command noise (`launched action ...`, `applied command ...`, `poll
+ * error ...`, `iteration error ...`) — none of which contain `runner` — that
  * belongs to the queued/recently-ended surfaces, not the supervisor view.
  * (Spec open question: revisit if the runner later emits a structured
  * management-event stream; `?raw=1` serves the unfiltered tail meanwhile.)
  */
-const SUPERVISOR_MANAGEMENT_RE =
-  /\b(respawn|runner (?:started|stopped)|stale pidfile|worker exited|reap|heartbeat|spawn)/i;
+const SUPERVISOR_MANAGEMENT_RE = /\b(runner\b|respawn|stale pidfile|worker exited|reap)/i;
 
 /**
  * Read the last `tail` lines of the runner log. Returns `[]` when the file
