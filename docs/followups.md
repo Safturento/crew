@@ -33,8 +33,6 @@ Organization: Active is grouped by topic (not chronology) since the dominant acc
     - [2026-06-19 — Runner page: Failed-to-start / Queued / Recently-ended need read endpoints; supervisor controls unwired](#2026-06-19--runner-page-failed-to-start--queued--recently-ended-need-read-endpoints-supervisor-controls-unwired)
     - [2026-06-08 — Filters popover open inside the agent drawer makes the drawer click-dead (trigger/outside click dismisses the drawer)](#2026-06-08--filters-popover-open-inside-the-agent-drawer-makes-the-drawer-click-dead-triggeroutside-click-dismisses-the-drawer)
     - [2026-06-05 — Drawer `liveMode` + section-collapse leak across an in-place agent switch](#2026-06-05--drawer-livemode--section-collapse-leak-across-an-in-place-agent-switch)
-    - [2026-06-05 — Dashboard has no cancel action; CLI kill never notifies the daemon](#2026-06-05--dashboard-has-no-cancel-action-cli-kill-never-notifies-the-daemon)
-    - [2026-06-04 — New Run modal step 2 is a text entry, not the Figma open-ticket picker](#2026-06-04--new-run-modal-step-2-is-a-text-entry-not-the-figma-open-ticket-picker)
     - [2026-06-03 — CREW-137 modal composites unverified until wired into a screen](#2026-06-03--crew-137-modal-composites-unverified-until-wired-into-a-screen)
     - [2026-05-22 — `${APP_URL}` template literal in DrawerHeader docker pill (backend bug)](#2026-05-22--app_url-template-literal-in-drawerheader-docker-pill-backend-bug)
     - [2026-05-22 — Layer-1 RunMetrics widget loses its drawer home in the redesign — find it a new one](#2026-05-22--layer-1-runmetrics-widget-loses-its-drawer-home-in-the-redesign--find-it-a-new-one)
@@ -50,14 +48,13 @@ Organization: Active is grouped by topic (not chronology) since the dominant acc
     - [2026-04-28 — Dashboard New Run modal + projects route view](#2026-04-28--dashboard-new-run-modal--projects-route-view)
     - [2026-04-28 — `useAttention.clear()` snapshot semantic isn't directly tested](#2026-04-28--useattentionclear-snapshot-semantic-isnt-directly-tested)
   - [Daemon, CLI & Dispatch](#daemon-cli--dispatch)
+    - [2026-06-28 — Orphaned/stale runner workers heartbeat forever; no single-instance reconcile or code-version guard](#2026-06-28--orphanedstale-runner-workers-heartbeat-forever-no-single-instance-reconcile-or-code-version-guard)
     - [2026-06-27 — Auto-rebase open PRs on upstream merge via the new webhook (no manual fix-pr)](#2026-06-27--auto-rebase-open-prs-on-upstream-merge-via-the-new-webhook-no-manual-fix-pr)
     - [2026-06-27 — GitHub webhook receiver returns 500 (not a clean 4xx) on an unsigned/empty POST](#2026-06-27--github-webhook-receiver-returns-500-not-a-clean-4xx-on-an-unsignedempty-post)
     - [2026-06-25 — Third `isProcessAlive` copy in `commands/daemon.ts` not yet consolidated](#2026-06-25--third-isprocessalive-copy-in-commandsdaemonts-not-yet-consolidated)
     - [2026-06-20 — `crew resume` emits `run_started` as source `cli-run`, blurring resume vs original-run in the audit trail](#2026-06-20--crew-resume-emits-run_started-as-source-cli-run-blurring-resume-vs-original-run-in-the-audit-trail)
     - [2026-06-20 — Headless `crew run` silently cuts off an agent that backgrounds work and yields via `ScheduleWakeup`](#2026-06-20--headless-crew-run-silently-cuts-off-an-agent-that-backgrounds-work-and-yields-via-schedulewakeup)
     - [2026-06-19 — Per-run worktree stacks leak anonymous `node_modules` volumes (Docker disk hit 210 GB; 182 GB reclaimed manually)](#2026-06-19--per-run-worktree-stacks-leak-anonymous-node_modules-volumes-docker-disk-hit-210-gb-182-gb-reclaimed-manually)
-    - [2026-06-19 — `PrTransitionService.markMerged` check-then-insert isn't transaction-guarded against a true concurrent race](#2026-06-19--prtransitionservicemarkmerged-check-then-insert-isnt-transaction-guarded-against-a-true-concurrent-race)
-    - [2026-06-19 — Pause/resume/message build is gated on a host-only confirmation spike (CREW-248)](#2026-06-19--pauseresumemessage-build-is-gated-on-a-host-only-confirmation-spike-crew-248)
     - [2026-06-19 — A throw between `*_started` and `*_exited` leaves the agent stuck `running`](#2026-06-19--a-throw-between-_started-and-_exited-leaves-the-agent-stuck-running)
     - [2026-06-19 — `pr_created` hook regex misses env-var/command-prefixed `gh pr create`](#2026-06-19--pr_created-hook-regex-misses-env-varcommand-prefixed-gh-pr-create)
     - [2026-06-17 — Host runner can't apply `dequeue` (no daemon "drop pending action" route)](#2026-06-17--host-runner-cant-apply-dequeue-no-daemon-drop-pending-action-route)
@@ -105,6 +102,10 @@ Organization: Active is grouped by topic (not chronology) since the dominant acc
     - [2026-05-15 — `.agents/` topic-doc system vs native `.claude/rules/` and agents.md alignment](#2026-05-15--agents-topic-doc-system-vs-native-clauderules-and-agentsmd-alignment)
     - [2026-05-12 — Rethink followup-tracking system (priority tier + Jira backlog sync)](#2026-05-12--rethink-followup-tracking-system-priority-tier--jira-backlog-sync)
 - [Resolved](#resolved)
+  - [2026-06-05 — Dashboard has no cancel action; CLI kill never notifies the daemon](#2026-06-05--dashboard-has-no-cancel-action-cli-kill-never-notifies-the-daemon)
+  - [2026-06-04 — New Run modal step 2 is a text entry, not the Figma open-ticket picker](#2026-06-04--new-run-modal-step-2-is-a-text-entry-not-the-figma-open-ticket-picker)
+  - [2026-06-19 — Pause/resume/message build is gated on a host-only confirmation spike (CREW-248)](#2026-06-19--pauseresumemessage-build-is-gated-on-a-host-only-confirmation-spike-crew-248)
+  - [2026-06-19 — `PrTransitionService.markMerged` check-then-insert isn't transaction-guarded against a true concurrent race](#2026-06-19--prtransitionservicemarkmerged-check-then-insert-isnt-transaction-guarded-against-a-true-concurrent-race)
   - [2026-06-25 — Runner never reaps dead processes: phantom "running" entries linger, and early-death runs never settle to error](#2026-06-25--runner-never-reaps-dead-processes-phantom-running-entries-linger-and-early-death-runs-never-settle-to-error)
   - [2026-06-25 — `crew run` worktree creation is non-idempotent: an orphan branch silently wedges every future run of a ticket](#2026-06-25--crew-run-worktree-creation-is-non-idempotent-an-orphan-branch-silently-wedges-every-future-run-of-a-ticket)
   - [2026-06-19 — `AgentsService.deriveState` terminal guards silently revert a state override out of `finished`/`error`/`pr_merged`](#2026-06-19--agentsservicederivestate-terminal-guards-silently-revert-a-state-override-out-of-finishederrorpr_merged)
@@ -459,50 +460,6 @@ Organization: Active is grouped by topic (not chronology) since the dominant acc
 
 **Shape of work:** XS — one-line `key` add, or a few lines extending the existing re-seed block, plus a Timeline rerender-without-remount test for `liveMode`/collapse (mirror the CREW-232 `re-seeds filters when the agent key changes without a remount` test).
 
-#### 2026-06-05 — Dashboard has no cancel action; CLI kill never notifies the daemon
-
-**Ticket:** [CREW-235](https://safturento.atlassian.net/browse/CREW-235) — Epic "Runner control parity (UI ⇄ CLI run-lifecycle actions)", needs-planning. This is the Epic's graceful-path half; resolution gated on Epic completion.
-
-**What:** There is no way to stop an in-flight `crew run` from the dashboard, and stopping one from a separate shell (`kill`, killing the container, deleting the worktree) never tells the daemon the run ended. `crew run` only POSTs `…/runs/:id/complete` on a clean exit of the foreground process — claude exits normally, or a foreground Ctrl+C that the `sigintHandler` forwards to claude before falling through to the `completeRun` call. An out-of-band kill skips that path entirely, so the run row keeps `completed_at = null` and the agent shows "running" forever (the orphaned-run symptom). The dashboard's action surface (the CREW-208 lineage: New Run / Fix PR / Finish) has no Cancel verb, so the operator's only recourse is a CLI kill — which is exactly what orphans the run.
-
-**Why noticed:** 2026-06-05 session. After hard-resetting the four Dashboard-polish runs (CREW-231–234) from the command line — there's no dashboard control for it — all four kept showing "running" on the dashboard. Tracing it: the kill bypassed `completeRun`, leaving the run rows in-flight. The display self-corrects on re-dispatch (state derivation keys off the latest run by id), but the orphaned rows persist underneath, and there's no graceful way to end a run from the UI in the first place.
-
-**Anchors:** `packages/cli/src/commands/run.ts` ~`:587`–`:657` (the abort controller, `sigintHandler`, and the `completeRun` call reached only on the clean path); `packages/daemon/src/routes/runs.ts` (the `:runId/complete` endpoint a Cancel action would land); `packages/cli/src/lib/runner/` + `packages/daemon/src/routes/runner.ts` (the host runner that executes dispatched verbs — a Cancel would need it to signal the spawned process); the CREW-208 dashboard-actions lineage. Pairs with the 2026-05-18 reaper followup below.
-
-**What's been considered:** Two complementary angles, both wanted — (1) a **dashboard Cancel/Abort action** routed through the action queue + runner (signal the spawned `crew run` process) so it lands a clean `completeRun`, mirroring how New Run / Fix PR / Finish already flow; (2) a **daemon-side reaper** (the 2026-05-18 followup) as the backstop for kills that bypass _any_ graceful path (SIGKILL, container death). The action handles the intentional case cleanly; the reaper catches the rest. The terminal-state question is shared with the reaper: a cancelled/reaped run probably wants a distinct `cancelled`/`abandoned` state rather than `error`.
-
-**Shape of work:** Belongs to the not-yet-planned runner-status/logs epic (item #3 of the 2026-06-05 dashboard worklist) or a dedicated run-lifecycle-control slice — not its own ticket until that epic is brainstormed. Medium: a daemon action verb + route, runner support for signalling a tracked child process, a dashboard button on active agents, and the terminal-state decision.
-
-**Open questions:**
-
-- Does the runner currently track the PID of each `crew run` it spawns well enough to signal it cleanly? (Check `packages/cli/src/lib/runner/`.)
-- New terminal state (`cancelled`) vs reusing `error`? Resolve together with the reaper followup, which raises the same question.
-
-#### 2026-06-04 — New Run modal step 2 is a text entry, not the Figma open-ticket picker
-
-**Ticket:** [CREW-276](https://safturento.atlassian.net/browse/CREW-276) — _Epic (children CREW-277 / CREW-278 / CREW-279). Resolution gated on Epic completion, not individual children._
-
-**What:** CREW-218's New Run modal ships step 2 ("Pick a ticket") as a single `FormField` where the operator types a ticket key, and step 3 ("Confirm") omits the Figma's "Title" summary row. The Figma frames (`1:3418`, `9:2`) instead show a searchable list of the project's **open Jira tickets** (rows like `KAN-31 · Drag-and-drop reordering…` with a priority badge + a "Filter open tickets…" search input) and a ticket _title_ on the confirm step. Both gaps have the same root cause: no daemon endpoint serves open tickets or a ticket summary to the dashboard — `DaemonClient` exposes only `listProjects` / `listAgents` / `enqueueAction` / `getRunnerStatus`. The plan (T6 step 2) explicitly deferred live ticket fetching ("otherwise skip in v1").
-
-**Why noticed:** Implementing CREW-218. Step 1 (project picker) maps cleanly to `listProjects()`, but steps 2–3 need data the dashboard can't fetch yet, so the modal degrades to a typed key. Surfaced during the visual-fidelity pass as the largest code↔Figma divergence (medium, intentional).
-
-**Anchors:**
-
-- `packages/dashboard/src/components/NewRunModal.tsx` — step 2 `FormField`; step 3 `SummaryRow`s (no Title).
-- Figma `1:3418` (Select Ticket), `9:2` (Confirm) + composites `362:2212` / `362:2213` in `.crew/figma-snapshot/`.
-- `packages/dashboard/src/data/DaemonClient.ts` — the missing `listOpenTickets(project)` / `getTicket(key)` surface.
-- `packages/shared/src/jira` — the Jira client the daemon would call.
-- Sibling followup directly above: "CREW-137 modal composites unverified" — CREW-218 is the wiring ticket it anticipated; its Modal/Stepper/ModalSelectionRow/FormField fidelity is now verified (AlertModal still unwired).
-
-**What's been considered:** A `GET /api/projects/:slug/tickets` (open issues via the project's Jira board) + `GET /api/tickets/:key` (summary) would let step 2 become the real picker and step 3 show the title. Out of scope for T6 (dashboard-only); needs a daemon route + Jira-client call + Bruno coverage. Also open: should the New Run modal's "Spawn agent" respect runner-online status (like T5's QuickAction degradation), or is queuing-while-offline acceptable since the daemon holds the pending action until a runner connects? Today it always enqueues.
-
-**Shape of work:** One daemon ticket (open-tickets + ticket-summary routes + Jira client + Bruno) blocking one dashboard ticket (swap step 2's FormField for a `ModalSelectionRow` list with the search `Input`, add the Title row to step 3). The runner-gating question is a small separate decision, possibly just a disabled-state on Spawn.
-
-**Open questions:**
-
-- [ ] Source of "open tickets" — the project's Jira board/JQL, or only tickets with no existing agent yet?
-- [ ] Should Spawn be disabled / warn when no runner is online?
-
 #### 2026-06-03 — CREW-137 modal composites unverified until wired into a screen
 
 **What:** CREW-137 added the modal-family composites (Modal, AlertModal, ModalSelectionRow, Stepper) but wired none into a live screen, so their visual fidelity could not be verified at merge — the PR shipped on component-build correctness alone. When the first real consumer lands (e.g. the New Run modal), verify each composite against its Figma reference and adjust the composite where it diverges.
@@ -782,6 +739,30 @@ The "synthetic Unregistered section" feels right — single render path, no extr
 
 ### Daemon, CLI & Dispatch
 
+#### 2026-06-28 — Orphaned/stale runner workers heartbeat forever; no single-instance reconcile or code-version guard
+
+**What:** The host runner has two unmanaged failure modes that let a dead-but-heartbeating worker pollute the Runner tab indefinitely, and the management commands can't clean it up:
+
+1. **A worker can outlive its supervisor and keep heartbeating.** The supervisor (`crew runner __supervise`) spawns one worker (`crew runner __worker`); if the supervisor dies (crash, the daemon-connectivity blip seen at `02:21` in `runner.log`, a `kill` that missed it) the worker is reparented (to a subreaper / init) and keeps POSTing `/api/runner/heartbeat` with its stale in-memory `Registry`. Nothing detects "a worker with no supervisor." The pidfile (`~/.config/crew/runner.pid`) only ever records the *supervisor* pid, so `crew runner stop`/`restart` — which read that one pid — are blind to an orphan worker. Net: the orphan's snapshot keeps overwriting the daemon's live-process list.
+
+2. **A long-lived worker runs stale code with no version signal.** The runner runs from source via `tsx` (`node_modules/.bin/tsx packages/cli/src/index.ts runner __worker`), so a worker started before a code change keeps the *old* logic loaded in memory forever — there's no watch/reload. The orphan we hit had been up `4d19h` and predated the `reapDead` liveness sweep (CREW-288), so it never pruned its own dead children — exactly the bug CREW-288 "fixed", still live in an old process. There is no way to ask "is the active runner on latest code?" short of reading `etime` and correlating against git history by hand.
+
+3. **`crew runner restart` doesn't reconcile duplicates.** `restart` = `stop` (SIGTERM the pidfile pid) + `start` (spawn a fresh supervisor). When the pidfile is stale/missing the `stop` is a silent no-op and `start` adds a *second* live runner alongside the survivor → two workers heartbeating one daemon, and the Runner tab flip-flops between their snapshots every ~5s (each worker's own heartbeat cadence). There is no "is more than one worker heartbeating this daemon?" check and no all-instances reset.
+
+**Why noticed:** 2026-06-28 cleanup session. The Runner tab showed 26 phantom "Live processes" (actions back to 2026-06-24, including `finish` commands "running" for 4 days). Root cause: an orphaned `4d19h`-old worker (pid `30556`, reparented to ppid `1222`, no supervisor) running pre-`reapDead` code, endlessly re-pushing its 26-entry registry. The user's `crew runner restart` didn't fix it — it spawned a healthy second runner (pid `607619`, empty registry) next to the orphan, producing a 26↔0 flicker. Fix was manual: find the orphan by process listing on the distinctive `__worker`/`__supervise` tokens (a `crew runner` grep misses the `node …/index.ts runner __worker` cmdline), `kill 30556 30572`, leaving the one healthy runner. Diagnosis was done entirely through `GET /api/runner/status` because the Bash sandbox is in its own PID namespace (`--unshare-pid`) — `kill -0 <hostpid>` and `ps` can't see host runner processes from inside, only the pidfile + `runner.log` (host files) are readable.
+
+**Anchors:** `packages/cli/src/commands/runner.ts` (`startAction`/`stopAction`/`restart`/`spawnSupervisor`/`superviseAction`/`workerAction`; pidfile read at `readPidFile`); `packages/cli/src/lib/runner/paths.ts` (pidfile = `~/.config/crew/runner.pid`, log dir = `~/.crew/runner`); `packages/cli/src/lib/runner/loop.ts` (`startHeartbeat`→`reapDead`); `packages/cli/src/lib/runner/registry.ts`; daemon `RunnerStatusService` (`status()` / heartbeat staleness window) + `GET /api/runner/status`. Related shipped work: Resolved [[#2026-06-25--runner-never-reaps-dead-processes-phantom-running-entries-linger-and-early-death-runs-never-settle-to-error]] (CREW-288 reapDead — only helps *inside* a current-code worker; orthogonal to orphan/stale-code detection).
+
+**What's been considered:**
+- **Single-instance enforcement at the daemon.** The heartbeat already carries enough to stamp each worker with an identity (worker pid / a boot-time nonce). The daemon could reject or flag a heartbeat from a *second* worker id and expose "N workers heartbeating" so the dashboard can warn — turning the silent flip-flop into a visible "duplicate runner" state with a one-click "stop the stale one".
+- **Worker→supervisor liveness.** A worker could probe its own parent (`process.ppid` / `isProcessAlive(supervisorPid)`) each heartbeat and self-exit when orphaned, so a dead supervisor takes its worker with it instead of leaving a zombie. (Mirror of the existing supervisor→worker probe in `supervisor.ts`.)
+- **Code-version stamp.** Stamp the worker at boot with the repo `HEAD` sha (and/or dirty flag) and surface it in `GET /api/runner/status` + the supervisor drawer, so "is the active runner on latest code?" is answerable at a glance and a stale runner is obvious. `crew runner status` could warn when the running sha ≠ current `HEAD`.
+- **A real reset command.** `crew runner restart --force` (or a `reap`/`nuke` verb) that finds *all* `__worker`/`__supervise` processes (token match, not pidfile), kills them, clears the pidfile, and starts exactly one — codifying the manual recovery so the next operator doesn't have to hand-craft the `ps … grep '__worker|__supervise'` + `pkill`.
+
+**Shape of work:** Two-to-three tickets, likely an Epic. (1) worker self-orphan detection + version stamp (CLI `runner/` lib + worker boot) — small/medium; (2) daemon single-instance identity + duplicate-runner surfacing in status/SSE + dashboard warning — medium, touches `RunnerStatusService`, the heartbeat schema in `crew-shared`, and the Runner page; (3) `crew runner restart --force`/reset verb — small. (1) and (3) are independent of the daemon work and can land first.
+
+**Open questions:** When a duplicate worker is detected, who wins — newest boot nonce, or refuse the newcomer? Should an orphaned worker self-exit immediately, or first drain/settle so in-flight (genuinely live) children aren't abandoned? Is `process.ppid`-based orphan detection robust under WSL subreaping (the orphan here reparented to `1222`, not `1`)? Should the version stamp gate anything (e.g. refuse to claim new actions when stale) or be purely advisory?
+
 #### 2026-06-27 — Auto-rebase open PRs on upstream merge via the new webhook (no manual fix-pr)
 
 **What:** Now that the daemon receives GitHub `pull_request` events (CREW-303), a merge to `main` can trigger an automatic reaction: re-check every *other* open crew PR for conflicts against the new `main`, and for each one that's now conflicted, auto-dispatch a `fix-pr`-style agent to rebase + resolve — instead of the operator noticing the red "conflicts" badge and manually running `crew fix-pr`.
@@ -902,44 +883,6 @@ Three fix directions (likely an Epic, not one ticket): (a) **kill the anon volum
 **Shape of work:** Likely an Epic with three children mapping to (a)/(b)/(c). (a) is a small compose change gated on a verification spike (is the anon volume load-bearing?). (b) is a focused `finish.ts` change + tests. (c) is a new CLI subcommand + reaper logic + tests. (a) and (b) are independent; (c) is independent but most valuable shipped last (cleans up whatever (a)/(b) miss).
 
 **Open questions:** Is the `/app/node_modules` anon volume still load-bearing given src-subdir-only bind-mounts, or vestigial (→ just delete it)? Should the reaper run automatically pre-dispatch, or be an explicit `crew prune` the user invokes? Should `crew down` also gain `-v`/`--rmi`, or stay conservative for the canonical stack? Does the canonical (non-worktree) stack share the same per-project anon-volume churn, or only worktree runs?
-
-#### 2026-06-19 — `PrTransitionService.markMerged` check-then-insert isn't transaction-guarded against a true concurrent race
-
-**Ticket:** Resolution gated on Epic [CREW-267](https://safturento.atlassian.net/browse/CREW-267) — fold the decision into child C (the webhook service/route ticket), where the second concurrent caller is introduced.
-
-**What:** `markMerged` reads the latest `state_transitions` row (`latestState`) and, if it's `pr_open`, inserts a `pr_merged` row — without wrapping the read+insert in a transaction (`packages/daemon/src/services/PrTransitionService.ts`, `markMerged` + `latestState`). The `latest === 'pr_open'` precondition collapses _sequential_ re-delivery (double webhook, webhook-after-poll) to one transition perfectly, but two callers that both pass the precondition read _before_ either inserts will both insert — yielding two `pr_merged` rows. The plan's stated constraint is "double-delivery and webhook-vs-poll races must collapse to one transition"; the precondition satisfies the sequential half, not a true concurrent race.
-
-**Why noticed:** Code review of CREW-268 (the extraction ticket). Surfaced as a Minor finding explicitly scoped to the future webhook child — for CREW-268 it is moot because `PrPoller` is the single, single-threaded caller. It becomes live the moment the webhook (`GithubWebhookService`, child C) can fire `markMerged` concurrently with a poll round.
-
-**Anchors:** `packages/daemon/src/services/PrTransitionService.ts` (`markMerged`, `latestState`); `packages/daemon/src/services/PrPoller.ts` (current sole caller); plan `docs/superpowers/plans/2026-06-19-github-webhook-pr-merge.md` (idempotency constraint + Task 8 webhook service); ticket `docs/tickets/CREW-268.md`.
-
-**What's been considered:** Two viable resolutions in child C — (a) wrap the check+insert in a Kysely transaction (SQLite serializes writes, so a `BEGIN IMMEDIATE` + re-read closes the window), or (b) deliberately accept the duplicate row as harmless, since `AgentsService.deriveState` projects from the _latest_ transition and two identical `pr_merged` rows render identically. Option (b) is likely fine at crew's scale and write pattern; the point is to make it a conscious decision rather than an accidental gap. A unique-ish guard (partial index on `agent_key` where `to_state='pr_merged'`) is a third option but heavier than warranted.
-
-**Shape of work:** one-line-ish decision + optional small transaction wrapper in child C; add a concurrent-race test if option (a) is taken.
-
-**Open questions:** Does the webhook actually run on a separate event-loop turn from the poll round such that a race is reachable in practice (both are in-process on one Node daemon)? If `markMerged` calls are never truly interleaved (single-threaded JS, no `await` between the read and insert in the same microtask)… but there _is_ an `await` between `latestState` and the insert, so interleaving is reachable. Confirm in child C.
-
-#### 2026-06-19 — Pause/resume/message build is gated on a host-only confirmation spike (CREW-248)
-
-**Ticket:** Build tracked under Epic [CREW-235](https://safturento.atlassian.net/browse/CREW-235) as three children — [CREW-272](https://safturento.atlassian.net/browse/CREW-272) (apply paths), [CREW-273](https://safturento.atlassian.net/browse/CREW-273) (non-terminal `paused` run-state), [CREW-274](https://safturento.atlassian.net/browse/CREW-274) (dashboard controls). The gating spike [CREW-248](https://safturento.atlassian.net/browse/CREW-248) is **Done**. Resolution gated on the Epic; resolve this entry when the three build children ship.
-
-**Update 2026-06-19:** Gate **closed GREEN** on a host (un-sandboxed) confirmation run — `claude --resume` tolerates a transcript ending on a dangling `tool_use` (Claude Code's resume reconstruction sanitizes the trailing turn before re-sending to the API), so the apply path needs **no** transcript-sanitization branch. The build is now ticketed (CREW-272/273/274, all _Ready for Development_) — no longer deferred. The original blocked-in-sandbox framing below is retained for history.
-
-**What:** The pause/resume/message apply paths (`packages/cli/src/lib/runner/commands.ts`) + dashboard controls are designed-for in the v1 data model but gated behind a feasibility spike (cleanly interrupt a detached headless `claude` mid-turn + resume via `spawnClaudeResume` without a dangling-`tool_use` corrupting state). The spike's empirical leg **could not run in the `crew run` dispatch sandbox** — `~/.claude/projects` + `~/.claude/session-env` are mounted read-only, so a nested `claude` persists no transcript/session and `--resume` has nothing to resume (the Bash tool also can't run). The gate was therefore confirmed on the host instead (see Update above).
-
-**Why noticed:** Ran the CREW-248 spike under `crew run` dispatch; hit the read-only `~/.claude` substrate. See the full writeup + the reproducible host-confirmation script.
-
-**Anchors:**
-
-- `docs/tickets/CREW-248.md` — full spike outcome, the host-confirmation script, the implementation design, and the cross-layer `paused` run-state wrinkle.
-- `packages/cli/src/lib/runner/commands.ts` (`applyCommand`) — `pause`/`resume`/`message` return `failed: not yet supported` today.
-- `packages/cli/src/commands/resume.ts`, `packages/cli/src/lib/claude/spawn.ts` (`spawnClaudeResume`) — the resume mechanism the build reuses.
-
-**What's been considered:** Design settled in `docs/tickets/CREW-248.md` — `pause` = SIGTERM the group + `registry.setState(paused)` (keep tracking); `resume`/`message` = re-dispatch `crew resume <key> [-m message]` via a new injected boundary on `ApplyCommandDeps`. Key wrinkle: `crew run` lands a _terminal_ `completeRun` on any SIGTERM exit (reduces to `error`), so a _non-terminal_ resumable `paused` run-state needs `crew run`/daemon pause-awareness — `paused` is a `LiveProcessState` only today.
-
-**Shape of work:** Now three CREW-235 children — (1) `commands.ts` apply mapping + injected `resume` boundary = CREW-272; (2) non-terminal `paused` run-state in `crew run` + daemon = CREW-273; (3) dashboard Pause/Resume controls = CREW-274. CREW-272 ∥ CREW-273 (parallel — different code seams), both block CREW-274.
-
-**Open questions:** Gate question (does `claude --resume` repair or reject a dangling `tool_use`?) **resolved 2026-06-19 — it repairs/tolerates it.** Remaining build-design choice carried into CREW-273: how to represent a non-terminal `paused` run — sentinel/suppress `completeRun`, distinct signal, or new daemon state?
 
 #### 2026-06-19 — A throw between `*_started` and `*_exited` leaves the agent stuck `running`
 
@@ -1159,7 +1102,7 @@ Three fix directions (likely an Epic, not one ticket): (a) **kill the anon volum
 
 #### 2026-05-18 — Daemon has no reaper for orphaned runs stuck in `running`
 
-**Ticket:** [CREW-235](https://safturento.atlassian.net/browse/CREW-235) — Epic "Runner control parity (UI ⇄ CLI run-lifecycle actions)", needs-planning. This is the Epic's backstop half; resolution gated on Epic completion.
+**Ticket:** [CREW-305](https://safturento.atlassian.net/browse/CREW-305) — standalone Task, Backlog (needs-planning). Carved out of Epic CREW-235 at its 2026-06-28 close: the epic shipped the *manual* Reap affordance plus the `launching`-only auto-reaper ([CREW-244](https://safturento.atlassian.net/browse/CREW-244)), but the automatic detection-and-settle of fully-`running` orphans (no live runner snapshot to diff against) was deferred to this ticket.
 
 **What:** A crew run can finish its real-world work — PR opened and merged, Jira ticket Done — while the daemon's run record stays stuck in `running` indefinitely. The daemon marks a run complete only when the CLI delivers `POST /api/agents/runs/:id/complete` on Claude exit. If that call never lands (CLI crash, daemon down at exit, killed process), the run sits in `running` forever — `completed_at` null, metrics null, no PR URL — and the dashboard shows the agent as perpetually active. Nothing detects or reaps these.
 
@@ -1770,6 +1713,88 @@ The other two open questions (sandbox config drift, Phase 2 + Phase 3 separation
 - Should priority on the markdown side map directly to Jira priority, or stay a separate signal?
 
 ## Resolved
+
+### 2026-06-05 — Dashboard has no cancel action; CLI kill never notifies the daemon
+
+**What:** There is no way to stop an in-flight `crew run` from the dashboard, and stopping one from a separate shell (`kill`, killing the container, deleting the worktree) never tells the daemon the run ended. `crew run` only POSTs `…/runs/:id/complete` on a clean exit of the foreground process — claude exits normally, or a foreground Ctrl+C that the `sigintHandler` forwards to claude before falling through to the `completeRun` call. An out-of-band kill skips that path entirely, so the run row keeps `completed_at = null` and the agent shows "running" forever (the orphaned-run symptom). The dashboard's action surface (the CREW-208 lineage: New Run / Fix PR / Finish) has no Cancel verb, so the operator's only recourse is a CLI kill — which is exactly what orphans the run.
+
+**Why noticed:** 2026-06-05 session. After hard-resetting the four Dashboard-polish runs (CREW-231–234) from the command line — there's no dashboard control for it — all four kept showing "running" on the dashboard. Tracing it: the kill bypassed `completeRun`, leaving the run rows in-flight. The display self-corrects on re-dispatch (state derivation keys off the latest run by id), but the orphaned rows persist underneath, and there's no graceful way to end a run from the UI in the first place.
+
+**Anchors:** `packages/cli/src/commands/run.ts` ~`:587`–`:657` (the abort controller, `sigintHandler`, and the `completeRun` call reached only on the clean path); `packages/daemon/src/routes/runs.ts` (the `:runId/complete` endpoint a Cancel action would land); `packages/cli/src/lib/runner/` + `packages/daemon/src/routes/runner.ts` (the host runner that executes dispatched verbs — a Cancel would need it to signal the spawned process); the CREW-208 dashboard-actions lineage. Pairs with the 2026-05-18 reaper followup below.
+
+**What's been considered:** Two complementary angles, both wanted — (1) a **dashboard Cancel/Abort action** routed through the action queue + runner (signal the spawned `crew run` process) so it lands a clean `completeRun`, mirroring how New Run / Fix PR / Finish already flow; (2) a **daemon-side reaper** (the 2026-05-18 followup) as the backstop for kills that bypass _any_ graceful path (SIGKILL, container death). The action handles the intentional case cleanly; the reaper catches the rest. The terminal-state question is shared with the reaper: a cancelled/reaped run probably wants a distinct `cancelled`/`abandoned` state rather than `error`.
+
+**Shape of work:** Belongs to the not-yet-planned runner-status/logs epic (item #3 of the 2026-06-05 dashboard worklist) or a dedicated run-lifecycle-control slice — not its own ticket until that epic is brainstormed. Medium: a daemon action verb + route, runner support for signalling a tracked child process, a dashboard button on active agents, and the terminal-state decision.
+
+**Open questions:**
+
+- Does the runner currently track the PID of each `crew run` it spawns well enough to signal it cleanly? (Check `packages/cli/src/lib/runner/`.)
+- New terminal state (`cancelled`) vs reusing `error`? Resolve together with the reaper followup, which raises the same question.
+
+**Resolved 2026-06-28:** Closed by Epic [CREW-235](https://safturento.atlassian.net/browse/CREW-235) — the dashboard Cancel action shipped: drawer-header cancel ([CREW-246](https://safturento.atlassian.net/browse/CREW-246)) and Runner-page soft→hard cancel escalation ([CREW-245](https://safturento.atlassian.net/browse/CREW-245)), routing through the `runner_commands` reverse queue so the signalled process lands a clean `completeRun`. The **backstop half** (a daemon auto-reaper for fully-`running` orphans that bypass *any* graceful path — SIGKILL, container death) was deliberately NOT covered here; it is carved out to standalone ticket [CREW-305](https://safturento.atlassian.net/browse/CREW-305), tracked by the still-Active "2026-05-18 — Daemon has no reaper for orphaned runs stuck in `running`" entry.
+
+### 2026-06-04 — New Run modal step 2 is a text entry, not the Figma open-ticket picker
+
+**What:** CREW-218's New Run modal ships step 2 ("Pick a ticket") as a single `FormField` where the operator types a ticket key, and step 3 ("Confirm") omits the Figma's "Title" summary row. The Figma frames (`1:3418`, `9:2`) instead show a searchable list of the project's **open Jira tickets** (rows like `KAN-31 · Drag-and-drop reordering…` with a priority badge + a "Filter open tickets…" search input) and a ticket _title_ on the confirm step. Both gaps have the same root cause: no daemon endpoint serves open tickets or a ticket summary to the dashboard — `DaemonClient` exposes only `listProjects` / `listAgents` / `enqueueAction` / `getRunnerStatus`. The plan (T6 step 2) explicitly deferred live ticket fetching ("otherwise skip in v1").
+
+**Why noticed:** Implementing CREW-218. Step 1 (project picker) maps cleanly to `listProjects()`, but steps 2–3 need data the dashboard can't fetch yet, so the modal degrades to a typed key. Surfaced during the visual-fidelity pass as the largest code↔Figma divergence (medium, intentional).
+
+**Anchors:**
+
+- `packages/dashboard/src/components/NewRunModal.tsx` — step 2 `FormField`; step 3 `SummaryRow`s (no Title).
+- Figma `1:3418` (Select Ticket), `9:2` (Confirm) + composites `362:2212` / `362:2213` in `.crew/figma-snapshot/`.
+- `packages/dashboard/src/data/DaemonClient.ts` — the missing `listOpenTickets(project)` / `getTicket(key)` surface.
+- `packages/shared/src/jira` — the Jira client the daemon would call.
+- Sibling followup directly above: "CREW-137 modal composites unverified" — CREW-218 is the wiring ticket it anticipated; its Modal/Stepper/ModalSelectionRow/FormField fidelity is now verified (AlertModal still unwired).
+
+**What's been considered:** A `GET /api/projects/:slug/tickets` (open issues via the project's Jira board) + `GET /api/tickets/:key` (summary) would let step 2 become the real picker and step 3 show the title. Out of scope for T6 (dashboard-only); needs a daemon route + Jira-client call + Bruno coverage. Also open: should the New Run modal's "Spawn agent" respect runner-online status (like T5's QuickAction degradation), or is queuing-while-offline acceptable since the daemon holds the pending action until a runner connects? Today it always enqueues.
+
+**Shape of work:** One daemon ticket (open-tickets + ticket-summary routes + Jira client + Bruno) blocking one dashboard ticket (swap step 2's FormField for a `ModalSelectionRow` list with the search `Input`, add the Title row to step 3). The runner-gating question is a small separate decision, possibly just a disabled-state on Spawn.
+
+**Open questions:**
+
+- [ ] Source of "open tickets" — the project's Jira board/JQL, or only tickets with no existing agent yet?
+- [ ] Should Spawn be disabled / warn when no runner is online?
+
+**Resolved 2026-06-28:** Closed by Epic [CREW-276](https://safturento.atlassian.net/browse/CREW-276) — step 2 is now the searchable, epic-grouped, dependency-aware ticket picker (shared Jira client + search [CREW-277](https://safturento.atlassian.net/browse/CREW-277); daemon `GET /api/projects/:slug/tickets` [CREW-278](https://safturento.atlassian.net/browse/CREW-278); dashboard picker UI [CREW-279](https://safturento.atlassian.net/browse/CREW-279)), step 3 shows the ticket title, and it degrades to manual key entry when the daemon has no Jira creds. The two-row TicketRow redesign + interactive-label gating followed in Epic [CREW-284](https://safturento.atlassian.net/browse/CREW-284). The Spawn-while-runner-offline open question was left as accepted behavior — the daemon holds the pending action until a runner connects.
+
+### 2026-06-19 — Pause/resume/message build is gated on a host-only confirmation spike (CREW-248)
+
+**Update 2026-06-19:** Gate **closed GREEN** on a host (un-sandboxed) confirmation run — `claude --resume` tolerates a transcript ending on a dangling `tool_use` (Claude Code's resume reconstruction sanitizes the trailing turn before re-sending to the API), so the apply path needs **no** transcript-sanitization branch. The build is now ticketed (CREW-272/273/274, all _Ready for Development_) — no longer deferred. The original blocked-in-sandbox framing below is retained for history.
+
+**What:** The pause/resume/message apply paths (`packages/cli/src/lib/runner/commands.ts`) + dashboard controls are designed-for in the v1 data model but gated behind a feasibility spike (cleanly interrupt a detached headless `claude` mid-turn + resume via `spawnClaudeResume` without a dangling-`tool_use` corrupting state). The spike's empirical leg **could not run in the `crew run` dispatch sandbox** — `~/.claude/projects` + `~/.claude/session-env` are mounted read-only, so a nested `claude` persists no transcript/session and `--resume` has nothing to resume (the Bash tool also can't run). The gate was therefore confirmed on the host instead (see Update above).
+
+**Why noticed:** Ran the CREW-248 spike under `crew run` dispatch; hit the read-only `~/.claude` substrate. See the full writeup + the reproducible host-confirmation script.
+
+**Anchors:**
+
+- `docs/tickets/CREW-248.md` — full spike outcome, the host-confirmation script, the implementation design, and the cross-layer `paused` run-state wrinkle.
+- `packages/cli/src/lib/runner/commands.ts` (`applyCommand`) — `pause`/`resume`/`message` return `failed: not yet supported` today.
+- `packages/cli/src/commands/resume.ts`, `packages/cli/src/lib/claude/spawn.ts` (`spawnClaudeResume`) — the resume mechanism the build reuses.
+
+**What's been considered:** Design settled in `docs/tickets/CREW-248.md` — `pause` = SIGTERM the group + `registry.setState(paused)` (keep tracking); `resume`/`message` = re-dispatch `crew resume <key> [-m message]` via a new injected boundary on `ApplyCommandDeps`. Key wrinkle: `crew run` lands a _terminal_ `completeRun` on any SIGTERM exit (reduces to `error`), so a _non-terminal_ resumable `paused` run-state needs `crew run`/daemon pause-awareness — `paused` is a `LiveProcessState` only today.
+
+**Shape of work:** Now three CREW-235 children — (1) `commands.ts` apply mapping + injected `resume` boundary = CREW-272; (2) non-terminal `paused` run-state in `crew run` + daemon = CREW-273; (3) dashboard Pause/Resume controls = CREW-274. CREW-272 ∥ CREW-273 (parallel — different code seams), both block CREW-274.
+
+**Open questions:** Gate question (does `claude --resume` repair or reject a dangling `tool_use`?) **resolved 2026-06-19 — it repairs/tolerates it.** Remaining build-design choice carried into CREW-273: how to represent a non-terminal `paused` run — sentinel/suppress `completeRun`, distinct signal, or new daemon state?
+
+**Resolved 2026-06-28:** Closed by Epic [CREW-235](https://safturento.atlassian.net/browse/CREW-235) — the three build children shipped: apply paths in `commands.ts` + the injected resume boundary ([CREW-272](https://safturento.atlassian.net/browse/CREW-272)), the non-terminal `paused` run-state in `crew run` + daemon ([CREW-273](https://safturento.atlassian.net/browse/CREW-273)), and the dashboard Pause/Resume controls ([CREW-274](https://safturento.atlassian.net/browse/CREW-274)). The gating spike CREW-248 had already confirmed (host run, GREEN) that `claude --resume` tolerates a transcript ending on a dangling `tool_use`, so no transcript-sanitization branch was needed.
+
+### 2026-06-19 — `PrTransitionService.markMerged` check-then-insert isn't transaction-guarded against a true concurrent race
+
+**What:** `markMerged` reads the latest `state_transitions` row (`latestState`) and, if it's `pr_open`, inserts a `pr_merged` row — without wrapping the read+insert in a transaction (`packages/daemon/src/services/PrTransitionService.ts`, `markMerged` + `latestState`). The `latest === 'pr_open'` precondition collapses _sequential_ re-delivery (double webhook, webhook-after-poll) to one transition perfectly, but two callers that both pass the precondition read _before_ either inserts will both insert — yielding two `pr_merged` rows. The plan's stated constraint is "double-delivery and webhook-vs-poll races must collapse to one transition"; the precondition satisfies the sequential half, not a true concurrent race.
+
+**Why noticed:** Code review of CREW-268 (the extraction ticket). Surfaced as a Minor finding explicitly scoped to the future webhook child — for CREW-268 it is moot because `PrPoller` is the single, single-threaded caller. It becomes live the moment the webhook (`GithubWebhookService`, child C) can fire `markMerged` concurrently with a poll round.
+
+**Anchors:** `packages/daemon/src/services/PrTransitionService.ts` (`markMerged`, `latestState`); `packages/daemon/src/services/PrPoller.ts` (current sole caller); plan `docs/superpowers/plans/2026-06-19-github-webhook-pr-merge.md` (idempotency constraint + Task 8 webhook service); ticket `docs/tickets/CREW-268.md`.
+
+**What's been considered:** Two viable resolutions in child C — (a) wrap the check+insert in a Kysely transaction (SQLite serializes writes, so a `BEGIN IMMEDIATE` + re-read closes the window), or (b) deliberately accept the duplicate row as harmless, since `AgentsService.deriveState` projects from the _latest_ transition and two identical `pr_merged` rows render identically. Option (b) is likely fine at crew's scale and write pattern; the point is to make it a conscious decision rather than an accidental gap. A unique-ish guard (partial index on `agent_key` where `to_state='pr_merged'`) is a third option but heavier than warranted.
+
+**Shape of work:** one-line-ish decision + optional small transaction wrapper in child C; add a concurrent-race test if option (a) is taken.
+
+**Open questions:** Does the webhook actually run on a separate event-loop turn from the poll round such that a race is reachable in practice (both are in-process on one Node daemon)? If `markMerged` calls are never truly interleaved (single-threaded JS, no `await` between the read and insert in the same microtask)… but there _is_ an `await` between `latestState` and the insert, so interleaving is reachable. Confirm in child C.
+
+**Resolved 2026-06-28:** Resolved as **option (b) — accept the duplicate as harmless** — at the close of Epic [CREW-267](https://safturento.atlassian.net/browse/CREW-267). Verified against HEAD: `PrTransitionService.markMerged` still performs an unguarded check-then-insert (an `await` separates the `latestState` read from the insert), so a genuine concurrent webhook-vs-poll race could write two `pr_merged` rows. This is intentionally tolerated — `AgentsService.deriveState` projects from the *latest* transition and two identical `pr_merged` rows render identically, so the duplicate is inert at crew's scale and single-daemon write pattern. If exactly-once transitions are ever needed, wrap the check+insert in a `BEGIN IMMEDIATE` Kysely transaction (option a).
 
 ### 2026-06-25 — Runner never reaps dead processes: phantom "running" entries linger, and early-death runs never settle to error
 
