@@ -1,0 +1,41 @@
+meta {
+  name: GET /api/runner/page
+  type: http
+  seq: 9
+}
+
+get {
+  url: {{baseUrl}}/api/runner/page
+}
+
+assert {
+  res.status: eq 200
+  res.body.failedToStart: isArray
+  res.body.queued: isArray
+  res.body.recentlyEnded: isArray
+}
+
+tests {
+  test("surfaces the unacknowledged failed-start in failedToStart", () => {
+    // Runs after post-failed-start (BRUNO-FAIL-1) and before post-acknowledge,
+    // so the row is still unacknowledged and present in the attention queue.
+    const keys = res.body.failedToStart.map((r) => r.key);
+    expect(keys).to.include("BRUNO-FAIL-1");
+    const failed = res.body.failedToStart.find((r) => r.key === "BRUNO-FAIL-1");
+    expect(failed.failure.check).to.equal("git-remote");
+  });
+
+  test("includes the terminal failed-start in recentlyEnded history", () => {
+    const ended = res.body.recentlyEnded.find((r) => r.key === "BRUNO-FAIL-1");
+    expect(ended).to.not.equal(undefined);
+    expect(ended.kind).to.equal("failed-start");
+  });
+}
+
+docs {
+  CREW-249 (T2): the Runner page's read surface. Returns the three DB-backed
+  lists — `failedToStart` (unacknowledged failed-start runs), `queued`
+  (pending action requests, read-only), and `recentlyEnded` (terminal runs
+  newest-first). Ordered in the smoke after post-failed-start so BRUNO-FAIL-1
+  is deterministically present in both failedToStart and recentlyEnded.
+}
