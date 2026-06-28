@@ -7,6 +7,7 @@ import {
   enqueueRunnerCommandSchema,
   liveProcessSchema,
   runnerCommandPayloadSchema,
+  runnerPageSchema,
   runnerSnapshotSchema,
 } from 'crew-shared';
 import type { DaemonApp } from '../app.js';
@@ -186,6 +187,14 @@ export async function registerRunnerRoutes(app: DaemonApp): Promise<void> {
       const lines = await tailLog(join(runnerLogDir, 'runner.log'), req.query.tail);
       return { lines };
     },
+  );
+
+  // CREW-249 (T2): the Runner page's read surface — failed-to-start, queued,
+  // and recently-ended lists from the DB. Thin wrapper over RunnerPageService.
+  app.get(
+    '/api/runner/page',
+    { schema: { response: { 200: runnerPageSchema } } },
+    async (req) => req.diScope.resolve('runnerPageService').getPage(),
   );
 
   app.post(

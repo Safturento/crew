@@ -3,9 +3,10 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import { join, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { pino, type Logger } from 'pino';
+import type { Kysely } from 'kysely';
 import { buildApp, type DaemonApp } from '../app.js';
 import { parseDaemonConfig } from '../config.js';
-import { createDb, runMigrations } from '../db.js';
+import { createDb, runMigrations, type DaemonDatabase } from '../db.js';
 import { useTmpDir } from '../test/tmpdir.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -16,7 +17,7 @@ const silentLogger: Logger = pino({ level: 'silent' });
 
 async function setupApp(
   opts: { runnerLogDir?: string } = {},
-): Promise<{ app: DaemonApp; close: () => Promise<void> }> {
+): Promise<{ app: DaemonApp; db: Kysely<DaemonDatabase>; close: () => Promise<void> }> {
   const dir = tmp();
   const config = parseDaemonConfig({
     CREW_CONFIG_DIR: dir,
@@ -28,6 +29,7 @@ async function setupApp(
   const app = await buildApp({ config, logger: silentLogger, db });
   return {
     app,
+    db,
     close: async () => {
       await app.close();
       await db.destroy();
@@ -325,6 +327,55 @@ describe('GET /api/runner/logs', () => {
     try {
       const res = await app.inject({ method: 'GET', url: '/api/runner/logs?tail=banana' });
       expect(res.statusCode).toBe(400);
+    } finally {
+      await close();
+    }
+  });
+});
+
+describe('GET /api/runner/page', () => {
+  it('returns empty lists when the db is empty', async () => {
+    const { app, close } = await setupApp();
+    try {
+      const res = await app.inject({ method: 'GET', url: '/api/runner/page' });
+      expect(res.statusCode).toBe(200);
+      expect(res.json()).toEqual({ failedToStart: [], queued: [], recentlyEnded: [] });
+    } finally {
+      await close();
+    }
+  });
+
+  it('returns the failed-start, queued, and recently-ended lists from the db', async () => {
+    const { app, db, close } = await setupApp();
+    try {
+      // A fresh failed-start (also a terminal run → recentlyEnded).
+      await app.inject({
+        method: 'POST',
+        url: '/api/runner/failed-start',
+        payload: { key: 'CREW-A', projectName: 'crew', command: 'run', failure: FAILURE },
+      });
+      // A pending action request → queued.
+      await db
+        .insertInto('action_requests')
+        .values({
+          kind: 'fix_pr',
+          ticket_key: 'CREW-B',
+          project: 'crew',
+          payload: '{"kind":"fix_pr","comment":"x"}',
+          status: 'pending',
+          error: null,
+          created_at: '2026-06-25T00:02:00.000Z',
+          updated_at: '2026-06-25T00:02:00.000Z',
+        })
+        .execute();
+
+      const res = await app.inject({ method: 'GET', url: '/api/runner/page' });
+      expect(res.statusCode).toBe(200);
+      const body = res.json();
+      expect(body.failedToStart.map((r: { key: string }) => r.key)).toContain('CREW-A');
+      expect(body.queued.map((q: { key: string }) => q.key)).toContain('CREW-B');
+      expect(body.queued[0].command).toBe('fix-pr');
+      expect(body.recentlyEnded.map((r: { key: string }) => r.key)).toContain('CREW-A');
     } finally {
       await close();
     }
