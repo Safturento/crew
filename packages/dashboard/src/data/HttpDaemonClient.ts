@@ -5,6 +5,7 @@ import type {
   EnqueueRunnerCommand,
   ProjectTicketsResponse,
   RunnerCommand,
+  RunnerPage,
 } from 'crew-shared';
 
 import type { DaemonClient, RunnerStatus } from './DaemonClient.js';
@@ -279,6 +280,52 @@ const RunnerLogsSchema = z.object({
   lines: z.array(z.string()),
 });
 
+/**
+ * CREW-291: wire shape of `GET /api/runner/page`. Mirrors `crew-shared`'s
+ * `runnerPageSchema` inline, per this file's "only types cross over from
+ * crew-shared (the barrel re-exports a node-only loader Vite won't bundle)"
+ * convention. The daemon's Zod serializer guarantees the shape; this
+ * re-validates it on the browser side.
+ */
+const RUNNER_COMMAND_NAME = z.enum(['run', 'fix-pr', 'finish', 'resume']);
+const RunFailureSchema = z.object({
+  check: z.string(),
+  headline: z.string(),
+  remediation: z.string(),
+  output: z.string(),
+});
+const RunnerPageSchema = z.object({
+  failedToStart: z.array(
+    z.object({
+      key: z.string(),
+      command: RUNNER_COMMAND_NAME,
+      project: z.string(),
+      failedAt: z.string(),
+      failure: RunFailureSchema,
+    }),
+  ),
+  queued: z.array(
+    z.object({
+      key: z.string(),
+      command: RUNNER_COMMAND_NAME,
+      project: z.string(),
+      queuedAt: z.string(),
+    }),
+  ),
+  recentlyEnded: z.array(
+    z.object({
+      key: z.string(),
+      command: RUNNER_COMMAND_NAME,
+      project: z.string(),
+      endedAt: z.string(),
+      kind: z.enum(['finished', 'cancelled', 'error', 'failed-start']),
+      prUrl: z.string().optional(),
+      prNumber: z.number().optional(),
+      failure: RunFailureSchema.optional(),
+    }),
+  ),
+});
+
 const StateHistoryResponseSchema = z.object({
   transitions: z.array(
     z.object({
@@ -484,6 +531,33 @@ export class HttpDaemonClient implements DaemonClient {
     });
     if (!res.ok) throw new Error(`POST /api/runs/${key}/acknowledge: ${res.status}`);
     return AcknowledgeRunSchema.parse(await res.json()).acknowledged;
+  }
+
+  /**
+   * CREW-291: the Runner page's read surface — `failedToStart` / `queued` /
+   * `recentlyEnded`. Seeds `useRunnerPage()`; the three sections render from
+   * the parsed lists. Re-validated against the inline mirror of the shared
+   * `runnerPageSchema`.
+   */
+  async getRunnerPage(): Promise<RunnerPage> {
+    const res = await fetch(`${this.baseUrl}/api/runner/page`);
+    if (!res.ok) throw new Error(`GET /api/runner/page: ${res.status}`);
+    return RunnerPageSchema.parse(await res.json());
+  }
+
+  /**
+   * CREW-291: a run's raw startup console log (the `crew run` wrapper's
+   * stdout/stderr captured at `~/.crew/startup/<key>.log`). Returns the body
+   * text, or `null` on 404 — a run that never captured a log. Backs the run
+   * drawer's Console output region. The daemon also serves an SSE tail at
+   * `?follow=1`; the drawer poll-refetches the static body while a run is
+   * in-flight instead (consistent with `getRunnerLogs`).
+   */
+  async getStartupLog(key: string): Promise<string | null> {
+    const res = await fetch(`${this.baseUrl}/api/runs/${encodeURIComponent(key)}/startup-log`);
+    if (res.status === 404) return null;
+    if (!res.ok) throw new Error(`GET /api/runs/${key}/startup-log: ${res.status}`);
+    return res.text();
   }
 
   /**

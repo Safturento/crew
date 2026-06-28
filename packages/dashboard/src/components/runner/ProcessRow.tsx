@@ -9,6 +9,7 @@ import { Badge } from '../ui/badge.js';
 import { Button } from '../ui/button.js';
 import { Row } from '../Row.js';
 import { CommandBadge } from './CommandBadge.js';
+import { RunDrawer } from './RunDrawer.js';
 import { useCancelEscalation } from './useCancelEscalation.js';
 
 interface ProcessRowProps {
@@ -42,6 +43,7 @@ export function ProcessRow({ process, onCancel, onForceKill, onPause, onResume }
     onForceKill: () => onForceKill(process.agentKey),
   });
   const [resumeOpen, setResumeOpen] = useState(false);
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
   const snapshotCancelling = process.state === 'cancelling';
   const cancelling = snapshotCancelling || escalation.phase === 'cancelling';
@@ -53,6 +55,8 @@ export function ProcessRow({ process, onCancel, onForceKill, onPause, onResume }
   return (
     <>
       <Row
+        onActivate={() => setDrawerOpen(true)}
+        ariaLabel={`Open run drawer for ${process.agentKey}`}
         statusSlot={
           <Badge role="status" aria-label={pill.label} color={pill.color} intensity="mid">
             {pill.label}
@@ -72,7 +76,10 @@ export function ProcessRow({ process, onCancel, onForceKill, onPause, onResume }
           </div>
         }
         actions={
-          <div className="flex shrink-0 items-center justify-end gap-1.5">
+          <div
+            className="flex shrink-0 items-center justify-end gap-1.5"
+            onClick={(e) => e.stopPropagation()}
+          >
             {cancelling ? (
               showForceKill && (
                 <Button color="error" intensity="loud" size="sm" onClick={escalation.forceKill}>
@@ -133,6 +140,7 @@ export function ProcessRow({ process, onCancel, onForceKill, onPause, onResume }
         onOpenChange={setResumeOpen}
         onSubmit={(message) => onResume(process.agentKey, message)}
       />
+      <RunDrawer source={{ kind: 'live', process }} open={drawerOpen} onOpenChange={setDrawerOpen} />
     </>
   );
 }

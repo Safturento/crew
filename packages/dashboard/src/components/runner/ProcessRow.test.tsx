@@ -1,9 +1,10 @@
-import { act, fireEvent, render, screen, within } from '@testing-library/react';
+import { act, fireEvent, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { LiveProcess } from 'crew-shared';
 
 import { ProcessRow } from './ProcessRow.js';
+import { renderWithProviders } from '@/test/renderWithProviders';
 
 const base: LiveProcess = {
   agentKey: 'CREW-231',
@@ -29,7 +30,7 @@ function renderRow(
   const onForceKill = vi.fn(handlers.onForceKill);
   const onPause = vi.fn(handlers.onPause);
   const onResume = vi.fn(handlers.onResume);
-  render(
+  renderWithProviders(
     <ProcessRow
       process={{ ...base, ...p }}
       onCancel={onCancel}

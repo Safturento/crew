@@ -20,11 +20,47 @@ test.describe('Runner page (CREW-245)', () => {
     // The supervisor card always renders (its status pill is down or running).
     await expect(page.getByText('Supervisor', { exact: true })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Live processes' })).toBeVisible();
-    // Recently-ended + the Failed-to-start attention queue have no read
-    // endpoint on the merged daemon yet, so recently-ended shows its empty
-    // state and the attention queue stays hidden (CREW-245 scope decision).
-    await expect(page.getByText('Nothing ended recently')).toBeVisible();
-    await expect(page.getByText('Failed to start')).toBeHidden();
+    // CREW-291: Recently-ended is now wired to GET /api/runner/page, so the
+    // seed's terminal runs render real rows (no longer the empty state).
+    await expect(page.getByRole('heading', { name: 'Recently ended' })).toBeVisible();
+    await expect(page.getByText('Nothing ended recently')).toBeHidden();
+  });
+
+  // CREW-291: every run row is clickable → the run drawer (header + meta +
+  // console output). Driven off an SSE-injected live process so the assertion
+  // doesn't depend on whatever terminal runs the worktree happens to seed.
+  test('clicking a live-process row opens the run drawer', async ({ page }) => {
+    await page.goto('/#/runner');
+    await expect(page.getByRole('heading', { name: 'Runner' })).toBeVisible();
+
+    await page.evaluate(() => {
+      (window as unknown as { __crewTestInjectEvent: Injector }).__crewTestInjectEvent(
+        'runner.snapshot_changed',
+        {
+          processes: [
+            {
+              agentKey: 'CREW-999',
+              command: 'run',
+              pid: 4242,
+              pgid: 4242,
+              actionRequestId: null,
+              spawnedAt: new Date(Date.now() - 90_000).toISOString(),
+              state: 'running',
+              project: 'crew',
+            },
+          ],
+        },
+      );
+    });
+
+    await page.getByRole('button', { name: 'Open run drawer for CREW-999' }).click();
+
+    // The drawer renders the header (key heading + running pill), the live
+    // console indicator, and — with no captured startup log — the empty body.
+    await expect(page.getByRole('heading', { name: 'CREW-999', exact: true })).toBeVisible();
+    await expect(page.getByText('Console output')).toBeVisible();
+    await expect(page.getByText('No output captured.')).toBeVisible();
+    await expect(page.getByText('pgid')).toBeVisible();
   });
 
   test('renders a live process from a snapshot SSE event and opens the cancel confirm', async ({

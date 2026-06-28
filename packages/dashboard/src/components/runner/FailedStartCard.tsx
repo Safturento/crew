@@ -6,7 +6,7 @@ import { Button } from '../ui/button.js';
 import { STATE_CLASSES } from '@/data/state-meta';
 import { formatAgo } from '@/format/relativeTime';
 import { CommandBadge } from './CommandBadge.js';
-import { ViewOutputModal } from './ViewOutputModal.js';
+import { RunDrawer } from './RunDrawer.js';
 import type { FailedStartView } from './types.js';
 
 interface FailedStartCardProps {
@@ -18,18 +18,21 @@ interface FailedStartCardProps {
  * One Failed-to-start card. The shared `error` accent tints the row red; the
  * meta line carries the agent key + command + "failed to start · Nm ago", the
  * headline and the amber → remediation sit on the second line (remediation
- * omitted for generic non-health-check failures). `Inspect` opens the
- * Diagnosis + Output modal; `Archive` acknowledges the failure (moving it to
- * Recently ended).
+ * omitted for generic non-health-check failures). Clicking the row opens the
+ * run drawer (diagnosis + startup console log — CREW-291, absorbing the old
+ * ViewOutputModal); `Archive` acknowledges the failure (moving it to Recently
+ * ended).
  */
 export function FailedStartCard({ failure, onArchive }: FailedStartCardProps) {
-  const [inspecting, setInspecting] = useState(false);
+  const [open, setOpen] = useState(false);
   const f = failure;
 
   return (
     <>
       <Row
         accent="error"
+        onActivate={() => setOpen(true)}
+        ariaLabel={`Open run drawer for ${f.key}`}
         statusSlot={
           <Badge role="status" aria-label="failed" color="error" intensity="mid">
             failed
@@ -55,25 +58,20 @@ export function FailedStartCard({ failure, onArchive }: FailedStartCardProps) {
           </div>
         }
         actions={
-          <div className="flex shrink-0 items-center justify-end gap-1.5">
+          <div
+            className="flex shrink-0 items-center justify-end gap-1.5"
+            onClick={(e) => e.stopPropagation()}
+          >
             <Button color="idle" intensity="ghost" size="sm" onClick={() => onArchive(f.key)}>
               Archive
             </Button>
-            <Button color="error" intensity="mid" size="sm" onClick={() => setInspecting(true)}>
+            <Button color="error" intensity="mid" size="sm" onClick={() => setOpen(true)}>
               Inspect
             </Button>
           </div>
         }
       />
-      <ViewOutputModal
-        open={inspecting}
-        onOpenChange={setInspecting}
-        agentKey={f.key}
-        command={f.command}
-        project={f.project}
-        failedAt={f.failedAt}
-        failure={f.failure}
-      />
+      <RunDrawer source={{ kind: 'failed-start', view: f }} open={open} onOpenChange={setOpen} />
     </>
   );
 }

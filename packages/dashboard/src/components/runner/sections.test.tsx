@@ -1,6 +1,6 @@
-import { render, screen } from '@testing-library/react';
+import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { RunFailure } from 'crew-shared';
 
 import { SupervisorCard } from './SupervisorCard.js';
@@ -9,7 +9,13 @@ import { LiveProcessList } from './LiveProcessList.js';
 import { UnmanagedRuns } from './UnmanagedRuns.js';
 import { QueuedActions } from './QueuedActions.js';
 import { RecentlyEnded } from './RecentlyEnded.js';
+import { renderWithProviders as render } from '@/test/renderWithProviders';
+import { defaultClient } from '@/data/queries';
 import type { EndedRunView, FailedStartView } from './types.js';
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
 
 const FAILURE: RunFailure = {
   check: 'remote-repo-resolves',
@@ -118,13 +124,23 @@ describe('FailedToStartSection', () => {
     expect(onArchive).toHaveBeenCalledWith('CREW-241');
   });
 
-  it('Inspect opens the Diagnosis + Output modal', async () => {
+  it('Inspect opens the run drawer with the diagnosis + console (CREW-291)', async () => {
+    vi.spyOn(defaultClient, 'getStartupLog').mockResolvedValue(null);
     const user = userEvent.setup();
     render(<FailedToStartSection failures={[failure]} onArchive={vi.fn()} />);
     await user.click(screen.getByRole('button', { name: 'Inspect' }));
-    expect(await screen.findByText('Startup output — CREW-241')).toBeInTheDocument();
-    expect(screen.getByText('remote-repo-resolves')).toBeInTheDocument();
+    // The drawer's Diagnosis carries the structured check name; the console
+    // falls back to failure.output when no startup log was captured.
+    expect(await screen.findByText('remote-repo-resolves')).toBeInTheDocument();
     expect(screen.getByText(/process exited 1/)).toBeInTheDocument();
+  });
+
+  it('clicking the row opens the run drawer (CREW-291)', async () => {
+    vi.spyOn(defaultClient, 'getStartupLog').mockResolvedValue(null);
+    const user = userEvent.setup();
+    render(<FailedToStartSection failures={[failure]} onArchive={vi.fn()} />);
+    await user.click(screen.getByRole('button', { name: 'Open run drawer for CREW-241' }));
+    expect(await screen.findByText('remote-repo-resolves')).toBeInTheDocument();
   });
 });
 
@@ -213,7 +229,7 @@ describe('RecentlyEnded', () => {
     );
   });
 
-  it('renders a cancelled run with no right-side action', () => {
+  it('renders a cancelled run with no right-side action, but the row opens the drawer', () => {
     const runs: EndedRunView[] = [
       {
         key: 'CREW-219',
@@ -225,11 +241,14 @@ describe('RecentlyEnded', () => {
     ];
     render(<RecentlyEnded runs={runs} />);
     expect(screen.getByText('soft cancel')).toBeInTheDocument();
-    expect(screen.queryByRole('button')).toBeNull();
+    // No PR link and no secondary action; the only interactive element is the
+    // clickable row itself (CREW-291).
     expect(screen.queryByRole('link')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Open run drawer for CREW-219' })).toBeInTheDocument();
   });
 
-  it('renders an error run with an Inspect that opens the modal', async () => {
+  it('clicking an error run row opens the drawer with its diagnosis (CREW-291)', async () => {
+    vi.spyOn(defaultClient, 'getStartupLog').mockResolvedValue(null);
     const user = userEvent.setup();
     const runs: EndedRunView[] = [
       {
@@ -242,7 +261,7 @@ describe('RecentlyEnded', () => {
       },
     ];
     render(<RecentlyEnded runs={runs} />);
-    await user.click(screen.getByRole('button', { name: 'Inspect' }));
-    expect(await screen.findByText('Startup output — CREW-217')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Open run drawer for CREW-217' }));
+    expect(await screen.findByText('remote-repo-resolves')).toBeInTheDocument();
   });
 });

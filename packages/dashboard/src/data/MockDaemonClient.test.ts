@@ -34,6 +34,29 @@ describe('MockDaemonClient', () => {
     });
   });
 
+  it('returns an empty runner page by default and the override when given (CREW-291)', async () => {
+    await expect(new MockDaemonClient().getRunnerPage()).resolves.toEqual({
+      failedToStart: [],
+      queued: [],
+      recentlyEnded: [],
+    });
+
+    const page = {
+      failedToStart: [],
+      queued: [
+        { key: 'CREW-240', command: 'run' as const, project: '~/code/crew', queuedAt: 'now' },
+      ],
+      recentlyEnded: [],
+    };
+    await expect(new MockDaemonClient({ runnerPage: page }).getRunnerPage()).resolves.toEqual(page);
+  });
+
+  it('returns the seeded startup log for a key, else null (CREW-291)', async () => {
+    const client = new MockDaemonClient({ startupLogs: { 'CREW-241': 'boom\nexit 1' } });
+    await expect(client.getStartupLog('CREW-241')).resolves.toBe('boom\nexit 1');
+    await expect(client.getStartupLog('CREW-999')).resolves.toBeNull();
+  });
+
   it('returns a canned available ticket list parseable by the contract', async () => {
     const client = new MockDaemonClient();
     const res = await client.listProjectTickets();

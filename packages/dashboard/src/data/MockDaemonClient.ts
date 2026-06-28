@@ -4,6 +4,7 @@ import type {
   EnqueueRunnerCommand,
   ProjectTicketsResponse,
   RunnerCommand,
+  RunnerPage,
 } from 'crew-shared';
 
 import type { DaemonClient, RunnerStatus } from './DaemonClient.js';
@@ -17,7 +18,13 @@ export interface MockDaemonClientOptions {
   projectDetails?: Record<string, ProjectDetailResponse>;
   runnerStatus?: RunnerStatus;
   runnerLogs?: string[];
+  /** CREW-291: the three Runner-page lists served by `getRunnerPage`. */
+  runnerPage?: RunnerPage;
+  /** CREW-291: per-key startup logs served by `getStartupLog` (absent → 404/null). */
+  startupLogs?: Record<string, string>;
 }
+
+const EMPTY_RUNNER_PAGE: RunnerPage = { failedToStart: [], queued: [], recentlyEnded: [] };
 
 export class MockDaemonClient implements DaemonClient {
   private readonly agents: Agent[];
@@ -25,6 +32,8 @@ export class MockDaemonClient implements DaemonClient {
   private readonly projectDetails: Record<string, ProjectDetailResponse>;
   private readonly runnerStatus: RunnerStatus;
   private readonly runnerLogs: string[];
+  private readonly runnerPage: RunnerPage;
+  private readonly startupLogs: Record<string, string>;
   /** Records of every action enqueued through this mock, for assertions. */
   readonly enqueued: EnqueueAction[] = [];
   /** Records of every runner command enqueued through this mock. */
@@ -42,6 +51,8 @@ export class MockDaemonClient implements DaemonClient {
       processes: [],
     };
     this.runnerLogs = options.runnerLogs ?? [];
+    this.runnerPage = options.runnerPage ?? EMPTY_RUNNER_PAGE;
+    this.startupLogs = options.startupLogs ?? {};
   }
 
   async listProjects(): Promise<Project[]> {
@@ -102,6 +113,14 @@ export class MockDaemonClient implements DaemonClient {
   async acknowledgeRun(key: string): Promise<number> {
     this.acknowledged.push(key);
     return 1;
+  }
+
+  async getRunnerPage(): Promise<RunnerPage> {
+    return this.runnerPage;
+  }
+
+  async getStartupLog(key: string): Promise<string | null> {
+    return this.startupLogs[key] ?? null;
   }
 
   /**
