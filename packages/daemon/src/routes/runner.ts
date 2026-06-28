@@ -209,10 +209,8 @@ export async function registerRunnerRoutes(app: DaemonApp): Promise<void> {
 
   // CREW-249 (T2): the Runner page's read surface — failed-to-start, queued,
   // and recently-ended lists from the DB. Thin wrapper over RunnerPageService.
-  app.get(
-    '/api/runner/page',
-    { schema: { response: { 200: runnerPageSchema } } },
-    async (req) => req.diScope.resolve('runnerPageService').getPage(),
+  app.get('/api/runner/page', { schema: { response: { 200: runnerPageSchema } } }, async (req) =>
+    req.diScope.resolve('runnerPageService').getPage(),
   );
 
   // CREW-249 (T2): the supervisor drawer's read surface — the management slice

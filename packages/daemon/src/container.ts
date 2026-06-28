@@ -178,9 +178,7 @@ export function buildContainer(deps: BuildContainerDeps): AwilixContainer<Daemon
     // CREW-249 (T2): read-only Runner-page data surface (failed-to-start /
     // queued / recently-ended). Scoped — stateless over SQLite, like the other
     // DB-backed query services.
-    runnerPageService: asFunction(
-      ({ db }: DaemonCradle) => new RunnerPageService({ db }),
-    ).scoped(),
+    runnerPageService: asFunction(({ db }: DaemonCradle) => new RunnerPageService({ db })).scoped(),
     // CREW-278: New Run ticket picker — fetches a project's Ready-for-Development
     // tickets from Jira, grouped + runnability-classified. Scoped — stateless
     // over the injected creds + agentsService.
