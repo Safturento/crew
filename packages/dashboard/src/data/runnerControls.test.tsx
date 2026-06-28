@@ -101,4 +101,20 @@ describe('runner control hooks', () => {
     result.current.mutate('CREW-241');
     await waitFor(() => expect(spy).toHaveBeenCalledWith('CREW-241'));
   });
+
+  it('useArchiveFailedStart invalidates the runner-page query on success (CREW-291)', async () => {
+    vi.spyOn(defaultClient, 'acknowledgeRun').mockResolvedValue(1);
+    const qc = new QueryClient({ defaultOptions: { mutations: { retry: false } } });
+    const invalidate = vi.spyOn(qc, 'invalidateQueries');
+    const w = ({ children }: { children: ReactNode }) => (
+      <QueryClientProvider client={qc}>{children}</QueryClientProvider>
+    );
+
+    const { result } = renderHook(() => useArchiveFailedStart(), { wrapper: w });
+    result.current.mutate('CREW-241');
+
+    await waitFor(() =>
+      expect(invalidate).toHaveBeenCalledWith({ queryKey: ['runner-page'] }),
+    );
+  });
 });

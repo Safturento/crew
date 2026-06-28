@@ -1,4 +1,4 @@
-import { useMutation, type UseMutationResult } from '@tanstack/react-query';
+import { useMutation, useQueryClient, type UseMutationResult } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import type { RunnerCommand, RunnerCommandKind } from 'crew-shared';
 
@@ -115,10 +115,20 @@ export function useRestartSupervisor(): UseMutationResult<RunnerCommand, Error, 
   return useSupervisorCommand('supervisor_restart', 'restart');
 }
 
-/** Archive (acknowledge) a key's failed-start rows — moves them to Recently ended. */
+/**
+ * Archive (acknowledge) a key's failed-start rows — moves them from the
+ * Failed-to-start attention queue to Recently ended. The daemon acknowledges
+ * synchronously but publishes no SSE edge for it (and failed-start rows carry
+ * none), so we invalidate `['runner-page']` on success to refetch the wired
+ * sections immediately rather than waiting on the 30s poll (CREW-291).
+ */
 export function useArchiveFailedStart(): UseMutationResult<number, Error, string> {
+  const qc = useQueryClient();
   return useMutation<number, Error, string>({
     mutationFn: (key) => defaultClient.acknowledgeRun(key),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['runner-page'] });
+    },
     onError: (error, key) => {
       toast.error(`Couldn't archive ${key}: ${error.message}`);
     },

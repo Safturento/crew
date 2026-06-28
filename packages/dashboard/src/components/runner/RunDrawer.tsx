@@ -61,7 +61,9 @@ export function RunDrawer({ source, open, onOpenChange }: RunDrawerProps) {
   const duration = useLiveDuration(model.spawnedAt ?? '', model.live && open);
   const log = useStartupLog(model.agentKey, { enabled: open, live: model.live });
 
-  const consoleText = log.data ?? model.failure?.output ?? '';
+  // `||` not `??`: a present-but-empty startup log (`''`, 200) should still
+  // fall through to any in-hand failure.output rather than show "no output".
+  const consoleText = log.data || model.failure?.output || '';
   const consoleLoading = log.isLoading;
 
   const copy = () => {
