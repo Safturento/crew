@@ -772,7 +772,12 @@ describe('HttpDaemonClient.getRunnerPage (CREW-291)', () => {
       },
     ],
     queued: [
-      { key: 'CREW-240', command: 'run', project: '~/code/crew', queuedAt: '2026-06-25T14:28:00.000Z' },
+      {
+        key: 'CREW-240',
+        command: 'run',
+        project: '~/code/crew',
+        queuedAt: '2026-06-25T14:28:00.000Z',
+      },
     ],
     recentlyEnded: [
       {
@@ -799,7 +804,11 @@ describe('HttpDaemonClient.getRunnerPage (CREW-291)', () => {
 
     expect(page.failedToStart.map((f) => f.key)).toEqual(['CREW-241']);
     expect(page.queued.map((q) => q.key)).toEqual(['CREW-240']);
-    expect(page.recentlyEnded[0]).toMatchObject({ key: 'CREW-227', kind: 'finished', prNumber: 340 });
+    expect(page.recentlyEnded[0]).toMatchObject({
+      key: 'CREW-227',
+      kind: 'finished',
+      prNumber: 340,
+    });
     expect(fetchSpy).toHaveBeenCalledWith('/api/runner/page');
   });
 
@@ -821,7 +830,9 @@ describe('HttpDaemonClient.getStartupLog (CREW-291)', () => {
     const body = '$ crew run CREW-241\n[preflight] resolving project config… ok\nexit code 1';
     const fetchSpy = vi
       .spyOn(globalThis, 'fetch')
-      .mockResolvedValue(new Response(body, { status: 200, headers: { 'content-type': 'text/plain' } }));
+      .mockResolvedValue(
+        new Response(body, { status: 200, headers: { 'content-type': 'text/plain' } }),
+      );
 
     const log = await new HttpDaemonClient().getStartupLog('CREW-241');
 
@@ -845,6 +856,57 @@ describe('HttpDaemonClient.getStartupLog (CREW-291)', () => {
   it('throws on other non-2xx', async () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('boom', { status: 500 }));
     await expect(new HttpDaemonClient().getStartupLog('CREW-1')).rejects.toThrow(/500/);
+  });
+});
+
+describe('HttpDaemonClient.getSupervisorLog (CREW-292)', () => {
+  it('GETs /api/runner/supervisor-log and returns the lines', async () => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify({ lines: ['runner started', 'reaped 1 dead process'] }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      }),
+    );
+
+    const lines = await new HttpDaemonClient().getSupervisorLog();
+
+    expect(lines).toEqual(['runner started', 'reaped 1 dead process']);
+    expect(fetchSpy).toHaveBeenCalledWith('/api/runner/supervisor-log');
+  });
+
+  it('passes the tail count as a query param when given', async () => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify({ lines: [] }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      }),
+    );
+
+    await new HttpDaemonClient().getSupervisorLog(50);
+    expect(fetchSpy).toHaveBeenCalledWith('/api/runner/supervisor-log?tail=50');
+  });
+
+  it('returns an empty array when the log is absent (no runner)', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify({ lines: [] }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      }),
+    );
+
+    expect(await new HttpDaemonClient().getSupervisorLog()).toEqual([]);
+  });
+
+  it('throws on non-2xx', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('boom', { status: 500 }));
+    await expect(new HttpDaemonClient().getSupervisorLog()).rejects.toThrow(/500/);
+  });
+
+  it('throws on schema mismatch', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify({ lines: [42] }), { status: 200 }),
+    );
+    await expect(new HttpDaemonClient().getSupervisorLog()).rejects.toThrow();
   });
 });
 

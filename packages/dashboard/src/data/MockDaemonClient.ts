@@ -22,6 +22,8 @@ export interface MockDaemonClientOptions {
   runnerPage?: RunnerPage;
   /** CREW-291: per-key startup logs served by `getStartupLog` (absent → 404/null). */
   startupLogs?: Record<string, string>;
+  /** CREW-292: the supervisor management log served by `getSupervisorLog`. */
+  supervisorLog?: string[];
 }
 
 const EMPTY_RUNNER_PAGE: RunnerPage = { failedToStart: [], queued: [], recentlyEnded: [] };
@@ -34,6 +36,7 @@ export class MockDaemonClient implements DaemonClient {
   private readonly runnerLogs: string[];
   private readonly runnerPage: RunnerPage;
   private readonly startupLogs: Record<string, string>;
+  private readonly supervisorLog: string[];
   /** Records of every action enqueued through this mock, for assertions. */
   readonly enqueued: EnqueueAction[] = [];
   /** Records of every runner command enqueued through this mock. */
@@ -53,6 +56,7 @@ export class MockDaemonClient implements DaemonClient {
     this.runnerLogs = options.runnerLogs ?? [];
     this.runnerPage = options.runnerPage ?? EMPTY_RUNNER_PAGE;
     this.startupLogs = options.startupLogs ?? {};
+    this.supervisorLog = options.supervisorLog ?? [];
   }
 
   async listProjects(): Promise<Project[]> {
@@ -93,6 +97,10 @@ export class MockDaemonClient implements DaemonClient {
 
   async getRunnerLogs(): Promise<string[]> {
     return this.runnerLogs;
+  }
+
+  async getSupervisorLog(): Promise<string[]> {
+    return this.supervisorLog;
   }
 
   async enqueueRunnerCommand(input: EnqueueRunnerCommand): Promise<RunnerCommand> {

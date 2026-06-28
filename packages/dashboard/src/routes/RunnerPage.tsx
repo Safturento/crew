@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { toast } from 'sonner';
 
 import type { Agent } from '../data/types.js';
@@ -17,6 +18,7 @@ import { LiveProcessList } from '../components/runner/LiveProcessList.js';
 import { QueuedActions } from '../components/runner/QueuedActions.js';
 import { RecentlyEnded } from '../components/runner/RecentlyEnded.js';
 import { SupervisorCard } from '../components/runner/SupervisorCard.js';
+import { SupervisorDrawer } from '../components/runner/SupervisorDrawer.js';
 import { UnmanagedRuns } from '../components/runner/UnmanagedRuns.js';
 import { useRunnerPageData } from '../components/runner/useRunnerPageData.js';
 
@@ -44,6 +46,7 @@ export function RunnerPage({ agents, loading = false }: RunnerPageProps) {
   const archive = useArchiveFailedStart();
   const stopSupervisor = useStopSupervisor();
   const restartSupervisor = useRestartSupervisor();
+  const [supervisorDrawerOpen, setSupervisorDrawerOpen] = useState(false);
 
   return (
     <div className="mx-auto flex w-full max-w-5xl flex-col gap-6 p-6">
@@ -56,12 +59,18 @@ export function RunnerPage({ agents, loading = false }: RunnerPageProps) {
 
       <SupervisorCard
         supervisor={data.supervisor}
+        onOpen={() => setSupervisorDrawerOpen(true)}
         onStop={() => stopSupervisor.mutate()}
         onRestart={() => restartSupervisor.mutate()}
         // Cold Start can't be enqueued — once the supervisor is fully stopped
         // nothing drains the queue, and the containerized daemon can't spawn a
         // host process. Point the operator at the CLI instead (CREW-293).
         onStart={() => toast.message('Run `crew runner start` on the host to start the supervisor')}
+      />
+      <SupervisorDrawer
+        supervisor={data.supervisor}
+        open={supervisorDrawerOpen}
+        onOpenChange={setSupervisorDrawerOpen}
       />
       <FailedToStartSection failures={data.failedToStart} onArchive={(k) => archive.mutate(k)} />
       <LiveProcessList
