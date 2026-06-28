@@ -42,7 +42,11 @@ describe('SupervisorDrawer', () => {
     vi.spyOn(defaultClient, 'getSupervisorLog').mockResolvedValue([]);
 
     renderWithProviders(
-      <SupervisorDrawer supervisor={{ online: false, lastSeen: null }} open onOpenChange={() => {}} />,
+      <SupervisorDrawer
+        supervisor={{ online: false, lastSeen: null }}
+        open
+        onOpenChange={() => {}}
+      />,
     );
 
     expect(screen.getByRole('status')).toHaveAccessibleName('down');

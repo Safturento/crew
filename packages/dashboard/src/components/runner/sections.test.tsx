@@ -67,6 +67,38 @@ describe('SupervisorCard', () => {
     await user.click(start);
     expect(onStart).toHaveBeenCalledTimes(1);
   });
+
+  it('opens the supervisor drawer when the card is clicked', async () => {
+    const user = userEvent.setup();
+    const onOpen = vi.fn();
+    render(
+      <SupervisorCard
+        supervisor={{ online: true, lastSeen: Date.now() }}
+        onOpen={onOpen}
+        onRestart={vi.fn()}
+        onStop={vi.fn()}
+      />,
+    );
+    await user.click(screen.getByRole('button', { name: 'Open supervisor detail' }));
+    expect(onOpen).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not open the drawer when an action button is clicked', async () => {
+    const user = userEvent.setup();
+    const onOpen = vi.fn();
+    const onRestart = vi.fn();
+    render(
+      <SupervisorCard
+        supervisor={{ online: true, lastSeen: Date.now() }}
+        onOpen={onOpen}
+        onRestart={onRestart}
+        onStop={vi.fn()}
+      />,
+    );
+    await user.click(screen.getByRole('button', { name: 'Restart' }));
+    expect(onRestart).toHaveBeenCalledTimes(1);
+    expect(onOpen).not.toHaveBeenCalled();
+  });
 });
 
 describe('LiveProcessList', () => {
