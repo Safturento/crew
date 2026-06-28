@@ -1,0 +1,178 @@
+{
+  "id": "882:1216",
+  "name": "SupervisorDrawerBody",
+  "type": "COMPONENT",
+  "page": "Composites",
+  "raw": {
+    "id": "882:1216",
+    "name": "SupervisorDrawerBody",
+    "type": "COMPONENT",
+    "scrollBehavior": "SCROLLS",
+    "boundVariables": {
+      "fills": [
+        {
+          "type": "VARIABLE_ALIAS",
+          "id": "VariableID:217:213"
+        }
+      ]
+    },
+    "blendMode": "PASS_THROUGH",
+    "clipsContent": false,
+    "background": [
+      {
+        "blendMode": "NORMAL",
+        "type": "SOLID",
+        "color": {
+          "r": 0.007843137718737125,
+          "g": 0.0235294122248888,
+          "b": 0.09019608050584793,
+          "a": 1
+        },
+        "boundVariables": {
+          "color": {
+            "type": "VARIABLE_ALIAS",
+            "id": "VariableID:217:213"
+          }
+        }
+      }
+    ],
+    "fills": [
+      {
+        "blendMode": "NORMAL",
+        "type": "SOLID",
+        "color": {
+          "r": 0.007843137718737125,
+          "g": 0.0235294122248888,
+          "b": 0.09019608050584793,
+          "a": 1
+        },
+        "boundVariables": {
+          "color": {
+            "type": "VARIABLE_ALIAS",
+            "id": "VariableID:217:213"
+          }
+        }
+      }
+    ],
+    "strokes": [],
+    "strokeWeight": 1,
+    "strokeAlign": "INSIDE",
+    "backgroundColor": {
+      "r": 0.007843137718737125,
+      "g": 0.0235294122248888,
+      "b": 0.09019608050584793,
+      "a": 1
+    },
+    "layoutMode": "VERTICAL",
+    "counterAxisSizingMode": "FIXED",
+    "layoutWrap": "NO_WRAP",
+    "absoluteBoundingBox": {
+      "x": 3960,
+      "y": 5560,
+      "width": 686,
+      "height": 363.20001220703125
+    },
+    "absoluteRenderBounds": {
+      "x": 3960,
+      "y": 5560,
+      "width": 686,
+      "height": 363.2001953125
+    },
+    "constraints": {
+      "vertical": "TOP",
+      "horizontal": "LEFT"
+    },
+    "layoutSizingHorizontal": "FIXED",
+    "layoutSizingVertical": "HUG",
+    "effects": [],
+    "interactions": [],
+    "complexStrokeProperties": {
+      "strokeType": "BASIC"
+    }
+  },
+  "enrichment": {
+    "source": "plugin-api",
+    "capturedAt": "2026-06-28T02:25:15.782Z",
+    "componentInstances": [
+      {
+        "id": "882:1227",
+        "name": "Pill",
+        "mainComponentSetId": "272:120",
+        "variantOverrides": "type=pill, color=running, intensity=mid, font=mono",
+        "componentPropertyOverrides": {
+          "Icon": "lucide/git-pull-request",
+          "Has Icon": false,
+          "Label": "running",
+          "type": "pill",
+          "color": "running",
+          "intensity": "mid",
+          "font": "mono"
+        },
+        "resolvedStyles": {
+          "fills": [
+            {
+              "hex": "#1C2538",
+              "tokenAlias": "slate-1050",
+              "opacity": 1
+            }
+          ],
+          "strokes": [
+            {
+              "hex": "#64748B",
+              "tokenAlias": "slate/500",
+              "opacity": 1
+            }
+          ],
+          "textColor": {
+            "hex": "#94A3B8",
+            "tokenAlias": "state/running"
+          }
+        }
+      },
+      {
+        "id": "882:1247",
+        "name": "Pill",
+        "mainComponentSetId": "272:120",
+        "variantOverrides": "type=button-xs, color=running, intensity=muted, font=sans",
+        "componentPropertyOverrides": {
+          "Has Icon": false,
+          "Icon": "lucide/git-pull-request",
+          "Label": "Copy",
+          "type": "button-xs",
+          "color": "running",
+          "intensity": "muted",
+          "font": "sans"
+        },
+        "resolvedStyles": {
+          "fills": [
+            {
+              "hex": "#1C2538",
+              "tokenAlias": "slate-1050",
+              "opacity": 1
+            }
+          ],
+          "textColor": {
+            "hex": "#94A3B8",
+            "tokenAlias": "state/running"
+          }
+        }
+      }
+    ],
+    "boundVariables": [
+      {
+        "path": "fills[0].color",
+        "variableId": "VariableID:217:213",
+        "variableName": "background",
+        "resolvedAlias": "background -> slate/950",
+        "resolvedHex": "#020617"
+      },
+      {
+        "path": "backgrounds[0].color",
+        "variableId": "VariableID:217:213",
+        "variableName": "background",
+        "resolvedAlias": "background -> slate/950",
+        "resolvedHex": "#020617"
+      }
+    ]
+  }
+}

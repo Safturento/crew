@@ -341,5 +341,33 @@
     "page": "Dashboard Screens",
     "screenshotPath": "screens/775-3715.png",
     "metadataPath": "screens/775-3715.json"
+  },
+  "881:1216": {
+    "name": "RunDrawerBody",
+    "type": "COMPONENT_SET",
+    "page": "Composites",
+    "screenshotPath": "composites/881-1216.png",
+    "metadataPath": "composites/881-1216.json"
+  },
+  "882:1216": {
+    "name": "SupervisorDrawerBody",
+    "type": "COMPONENT",
+    "page": "Composites",
+    "screenshotPath": "composites/882-1216.png",
+    "metadataPath": "composites/882-1216.json"
+  },
+  "883:4027": {
+    "name": "Runner Page (/runner) - Run Drawer Open",
+    "type": "FRAME",
+    "page": "Dashboard Screens",
+    "screenshotPath": "screens/883-4027.png",
+    "metadataPath": "screens/883-4027.json"
+  },
+  "883:4779": {
+    "name": "Runner Page (/runner) - Supervisor Drawer Open",
+    "type": "FRAME",
+    "page": "Dashboard Screens",
+    "screenshotPath": "screens/883-4779.png",
+    "metadataPath": "screens/883-4779.json"
   }
 }

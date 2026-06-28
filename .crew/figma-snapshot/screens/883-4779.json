@@ -1,0 +1,497 @@
+{
+  "id": "883:4779",
+  "name": "Runner Page (/runner) - Supervisor Drawer Open",
+  "type": "FRAME",
+  "page": "Dashboard Screens",
+  "raw": {
+    "id": "883:4779",
+    "name": "Runner Page (/runner) - Supervisor Drawer Open",
+    "type": "FRAME",
+    "scrollBehavior": "SCROLLS",
+    "boundVariables": {
+      "fills": [
+        {
+          "type": "VARIABLE_ALIAS",
+          "id": "VariableID:217:213"
+        }
+      ]
+    },
+    "blendMode": "PASS_THROUGH",
+    "clipsContent": true,
+    "background": [
+      {
+        "blendMode": "NORMAL",
+        "type": "SOLID",
+        "color": {
+          "r": 0.007843137718737125,
+          "g": 0.0235294122248888,
+          "b": 0.09019608050584793,
+          "a": 1
+        },
+        "boundVariables": {
+          "color": {
+            "type": "VARIABLE_ALIAS",
+            "id": "VariableID:217:213"
+          }
+        }
+      }
+    ],
+    "fills": [
+      {
+        "blendMode": "NORMAL",
+        "type": "SOLID",
+        "color": {
+          "r": 0.007843137718737125,
+          "g": 0.0235294122248888,
+          "b": 0.09019608050584793,
+          "a": 1
+        },
+        "boundVariables": {
+          "color": {
+            "type": "VARIABLE_ALIAS",
+            "id": "VariableID:217:213"
+          }
+        }
+      }
+    ],
+    "strokes": [],
+    "strokeWeight": 1,
+    "strokeAlign": "INSIDE",
+    "backgroundColor": {
+      "r": 0.007843137718737125,
+      "g": 0.0235294122248888,
+      "b": 0.09019608050584793,
+      "a": 1
+    },
+    "layoutMode": "VERTICAL",
+    "counterAxisSizingMode": "FIXED",
+    "layoutWrap": "NO_WRAP",
+    "absoluteBoundingBox": {
+      "x": 6502,
+      "y": 0,
+      "width": 1179,
+      "height": 1139
+    },
+    "absoluteRenderBounds": {
+      "x": 6502,
+      "y": 0,
+      "width": 1179,
+      "height": 1139
+    },
+    "constraints": {
+      "vertical": "TOP",
+      "horizontal": "LEFT"
+    },
+    "layoutSizingHorizontal": "FIXED",
+    "layoutSizingVertical": "HUG",
+    "effects": [],
+    "interactions": [],
+    "complexStrokeProperties": {
+      "strokeType": "BASIC"
+    }
+  },
+  "enrichment": {
+    "source": "plugin-api",
+    "capturedAt": "2026-06-28T02:45:03.625Z",
+    "componentInstances": [
+      {
+        "id": "883:4780",
+        "name": "TopNav",
+        "mainComponentSetId": "245:133",
+        "variantOverrides": "Active Tab=runner",
+        "componentPropertyOverrides": {
+          "Show New Run": true,
+          "Attention Count": "3",
+          "Show Attention": true,
+          "Active Tab": "runner"
+        },
+        "resolvedStyles": {
+          "strokes": [
+            {
+              "hex": "#1E293B",
+              "tokenAlias": "border",
+              "opacity": 1
+            }
+          ],
+          "textColor": {
+            "hex": "#E2E8F0",
+            "tokenAlias": "foreground"
+          }
+        }
+      },
+      {
+        "id": "883:4785",
+        "name": "SupervisorCard",
+        "mainComponentSetId": "789:1190",
+        "variantOverrides": "state=running",
+        "componentPropertyOverrides": {
+          "Meta": "5s heartbeat · 4 workers · up 2h 14m · pid 48213",
+          "state": "running"
+        },
+        "resolvedStyles": {
+          "fills": [
+            {
+              "hex": "#0F172A",
+              "tokenAlias": "card",
+              "opacity": 1
+            }
+          ],
+          "strokes": [
+            {
+              "hex": "#1E293B",
+              "tokenAlias": "border",
+              "opacity": 1
+            }
+          ],
+          "textColor": {
+            "hex": "#94A3B8",
+            "tokenAlias": "state/running"
+          }
+        }
+      },
+      {
+        "id": "883:4792",
+        "name": "FailedStartCard",
+        "mainComponentSetId": "771:1142",
+        "componentPropertyOverrides": {
+          "Show Remediation": true,
+          "Headline": "Remote ‘origin’ not found in project config",
+          "Remediation": "set repo.remote in crew.toml",
+          "Timing": "failed to start · 2m ago",
+          "AgentKey": "CREW-241"
+        },
+        "resolvedStyles": {
+          "fills": [
+            {
+              "hex": "#262031",
+              "tokenAlias": "red-1050",
+              "opacity": 1
+            }
+          ],
+          "strokes": [
+            {
+              "hex": "#EF4444",
+              "tokenAlias": "red/500",
+              "opacity": 1
+            }
+          ],
+          "textColor": {
+            "hex": "#F87171",
+            "tokenAlias": "state/error"
+          }
+        }
+      },
+      {
+        "id": "883:4793",
+        "name": "FailedStartCard",
+        "mainComponentSetId": "771:1142",
+        "componentPropertyOverrides": {
+          "Show Remediation": true,
+          "Headline": "GH_TOKEN missing from agent environment",
+          "Remediation": "add GH_TOKEN to env.toml or the host shell",
+          "Timing": "failed to start · 9m ago",
+          "AgentKey": "CREW-238"
+        },
+        "resolvedStyles": {
+          "fills": [
+            {
+              "hex": "#262031",
+              "tokenAlias": "red-1050",
+              "opacity": 1
+            }
+          ],
+          "strokes": [
+            {
+              "hex": "#EF4444",
+              "tokenAlias": "red/500",
+              "opacity": 1
+            }
+          ],
+          "textColor": {
+            "hex": "#F87171",
+            "tokenAlias": "state/error"
+          }
+        }
+      },
+      {
+        "id": "883:4799",
+        "name": "ProcessRow",
+        "mainComponentSetId": "767:1179",
+        "variantOverrides": "state=running",
+        "componentPropertyOverrides": {
+          "Duration": "12m 04s",
+          "Project": "~/code/crew",
+          "AgentKey": "CREW-231",
+          "state": "running"
+        },
+        "resolvedStyles": {
+          "fills": [
+            {
+              "hex": "#0F172A",
+              "tokenAlias": "card",
+              "opacity": 1
+            }
+          ],
+          "strokes": [
+            {
+              "hex": "#1E293B",
+              "tokenAlias": "border",
+              "opacity": 1
+            }
+          ],
+          "textColor": {
+            "hex": "#94A3B8",
+            "tokenAlias": "state/running"
+          }
+        }
+      },
+      {
+        "id": "883:4800",
+        "name": "ProcessRow",
+        "mainComponentSetId": "767:1179",
+        "variantOverrides": "state=cancelling",
+        "componentPropertyOverrides": {
+          "Duration": "cancelling · 0m 08s",
+          "Project": "~/code/lighthouse",
+          "AgentKey": "CREW-232",
+          "state": "cancelling"
+        },
+        "resolvedStyles": {
+          "fills": [
+            {
+              "hex": "#0F172A",
+              "tokenAlias": "card",
+              "opacity": 1
+            }
+          ],
+          "strokes": [
+            {
+              "hex": "#1E293B",
+              "tokenAlias": "border",
+              "opacity": 1
+            }
+          ],
+          "textColor": {
+            "hex": "#FBBF24",
+            "tokenAlias": "state/waiting"
+          }
+        }
+      },
+      {
+        "id": "883:4819",
+        "name": "Pill",
+        "mainComponentSetId": "272:120",
+        "variantOverrides": "type=button-sm, color=waiting, intensity=muted, font=sans",
+        "componentPropertyOverrides": {
+          "Has Icon": false,
+          "Icon": "lucide/git-pull-request",
+          "Label": "Reap",
+          "type": "button-sm",
+          "color": "waiting",
+          "intensity": "muted",
+          "font": "sans"
+        },
+        "resolvedStyles": {
+          "fills": [
+            {
+              "hex": "#26282A",
+              "tokenAlias": "amber-1050",
+              "opacity": 1
+            }
+          ],
+          "textColor": {
+            "hex": "#FBBF24",
+            "tokenAlias": "state/waiting"
+          }
+        }
+      },
+      {
+        "id": "883:4838",
+        "name": "Pill",
+        "mainComponentSetId": "272:120",
+        "variantOverrides": "type=button-sm, color=idle, intensity=ghost, font=sans",
+        "componentPropertyOverrides": {
+          "Has Icon": false,
+          "Icon": "lucide/git-pull-request",
+          "Label": "Dequeue",
+          "type": "button-sm",
+          "color": "idle",
+          "intensity": "ghost",
+          "font": "sans"
+        },
+        "resolvedStyles": {
+          "textColor": {
+            "hex": "#64748B",
+            "tokenAlias": "state/idle"
+          }
+        }
+      },
+      {
+        "id": "883:4854",
+        "name": "Pill",
+        "mainComponentSetId": "272:120",
+        "variantOverrides": "type=button-sm, color=pr-open, intensity=mid, font=sans",
+        "componentPropertyOverrides": {
+          "Has Icon": false,
+          "Icon": "lucide/git-pull-request",
+          "Label": "PR #340",
+          "type": "button-sm",
+          "color": "pr-open",
+          "intensity": "mid",
+          "font": "sans"
+        },
+        "resolvedStyles": {
+          "fills": [
+            {
+              "hex": "#1E233F",
+              "tokenAlias": "violet-1050",
+              "opacity": 1
+            }
+          ],
+          "strokes": [
+            {
+              "hex": "#8B5CF6",
+              "tokenAlias": "violet/500",
+              "opacity": 1
+            }
+          ],
+          "textColor": {
+            "hex": "#A78BFA",
+            "tokenAlias": "state/pr-open"
+          }
+        }
+      },
+      {
+        "id": "883:4875",
+        "name": "Pill",
+        "mainComponentSetId": "272:120",
+        "variantOverrides": "type=button-sm, color=error, intensity=mid, font=sans",
+        "componentPropertyOverrides": {
+          "Icon": "lucide/git-pull-request",
+          "Has Icon": false,
+          "Label": "Inspect",
+          "type": "button-sm",
+          "color": "error",
+          "intensity": "mid",
+          "font": "sans"
+        },
+        "resolvedStyles": {
+          "fills": [
+            {
+              "hex": "#262031",
+              "tokenAlias": "red-1050",
+              "opacity": 1
+            }
+          ],
+          "strokes": [
+            {
+              "hex": "#EF4444",
+              "tokenAlias": "red/500",
+              "opacity": 1
+            }
+          ],
+          "textColor": {
+            "hex": "#F87171",
+            "tokenAlias": "state/error"
+          }
+        }
+      },
+      {
+        "id": "883:4878",
+        "name": "SupervisorDrawerBody (drawer)",
+        "mainComponentSetId": "882:1216",
+        "resolvedStyles": {
+          "fills": [
+            {
+              "hex": "#020617",
+              "tokenAlias": "background",
+              "opacity": 1
+            }
+          ],
+          "textColor": {
+            "hex": "#94A3B8",
+            "tokenAlias": "muted-foreground"
+          }
+        }
+      }
+    ],
+    "boundVariables": [
+      {
+        "path": "fills[0].color",
+        "variableId": "VariableID:217:213",
+        "variableName": "background",
+        "resolvedAlias": "background -> slate/950",
+        "resolvedHex": "#020617"
+      },
+      {
+        "path": "backgrounds[0].color",
+        "variableId": "VariableID:217:213",
+        "variableName": "background",
+        "resolvedAlias": "background -> slate/950",
+        "resolvedHex": "#020617"
+      }
+    ],
+    "depthWarnings": [
+      {
+        "depthExceeded": true,
+        "depth": 7,
+        "atNodeId": "883:4809",
+        "atName": "state-slot"
+      },
+      {
+        "depthExceeded": true,
+        "depth": 7,
+        "atNodeId": "883:4811",
+        "atName": "Frame"
+      },
+      {
+        "depthExceeded": true,
+        "depth": 7,
+        "atNodeId": "883:4828",
+        "atName": "state-slot"
+      },
+      {
+        "depthExceeded": true,
+        "depth": 7,
+        "atNodeId": "883:4830",
+        "atName": "Frame"
+      },
+      {
+        "depthExceeded": true,
+        "depth": 7,
+        "atNodeId": "883:4846",
+        "atName": "state-slot"
+      },
+      {
+        "depthExceeded": true,
+        "depth": 7,
+        "atNodeId": "883:4848",
+        "atName": "Frame"
+      },
+      {
+        "depthExceeded": true,
+        "depth": 7,
+        "atNodeId": "883:4857",
+        "atName": "state-slot"
+      },
+      {
+        "depthExceeded": true,
+        "depth": 7,
+        "atNodeId": "883:4859",
+        "atName": "Frame"
+      },
+      {
+        "depthExceeded": true,
+        "depth": 7,
+        "atNodeId": "883:4867",
+        "atName": "state-slot"
+      },
+      {
+        "depthExceeded": true,
+        "depth": 7,
+        "atNodeId": "883:4869",
+        "atName": "Frame"
+      }
+    ]
+  }
+}

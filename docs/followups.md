@@ -10,6 +10,7 @@ Organization: Active is grouped by topic (not chronology) since the dominant acc
 
 - [Active](#active)
   - [Figma & Crew DS](#figma--crew-ds)
+    - [2026-06-27 — figma-snapshot stale for 5 nodes (FilterMenu, NewRunStep2, New Run modals)](#2026-06-27--figma-snapshot-stale-for-5-nodes-filtermenu-newrunstep2-new-run-modals)
     - [2026-06-04 — `FinishSteps` checklist has no Crew DS Figma counterpart](#2026-06-04--finishsteps-checklist-has-no-crew-ds-figma-counterpart)
     - [2026-05-24 — Publish `state/pr-merged` variable in Crew DS Figma](#2026-05-24--publish-statepr-merged-variable-in-crew-ds-figma)
     - [2026-05-12 — Move figma-snapshot PAGE_DIR_MAP into project config](#2026-05-12--move-figma-snapshot-page_dir_map-into-project-config)
@@ -136,6 +137,23 @@ Organization: Active is grouped by topic (not chronology) since the dominant acc
 ## Active
 
 ### Figma & Crew DS
+
+#### 2026-06-27 — figma-snapshot stale for 5 nodes (FilterMenu, NewRunStep2, New Run modals)
+
+**What:** During CREW-294 (the interactive Figma build of the run + supervisor drawers), `crew figma-snapshot --check` reported 5 already-committed snapshot nodes as drifted from live Figma: `844:4328` (FilterMenu), `362:2212` (NewRunStep2Content), and the three New Run modal screens `1:2980` / `1:3418` / `9:2`. These are unrelated to the drawers — they're Figma edits made under earlier tickets whose `figma-snapshot-refresh` never ran. `visual-fidelity-check` for those components/screens is therefore validating against stale snapshot data.
+
+**Why noticed:** The CREW-294 partial refresh (run/supervisor drawers only) deliberately left `meta.json` untouched, so `--check` keeps surfacing the 5 drifts. Partial refresh fixes the named nodes; clearing the stale signal needs a full refresh, which is the catch-all the skill prescribes.
+
+**Anchors:**
+
+- `crew figma-snapshot --check` (run from repo root) — reproduces the stale list
+- `.crew/figma-snapshot/` — committed snapshot; `meta.json` carries the freshness hashes
+- `.claude/skills/figma-snapshot-refresh/SKILL.md` — step 2 (full vs partial) + the "partial doesn't update meta.json" note
+- Figma file `9FeJPriqdsdA4n9R5Xsrr8` — FilterMenu `844:4328`, NewRunStep2Content `362:2212`, New Run modal screens `1:2980` / `1:3418` / `9:2`
+
+**Shape of work:** run a **full** `crew figma-snapshot` (no flag) → enrich every `index.json` node in batches → `--enrich` merge → verify `--check` reports fresh → commit. Should be its own doc-ish PR so the drift fix isn't conflated with feature work. Verify each of the 5 components actually changed in Figma (vs a snapshot hashing quirk) while doing it.
+
+**Open questions:** were these intentional Figma changes (so the snapshot should adopt them) or accidental drift (so Figma should be reverted)? Resolve per-node before committing a full refresh.
 
 #### 2026-06-04 — `FinishSteps` checklist has no Crew DS Figma counterpart
 
