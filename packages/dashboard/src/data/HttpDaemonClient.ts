@@ -503,6 +503,13 @@ export class HttpDaemonClient implements DaemonClient {
     return RunnerLogsSchema.parse(await res.json()).lines;
   }
 
+  async getSupervisorLog(tail?: number): Promise<string[]> {
+    const qs = tail === undefined ? '' : `?tail=${tail}`;
+    const res = await fetch(`${this.baseUrl}/api/runner/supervisor-log${qs}`);
+    if (!res.ok) throw new Error(`GET /api/runner/supervisor-log: ${res.status}`);
+    return RunnerLogsSchema.parse(await res.json()).lines;
+  }
+
   /**
    * CREW-245: enqueue a runner reverse-queue control command. The daemon
    * persists it `pending`; the host runner drains + applies it each cycle

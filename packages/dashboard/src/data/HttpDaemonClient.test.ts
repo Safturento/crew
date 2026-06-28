@@ -848,6 +848,57 @@ describe('HttpDaemonClient.getStartupLog (CREW-291)', () => {
   });
 });
 
+describe('HttpDaemonClient.getSupervisorLog (CREW-292)', () => {
+  it('GETs /api/runner/supervisor-log and returns the lines', async () => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify({ lines: ['runner started', 'reaped 1 dead process'] }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      }),
+    );
+
+    const lines = await new HttpDaemonClient().getSupervisorLog();
+
+    expect(lines).toEqual(['runner started', 'reaped 1 dead process']);
+    expect(fetchSpy).toHaveBeenCalledWith('/api/runner/supervisor-log');
+  });
+
+  it('passes the tail count as a query param when given', async () => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify({ lines: [] }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      }),
+    );
+
+    await new HttpDaemonClient().getSupervisorLog(50);
+    expect(fetchSpy).toHaveBeenCalledWith('/api/runner/supervisor-log?tail=50');
+  });
+
+  it('returns an empty array when the log is absent (no runner)', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify({ lines: [] }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      }),
+    );
+
+    expect(await new HttpDaemonClient().getSupervisorLog()).toEqual([]);
+  });
+
+  it('throws on non-2xx', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('boom', { status: 500 }));
+    await expect(new HttpDaemonClient().getSupervisorLog()).rejects.toThrow(/500/);
+  });
+
+  it('throws on schema mismatch', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify({ lines: [42] }), { status: 200 }),
+    );
+    await expect(new HttpDaemonClient().getSupervisorLog()).rejects.toThrow();
+  });
+});
+
 describe('HttpDaemonClient.listProjectTickets', () => {
   it('GETs /api/projects/:slug/tickets and parses an available payload', async () => {
     const payload = {

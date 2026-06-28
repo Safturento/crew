@@ -42,6 +42,13 @@ export interface DaemonClient {
   getRunnerStatus(): Promise<RunnerStatus>;
   getRunnerLogs(tail?: number): Promise<string[]>;
   /**
+   * CREW-292: tail the supervisor's process-management log (the
+   * spawn/respawn/heartbeat/reap slice of `runner.log`) for the supervisor
+   * drawer, via `GET /api/runner/supervisor-log`. Resolves to `[]` when no
+   * runner log exists — the normal state on a worktree stack.
+   */
+  getSupervisorLog(tail?: number): Promise<string[]>;
+  /**
    * CREW-245: enqueue a runner reverse-queue control command
    * (`cancel_soft` / `cancel_hard` / `reap` / `dequeue`) via
    * `POST /api/runner/commands`. Backs the Runner page row controls.
