@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import type { AddressInfo } from 'node:net';
 import { pino, type Logger } from 'pino';
 import { claudeProjectDirFor } from 'crew-shared';
 import { buildApp } from '../app.js';
@@ -18,15 +19,23 @@ const silentLogger: Logger = pino({ level: 'silent' });
 
 async function setupApp() {
   const dir = tmp();
+  // Override the startup-events dir so the startup-log route reads `<key>.log`
+  // from a fresh empty dir the test controls (and the boot chokidar watcher
+  // doesn't scan the developer's real ~/.crew/startup).
+  const startupEventsDir = tmp();
   const config = parseDaemonConfig({
     CREW_CONFIG_DIR: dir,
     CREW_DB_FILE: join(dir, 'state.db'),
+    CREW_STARTUP_EVENTS_DIR: startupEventsDir,
   });
   const db = createDb(config.dbFile);
   await runMigrations(db, MIGRATIONS_DIR);
   const app = await buildApp({ config, logger: silentLogger, db });
+  await app.listen({ host: '127.0.0.1', port: 0 });
+  const addr = app.server.address() as AddressInfo;
+  const baseUrl = `http://127.0.0.1:${addr.port}`;
   const eventBus = app.diContainer.cradle.eventBus;
-  return { app, db, eventBus };
+  return { app, db, eventBus, startupEventsDir, baseUrl };
 }
 
 const validBody = {
@@ -606,6 +615,88 @@ describe('POST /api/runs/:key/acknowledge', () => {
     }
   });
 });
+
+describe('GET /api/runs/:key/startup-log', () => {
+  it('serves the static log body for an ended run', async () => {
+    const { app, startupEventsDir, close } = await setupAppCloseable();
+    try {
+      writeFileSync(join(startupEventsDir, 'CREW-LOG.log'), 'line one\nline two\n');
+      const res = await app.inject({ method: 'GET', url: '/api/runs/CREW-LOG/startup-log' });
+      expect(res.statusCode).toBe(200);
+      expect(res.headers['content-type']).toMatch(/text\/plain/);
+      expect(res.body).toBe('line one\nline two\n');
+    } finally {
+      await close();
+    }
+  });
+
+  it('returns 404 when the log file is absent', async () => {
+    const { app, close } = await setupAppCloseable();
+    try {
+      const res = await app.inject({ method: 'GET', url: '/api/runs/CREW-MISSING/startup-log' });
+      expect(res.statusCode).toBe(404);
+    } finally {
+      await close();
+    }
+  });
+
+  it('tails appended lines over SSE when ?follow=1', async () => {
+    const { baseUrl, startupEventsDir, close } = await setupAppCloseable();
+    try {
+      const logPath = join(startupEventsDir, 'CREW-TAIL.log');
+      writeFileSync(logPath, 'first\n');
+      const res = await fetch(`${baseUrl}/api/runs/CREW-TAIL/startup-log?follow=1`);
+      expect(res.status).toBe(200);
+      expect(res.headers.get('content-type')).toMatch(/text\/event-stream/);
+
+      // Append a line and assert it streams through.
+      writeFileSync(logPath, 'first\nsecond\n');
+      const text = await readUntil(res, 'second');
+      expect(text).toContain('first');
+      expect(text).toContain('second');
+    } finally {
+      await close();
+    }
+  });
+});
+
+/**
+ * Reads from a streaming Response until `needle` appears in the accumulated
+ * text (or a timeout). Used to assert the SSE startup-log tail without
+ * depending on exact frame boundaries.
+ */
+async function readUntil(response: Response, needle: string, timeoutMs = 1500): Promise<string> {
+  if (!response.body) throw new Error('response has no body');
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buf = '';
+  const start = Date.now();
+  try {
+    while (!buf.includes(needle)) {
+      if (Date.now() - start > timeoutMs) {
+        throw new Error(`timed out waiting for "${needle}"; got: ${buf}`);
+      }
+      const { value, done } = await reader.read();
+      if (done) break;
+      buf += decoder.decode(value, { stream: true });
+    }
+    return buf;
+  } finally {
+    await reader.cancel().catch(() => {});
+  }
+}
+
+/** setupApp + a `close` that tears the listening server + db down. */
+async function setupAppCloseable() {
+  const h = await setupApp();
+  return {
+    ...h,
+    close: async () => {
+      await h.app.close();
+      await h.db.destroy();
+    },
+  };
+}
 
 describe('register auto-acknowledges a prior failed-start', () => {
   it('clears an unacknowledged failed-start when a fresh run registers', async () => {

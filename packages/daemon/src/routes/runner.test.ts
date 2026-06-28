@@ -381,3 +381,64 @@ describe('GET /api/runner/page', () => {
     }
   });
 });
+
+describe('GET /api/runner/supervisor-log', () => {
+  it('returns an empty tail when runner.log is absent', async () => {
+    const { app, close } = await setupApp();
+    try {
+      const res = await app.inject({ method: 'GET', url: '/api/runner/supervisor-log' });
+      expect(res.statusCode).toBe(200);
+      expect(res.json()).toEqual({ lines: [] });
+    } finally {
+      await close();
+    }
+  });
+
+  it('filters runner.log to supervisor management lines, dropping per-action noise', async () => {
+    const dir = tmp();
+    const logDir = join(dir, 'runner');
+    mkdirSync(logDir, { recursive: true });
+    writeFileSync(
+      join(logDir, 'runner.log'),
+      [
+        '[2026-06-25T00:00:00.000Z] runner started (pid 1)',
+        '[2026-06-25T00:00:01.000Z] launched action 5 (run CREW-1)',
+        '[2026-06-25T00:00:02.000Z] worker exited 1; respawning',
+        '[2026-06-25T00:00:03.000Z] reaped 2 dead process(es): CREW-2, CREW-3',
+        '[2026-06-25T00:00:04.000Z] poll error: timeout',
+        '',
+      ].join('\n'),
+    );
+    const { app, close } = await setupApp({ runnerLogDir: logDir });
+    try {
+      const res = await app.inject({ method: 'GET', url: '/api/runner/supervisor-log' });
+      expect(res.statusCode).toBe(200);
+      const { lines } = res.json() as { lines: string[] };
+      expect(lines.some((l) => l.includes('runner started'))).toBe(true);
+      expect(lines.some((l) => l.includes('respawning'))).toBe(true);
+      expect(lines.some((l) => l.includes('reaped'))).toBe(true);
+      expect(lines.some((l) => l.includes('launched action'))).toBe(false);
+      expect(lines.some((l) => l.includes('poll error'))).toBe(false);
+    } finally {
+      await close();
+    }
+  });
+
+  it('serves the unfiltered tail with ?raw=1', async () => {
+    const dir = tmp();
+    const logDir = join(dir, 'runner');
+    mkdirSync(logDir, { recursive: true });
+    writeFileSync(
+      join(logDir, 'runner.log'),
+      '[2026-06-25T00:00:00.000Z] runner started (pid 1)\n[2026-06-25T00:00:01.000Z] launched action 5 (run CREW-1)\n',
+    );
+    const { app, close } = await setupApp({ runnerLogDir: logDir });
+    try {
+      const res = await app.inject({ method: 'GET', url: '/api/runner/supervisor-log?raw=1' });
+      const { lines } = res.json() as { lines: string[] };
+      expect(lines.some((l) => l.includes('launched action'))).toBe(true);
+    } finally {
+      await close();
+    }
+  });
+});

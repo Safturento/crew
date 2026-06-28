@@ -90,6 +90,24 @@ const LogsResponseSchema = z.object({
   lines: z.array(z.string()),
 });
 
+const SupervisorLogQuerySchema = z.object({
+  tail: z.coerce.number().int().positive().max(2000).default(200),
+  // `?raw=1` bypasses the management filter and serves the full tail.
+  raw: z.string().optional(),
+});
+
+/**
+ * Management lines the supervisor drawer cares about — process spawn/respawn,
+ * the supervisor's own start/stop, dead-process reaping, and stale-pidfile
+ * recovery. `runner.log` interleaves these with per-action/per-command noise
+ * (`launched action ...`, `applied command ...`, `poll error ...`) that
+ * belongs to the queued/recently-ended surfaces, not the supervisor view.
+ * (Spec open question: revisit if the runner later emits a structured
+ * management-event stream; `?raw=1` serves the unfiltered tail meanwhile.)
+ */
+const SUPERVISOR_MANAGEMENT_RE =
+  /\b(respawn|runner (?:started|stopped)|stale pidfile|worker exited|reap|heartbeat|spawn)/i;
+
 /**
  * Read the last `tail` lines of the runner log. Returns `[]` when the file
  * is absent (no runner has ever run on this host) — a missing log is the
@@ -195,6 +213,26 @@ export async function registerRunnerRoutes(app: DaemonApp): Promise<void> {
     '/api/runner/page',
     { schema: { response: { 200: runnerPageSchema } } },
     async (req) => req.diScope.resolve('runnerPageService').getPage(),
+  );
+
+  // CREW-249 (T2): the supervisor drawer's read surface — the management slice
+  // of `runner.log` (spawn/respawn/heartbeat/reap), tailed to the last N lines.
+  // `?raw=1` serves the unfiltered tail.
+  app.get(
+    '/api/runner/supervisor-log',
+    {
+      schema: {
+        querystring: SupervisorLogQuerySchema,
+        response: { 200: LogsResponseSchema },
+      },
+    },
+    async (req) => {
+      const { runnerLogDir } = req.diScope.resolve('config');
+      const all = await tailLog(join(runnerLogDir, 'runner.log'), Number.MAX_SAFE_INTEGER);
+      const filtered =
+        req.query.raw === '1' ? all : all.filter((l) => SUPERVISOR_MANAGEMENT_RE.test(l));
+      return { lines: filtered.slice(-req.query.tail) };
+    },
   );
 
   app.post(
