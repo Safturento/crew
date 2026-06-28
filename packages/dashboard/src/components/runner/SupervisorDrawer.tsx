@@ -34,8 +34,12 @@ export function SupervisorDrawer({ supervisor, open, onOpenChange }: SupervisorD
   const lines = data ?? [];
 
   const copy = () => {
-    void navigator.clipboard?.writeText(lines.join('\n'));
-    toast.success('Management log copied');
+    // Only claim success once the write actually resolves — an insecure context
+    // (no `navigator.clipboard`) or a denied permission must not toast success.
+    navigator.clipboard
+      ?.writeText(lines.join('\n'))
+      .then(() => toast.success('Management log copied'))
+      .catch(() => toast.error('Could not copy the management log'));
   };
 
   return (
