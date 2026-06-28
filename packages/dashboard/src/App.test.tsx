@@ -162,6 +162,8 @@ describe('App', () => {
       getRunnerLogs: () => Promise.reject(new Error('daemon unreachable')),
       enqueueRunnerCommand: () => Promise.reject(new Error('daemon unreachable')),
       acknowledgeRun: () => Promise.reject(new Error('daemon unreachable')),
+      getRunnerPage: () => Promise.reject(new Error('daemon unreachable')),
+      getStartupLog: () => Promise.reject(new Error('daemon unreachable')),
     };
     const queryClient = new QueryClient({
       defaultOptions: { queries: { retry: false, throwOnError: true } },

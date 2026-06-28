@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { GitPullRequest } from 'lucide-react';
-import type { RunFailure } from 'crew-shared';
 
 import type { PillColor } from '@/lib/pill-variants';
 import { Row } from '../Row.js';
@@ -8,9 +7,9 @@ import { Badge } from '../ui/badge.js';
 import { Button } from '../ui/button.js';
 import { formatAgo } from '@/format/relativeTime';
 import { CommandBadge } from './CommandBadge.js';
+import { RunDrawer } from './RunDrawer.js';
 import { EmptyRow } from './rowStates.js';
 import { Section } from './Section.js';
-import { ViewOutputModal } from './ViewOutputModal.js';
 import type { EndedKind, EndedRunView } from './types.js';
 
 interface RecentlyEndedProps {
@@ -31,19 +30,11 @@ const SUFFIX: Record<EndedKind, string> = {
   'failed-start': 'failed to start',
 };
 
-const NO_OUTPUT: RunFailure = {
-  check: 'unknown',
-  headline: 'No diagnosis was captured for this run.',
-  remediation: '',
-  output: 'No output captured.',
-};
-
 /**
- * Recently ended — the terminal-run history. `finished` shows a PR link;
- * `cancelled` carries no right-side action (the cancellation source lands in
- * the CREW-249 drawer); `error` and acknowledged `failed-start` open the same
- * Inspect (Diagnosis + Output) modal. Always visible: empty → a muted
- * "Nothing ended recently".
+ * Recently ended — the terminal-run history. Every row is clickable → the run
+ * drawer (its diagnosis, if any, + the captured startup console log — CREW-291).
+ * `finished` also carries a PR link as a secondary action. Always visible:
+ * empty → a muted "Nothing ended recently".
  */
 export function RecentlyEnded({ runs }: RecentlyEndedProps) {
   return (
@@ -58,14 +49,15 @@ export function RecentlyEnded({ runs }: RecentlyEndedProps) {
 }
 
 function EndedRow({ run }: { run: EndedRunView }) {
-  const [inspecting, setInspecting] = useState(false);
+  const [open, setOpen] = useState(false);
   const pill = PILL[run.kind];
   const suffix = SUFFIX[run.kind];
-  const canInspect = run.kind === 'error' || run.kind === 'failed-start';
 
   return (
     <>
       <Row
+        onActivate={() => setOpen(true)}
+        ariaLabel={`Open run drawer for ${run.key}`}
         statusSlot={
           <Badge role="status" aria-label={pill.label} color={pill.color} intensity="mid">
             {pill.label}
@@ -88,37 +80,25 @@ function EndedRow({ run }: { run: EndedRunView }) {
         }
         actions={
           run.kind === 'finished' && run.prNumber !== undefined ? (
-            <Button
-              color="pr_open"
-              intensity="mid"
-              size="sm"
-              icon={<GitPullRequest aria-hidden />}
-              asChild
-            >
-              <a href={run.prUrl ?? '#'} target="_blank" rel="noreferrer">
-                PR #{run.prNumber}
-              </a>
-            </Button>
-          ) : canInspect ? (
-            <Button color="error" intensity="mid" size="sm" onClick={() => setInspecting(true)}>
-              Inspect
-            </Button>
+            <div className="shrink-0" onClick={(e) => e.stopPropagation()}>
+              <Button
+                color="pr_open"
+                intensity="mid"
+                size="sm"
+                icon={<GitPullRequest aria-hidden />}
+                asChild
+              >
+                <a href={run.prUrl ?? '#'} target="_blank" rel="noreferrer">
+                  PR #{run.prNumber}
+                </a>
+              </Button>
+            </div>
           ) : (
             <span aria-hidden />
           )
         }
       />
-      {canInspect && (
-        <ViewOutputModal
-          open={inspecting}
-          onOpenChange={setInspecting}
-          agentKey={run.key}
-          command={run.command}
-          project={run.project}
-          failedAt={run.endedAt}
-          failure={run.failure ?? NO_OUTPUT}
-        />
-      )}
+      <RunDrawer source={{ kind: 'ended', view: run }} open={open} onOpenChange={setOpen} />
     </>
   );
 }

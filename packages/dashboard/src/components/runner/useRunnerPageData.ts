@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import type { LiveProcess } from 'crew-shared';
 
 import type { Agent } from '@/data/types';
+import { useRunnerPage } from '@/data/useRunnerPage';
 import { useRunnerStatus } from '@/data/useRunnerStatus';
 import type {
   EndedRunView,
@@ -23,22 +24,20 @@ export interface RunnerPageData {
 const ACTIVE_STATES = new Set<Agent['state']>(['running', 'initializing']);
 
 /**
- * Aggregates the Runner page's data from what the merged daemon serves today:
+ * Aggregates the Runner page's data from the daemon surfaces:
  *
  * - Supervisor + live processes come from `/api/runner/status` (online/lastSeen
  *   + the snapshot, kept live over `runner.snapshot_changed`).
  * - Unmanaged is derived honestly client-side: agents `running`/`initializing`
  *   in the DB whose key is absent from the live snapshot — exactly the spec's
  *   "running in the DB, no live process".
- *
- * Failed-to-start / Queued / Recently-ended have no read endpoint on the merged
- * daemon yet (the claim route mutates; failed-start runs aren't agents), so
- * they return empty until the CREW-249 per-entity read surfaces land. The
- * section components render fully from these arrays — only the source is
- * deferred. See docs/followups.md.
+ * - Failed-to-start / Queued / Recently-ended come from `/api/runner/page`
+ *   (CREW-290 / T2), consumed via `useRunnerPage` (CREW-291). The section
+ *   components render fully from these arrays.
  */
 export function useRunnerPageData(agents: Agent[]): RunnerPageData {
   const runner = useRunnerStatus();
+  const page = useRunnerPage();
 
   return useMemo(() => {
     const liveKeys = new Set(runner.processes.map((p) => p.agentKey));
@@ -50,9 +49,9 @@ export function useRunnerPageData(agents: Agent[]): RunnerPageData {
       supervisor: { online: runner.online, lastSeen: runner.lastSeen },
       liveProcesses: runner.processes,
       unmanaged,
-      failedToStart: [],
-      queued: [],
-      recentlyEnded: [],
+      failedToStart: page.failedToStart,
+      queued: page.queued,
+      recentlyEnded: page.recentlyEnded,
     };
-  }, [runner.online, runner.lastSeen, runner.processes, agents]);
+  }, [runner.online, runner.lastSeen, runner.processes, agents, page]);
 }
