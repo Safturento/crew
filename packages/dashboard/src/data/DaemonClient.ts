@@ -5,6 +5,7 @@ import type {
   LiveProcess,
   ProjectTicketsResponse,
   RunnerCommand,
+  RunnerPage,
 } from 'crew-shared';
 
 import type { Agent, Project, ProjectDetailResponse } from './types.js';
@@ -51,4 +52,16 @@ export interface DaemonClient {
    * `POST /api/runs/:key/acknowledge`. Returns the number acknowledged.
    */
   acknowledgeRun(key: string): Promise<number>;
+  /**
+   * CREW-291: the Runner page's read surface — `failedToStart` / `queued` /
+   * `recentlyEnded` from `GET /api/runner/page` (CREW-290 / T2). Backs the
+   * three previously-stubbed sections.
+   */
+  getRunnerPage(): Promise<RunnerPage>;
+  /**
+   * CREW-291: a run's raw startup console log from
+   * `GET /api/runs/:key/startup-log`. Returns the body text, or `null` when no
+   * log exists yet (404 — a run that never captured one). Feeds the run drawer.
+   */
+  getStartupLog(key: string): Promise<string | null>;
 }

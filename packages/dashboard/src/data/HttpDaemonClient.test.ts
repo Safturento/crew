@@ -755,6 +755,99 @@ describe('HttpDaemonClient.getRunnerLogs (CREW-221)', () => {
   });
 });
 
+describe('HttpDaemonClient.getRunnerPage (CREW-291)', () => {
+  const PAGE = {
+    failedToStart: [
+      {
+        key: 'CREW-241',
+        command: 'run',
+        project: '~/code/crew',
+        failedAt: '2026-06-25T14:30:41.000Z',
+        failure: {
+          check: 'repo-config',
+          headline: "Remote 'origin' not found in project config",
+          remediation: 'set repo.remote in crew.toml',
+          output: '$ crew run CREW-241\nexit code 1',
+        },
+      },
+    ],
+    queued: [
+      { key: 'CREW-240', command: 'run', project: '~/code/crew', queuedAt: '2026-06-25T14:28:00.000Z' },
+    ],
+    recentlyEnded: [
+      {
+        key: 'CREW-227',
+        command: 'run',
+        project: '~/code/crew',
+        endedAt: '2026-06-25T14:42:00.000Z',
+        kind: 'finished',
+        prUrl: 'https://example.com/pr/340',
+        prNumber: 340,
+      },
+    ],
+  };
+
+  it('GETs /api/runner/page and returns the three parsed lists', async () => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify(PAGE), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      }),
+    );
+
+    const page = await new HttpDaemonClient().getRunnerPage();
+
+    expect(page.failedToStart.map((f) => f.key)).toEqual(['CREW-241']);
+    expect(page.queued.map((q) => q.key)).toEqual(['CREW-240']);
+    expect(page.recentlyEnded[0]).toMatchObject({ key: 'CREW-227', kind: 'finished', prNumber: 340 });
+    expect(fetchSpy).toHaveBeenCalledWith('/api/runner/page');
+  });
+
+  it('throws on non-2xx', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('boom', { status: 500 }));
+    await expect(new HttpDaemonClient().getRunnerPage()).rejects.toThrow(/500/);
+  });
+
+  it('throws on schema mismatch', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify({ failedToStart: [{ key: 'x' }] }), { status: 200 }),
+    );
+    await expect(new HttpDaemonClient().getRunnerPage()).rejects.toThrow();
+  });
+});
+
+describe('HttpDaemonClient.getStartupLog (CREW-291)', () => {
+  it('GETs /api/runs/:key/startup-log and returns the raw body text', async () => {
+    const body = '$ crew run CREW-241\n[preflight] resolving project config… ok\nexit code 1';
+    const fetchSpy = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValue(new Response(body, { status: 200, headers: { 'content-type': 'text/plain' } }));
+
+    const log = await new HttpDaemonClient().getStartupLog('CREW-241');
+
+    expect(log).toBe(body);
+    expect(fetchSpy).toHaveBeenCalledWith('/api/runs/CREW-241/startup-log');
+  });
+
+  it('encodes the key', async () => {
+    const fetchSpy = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValue(new Response('', { status: 200 }));
+    await new HttpDaemonClient().getStartupLog('weird/key');
+    expect(fetchSpy).toHaveBeenCalledWith('/api/runs/weird%2Fkey/startup-log');
+  });
+
+  it('returns null when no log exists (404)', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('not found', { status: 404 }));
+    expect(await new HttpDaemonClient().getStartupLog('CREW-9')).toBeNull();
+  });
+
+  it('throws on other non-2xx', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('boom', { status: 500 }));
+    await expect(new HttpDaemonClient().getStartupLog('CREW-1')).rejects.toThrow(/500/);
+  });
+});
+
 describe('HttpDaemonClient.listProjectTickets', () => {
   it('GETs /api/projects/:slug/tickets and parses an available payload', async () => {
     const payload = {
