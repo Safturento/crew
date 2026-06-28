@@ -276,7 +276,9 @@ describe('RecentlyEnded', () => {
     // No PR link and no secondary action; the only interactive element is the
     // clickable row itself (CREW-291).
     expect(screen.queryByRole('link')).toBeNull();
-    expect(screen.getByRole('button', { name: 'Open run drawer for CREW-219' })).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Open run drawer for CREW-219' }),
+    ).toBeInTheDocument();
   });
 
   it('clicking an error run row opens the drawer with its diagnosis (CREW-291)', async () => {

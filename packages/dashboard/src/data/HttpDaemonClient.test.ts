@@ -772,7 +772,12 @@ describe('HttpDaemonClient.getRunnerPage (CREW-291)', () => {
       },
     ],
     queued: [
-      { key: 'CREW-240', command: 'run', project: '~/code/crew', queuedAt: '2026-06-25T14:28:00.000Z' },
+      {
+        key: 'CREW-240',
+        command: 'run',
+        project: '~/code/crew',
+        queuedAt: '2026-06-25T14:28:00.000Z',
+      },
     ],
     recentlyEnded: [
       {
@@ -799,7 +804,11 @@ describe('HttpDaemonClient.getRunnerPage (CREW-291)', () => {
 
     expect(page.failedToStart.map((f) => f.key)).toEqual(['CREW-241']);
     expect(page.queued.map((q) => q.key)).toEqual(['CREW-240']);
-    expect(page.recentlyEnded[0]).toMatchObject({ key: 'CREW-227', kind: 'finished', prNumber: 340 });
+    expect(page.recentlyEnded[0]).toMatchObject({
+      key: 'CREW-227',
+      kind: 'finished',
+      prNumber: 340,
+    });
     expect(fetchSpy).toHaveBeenCalledWith('/api/runner/page');
   });
 
@@ -821,7 +830,9 @@ describe('HttpDaemonClient.getStartupLog (CREW-291)', () => {
     const body = '$ crew run CREW-241\n[preflight] resolving project config… ok\nexit code 1';
     const fetchSpy = vi
       .spyOn(globalThis, 'fetch')
-      .mockResolvedValue(new Response(body, { status: 200, headers: { 'content-type': 'text/plain' } }));
+      .mockResolvedValue(
+        new Response(body, { status: 200, headers: { 'content-type': 'text/plain' } }),
+      );
 
     const log = await new HttpDaemonClient().getStartupLog('CREW-241');
 
