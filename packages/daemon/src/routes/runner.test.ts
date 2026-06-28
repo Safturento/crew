@@ -3,9 +3,10 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import { join, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { pino, type Logger } from 'pino';
+import type { Kysely } from 'kysely';
 import { buildApp, type DaemonApp } from '../app.js';
 import { parseDaemonConfig } from '../config.js';
-import { createDb, runMigrations } from '../db.js';
+import { createDb, runMigrations, type DaemonDatabase } from '../db.js';
 import { useTmpDir } from '../test/tmpdir.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -16,7 +17,7 @@ const silentLogger: Logger = pino({ level: 'silent' });
 
 async function setupApp(
   opts: { runnerLogDir?: string } = {},
-): Promise<{ app: DaemonApp; close: () => Promise<void> }> {
+): Promise<{ app: DaemonApp; db: Kysely<DaemonDatabase>; close: () => Promise<void> }> {
   const dir = tmp();
   const config = parseDaemonConfig({
     CREW_CONFIG_DIR: dir,
@@ -28,6 +29,7 @@ async function setupApp(
   const app = await buildApp({ config, logger: silentLogger, db });
   return {
     app,
+    db,
     close: async () => {
       await app.close();
       await db.destroy();
@@ -325,6 +327,130 @@ describe('GET /api/runner/logs', () => {
     try {
       const res = await app.inject({ method: 'GET', url: '/api/runner/logs?tail=banana' });
       expect(res.statusCode).toBe(400);
+    } finally {
+      await close();
+    }
+  });
+});
+
+describe('GET /api/runner/page', () => {
+  it('returns empty lists when the db is empty', async () => {
+    const { app, close } = await setupApp();
+    try {
+      const res = await app.inject({ method: 'GET', url: '/api/runner/page' });
+      expect(res.statusCode).toBe(200);
+      expect(res.json()).toEqual({ failedToStart: [], queued: [], recentlyEnded: [] });
+    } finally {
+      await close();
+    }
+  });
+
+  it('returns the failed-start, queued, and recently-ended lists from the db', async () => {
+    const { app, db, close } = await setupApp();
+    try {
+      // A fresh failed-start (also a terminal run → recentlyEnded).
+      await app.inject({
+        method: 'POST',
+        url: '/api/runner/failed-start',
+        payload: { key: 'CREW-A', projectName: 'crew', command: 'run', failure: FAILURE },
+      });
+      // A pending action request → queued.
+      await db
+        .insertInto('action_requests')
+        .values({
+          kind: 'fix_pr',
+          ticket_key: 'CREW-B',
+          project: 'crew',
+          payload: '{"kind":"fix_pr","comment":"x"}',
+          status: 'pending',
+          error: null,
+          created_at: '2026-06-25T00:02:00.000Z',
+          updated_at: '2026-06-25T00:02:00.000Z',
+        })
+        .execute();
+
+      const res = await app.inject({ method: 'GET', url: '/api/runner/page' });
+      expect(res.statusCode).toBe(200);
+      const body = res.json();
+      expect(body.failedToStart.map((r: { key: string }) => r.key)).toContain('CREW-A');
+      expect(body.queued.map((q: { key: string }) => q.key)).toContain('CREW-B');
+      expect(body.queued[0].command).toBe('fix-pr');
+      expect(body.recentlyEnded.map((r: { key: string }) => r.key)).toContain('CREW-A');
+    } finally {
+      await close();
+    }
+  });
+});
+
+describe('GET /api/runner/supervisor-log', () => {
+  it('returns an empty tail when runner.log is absent', async () => {
+    const { app, close } = await setupApp();
+    try {
+      const res = await app.inject({ method: 'GET', url: '/api/runner/supervisor-log' });
+      expect(res.statusCode).toBe(200);
+      expect(res.json()).toEqual({ lines: [] });
+    } finally {
+      await close();
+    }
+  });
+
+  it('filters runner.log to supervisor management lines, dropping per-action noise', async () => {
+    const dir = tmp();
+    const logDir = join(dir, 'runner');
+    mkdirSync(logDir, { recursive: true });
+    // Lines below are the verbatim `deps.log(...)` strings the runner emits in
+    // packages/cli/src/lib/runner/{supervisor,loop}.ts — management lines plus
+    // the per-action/per-command noise the filter must drop.
+    writeFileSync(
+      join(logDir, 'runner.log'),
+      [
+        '[2026-06-25T00:00:00.000Z] runner started (pid 1)',
+        '[2026-06-25T00:00:01.000Z] runner already running (pid 1)',
+        '[2026-06-25T00:00:02.000Z] runner failed to start (no pid)',
+        '[2026-06-25T00:00:03.000Z] launched action 5 (run CREW-1)',
+        '[2026-06-25T00:00:04.000Z] worker exited 1; respawning',
+        '[2026-06-25T00:00:05.000Z] removed stale pidfile (pid 9)',
+        '[2026-06-25T00:00:06.000Z] reaped 2 dead process(es): CREW-2, CREW-3',
+        '[2026-06-25T00:00:07.000Z] poll error: timeout',
+        '[2026-06-25T00:00:08.000Z] applied command 7 (cancel_soft CREW-4)',
+        '',
+      ].join('\n'),
+    );
+    const { app, close } = await setupApp({ runnerLogDir: logDir });
+    try {
+      const res = await app.inject({ method: 'GET', url: '/api/runner/supervisor-log' });
+      expect(res.statusCode).toBe(200);
+      const { lines } = res.json() as { lines: string[] };
+      // Every supervisor-lifecycle line is kept, including the failed-to-start
+      // diagnostic and the already-running guard.
+      expect(lines.some((l) => l.includes('runner started'))).toBe(true);
+      expect(lines.some((l) => l.includes('runner already running'))).toBe(true);
+      expect(lines.some((l) => l.includes('runner failed to start'))).toBe(true);
+      expect(lines.some((l) => l.includes('respawning'))).toBe(true);
+      expect(lines.some((l) => l.includes('removed stale pidfile'))).toBe(true);
+      expect(lines.some((l) => l.includes('reaped'))).toBe(true);
+      // Per-action/per-command noise is dropped.
+      expect(lines.some((l) => l.includes('launched action'))).toBe(false);
+      expect(lines.some((l) => l.includes('poll error'))).toBe(false);
+      expect(lines.some((l) => l.includes('applied command'))).toBe(false);
+    } finally {
+      await close();
+    }
+  });
+
+  it('serves the unfiltered tail with ?raw=1', async () => {
+    const dir = tmp();
+    const logDir = join(dir, 'runner');
+    mkdirSync(logDir, { recursive: true });
+    writeFileSync(
+      join(logDir, 'runner.log'),
+      '[2026-06-25T00:00:00.000Z] runner started (pid 1)\n[2026-06-25T00:00:01.000Z] launched action 5 (run CREW-1)\n',
+    );
+    const { app, close } = await setupApp({ runnerLogDir: logDir });
+    try {
+      const res = await app.inject({ method: 'GET', url: '/api/runner/supervisor-log?raw=1' });
+      const { lines } = res.json() as { lines: string[] };
+      expect(lines.some((l) => l.includes('launched action'))).toBe(true);
     } finally {
       await close();
     }

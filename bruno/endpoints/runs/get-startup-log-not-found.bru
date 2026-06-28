@@ -1,0 +1,28 @@
+meta {
+  name: GET /api/runs/:key/startup-log (404)
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/api/runs/BRUNO-NO-LOG/startup-log
+}
+
+assert {
+  res.status: eq 404
+}
+
+tests {
+  test("404s when no startup log exists for the key", () => {
+    // The smoke env never writes ~/.crew/startup/<key>.log, so the static
+    // read for an arbitrary key is a deterministic 404.
+    expect(res.status).to.equal(404);
+  });
+}
+
+docs {
+  CREW-249 (T2): serves a run's raw startup console log captured by the CLI
+  runner at `~/.crew/startup/<key>.log` (read-only mounted into the daemon).
+  Static `text/plain` body for an ended run; `text/event-stream` tail when
+  `?follow=1`; 404 when the log is absent — exercised here.
+}

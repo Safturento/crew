@@ -7,6 +7,7 @@ import {
   enqueueRunnerCommandSchema,
   liveProcessSchema,
   runnerCommandPayloadSchema,
+  runnerPageSchema,
   runnerSnapshotSchema,
 } from 'crew-shared';
 import type { DaemonApp } from '../app.js';
@@ -88,6 +89,28 @@ const LogsQuerySchema = z.object({
 const LogsResponseSchema = z.object({
   lines: z.array(z.string()),
 });
+
+const SupervisorLogQuerySchema = z.object({
+  tail: z.coerce.number().int().positive().max(2000).default(200),
+  // `?raw=1` bypasses the management filter and serves the full tail.
+  raw: z.string().optional(),
+});
+
+/**
+ * Management lines the supervisor drawer cares about — the supervisor's own
+ * lifecycle (`runner started|stopped|already running|failed to start ...`),
+ * worker respawn (`worker exited N; respawning`), stale-pidfile recovery
+ * (`stale pidfile ...` / `removed stale pidfile ...`), and dead-process
+ * reaping (`reaped N dead process(es) ...`). Matched against the actual
+ * `deps.log(...)` strings the runner emits in `packages/cli/src/lib/runner/
+ * {supervisor,loop}.ts`. `runner.log` interleaves these with per-action /
+ * per-command noise (`launched action ...`, `applied command ...`, `poll
+ * error ...`, `iteration error ...`) — none of which contain `runner` — that
+ * belongs to the queued/recently-ended surfaces, not the supervisor view.
+ * (Spec open question: revisit if the runner later emits a structured
+ * management-event stream; `?raw=1` serves the unfiltered tail meanwhile.)
+ */
+const SUPERVISOR_MANAGEMENT_RE = /\b(runner\b|respawn|stale pidfile|worker exited|reap)/i;
 
 /**
  * Read the last `tail` lines of the runner log. Returns `[]` when the file
@@ -185,6 +208,32 @@ export async function registerRunnerRoutes(app: DaemonApp): Promise<void> {
       const { runnerLogDir } = req.diScope.resolve('config');
       const lines = await tailLog(join(runnerLogDir, 'runner.log'), req.query.tail);
       return { lines };
+    },
+  );
+
+  // CREW-249 (T2): the Runner page's read surface — failed-to-start, queued,
+  // and recently-ended lists from the DB. Thin wrapper over RunnerPageService.
+  app.get('/api/runner/page', { schema: { response: { 200: runnerPageSchema } } }, async (req) =>
+    req.diScope.resolve('runnerPageService').getPage(),
+  );
+
+  // CREW-249 (T2): the supervisor drawer's read surface — the management slice
+  // of `runner.log` (spawn/respawn/heartbeat/reap), tailed to the last N lines.
+  // `?raw=1` serves the unfiltered tail.
+  app.get(
+    '/api/runner/supervisor-log',
+    {
+      schema: {
+        querystring: SupervisorLogQuerySchema,
+        response: { 200: LogsResponseSchema },
+      },
+    },
+    async (req) => {
+      const { runnerLogDir } = req.diScope.resolve('config');
+      const all = await tailLog(join(runnerLogDir, 'runner.log'), Number.MAX_SAFE_INTEGER);
+      const filtered =
+        req.query.raw === '1' ? all : all.filter((l) => SUPERVISOR_MANAGEMENT_RE.test(l));
+      return { lines: filtered.slice(-req.query.tail) };
     },
   );
 

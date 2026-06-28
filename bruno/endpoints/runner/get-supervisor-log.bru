@@ -1,0 +1,32 @@
+meta {
+  name: GET /api/runner/supervisor-log
+  type: http
+  seq: 10
+}
+
+get {
+  url: {{baseUrl}}/api/runner/supervisor-log?tail=50
+}
+
+params:query {
+  tail: 50
+}
+
+assert {
+  res.status: eq 200
+  res.body.lines: isArray
+}
+
+tests {
+  test("returns a lines array (empty when no runner.log exists)", () => {
+    expect(res.body.lines).to.be.an("array");
+  });
+}
+
+docs {
+  CREW-249 (T2): the supervisor drawer's read surface — the management slice
+  of `~/.crew/runner/runner.log` (spawn/respawn/heartbeat/reap), tailed to the
+  last N lines. Per-action/per-command noise is filtered out; `?raw=1` serves
+  the unfiltered tail. Returns `{ lines: [] }` when the file is absent — the
+  normal state on a worktree stack before any host runner has written it.
+}

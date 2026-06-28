@@ -20,6 +20,7 @@ import { FinishStepsService } from './services/FinishStepsService.js';
 import { ActionService } from './services/ActionService.js';
 import { RunnerCommandsService } from './services/RunnerCommandsService.js';
 import { RunFailureService } from './services/RunFailureService.js';
+import { RunnerPageService } from './services/RunnerPageService.js';
 import { TicketsService } from './services/TicketsService.js';
 import { resolveJsonlPathForAgent } from './services/resolveJsonlPath.js';
 
@@ -52,6 +53,7 @@ export interface DaemonCradle {
   actionService: ActionService;
   runnerCommandsService: RunnerCommandsService;
   runFailureService: RunFailureService;
+  runnerPageService: RunnerPageService;
   ticketsService: TicketsService;
   githubWebhookSecrets: Map<string, string>;
   githubWebhookService: GithubWebhookService;
@@ -173,6 +175,10 @@ export function buildContainer(deps: BuildContainerDeps): AwilixContainer<Daemon
     runFailureService: asFunction(
       ({ db, eventBus }: DaemonCradle) => new RunFailureService({ db, eventBus }),
     ).scoped(),
+    // CREW-249 (T2): read-only Runner-page data surface (failed-to-start /
+    // queued / recently-ended). Scoped — stateless over SQLite, like the other
+    // DB-backed query services.
+    runnerPageService: asFunction(({ db }: DaemonCradle) => new RunnerPageService({ db })).scoped(),
     // CREW-278: New Run ticket picker — fetches a project's Ready-for-Development
     // tickets from Jira, grouped + runnability-classified. Scoped — stateless
     // over the injected creds + agentsService.

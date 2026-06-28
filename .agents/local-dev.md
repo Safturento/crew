@@ -48,10 +48,13 @@ The seed dir lives under `src/` so the `tsx watch` bind-mount picks up changes w
 The `daemon` service bind-mounts several host paths read-only — registered project
 TOMLs, host transcripts, the per-repo GitHub webhook secrets file
 (`~/.config/crew/github-webhook-secrets.toml`, CREW-269, loaded at boot to verify
-PR-merge webhook deliveries), the CLI startup-event JSONLs (`~/.crew/startup`),
-the concrete state-event JSONLs (`~/.crew/state-events`, CREW-254, reduced into
-`state_transitions`), and the host runner log (`~/.crew/runner`, CREW-215, tailed by
-`GET /api/runner/logs`).
+PR-merge webhook deliveries), the CLI startup-event JSONLs **and raw startup
+console logs** (`~/.crew/startup` — the `<key>.jsonl` events plus the `<key>.log`
+stdout/stderr the runner captures per run, CREW-249, served by `GET
+/api/runs/:key/startup-log`), the concrete state-event JSONLs (`~/.crew/state-events`,
+CREW-254, reduced into `state_transitions`), and the host runner log
+(`~/.crew/runner`, CREW-215, tailed by `GET /api/runner/logs` and, filtered to
+management lines, `GET /api/runner/supervisor-log`).
 
 There is **one** `docker-compose.yml`; worktree stacks reuse it with hashed ports (see
 below), so there is no per-worktree mount override. All stacks therefore bind the same
