@@ -1,4 +1,4 @@
-import { Copy, GitPullRequest, X } from 'lucide-react';
+import { X } from 'lucide-react';
 import { toast } from 'sonner';
 import type { LiveProcess, LiveProcessState, RunFailure } from 'crew-shared';
 
@@ -101,7 +101,9 @@ export function RunDrawer({ source, open, onOpenChange }: RunDrawerProps) {
               {model.pill.label}
             </Badge>
             {model.prNumber !== undefined && (
-              <Badge color="pr_open" intensity="mid" icon={<GitPullRequest aria-hidden />} asChild>
+              // Figma RunDrawerBody (881:1216): the PR pill is text-only
+              // (Has Icon=false) — no git-pull-request glyph.
+              <Badge color="pr_open" intensity="mid" asChild>
                 <a href={model.prUrl ?? '#'} target="_blank" rel="noreferrer">
                   PR #{model.prNumber}
                 </a>
@@ -182,13 +184,9 @@ function ConsoleOutput({
           )}
           {live && <span className="sr-only">live</span>}
         </div>
-        <Button
-          color="running"
-          intensity="muted"
-          size="xs"
-          icon={<Copy aria-hidden />}
-          onClick={onCopy}
-        >
+        {/* Figma RunDrawerBody (881:1216): the Copy button is text-only
+            (Has Icon=false). */}
+        <Button color="running" intensity="muted" size="xs" onClick={onCopy}>
           Copy
         </Button>
       </div>
