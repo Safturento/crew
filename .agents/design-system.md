@@ -74,8 +74,8 @@ entry in `STATE_META` + `STATE_CLASSES`, using the emerald-500 family — same
 shade as `finished` — to signal "PR done, Finish is the next user action."
 AgentRow + DrawerHeader bind directly to `text-emerald-500` / `bg-emerald-1050`
 in code; no `state/pr-merged` variable was added to Crew DS Figma yet. Followup
-tracked at `docs/followups.md` ("CREW-202 — publish state/pr-merged in Crew DS
-Figma") so a future Figma pass can rebind the consumer components without
+tracked at `docs/followups/figma-crew-ds.md` ("CREW-202 — publish state/pr-merged
+in Crew DS Figma") so a future Figma pass can rebind the consumer components without
 code churn.
 
 `border` and `input` alias to `white` (RGB only) — consumer fills carry the alpha (screens-file fills use opacity 0.04 / 0.06 / 0.07 / 0.12 for the white-overlay pattern). Required because Figma variable aliases don't have alpha overlay built-in.
@@ -180,7 +180,7 @@ The Timeline `FilterRow` (`842:4125`) + `FilterMenu` (`844:4328`) composites (CR
 
 `TopNav`, `AgentRow`, `TimelineSection`, `Stepper`, `SupervisorCard`, `ProcessRow`, `FilterRow`, and `FilterMenu` resolve to component sets in the live file; the rest resolve to single components. `ErrorFallback` is the only un-built composite from the original Phase 4 inventory; it lands alongside the next fidelity ticket that surfaces a need.
 
-`FinishSteps` (CREW-220) is the drawer's live `crew finish` step checklist (ok/skip/error rows). It is figma-less feature-internal — the same status as `MinimapStripe` — because no finish-checklist was ever designed in the Crew DS Figma; it borrows the `TokensByTool` card shell and the status palette (`emerald-500` / `muted-foreground` / `red-400`) directly. A future fidelity pass could add a Figma counterpart (tracked in `docs/followups.md`).
+`FinishSteps` (CREW-220) is the drawer's live `crew finish` step checklist (ok/skip/error rows). It is figma-less feature-internal — the same status as `MinimapStripe` — because no finish-checklist was ever designed in the Crew DS Figma; it borrows the `TokensByTool` card shell and the status palette (`emerald-500` / `muted-foreground` / `red-400`) directly. A future fidelity pass could add a Figma counterpart (tracked in `docs/followups/figma-crew-ds.md`).
 
 > **Figma-side Pill consolidation (2026-05-12) is now reconciled in code (CREW-135).** The Figma DS merged `Button` / `StateBadge` / `CountBadge` / `TimelineTag` into a unified `Pill` component set, and the Crew DS moved into the dashboard file. CREW-135 reconciled the dashboard code: an internal `PillBase` owns the shared anatomy, and `Button` / `Badge` / `Tag` (under `components/ui/`) wrap it. The standalone `StateBadge.tsx` and `CountBadge.tsx` composites are retired — every state pill and count pill is now a `Badge`. See [`docs/rationale/design-system.md`](../docs/rationale/design-system.md#2026-05-12-figma-side-pill-consolidation) for the migration history.
 
