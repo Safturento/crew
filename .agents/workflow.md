@@ -1,11 +1,12 @@
 ---
 name: workflow
 description: CREW-* tickets, followups, specs/plans, branching
-last_updated: 2026-05-14
+last_updated: 2026-06-29
 covers:
   - 'docs/tickets/**'
   - 'docs/superpowers/**'
   - 'docs/followups.md'
+  - 'docs/followups/**'
   - 'docs/mumen/**'
 ---
 
@@ -28,7 +29,7 @@ Canonical taxonomy is `.agents/README.md` §10 ("What does NOT belong in `.agent
 | Implementation plan from `superpowers:writing-plans`    | `docs/superpowers/plans/YYYY-MM-DD-<topic>.md`        |
 | Long-form architecture rationale                        | `docs/rationale/<topic>.md`                           |
 | Mumen-tier scoping                                      | `docs/mumen/YYYY-MM-DD-<topic>.md`                    |
-| Followups queue                                         | `docs/followups.md` (single file)                     |
+| Followups queue                                         | `docs/followups.md` (index) + `docs/followups/*.md` (per-topic) |
 | Agent-actionable repo rules                             | `.agents/<topic>.md` (this directory)                 |
 | Skill fixtures (golden data for `superpowers:*` skills) | `docs/superpowers/skill-fixtures/<skill>/`            |
 
@@ -53,9 +54,24 @@ If a new doc doesn't fit a row above, re-check `.agents/README.md` §10 before i
 
 ## 6. Followups
 
-- The queue lives at `docs/followups.md`. Format (template, ticketing protocol, Active/Resolved/Abandoned sections, Epic-exception rule) is defined in user-level `~/.claude/CLAUDE.md` "Followup detection" section — follow that verbatim.
-- At the start of substantial new work in this repo, skim `docs/followups.md` for items relevant to the task. Some may be ready to fold in; others worth flagging before scoping.
-- File entries are versioned with the code — surface them in PR descriptions when added, and move them to Resolved in the same PR that ships the fix (Epic exception aside).
+The queue grew past a single file, so crew uses the **split layout** the user-level convention describes for large queues. Format (entry template, ticketing protocol, Active/Resolved/Abandoned lifecycle, Epic-exception rule) is defined in `~/.claude/CLAUDE.md` "Followup detection" — follow that verbatim. The split only changes *where entries physically live*, not how they're written:
+
+- **`docs/followups.md`** is the index/router — intro, format pointer, and the topic→file table. It holds no entries; don't add any there.
+- **Active entries** live in per-topic files under `docs/followups/`, partitioned to mirror the `.agents/*.md` `covers:` topics. Route a new entry by the area it touches:
+
+  | Entry subject | File |
+  | --- | --- |
+  | Figma DS components/tokens, Crew DS | `docs/followups/figma-crew-ds.md` |
+  | `figma-snapshot`, `visual-fidelity-check`, enrichment tooling | `docs/followups/visual-fidelity.md` |
+  | Dashboard React UI — drawers, components, screens | `docs/followups/dashboard-ui.md` |
+  | Daemon services/routes, `crew` CLI, dispatch flow | `docs/followups/daemon-cli-dispatch.md` |
+  | docker/env, project config, architecture | `docs/followups/architecture-config.md` |
+  | conventions, docs, workflow, the followup system itself | `docs/followups/process-conventions.md` (also the catch-all when nothing fits) |
+
+- **Resolved / Abandoned** are archive files: `docs/followups/resolved.md` and `docs/followups/abandoned.md`. Resolving an entry cuts it from its topic file into the archive file — same protocol as the single-file convention, just across files instead of across `##` sections.
+- Within every file, entries are `##` headings, newest at top.
+- At the start of substantial new work in this repo, skim the relevant topic file(s) for items to fold in or flag before scoping.
+- Entries are versioned with the code — surface them in PR descriptions when added, and move them to Resolved in the same PR that ships the fix (Epic exception aside).
 
 ## 7. Branching
 

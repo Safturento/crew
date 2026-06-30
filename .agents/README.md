@@ -100,7 +100,7 @@ Explicit taxonomy — each kind of doc has a home:
 | Implementation plans (point-in-time, from writing-plans) | `docs/superpowers/plans/` |
 | Long-form architecture/design rationale | `docs/rationale/` |
 | Mumen-tier scoping | `docs/mumen/` |
-| Project followups | `docs/followups.md` |
+| Project followups | `docs/followups.md` (index) + `docs/followups/` (per-topic files) |
 | Universal coding/git/Node conventions | `~/.claude/conventions/` |
 | "How to do X" capability injection | user-level skills (`~/.claude/skills/`) |
 | Per-conversation notes / todos / in-flight state | not committed |
