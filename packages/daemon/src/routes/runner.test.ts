@@ -300,6 +300,68 @@ describe('POST /api/runner/initializing', () => {
   });
 });
 
+describe('POST /api/runner/early-failure (CREW-308)', () => {
+  it('settles a birthed agent to error and returns 204', async () => {
+    const { app, db, close } = await setupApp();
+    try {
+      await app.inject({
+        method: 'POST',
+        url: '/api/runner/initializing',
+        payload: {
+          key: 'HA-8',
+          projectName: 'home-assistant',
+          worktreePath: '/w/home-assistant-HA-8',
+          branch: 'HA-8',
+        },
+      });
+      const res = await app.inject({
+        method: 'POST',
+        url: '/api/runner/early-failure',
+        payload: {
+          key: 'HA-8',
+          projectName: 'home-assistant',
+          worktreePath: '/w/home-assistant-HA-8',
+          branch: 'HA-8',
+          phase: 'crew_startup_preflight',
+          summary: 'worktree already exists',
+        },
+      });
+      expect(res.statusCode).toBe(204);
+      const transition = await db
+        .selectFrom('state_transitions')
+        .selectAll()
+        .where('agent_key', '=', 'HA-8')
+        .orderBy('ts', 'desc')
+        .orderBy('id', 'desc')
+        .executeTakeFirstOrThrow();
+      expect(transition.to_state).toBe('error');
+      expect(transition.source).toBe('startup-failure');
+    } finally {
+      await close();
+    }
+  });
+
+  it('rejects a body missing the phase with 400', async () => {
+    const { app, close } = await setupApp();
+    try {
+      const res = await app.inject({
+        method: 'POST',
+        url: '/api/runner/early-failure',
+        payload: {
+          key: 'HA-8',
+          projectName: 'home-assistant',
+          worktreePath: '/w/home-assistant-HA-8',
+          branch: 'HA-8',
+          summary: 'worktree already exists',
+        },
+      });
+      expect(res.statusCode).toBe(400);
+    } finally {
+      await close();
+    }
+  });
+});
+
 describe('POST /api/runner/failed-start', () => {
   it('records a structured failed-start for a launching run', async () => {
     const { app, close } = await setupApp();

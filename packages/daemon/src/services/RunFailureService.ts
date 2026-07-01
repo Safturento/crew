@@ -45,6 +45,18 @@ export interface BirthAgentInput {
   appUrl?: string | null;
 }
 
+/**
+ * CREW-308: an early preflight-gate failure. Extends the birth inputs (so the
+ * agent row can be upserted as a fallback when the birth call was lost) with the
+ * failing `phase` + `summary`. The operator-facing reason itself lives on the
+ * `~/.crew/startup/<key>.jsonl` `failed` phase (written by the CLI before exit);
+ * these fields let the daemon log/annotate the `error` transition.
+ */
+export interface EarlyFailureInput extends BirthAgentInput {
+  phase: string;
+  summary: string;
+}
+
 export interface ReapStuckLaunchingOptions {
   /** A launching row older than this many ms (by `started_at`) is settled. */
   olderThanMs: number;
@@ -136,6 +148,31 @@ export class RunFailureService {
     if (previous === null || previous === 'queued') {
       await this.writeBirthTransition(input.key, 'init', 'initializing', previous);
     }
+  }
+
+  /**
+   * CREW-308 — record an early preflight-gate death as a visible `error` row.
+   * Called by the CLI (via `POST /api/runner/early-failure`) when a
+   * tool/gh-auth/worktree gate fails, *before* the process exits. The agent row
+   * was normally already birthed as `init` by `recordInitializing` (Task 5), so
+   * this is a transition write; the `upsertAgent` is a fallback for the rare
+   * case that birth call was lost to a downed daemon. Idempotent: a run already
+   * settled at `error` is not re-transitioned (mirrors `recordInitializing`).
+   * The failure `phase`/`summary` ride on the startup log the CLI wrote — the
+   * transition just carries the state.
+   */
+  async recordEarlyFailure(input: EarlyFailureInput): Promise<void> {
+    await this.upsertAgent({
+      key: input.key,
+      projectName: input.projectName,
+      ticketTitle: input.ticketTitle,
+      worktreePath: input.worktreePath,
+      branch: input.branch,
+      appUrl: input.appUrl ?? null,
+    });
+    const previous = await this.latestState(input.key);
+    if (previous === 'error') return;
+    await this.writeBirthTransition(input.key, 'error', 'startup-failure', previous);
   }
 
   /** Pre-register a run as `launching` before preflight. Returns the run id. */
@@ -362,9 +399,9 @@ export class RunFailureService {
   }
 
   /**
-   * CREW-307 — write a birth transition (`queued`/`init`) + publish the
-   * `agent.state_changed` SSE. The row-birth counterpart to `IngestService`'s
-   * transition writers.
+   * CREW-307 — write a birth/settle transition (`queued`/`init`, or `error` for
+   * an early-gate death — CREW-308) + publish the `agent.state_changed` SSE. The
+   * row-birth counterpart to `IngestService`'s transition writers.
    *
    * It does **not** update `IngestService`'s in-memory `agentStateCache`. For a
    * brand-new key — the common birth case — that is fully coherent: ingest
@@ -376,7 +413,7 @@ export class RunFailureService {
    */
   private async writeBirthTransition(
     agentKey: string,
-    to: 'queued' | 'init',
+    to: 'queued' | 'init' | 'error',
     source: string,
     from: StateTransitionsTable['from_state'] = null,
   ): Promise<void> {

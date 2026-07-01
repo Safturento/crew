@@ -79,6 +79,22 @@ const InitializingBodySchema = z.object({
   appUrl: z.string().nullable().optional(),
 });
 
+/**
+ * CREW-308 — the early preflight-gate failure body. Extends the initializing
+ * birth body (so the agent row can be upserted as a fallback when the birth call
+ * was lost) with the failing `phase` + `summary`. The reason itself lives on the
+ * CLI-written startup log; these carry it through for the `error` transition.
+ */
+const EarlyFailureBodySchema = z.object({
+  key: z.string().min(1),
+  projectName: z.string().min(1),
+  worktreePath: z.string().min(1),
+  branch: z.string(),
+  phase: z.string().min(1),
+  summary: z.string(),
+  appUrl: z.string().nullable().optional(),
+});
+
 const FailedStartBodySchema = z.object({
   key: z.string().min(1),
   projectName: z.string().min(1),
@@ -162,6 +178,10 @@ async function tailLog(logPath: string, tail: number): Promise<string[]> {
  * - `POST /api/runner/initializing` — CREW-307: the direct-CLI birth point.
  *   Idempotently upserts the agent row + writes an `init` transition, so a
  *   `crew run` is visible in the grid from config-resolve onward. 204.
+ * - `POST /api/runner/early-failure` — CREW-308: an early preflight-gate death
+ *   (tool/gh-auth/worktree). Upserts the agent (fallback) + writes an `error`
+ *   transition, so the whole gate-failure class becomes a visible `error` row
+ *   instead of a silent exit. 204.
  * - `POST /api/runner/failed-start` — CREW-244: record a structured
  *   failed-start (converting the launching placeholder when present).
  * - `POST /api/runner/commands`            — enqueue a reverse-queue control
@@ -209,6 +229,16 @@ export async function registerRunnerRoutes(app: DaemonApp): Promise<void> {
     async (req, reply) => {
       const svc = req.diScope.resolve('runFailureService');
       await svc.recordInitializing(req.body);
+      return reply.code(204).send();
+    },
+  );
+
+  app.post(
+    '/api/runner/early-failure',
+    { schema: { body: EarlyFailureBodySchema } },
+    async (req, reply) => {
+      const svc = req.diScope.resolve('runFailureService');
+      await svc.recordEarlyFailure(req.body);
       return reply.code(204).send();
     },
   );
