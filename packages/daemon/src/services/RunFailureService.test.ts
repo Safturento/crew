@@ -138,7 +138,13 @@ describe('RunFailureService.recordInitializing (CREW-307)', () => {
     // Simulate the run having started (a running transition landed).
     await db
       .insertInto('state_transitions')
-      .values({ agent_key: 'HA-3', from_state: 'init', to_state: 'running', ts: Date.now() + 1, source: 'cli-run' })
+      .values({
+        agent_key: 'HA-3',
+        from_state: 'init',
+        to_state: 'running',
+        ts: Date.now() + 1,
+        source: 'cli-run',
+      })
       .execute();
     await service.recordInitializing(input);
     expect(await latestTo(db, 'HA-3')).toBe('running');

@@ -88,7 +88,15 @@ export interface AgentSummary {
   key: string;
   projectName: string;
   ticketTitle: string;
-  state: 'initializing' | 'running' | 'idle' | 'waiting' | 'pr_open' | 'pr_merged' | 'error' | 'finished';
+  state:
+    | 'initializing'
+    | 'running'
+    | 'idle'
+    | 'waiting'
+    | 'pr_open'
+    | 'pr_merged'
+    | 'error'
+    | 'finished';
   startedAt: string;
   tokens: number;
   prUrl?: string;
@@ -278,9 +286,7 @@ export class CrewDaemonClient {
    * daemon side (safe when a `queued` row already exists). Best-effort: a downed
    * daemon just means the run won't be tracked, exactly like `reportLaunching`.
    */
-  async reportInitializing(
-    input: ReportInitializingInput,
-  ): Promise<DaemonResult<{ ok: true }>> {
+  async reportInitializing(input: ReportInitializingInput): Promise<DaemonResult<{ ok: true }>> {
     try {
       const res = await fetch(`${this.baseUrl}/api/runner/initializing`, {
         method: 'POST',

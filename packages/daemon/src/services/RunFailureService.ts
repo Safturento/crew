@@ -342,9 +342,7 @@ export class RunFailureService {
   }
 
   /** Latest `state_transitions.to_state` for a key (null when none). */
-  private async latestState(
-    agentKey: string,
-  ): Promise<StateTransitionsTable['to_state'] | null> {
+  private async latestState(agentKey: string): Promise<StateTransitionsTable['to_state'] | null> {
     const row = await this.db
       .selectFrom('state_transitions')
       .select('to_state')

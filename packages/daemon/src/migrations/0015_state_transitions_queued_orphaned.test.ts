@@ -29,7 +29,13 @@ describe('migration 0015 — queued + orphaned state transitions', () => {
     try {
       await db
         .insertInto('state_transitions')
-        .values({ agent_key: 'CREW-1', from_state: null, to_state: 'queued', ts: 1, source: 'enqueue' })
+        .values({
+          agent_key: 'CREW-1',
+          from_state: null,
+          to_state: 'queued',
+          ts: 1,
+          source: 'enqueue',
+        })
         .execute();
       const row = await db.selectFrom('state_transitions').selectAll().executeTakeFirstOrThrow();
       expect(row.to_state).toBe('queued');
@@ -64,7 +70,13 @@ describe('migration 0015 — queued + orphaned state transitions', () => {
     try {
       await db
         .insertInto('state_transitions')
-        .values({ agent_key: 'CREW-3', from_state: null, to_state: 'init', ts: 3, source: 'cli-run' })
+        .values({
+          agent_key: 'CREW-3',
+          from_state: null,
+          to_state: 'init',
+          ts: 3,
+          source: 'cli-run',
+        })
         .execute();
       const row = await db.selectFrom('state_transitions').selectAll().executeTakeFirstOrThrow();
       expect(row.source).toBe('cli-run');
@@ -95,7 +107,13 @@ describe('migration 0015 — queued + orphaned state transitions', () => {
       await expect(
         db
           .insertInto('state_transitions')
-          .values({ agent_key: 'CREW-5', from_state: null, to_state: 'queued', ts: 5, source: null })
+          .values({
+            agent_key: 'CREW-5',
+            from_state: null,
+            to_state: 'queued',
+            ts: 5,
+            source: null,
+          })
           .execute(),
       ).rejects.toThrow();
     } finally {
