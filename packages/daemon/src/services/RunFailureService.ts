@@ -93,8 +93,16 @@ export class RunFailureService {
    * run is visible in the grid from the moment it is requested — before the
    * runner has claimed it. The `worktree_path` is derived by the caller
    * (`ActionService.enqueue`) via `worktreePathFor(repoPath, key)`.
+   *
+   * Guarded against clobbering a **live** agent: a duplicate `run` enqueue for a
+   * key that is already in-flight (`init`/`running`/`pr_open`) is a no-op, so its
+   * badge never regresses to `queued`. Terminal/idle/orphaned agents are
+   * re-runnable, so birth proceeds (the transition's `from` records the prior
+   * state).
    */
   async birthQueued(input: BirthAgentInput): Promise<void> {
+    const previous = await this.latestState(input.key);
+    if (previous === 'init' || previous === 'running' || previous === 'pr_open') return;
     await this.upsertAgent({
       key: input.key,
       projectName: input.projectName,
@@ -103,7 +111,7 @@ export class RunFailureService {
       branch: input.branch,
       appUrl: input.appUrl ?? null,
     });
-    await this.writeBirthTransition(input.key, 'queued', 'enqueue');
+    await this.writeBirthTransition(input.key, 'queued', 'enqueue', previous);
   }
 
   /**
@@ -355,10 +363,16 @@ export class RunFailureService {
 
   /**
    * CREW-307 — write a birth transition (`queued`/`init`) + publish the
-   * `agent.state_changed` SSE. This is the row-birth counterpart to
-   * `IngestService`'s transition writers; it is safe re: that service's
-   * in-memory state cache because the cache lazily loads from the DB on first
-   * touch of a key, and a birthed key has not yet been touched by ingest.
+   * `agent.state_changed` SSE. The row-birth counterpart to `IngestService`'s
+   * transition writers.
+   *
+   * It does **not** update `IngestService`'s in-memory `agentStateCache`. For a
+   * brand-new key — the common birth case — that is fully coherent: ingest
+   * lazily loads from the DB on first touch, so it reads this birth row. For a
+   * re-run of a key whose prior run ingest already cached, the cache can hold a
+   * stale terminal state until the daemon restarts — a **pre-existing** re-run
+   * cache limitation independent of birth (the cache was never invalidated on
+   * re-run), tracked in `docs/followups/daemon-cli-dispatch.md`.
    */
   private async writeBirthTransition(
     agentKey: string,

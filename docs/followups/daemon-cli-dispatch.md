@@ -5,6 +5,28 @@
 (entries below, newest at top)
 
 
+## 2026-06-30 — Re-running a terminal agent leaves IngestService's state cache stale (birth transition ignored)
+
+**What:** `IngestService` keeps an in-memory `agentStateCache` (`packages/daemon/src/services/IngestService.ts:85`) that `reduceState` reads as `previous` for each concrete state event. The cache is only ever populated (never invalidated) per key for the daemon's lifetime, and `getCachedAgentState` reads the DB *only on a cache miss*. So when a **terminal** agent (`finished`/`pr_merged`) is re-run in the same long-lived daemon, the cache still holds the old terminal state, and the new run's first `run_started` event reduces `reduceState('finished','run_started') → null` (terminal guard) — **no `running` transition is written**, and the agent can stick. This predates CREW-307 (nothing invalidated the cache on re-run before either), but CREW-307 makes row-at-initiation / re-run a first-class flow, so it's now worth fixing. `RunFailureService.birthQueued`/`recordInitializing` write the birth transition to the DB + publish SSE but deliberately do **not** touch the cache (see the `writeBirthTransition` docstring), which is coherent for a fresh key but not for a cached re-run.
+
+**Why noticed:** CREW-307 code review (2026-06-30). The reviewer flagged the `writeBirthTransition` docstring as claiming a cache-coherence property that doesn't hold for a re-run of an already-cached key. Docstring corrected to state the real (pre-existing) limitation and point here.
+
+**Anchors:** `packages/daemon/src/services/IngestService.ts` (`agentStateCache`, `getCachedAgentState:746`, `announceTransition:733`, `recordStateOverride:629` — the one path that *does* advance the cache); `packages/daemon/src/services/RunFailureService.ts` (`birthQueued`/`recordInitializing`/`writeBirthTransition`); `packages/daemon/src/services/state-reduce.ts:35` (terminal guard).
+
+**What's been considered:** The clean fix is to invalidate (or advance) the cache entry when a birth transition lands — either inject `IngestService` into `RunFailureService` and call a new public `invalidateStateCache(key)` (delete → next event re-reads the birth row from the DB, reducing correctly), or route birth transitions *through* `IngestService` so the single writer owns both the row and the cache. A cache *delete* is the lowest-risk form (worst case one redundant DB read). Deferred from CREW-307 to keep the spine ticket scoped and because the underlying stuck-on-terminal-rerun is pre-existing, not introduced there.
+
+**Shape of work:** small daemon change — a public cache-invalidation method on `IngestService` + a dependency edge from `RunFailureService`, or a modest refactor moving birth writes into `IngestService`. Add an integration test: re-run a `finished` key → birth → `run_started` → agent reduces to `running` (not stuck).
+
+## 2026-06-30 — `deriveState` × `orphaned` × a completed run flips the badge to `error`, not `orphaned`
+
+**What:** `AgentsService.deriveState` (`packages/daemon/src/services/AgentsService.ts:682`) returns `orphaned` only while `completedAt === null`. Its terminal guards run first: once the reap/orphan-detection flow (a later runner-rework ticket) stamps `completed_at` + a non-zero `exit_code` on an orphaned run, the `exitCode !== 0 → 'error'` guard (line ~702) fires **before** the `currentState` projection, so the badge flips to `error` rather than staying `orphaned`. Arguably fine (an orphan that also crashed is an error), but it's an unexercised interaction the orphan-detection ticket must design against — e.g. whether `orphaned` should be a sticky guard like `pr_merged`.
+
+**Why noticed:** CREW-307 code review (2026-06-30, Minor). CREW-307's tests only cover `currentStateFromTransitions` for the new states, not the full `deriveState` × completed-run matrix.
+
+**Anchors:** `packages/daemon/src/services/AgentsService.ts` (`deriveState` terminal-guard ordering); the later orphan-detection/reap ticket under Epic CREW-306; spec `docs/superpowers/specs/2026-06-30-runner-page-rework-design.md` §2 (orphaned = amber, non-terminal).
+
+**Shape of work:** design decision + a targeted `deriveState` test matrix, folded into whichever CREW-306 child implements orphan detection / the Reap action.
+
 ## 2026-06-28 — Orphaned/stale runner workers heartbeat forever; no single-instance reconcile or code-version guard
 
 **What:** The host runner has two unmanaged failure modes that let a dead-but-heartbeating worker pollute the Runner tab indefinitely, and the management commands can't clean it up:

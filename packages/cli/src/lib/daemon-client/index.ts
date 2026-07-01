@@ -90,12 +90,14 @@ export interface AgentSummary {
   ticketTitle: string;
   state:
     | 'initializing'
+    | 'queued'
     | 'running'
     | 'idle'
     | 'waiting'
     | 'pr_open'
     | 'pr_merged'
     | 'error'
+    | 'orphaned'
     | 'finished';
   startedAt: string;
   tokens: number;
