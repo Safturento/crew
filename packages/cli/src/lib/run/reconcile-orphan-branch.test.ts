@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('execa', () => ({ execa: vi.fn() }));
 import { execa } from 'execa';
-import { reconcileOrphanBranch } from './reconcile-orphan-branch.js';
+import { reconcileOrphanBranch, reconcileOrphanWorktree } from './reconcile-orphan-branch.js';
 
 const execaMock = vi.mocked(execa);
 
@@ -136,6 +136,178 @@ describe('reconcileOrphanBranch', () => {
       .mockReturnValueOnce(ok() as ReturnType<typeof execa>);
 
     await reconcileOrphanBranch({ repoPath, key, defaultBranch });
+
+    expect(execaMock.mock.calls.length).toBeGreaterThan(0);
+    for (const call of execaMock.mock.calls) {
+      const [cmd, , options] = call as unknown as [string, string[], { cwd?: string }];
+      expect(cmd).toBe('git');
+      expect(options).toMatchObject({ cwd: repoPath });
+    }
+  });
+});
+
+/** Locate a recorded git call by a leading-args prefix (e.g. worktree remove). */
+function callMatching(prefix: string[]): string[] | undefined {
+  const call = execaMock.mock.calls.find((c) => {
+    const args = c[1] as string[] | undefined;
+    return Array.isArray(args) && prefix.every((p, i) => args[i] === p);
+  });
+  return call?.[1] as string[] | undefined;
+}
+
+/** `git worktree list --porcelain` output holding just the main worktree. */
+const mainOnlyPorcelain = ['worktree /repo', 'HEAD aaaaaaa', 'branch refs/heads/main', ''].join(
+  '\n',
+);
+
+/** …plus an orphan worktree checked out on the `<key>` branch. */
+function porcelainWithKey(worktreePath: string): string {
+  return [
+    mainOnlyPorcelain,
+    `worktree ${worktreePath}`,
+    'HEAD bbbbbbb',
+    `branch refs/heads/${key}`,
+    '',
+  ].join('\n');
+}
+
+describe('reconcileOrphanWorktree', () => {
+  const worktreePath = '/repo-CREW-270';
+
+  beforeEach(() => execaMock.mockReset());
+  afterEach(() => vi.restoreAllMocks());
+
+  it('returns "absent" and removes nothing when no worktree holds the <key> branch', async () => {
+    execaMock.mockReturnValueOnce(ok(mainOnlyPorcelain) as ReturnType<typeof execa>); // worktree list
+
+    const result = await reconcileOrphanWorktree({ repoPath, key, defaultBranch });
+
+    expect(result).toBe('absent');
+    expect(callMatching(['rev-list'])).toBeUndefined();
+    expect(callMatching(['worktree', 'remove'])).toBeUndefined();
+  });
+
+  it('removes a safe orphan worktree (no unique commits) and reports "reclaimed"', async () => {
+    execaMock
+      .mockReturnValueOnce(ok(porcelainWithKey(worktreePath)) as ReturnType<typeof execa>) // list
+      .mockReturnValueOnce(ok('0\n') as ReturnType<typeof execa>) // rev-list: 0 unique commits
+      .mockReturnValueOnce(ok('') as ReturnType<typeof execa>) // status: clean
+      .mockReturnValueOnce(ok() as ReturnType<typeof execa>); // worktree remove succeeds
+
+    const result = await reconcileOrphanWorktree({ repoPath, key, defaultBranch });
+
+    expect(result).toBe('reclaimed');
+    expect(callMatching(['worktree', 'remove'])).toContain(worktreePath);
+  });
+
+  it('counts unique commits against origin/<defaultBranch>', async () => {
+    execaMock
+      .mockReturnValueOnce(ok(porcelainWithKey(worktreePath)) as ReturnType<typeof execa>) // list
+      .mockReturnValueOnce(ok('0\n') as ReturnType<typeof execa>) // rev-list
+      .mockReturnValueOnce(ok('') as ReturnType<typeof execa>) // status: clean
+      .mockReturnValueOnce(ok() as ReturnType<typeof execa>); // remove
+
+    await reconcileOrphanWorktree({ repoPath, key, defaultBranch: 'develop' });
+
+    expect(callMatching(['rev-list'])).toEqual([
+      'rev-list',
+      '--count',
+      `origin/develop..refs/heads/${key}`,
+    ]);
+  });
+
+  it('refuses (throws, keeps the worktree) when the branch has unique commits', async () => {
+    execaMock
+      .mockReturnValueOnce(ok(porcelainWithKey(worktreePath)) as ReturnType<typeof execa>) // list
+      .mockReturnValueOnce(ok('2\n') as ReturnType<typeof execa>); // rev-list: 2 unique commits
+
+    await expect(reconcileOrphanWorktree({ repoPath, key, defaultBranch })).rejects.toThrow(
+      /2 unpushed commit/i,
+    );
+    expect(callMatching(['worktree', 'remove'])).toBeUndefined();
+  });
+
+  it('refuses with an actionable error (mentions the key and how to inspect the work)', async () => {
+    execaMock
+      .mockReturnValueOnce(ok(porcelainWithKey(worktreePath)) as ReturnType<typeof execa>)
+      .mockReturnValueOnce(ok('1\n') as ReturnType<typeof execa>);
+
+    await expect(reconcileOrphanWorktree({ repoPath, key, defaultBranch })).rejects.toThrow(
+      new RegExp(`log origin/${defaultBranch}\\.\\.${key}`),
+    );
+  });
+
+  it('refuses (keeps the worktree) when it is dirty despite no unique commits', async () => {
+    // A crash/kill after edits but before a commit leaves 0 unique commits yet
+    // uncommitted work. `git worktree remove --force` would silently discard it,
+    // so refuse — the commit count alone does not make a worktree safe to delete.
+    execaMock
+      .mockReturnValueOnce(ok(porcelainWithKey(worktreePath)) as ReturnType<typeof execa>) // list
+      .mockReturnValueOnce(ok('0\n') as ReturnType<typeof execa>) // rev-list: 0 unique commits
+      .mockReturnValueOnce(ok(' M packages/foo.ts\n?? new.ts\n') as ReturnType<typeof execa>); // status: dirty
+
+    await expect(reconcileOrphanWorktree({ repoPath, key, defaultBranch })).rejects.toThrow(
+      /uncommitted changes/i,
+    );
+    expect(callMatching(['worktree', 'remove'])).toBeUndefined();
+  });
+
+  it('refuses when the worktree cleanliness cannot be determined (status errors)', async () => {
+    execaMock
+      .mockReturnValueOnce(ok(porcelainWithKey(worktreePath)) as ReturnType<typeof execa>) // list
+      .mockReturnValueOnce(ok('0\n') as ReturnType<typeof execa>) // rev-list: 0
+      .mockReturnValueOnce(fail('fatal: not a git repository', 128) as ReturnType<typeof execa>); // status errors
+
+    await expect(reconcileOrphanWorktree({ repoPath, key, defaultBranch })).rejects.toThrow(
+      /could not be determined/i,
+    );
+    expect(callMatching(['worktree', 'remove'])).toBeUndefined();
+  });
+
+  it('refuses rather than guessing when the unique-commit count cannot be computed', async () => {
+    execaMock
+      .mockReturnValueOnce(ok(porcelainWithKey(worktreePath)) as ReturnType<typeof execa>) // list
+      .mockReturnValueOnce(fail('fatal: bad revision', 128) as ReturnType<typeof execa>); // rev-list
+
+    await expect(reconcileOrphanWorktree({ repoPath, key, defaultBranch })).rejects.toThrow(
+      /could not be determined/i,
+    );
+    expect(callMatching(['worktree', 'remove'])).toBeUndefined();
+  });
+
+  it('refuses (does not remove) when rev-list exits 0 but its output is not a number', async () => {
+    execaMock
+      .mockReturnValueOnce(ok(porcelainWithKey(worktreePath)) as ReturnType<typeof execa>) // list
+      .mockReturnValueOnce(ok('not-a-number\n') as ReturnType<typeof execa>); // rev-list: garbage
+
+    await expect(reconcileOrphanWorktree({ repoPath, key, defaultBranch })).rejects.toThrow(
+      /could not be determined/i,
+    );
+    expect(callMatching(['worktree', 'remove'])).toBeUndefined();
+  });
+
+  it('surfaces the git reason when a safe-orphan worktree remove fails', async () => {
+    execaMock
+      .mockReturnValueOnce(ok(porcelainWithKey(worktreePath)) as ReturnType<typeof execa>) // list
+      .mockReturnValueOnce(ok('0\n') as ReturnType<typeof execa>) // rev-list: safe
+      .mockReturnValueOnce(ok('') as ReturnType<typeof execa>) // status: clean
+      .mockReturnValueOnce(
+        fail('fatal: validation failed, cannot remove working tree', 1) as ReturnType<typeof execa>,
+      ); // remove fails
+
+    await expect(reconcileOrphanWorktree({ repoPath, key, defaultBranch })).rejects.toThrow(
+      /cannot remove working tree/i,
+    );
+  });
+
+  it('runs every git invocation with repoPath as cwd', async () => {
+    execaMock
+      .mockReturnValueOnce(ok(porcelainWithKey(worktreePath)) as ReturnType<typeof execa>)
+      .mockReturnValueOnce(ok('0\n') as ReturnType<typeof execa>)
+      .mockReturnValueOnce(ok('') as ReturnType<typeof execa>) // status: clean
+      .mockReturnValueOnce(ok() as ReturnType<typeof execa>);
+
+    await reconcileOrphanWorktree({ repoPath, key, defaultBranch });
 
     expect(execaMock.mock.calls.length).toBeGreaterThan(0);
     for (const call of execaMock.mock.calls) {

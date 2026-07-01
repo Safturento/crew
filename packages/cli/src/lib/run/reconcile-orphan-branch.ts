@@ -95,3 +95,154 @@ export async function reconcileOrphanBranch(
 
   return { action: 'reclaimed' };
 }
+
+export type ReconcileOrphanWorktreeResult =
+  | 'absent' // no worktree currently holds the `<key>` branch — nothing to do
+  | 'reclaimed'; // a safe orphan worktree was removed so the add can recreate it
+
+/**
+ * Make `git worktree add <path>` idempotent against an orphan worktree
+ * directory (CREW-309) — the sibling of {@link reconcileOrphanBranch}, extended
+ * from a leftover *branch* to a leftover *worktree directory*.
+ *
+ * A run interrupted after its worktree was created but before completion (crash,
+ * kill, a partial cleanup) leaves the `<key>` worktree registered and checked
+ * out. On the next `crew run <key>`, `requireWorktreeAvailable` throws on the
+ * lingering directory and every re-run of that key is wedged until it's removed
+ * by hand (`crew restart <key> --hard`).
+ *
+ * Run this in preflight, after `git fetch origin <default>` and before
+ * `requireWorktreeAvailable`, so the common wedge self-heals. It distinguishes a
+ * **safe orphan** — a worktree whose `<key>` branch has no commits beyond
+ * `origin/<default>` **and** a clean working tree — which it removes so the run
+ * can recreate it cleanly, from one carrying **unrecovered work** (unique commits
+ * or uncommitted/untracked changes), which it refuses to touch, throwing an
+ * actionable error. When the commit count or the working-tree cleanliness can't
+ * be determined (e.g. a missing origin ref, an errored `git status`) it also
+ * refuses rather than risk discarding real work — mirroring
+ * `reconcileOrphanBranch`'s "refuse on any uncertainty".
+ *
+ * Only the worktree directory is removed here; the `<key>` branch it held is
+ * left in place (now unchecked-out) for `reconcileOrphanBranch` — which runs
+ * next, in the worktree bracket — to reclaim. The two compose: worktree reclaim
+ * → branch reclaim → `git worktree add -b <key>`.
+ */
+export async function reconcileOrphanWorktree(
+  opts: ReconcileOrphanBranchOptions,
+): Promise<ReconcileOrphanWorktreeResult> {
+  const cwd = opts.repoPath;
+  const env = opts.env;
+
+  // Find the worktree (if any) currently checked out on the `<key>` branch.
+  // Keying off the branch — rather than the conventional on-disk path — finds
+  // the orphan wherever it lives and confirms it is holding our branch.
+  const list = await execa('git', ['worktree', 'list', '--porcelain'], { cwd, env, reject: false });
+  const worktreePath = worktreePathForBranch(list.stdout, opts.key);
+  if (worktreePath === null) return 'absent';
+
+  // Commits on <key> not reachable from origin/<default>. A safe orphan has 0.
+  const revList = await execa(
+    'git',
+    ['rev-list', '--count', `origin/${opts.defaultBranch}..refs/heads/${opts.key}`],
+    { cwd, env, reject: false },
+  );
+  // Refuse on any uncertainty — a non-zero exit (e.g. missing origin ref) OR a
+  // clean exit whose output isn't an integer. Erring toward keeping the worktree
+  // is the safe default: a wrong "0" here would discard unrecovered work.
+  const rawCount = revList.stdout.trim();
+  const uniqueCommits = Number.parseInt(rawCount, 10);
+  if (revList.exitCode !== 0 || !Number.isFinite(uniqueCommits)) {
+    const detail =
+      revList.stderr.trim() ||
+      `git rev-list rc=${revList.exitCode}, output ${JSON.stringify(rawCount)}`;
+    throw new Error(
+      `worktree for ${opts.key} at ${worktreePath} already exists, but its commits relative to ` +
+        `origin/${opts.defaultBranch} could not be determined (${detail}) — refusing to delete it.\n` +
+        `       Inspect and remove it manually if it is safe to discard:  ` +
+        `git -C ${cwd} worktree remove --force ${worktreePath}`,
+    );
+  }
+
+  if (uniqueCommits > 0) {
+    throw new Error(
+      `worktree for ${opts.key} at ${worktreePath} already exists with ${uniqueCommits} unpushed ` +
+        `commit(s) not on origin/${opts.defaultBranch} — refusing to delete it. This is unrecovered ` +
+        `work from an earlier interrupted run. Inspect it, then choose:\n` +
+        `       • Keep it:     git -C ${cwd} log origin/${opts.defaultBranch}..${opts.key}\n` +
+        `       • Discard it:  git -C ${cwd} worktree remove --force ${worktreePath}   ` +
+        `(then re-run crew run ${opts.key})`,
+    );
+  }
+
+  // A zero-commit branch is not the whole story for a *worktree*: unlike a bare
+  // branch (which `reconcileOrphanBranch` handles), a worktree has a live working
+  // tree that can hold uncommitted/untracked edits. `git worktree remove --force`
+  // would discard those silently, so the count check alone is not enough — an
+  // interrupted run that edited but never committed has 0 unique commits yet real
+  // unrecovered work. `git -C <worktree> status --porcelain` (cwd stays repoPath)
+  // is empty only for a genuinely clean tree; refuse on any content, and refuse
+  // on an errored status too (can't confirm clean ⇒ don't delete).
+  const status = await execa('git', ['-C', worktreePath, 'status', '--porcelain'], {
+    cwd,
+    env,
+    reject: false,
+  });
+  if (status.exitCode !== 0) {
+    throw new Error(
+      `worktree for ${opts.key} at ${worktreePath} already exists, but whether it has uncommitted ` +
+        `changes could not be determined (${status.stderr.trim() || `git status rc=${status.exitCode}`}) ` +
+        `— refusing to delete it.\n` +
+        `       Inspect and remove it manually if it is safe to discard:  ` +
+        `git -C ${cwd} worktree remove --force ${worktreePath}`,
+    );
+  }
+  if (status.stdout.trim() !== '') {
+    throw new Error(
+      `worktree for ${opts.key} at ${worktreePath} already exists with uncommitted changes — ` +
+        `refusing to delete it. This is unrecovered work from an earlier interrupted run. ` +
+        `Inspect it, then choose:\n` +
+        `       • Keep it:     git -C ${worktreePath} status\n` +
+        `       • Discard it:  crew restart ${opts.key} --hard   ` +
+        `(or: git -C ${cwd} worktree remove --force ${worktreePath})`,
+    );
+  }
+
+  // Safe orphan: remove so `git worktree add` recreates it from origin/<default>.
+  // `--force` is safe — the zero-unique-commits + clean-tree checks above already
+  // proved there is nothing to lose. This leaves the `<key>` branch behind for
+  // reconcileOrphanBranch to reclaim next.
+  const remove = await execa('git', ['worktree', 'remove', '--force', worktreePath], {
+    cwd,
+    env,
+    reject: false,
+  });
+  if (remove.exitCode !== 0) {
+    throw new Error(
+      `worktree for ${opts.key} at ${worktreePath} exists but could not be removed: ` +
+        `${remove.stderr.trim() || `git worktree remove rc=${remove.exitCode}`}\n` +
+        `       Inspect it manually:  git -C ${cwd} worktree list`,
+    );
+  }
+
+  return 'reclaimed';
+}
+
+/**
+ * Parse `git worktree list --porcelain` and return the path of the worktree
+ * checked out on `refs/heads/<key>`, or null if none holds that branch. The
+ * porcelain format is newline-delimited records separated by blank lines; each
+ * record opens with a `worktree <path>` line and (unless detached) carries a
+ * `branch <ref>` line.
+ */
+function worktreePathForBranch(porcelain: string, key: string): string | null {
+  const target = `refs/heads/${key}`;
+  let currentPath: string | null = null;
+  for (const line of porcelain.split('\n')) {
+    if (line.startsWith('worktree ')) {
+      currentPath = line.slice('worktree '.length).trim();
+    } else if (line.startsWith('branch ')) {
+      if (line.slice('branch '.length).trim() === target && currentPath) return currentPath;
+    }
+  }
+  return null;
+}
