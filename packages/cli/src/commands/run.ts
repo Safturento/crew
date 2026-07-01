@@ -25,7 +25,7 @@ import {
   type WriteDockerEnvResult,
 } from '../lib/docker/index.js';
 import { emit, loadEnvSpec, materialize, parseEnvFile } from '../lib/env-spec/index.js';
-import { crewDaemonClientFromEnv } from '../lib/daemon-client/index.js';
+import { crewDaemonClientFromEnv, type CrewDaemonClient } from '../lib/daemon-client/index.js';
 import { buildTicketPrompt } from '../lib/prompts/index.js';
 import {
   authoredEnabled,
@@ -166,6 +166,10 @@ export async function runRun(key: string, opts: RunOptions): Promise<never> {
 
   const config = await discoverProjectConfig(process.cwd());
   if (!config) {
+    // Kept sync + daemon-less: a config-resolution failure has no project name
+    // to key an agents row (NOT NULL) — the accepted pre-row gap (Epic CREW-306
+    // out-of-scope). Every gate *below* this point has a resolved project, so
+    // those report through the daemon (`failEarlyGate`).
     failStartupPhase(
       key,
       'crew_startup_preflight',
@@ -173,6 +177,21 @@ export async function runRun(key: string, opts: RunOptions): Promise<never> {
       'no crew project config matches this repository — configure ~/.config/crew/projects/<name>.toml',
     );
   }
+
+  // CREW-308: birth the agent row the moment config resolves — before the
+  // tool/gh-auth/worktree gate — so a `crew run` is visible in the dashboard
+  // from the earliest attributable point and no preflight-gate death is silent.
+  // The daemon client + resolved worktree are hoisted here (rather than built at
+  // registerRun) so the gates below report their `error` through them too. Both
+  // calls are best-effort — a downed daemon just leaves the run untracked.
+  const daemonClient = crewDaemonClientFromEnv(process.env);
+  const worktree = worktreePathFor(config.repo_path, key);
+  await daemonClient.reportInitializing({
+    key,
+    projectName: config.name,
+    worktreePath: worktree,
+    branch: key,
+  });
 
   // Build the augmented PATH once and pass it explicitly to every subprocess
   // rather than mutating process.env. ~/.local/bin is prepended so user-
@@ -238,27 +257,32 @@ export async function runRun(key: string, opts: RunOptions): Promise<never> {
   const required = ['claude', 'gh', 'jq', 'bwrap'];
   const missing = preflightTools(required, childPath);
   if (missing.length > 0) {
-    failStartupPhase(
+    await failEarlyGate({
+      daemonClient,
       key,
-      'crew_startup_preflight',
-      preflightStartedAt,
-      `missing required tool(s) on PATH: ${missing.join(', ')}`,
-    );
+      projectName: config.name,
+      worktreePath: worktree,
+      subtype: 'crew_startup_preflight',
+      startedAt: preflightStartedAt,
+      message: `missing required tool(s) on PATH: ${missing.join(', ')}`,
+    });
   }
 
   const ghTokenSource = join(config.repo_path, '.claude', 'secrets', 'gh-token');
   try {
     requireGithubAuth({ tokenPath: ghTokenSource });
   } catch (err) {
-    failStartupPhase(
+    await failEarlyGate({
+      daemonClient,
       key,
-      'crew_startup_preflight',
-      preflightStartedAt,
-      err instanceof Error ? err.message : String(err),
-    );
+      projectName: config.name,
+      worktreePath: worktree,
+      subtype: 'crew_startup_preflight',
+      startedAt: preflightStartedAt,
+      message: err instanceof Error ? err.message : String(err),
+    });
   }
 
-  const worktree = worktreePathFor(config.repo_path, key);
   try {
     // CREW-309: an interrupted run can leave the <key> worktree registered and
     // checked out; requireWorktreeAvailable then throws on it and wedges every
@@ -286,12 +310,15 @@ export async function runRun(key: string, opts: RunOptions): Promise<never> {
     }
     requireWorktreeAvailable(worktree);
   } catch (err) {
-    failStartupPhase(
+    await failEarlyGate({
+      daemonClient,
       key,
-      'crew_startup_preflight',
-      preflightStartedAt,
-      err instanceof Error ? err.message : String(err),
-    );
+      projectName: config.name,
+      worktreePath: worktree,
+      subtype: 'crew_startup_preflight',
+      startedAt: preflightStartedAt,
+      message: err instanceof Error ? err.message : String(err),
+    });
   }
 
   await emitStartupEvent(key, {
@@ -442,10 +469,10 @@ export async function runRun(key: string, opts: RunOptions): Promise<never> {
   }
 
   // CREW-244: register the run as `launching` BEFORE preflight, so an init
-  // failure leaves a structured trace instead of exiting silently. The daemon
-  // client is created here (rather than after the transcript appears) so the
-  // pre-register + failed-start reports can happen around prepareAgentEnvironment.
-  const daemonClient = crewDaemonClientFromEnv(process.env);
+  // failure leaves a structured trace instead of exiting silently. `daemonClient`
+  // was hoisted up to config-resolve (CREW-308) so the birth + early-gate
+  // reports could use it; here it drives the pre-register + failed-start reports
+  // around prepareAgentEnvironment.
   const { dockerProcess, resolvedAppUrl } = await runTrackedPreflight(
     {
       daemonClient,
@@ -864,22 +891,25 @@ function fail(message: string): never {
   process.exit(1);
 }
 
+type StartupFailSubtype =
+  | 'crew_startup_preflight'
+  | 'crew_startup_worktree'
+  | 'crew_startup_env_spec'
+  | 'crew_startup_npm_install'
+  | 'crew_startup_docker'
+  | 'crew_startup_mcp'
+  | 'crew_startup_claude_spawn';
+
 /**
  * Emit a `failed` startup phase event synchronously, then call `fail()`.
  * Sync so callers retain `fail()`'s control-flow narrowing — `await`ing
  * an async helper that returns `Promise<never>` does not narrow `null`
- * checks in TypeScript.
+ * checks in TypeScript. Used by the `!config` gate (no project to track);
+ * post-config gates use {@link failEarlyGate}.
  */
 function failStartupPhase(
   key: string,
-  subtype:
-    | 'crew_startup_preflight'
-    | 'crew_startup_worktree'
-    | 'crew_startup_env_spec'
-    | 'crew_startup_npm_install'
-    | 'crew_startup_docker'
-    | 'crew_startup_mcp'
-    | 'crew_startup_claude_spawn',
+  subtype: StartupFailSubtype,
   startedAt: number,
   message: string,
 ): never {
@@ -892,6 +922,45 @@ function failStartupPhase(
     durationMs: Date.now() - startedAt,
   });
   fail(message);
+}
+
+interface FailEarlyGateDeps {
+  daemonClient: Pick<CrewDaemonClient, 'reportEarlyFailure'>;
+  key: string;
+  projectName: string;
+  worktreePath: string;
+  subtype: StartupFailSubtype;
+  startedAt: number;
+  message: string;
+}
+
+/**
+ * CREW-308 — the post-config variant of {@link failStartupPhase}: emit the
+ * `failed` startup phase (so Inspect/reap-reason can read the reason), then
+ * report an `error` transition through the daemon so the death becomes a
+ * *visible* agent row, then exit. Async because the daemon report must land
+ * before the process tears down — best-effort, so a downed daemon never blocks
+ * the exit. The branch is `key` (matches the birth call). Used by the
+ * tool/gh-auth/worktree gates, which all run after config resolves.
+ */
+async function failEarlyGate(deps: FailEarlyGateDeps): Promise<never> {
+  emitStartupEventSync(deps.key, {
+    type: 'system',
+    subtype: deps.subtype,
+    status: 'failed',
+    timestamp: new Date().toISOString(),
+    summary: deps.message,
+    durationMs: Date.now() - deps.startedAt,
+  });
+  await deps.daemonClient.reportEarlyFailure({
+    key: deps.key,
+    projectName: deps.projectName,
+    worktreePath: deps.worktreePath,
+    branch: deps.key,
+    phase: deps.subtype,
+    summary: deps.message,
+  });
+  fail(deps.message);
 }
 
 /**
