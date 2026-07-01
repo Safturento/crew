@@ -7,6 +7,7 @@ import type { Kysely } from 'kysely';
 import { createDb, runMigrations, type DaemonDatabase } from '../db.js';
 import { AgentsService } from './AgentsService.js';
 import { RunnerPageService } from './RunnerPageService.js';
+import type { TransitionTarget } from './state-derivation.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const MIGRATIONS_DIR = resolve(__dirname, '..', 'migrations');
@@ -34,7 +35,7 @@ async function setup(): Promise<Harness> {
 async function insertTransition(
   db: Kysely<DaemonDatabase>,
   key: string,
-  to: string,
+  to: TransitionTarget,
   ts: number,
 ): Promise<void> {
   await db
