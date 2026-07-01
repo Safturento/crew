@@ -50,8 +50,20 @@ describe('stateEventSchema', () => {
     expect(e.event).toBe('run_paused');
   });
 
-  it('exposes all seven kinds', () => {
-    expect(STATE_EVENT_KINDS).toHaveLength(7);
+  it('accepts a run_orphaned event (CREW-307 — running → orphaned mismatch)', () => {
+    const e = stateEventSchema.parse({
+      eventId: 'o1',
+      key: 'CREW-1',
+      event: 'run_orphaned',
+      ts: '2026-06-30T00:00:00Z',
+      source: 'runner-exit',
+    });
+    expect(e.event).toBe('run_orphaned');
+  });
+
+  it('exposes all eight kinds', () => {
+    expect(STATE_EVENT_KINDS).toHaveLength(8);
     expect(STATE_EVENT_KINDS).toContain('run_paused');
+    expect(STATE_EVENT_KINDS).toContain('run_orphaned');
   });
 });

@@ -23,6 +23,13 @@ describe('reduceState', () => {
   it('finish_completed → finished', () => {
     expect(reduceState('pr_open', 'finish_completed')).toBe('finished');
   });
+  it('run_orphaned from running → orphaned (CREW-307)', () => {
+    expect(reduceState('running', 'run_orphaned')).toBe('orphaned');
+  });
+  it('run_orphaned while not running is a no-op (null)', () => {
+    expect(reduceState('pr_open', 'run_orphaned')).toBeNull();
+    expect(reduceState('idle', 'run_orphaned')).toBeNull();
+  });
   it('finished is sticky against lifecycle events', () => {
     expect(reduceState('finished', 'run_started')).toBeNull();
     expect(reduceState('finished', 'pr_created')).toBeNull();

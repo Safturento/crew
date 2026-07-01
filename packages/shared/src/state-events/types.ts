@@ -8,6 +8,9 @@ export const STATE_EVENT_KINDS = [
   'fixpr_exited',
   'run_exited',
   'run_paused',
+  // CREW-307: the runner detects a run whose DB state is `running` but whose
+  // process is gone (daemon/runner mismatch). Reduces `running` → `orphaned`.
+  'run_orphaned',
   'finish_completed',
 ] as const;
 export type StateEventKind = (typeof STATE_EVENT_KINDS)[number];

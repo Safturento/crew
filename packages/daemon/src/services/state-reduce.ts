@@ -63,6 +63,13 @@ export function reduceState(
       // non-zero-exit → error branch above (it never carries an error code).
       next = current === 'running' ? 'idle' : null;
       break;
+    case 'run_orphaned':
+      // CREW-307: a run the DB believes is `running` but whose process is gone
+      // (daemon/runner mismatch) settles to `orphaned` — amber, non-terminal,
+      // reap-able. Only meaningful from `running`; from any other state the
+      // liveness sweep has nothing to reconcile → no-op.
+      next = current === 'running' ? 'orphaned' : null;
+      break;
     case 'finish_completed':
       next = 'finished';
       break;
