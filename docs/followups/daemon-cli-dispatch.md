@@ -7,6 +7,8 @@
 
 ## 2026-06-30 — Runs that die in the early preflight gate are invisible in the dashboard (no agent row, ever)
 
+**Ticket:** [CREW-306](https://safturento.atlassian.net/browse/CREW-306) — Epic (children CREW-307–312). Resolution gated on Epic completion; move to `resolved.md` when the Epic transitions to Done, naming which children covered this scope.
+
 **What:** A `crew run` that fails one of the *early* `crew_startup_preflight` checks — `preflightTools` (claude/gh/jq/bwrap), `requireGithubAuth`, or `requireWorktreeAvailable` (`run.ts:236-269`) — produces **no dashboard entry of any kind**. Each of these calls `failStartupPhase` (`run.ts:868`), which writes a `failed` line to `~/.crew/startup/<key>.jsonl` and then `fail()`s (`process.exit`). This is the wrong "error dialect":
 
 - The daemon ingests the JSONL `failed` event (`IngestService.watchStartupEvents` → `recordError`, CREW-201) and writes only a `state_transitions` row keyed on `agentKey`. **No `agents` row exists yet** — that's created later by `registerRun` (`POST /api/agents/runs`, called *after* preflight + worktree + claude spawn). Every dashboard surface reads off `agents`/`runs`, so the orphan transition is invisible. Verified live: `GET /api/agents` returned 134 agents, **zero** for the failed key.
