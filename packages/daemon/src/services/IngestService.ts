@@ -808,12 +808,20 @@ function resolveAttachPath(input: AttachInput): string {
 // reducer activates (CREW-254/257). Intentionally keeps that helper's legacy
 // quirk of treating a stored `error` as a cold-read miss (→ `init`), so existing
 // error read-back behavior is unchanged; only `idle`/`waiting` are newly kept.
+// CREW-307: `queued`/`orphaned` are kept too, so a queued birth (or an orphaned
+// mismatch) survives a daemon restart instead of collapsing to `init`.
 function isTransitionTarget(s: string | null | undefined): s is TransitionTarget {
   return isTransitionState(s) || s === 'idle' || s === 'waiting';
 }
 
 function isTransitionState(s: string | null | undefined): s is TransitionState {
   return (
-    s === 'init' || s === 'running' || s === 'pr_open' || s === 'pr_merged' || s === 'finished'
+    s === 'init' ||
+    s === 'queued' ||
+    s === 'running' ||
+    s === 'pr_open' ||
+    s === 'pr_merged' ||
+    s === 'finished' ||
+    s === 'orphaned'
   );
 }

@@ -6,3 +6,4 @@ export * from './claude-paths/index.js';
 export * from './startup-events/index.js';
 export * from './state-events/index.js';
 export * from './jira/index.js';
+export * from './worktree/index.js';

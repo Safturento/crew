@@ -206,10 +206,12 @@ repo = "safturento/kanban-api"
 
 type AnyTransitionState =
   | 'init'
+  | 'queued'
   | 'running'
   | 'pr_open'
   | 'pr_merged'
   | 'error'
+  | 'orphaned'
   | 'finished'
   | 'idle'
   | 'waiting';
@@ -304,6 +306,36 @@ describe('AgentsService.list', () => {
       await makeToolCall(db, runId, { tool: 'Read', tokens: 2 });
       const svc = new AgentsService({ db });
       expect((await svc.list())[0]).toMatchObject({ key: 'KAN-4', state: 'idle' });
+    } finally {
+      await db.destroy();
+    }
+  });
+
+  // CREW-307: a queued agent (enqueued, no run row yet) stays `queued` — the
+  // derive must not collapse it to `initializing`/`idle`.
+  it('keeps a queued agent queued until it launches (no run row)', async () => {
+    const db = await freshDb();
+    try {
+      await makeAgent(db, 'HA-1');
+      await makeStateTransition(db, 'HA-1', 'queued', 1000, null, 'enqueue');
+      const agents = await new AgentsService({ db }).list();
+      expect(agents[0]).toMatchObject({ key: 'HA-1', state: 'queued' });
+    } finally {
+      await db.destroy();
+    }
+  });
+
+  // CREW-307: a run whose liveness sweep found the process gone reduces to
+  // `orphaned`; while the run has not completed the derive keeps it there.
+  it('keeps an orphaned agent orphaned while its run is still open', async () => {
+    const db = await freshDb();
+    try {
+      await makeAgent(db, 'HA-2');
+      await makeRun(db, 'HA-2', 's-ha2'); // open run (completedAt null)
+      await makeStateTransition(db, 'HA-2', 'running', 1000, 'init');
+      await makeStateTransition(db, 'HA-2', 'orphaned', 2000, 'running', 'runner-exit');
+      const agents = await new AgentsService({ db }).list();
+      expect(agents[0]).toMatchObject({ key: 'HA-2', state: 'orphaned' });
     } finally {
       await db.destroy();
     }

@@ -11,12 +11,14 @@ const ASSISTANT_TOOL_LABEL = 'Assistant';
 
 export type AgentState =
   | 'initializing'
+  | 'queued'
   | 'running'
   | 'idle'
   | 'waiting'
   | 'pr_open'
   | 'pr_merged'
   | 'error'
+  | 'orphaned'
   | 'finished';
 
 export interface AgentSummary {
@@ -92,10 +94,12 @@ export interface AgentDetail {
 
 export type StateTransitionState =
   | 'init'
+  | 'queued'
   | 'running'
   | 'pr_open'
   | 'pr_merged'
   | 'error'
+  | 'orphaned'
   | 'finished'
   | 'idle'
   | 'waiting';

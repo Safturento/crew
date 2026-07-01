@@ -252,6 +252,54 @@ describe('POST /api/runner/launching', () => {
   });
 });
 
+describe('POST /api/runner/initializing', () => {
+  it('births an init agent row when none exists and returns 204', async () => {
+    const { app, db, close } = await setupApp();
+    try {
+      const res = await app.inject({
+        method: 'POST',
+        url: '/api/runner/initializing',
+        payload: {
+          key: 'HA-7',
+          projectName: 'home-assistant',
+          worktreePath: '/w/home-assistant-HA-7',
+          branch: 'HA-7',
+        },
+      });
+      expect(res.statusCode).toBe(204);
+      const agent = await db
+        .selectFrom('agents')
+        .selectAll()
+        .where('key', '=', 'HA-7')
+        .executeTakeFirstOrThrow();
+      expect(agent.worktree_path).toBe('/w/home-assistant-HA-7');
+      const transition = await db
+        .selectFrom('state_transitions')
+        .select('to_state')
+        .where('agent_key', '=', 'HA-7')
+        .orderBy('ts', 'desc')
+        .executeTakeFirstOrThrow();
+      expect(transition.to_state).toBe('init');
+    } finally {
+      await close();
+    }
+  });
+
+  it('rejects a body missing the worktree path with 400', async () => {
+    const { app, close } = await setupApp();
+    try {
+      const res = await app.inject({
+        method: 'POST',
+        url: '/api/runner/initializing',
+        payload: { key: 'HA-7', projectName: 'home-assistant', branch: 'HA-7' },
+      });
+      expect(res.statusCode).toBe(400);
+    } finally {
+      await close();
+    }
+  });
+});
+
 describe('POST /api/runner/failed-start', () => {
   it('records a structured failed-start for a launching run', async () => {
     const { app, close } = await setupApp();

@@ -45,6 +45,193 @@ const failure: RunFailure = {
   output: '✗ preflight: No git remote configured',
 };
 
+type StateChanged = Extract<SseEvent, { type: 'agent.state_changed' }>;
+const isStateChanged = (e: SseEvent): e is StateChanged => e.type === 'agent.state_changed';
+
+describe('RunFailureService.birthQueued (CREW-307)', () => {
+  it('creates the agent row and a queued transition', async () => {
+    const { service, db, events } = await setup();
+    await service.birthQueued({
+      key: 'HA-9',
+      projectName: 'home-assistant',
+      worktreePath: '/w/home-assistant-HA-9',
+      branch: 'HA-9',
+    });
+
+    const agent = await db
+      .selectFrom('agents')
+      .selectAll()
+      .where('key', '=', 'HA-9')
+      .executeTakeFirstOrThrow();
+    expect(agent.project_name).toBe('home-assistant');
+    expect(agent.worktree_path).toBe('/w/home-assistant-HA-9');
+
+    const transition = await db
+      .selectFrom('state_transitions')
+      .selectAll()
+      .where('agent_key', '=', 'HA-9')
+      .orderBy('ts', 'desc')
+      .executeTakeFirstOrThrow();
+    expect(transition.to_state).toBe('queued');
+
+    const changed = events.filter(isStateChanged);
+    expect(changed).toHaveLength(1);
+    expect(changed[0].data).toMatchObject({ key: 'HA-9', to: 'queued' });
+  });
+
+  it('is a no-op for an agent already in-flight (does not clobber running → queued)', async () => {
+    const { service, db, events } = await setup();
+    // Simulate a live run: an agents row + a running transition.
+    await db
+      .insertInto('agents')
+      .values({
+        key: 'HA-9',
+        project_name: 'home-assistant',
+        worktree_path: '/w/home-assistant-HA-9',
+        branch: 'HA-9',
+        pr_url: null,
+        app_url: null,
+        created_at: new Date().toISOString(),
+      })
+      .execute();
+    await db
+      .insertInto('state_transitions')
+      .values({
+        agent_key: 'HA-9',
+        from_state: 'init',
+        to_state: 'running',
+        ts: 1,
+        source: 'cli-run',
+      })
+      .execute();
+
+    await service.birthQueued({
+      key: 'HA-9',
+      projectName: 'home-assistant',
+      worktreePath: '/w/home-assistant-HA-9',
+      branch: 'HA-9',
+    });
+
+    // Still running — no queued transition written, no SSE published.
+    expect(await latestTo(db, 'HA-9')).toBe('running');
+    expect(events.filter(isStateChanged)).toHaveLength(0);
+  });
+
+  it('births queued over a terminal agent (re-run), recording the prior state as `from`', async () => {
+    const { service, db } = await setup();
+    await db
+      .insertInto('agents')
+      .values({
+        key: 'HA-9',
+        project_name: 'home-assistant',
+        worktree_path: '/w/home-assistant-HA-9',
+        branch: 'HA-9',
+        pr_url: null,
+        app_url: null,
+        created_at: new Date().toISOString(),
+      })
+      .execute();
+    await db
+      .insertInto('state_transitions')
+      .values({
+        agent_key: 'HA-9',
+        from_state: null,
+        to_state: 'finished',
+        ts: 1,
+        source: 'cli-finish',
+      })
+      .execute();
+
+    await service.birthQueued({
+      key: 'HA-9',
+      projectName: 'home-assistant',
+      worktreePath: '/w/home-assistant-HA-9',
+      branch: 'HA-9',
+    });
+
+    const latest = await db
+      .selectFrom('state_transitions')
+      .selectAll()
+      .where('agent_key', '=', 'HA-9')
+      .orderBy('ts', 'desc')
+      .orderBy('id', 'desc')
+      .executeTakeFirstOrThrow();
+    expect(latest.to_state).toBe('queued');
+    expect(latest.from_state).toBe('finished');
+  });
+});
+
+async function latestTo(db: Kysely<DaemonDatabase>, key: string): Promise<string | null> {
+  const row = await db
+    .selectFrom('state_transitions')
+    .select('to_state')
+    .where('agent_key', '=', key)
+    .orderBy('ts', 'desc')
+    .orderBy('id', 'desc')
+    .executeTakeFirst();
+  return row?.to_state ?? null;
+}
+
+describe('RunFailureService.recordInitializing (CREW-307)', () => {
+  const input = {
+    key: 'HA-3',
+    projectName: 'home-assistant',
+    worktreePath: '/w/home-assistant-HA-3',
+    branch: 'HA-3',
+  };
+
+  it('births a fresh agent as init', async () => {
+    const { service, db } = await setup();
+    await service.recordInitializing(input);
+    const agent = await db
+      .selectFrom('agents')
+      .selectAll()
+      .where('key', '=', 'HA-3')
+      .executeTakeFirstOrThrow();
+    expect(agent.worktree_path).toBe('/w/home-assistant-HA-3');
+    expect(await latestTo(db, 'HA-3')).toBe('init');
+  });
+
+  it('advances a queued agent to init (dashboard → direct-CLI takeover)', async () => {
+    const { service, db } = await setup();
+    await service.birthQueued(input);
+    expect(await latestTo(db, 'HA-3')).toBe('queued');
+    await service.recordInitializing(input);
+    expect(await latestTo(db, 'HA-3')).toBe('init');
+  });
+
+  it('is idempotent — a second call writes no duplicate init transition', async () => {
+    const { service, db } = await setup();
+    await service.recordInitializing(input);
+    await service.recordInitializing(input);
+    const rows = await db
+      .selectFrom('state_transitions')
+      .selectAll()
+      .where('agent_key', '=', 'HA-3')
+      .where('to_state', '=', 'init')
+      .execute();
+    expect(rows).toHaveLength(1);
+  });
+
+  it('never regresses a run already past init', async () => {
+    const { service, db } = await setup();
+    await service.birthQueued(input);
+    // Simulate the run having started (a running transition landed).
+    await db
+      .insertInto('state_transitions')
+      .values({
+        agent_key: 'HA-3',
+        from_state: 'init',
+        to_state: 'running',
+        ts: Date.now() + 1,
+        source: 'cli-run',
+      })
+      .execute();
+    await service.recordInitializing(input);
+    expect(await latestTo(db, 'HA-3')).toBe('running');
+  });
+});
+
 describe('RunFailureService.recordLaunching', () => {
   it('upserts the agent and inserts a launching run', async () => {
     const { service, db } = await setup();

@@ -160,8 +160,18 @@ export function buildContainer(deps: BuildContainerDeps): AwilixContainer<Daemon
     // CREW-214: queued dashboard actions. Scoped — it carries no state of
     // its own (the queue lives in SQLite + the singleton event bus), so a
     // per-request instance is fine and matches the other DB-backed services.
+    // CREW-307: injects projectsService + runFailureService so a `kind:'run'`
+    // enqueue births the `queued` agent row (resolving the worktree path from
+    // the project's repo_path).
     actionService: asFunction(
-      ({ db, eventBus }: DaemonCradle) => new ActionService({ db, eventBus }),
+      ({ db, eventBus, projectsService, runFailureService, logger }: DaemonCradle) =>
+        new ActionService({
+          db,
+          eventBus,
+          projects: projectsService,
+          runFailure: runFailureService,
+          logger,
+        }),
     ).scoped(),
     // CREW-241: reverse-command queue drained by the host runner. Scoped —
     // like actionService, it carries no state of its own (the queue lives in

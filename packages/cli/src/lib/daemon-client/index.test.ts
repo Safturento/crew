@@ -451,6 +451,35 @@ const failure = {
   output: '✗ preflight: No git remote configured',
 };
 
+const initializingInput = {
+  key: 'HA-7',
+  projectName: 'home-assistant',
+  worktreePath: '/w/home-assistant-HA-7',
+  branch: 'HA-7',
+};
+
+describe('CrewDaemonClient.reportInitializing', () => {
+  it('POSTs to /api/runner/initializing and returns ok on 204', async () => {
+    const fetchSpy = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValue(new Response(null, { status: 204 }));
+    const client = new CrewDaemonClient({ baseUrl: 'http://localhost:7773' });
+    const result = await client.reportInitializing(initializingInput);
+    expect(result.ok).toBe(true);
+    expect(fetchSpy).toHaveBeenCalledWith(
+      'http://localhost:7773/api/runner/initializing',
+      expect.objectContaining({ method: 'POST' }),
+    );
+  });
+
+  it('returns ok:false on connection error without throwing', async () => {
+    vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('ECONNREFUSED'));
+    const client = new CrewDaemonClient({ baseUrl: 'http://localhost:7773', warn: vi.fn() });
+    const result = await client.reportInitializing(initializingInput);
+    expect(result.ok).toBe(false);
+  });
+});
+
 describe('CrewDaemonClient.reportLaunching', () => {
   it('POSTs to /api/runner/launching and returns the runId on 201', async () => {
     const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(

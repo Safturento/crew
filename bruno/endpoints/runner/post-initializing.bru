@@ -1,0 +1,36 @@
+meta {
+  name: POST /api/runner/initializing
+  type: http
+  seq: 11
+}
+
+post {
+  url: {{baseUrl}}/api/runner/initializing
+  body: json
+}
+
+body:json {
+  {
+    "key": "BRUNO-INIT-1",
+    "projectName": "bruno-smoke",
+    "worktreePath": "/tmp/bruno-smoke-worktree-init",
+    "branch": "BRUNO-INIT-1"
+  }
+}
+
+assert {
+  res.status: eq 204
+}
+
+tests {
+  test("births/advances the agent row to init and returns 204", () => {
+    expect(res.status).to.equal(204);
+  });
+}
+
+docs {
+  CREW-307: the direct-CLI birth point. Idempotently upserts the agent row and
+  writes an `init` transition, so a `crew run` is visible in the grid from
+  config-resolve onward — before the preflight gate. Safe to re-POST (a run
+  already past init is never regressed).
+}

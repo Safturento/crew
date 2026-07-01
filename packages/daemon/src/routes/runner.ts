@@ -65,6 +65,19 @@ const LaunchingBodySchema = z.object({
   appUrl: z.string().nullable().optional(),
 });
 
+/**
+ * CREW-307 — the direct-CLI birth body. Mirrors the CREW-244 launching body
+ * minus the run-specific fields (`command`/`startedAt`), since this births only
+ * the agent row + an `init` transition, not a `runs` row.
+ */
+const InitializingBodySchema = z.object({
+  key: z.string().min(1),
+  projectName: z.string().min(1),
+  worktreePath: z.string().min(1),
+  branch: z.string(),
+  appUrl: z.string().nullable().optional(),
+});
+
 const FailedStartBodySchema = z.object({
   key: z.string().min(1),
   projectName: z.string().min(1),
@@ -145,6 +158,9 @@ async function tailLog(logPath: string, tail: number): Promise<string[]> {
  * - `GET  /api/runner/logs?tail=N` — tails the mounted `runner.log`.
  * - `POST /api/runner/launching` — CREW-244: pre-register a run as
  *   `launching` *before* preflight, so an init failure has a row to convert.
+ * - `POST /api/runner/initializing` — CREW-307: the direct-CLI birth point.
+ *   Idempotently upserts the agent row + writes an `init` transition, so a
+ *   `crew run` is visible in the grid from config-resolve onward. 204.
  * - `POST /api/runner/failed-start` — CREW-244: record a structured
  *   failed-start (converting the launching placeholder when present).
  * - `POST /api/runner/commands`            — enqueue a reverse-queue control
@@ -183,6 +199,16 @@ export async function registerRunnerRoutes(app: DaemonApp): Promise<void> {
       const svc = req.diScope.resolve('runFailureService');
       const { runId } = await svc.recordLaunching(req.body);
       return reply.code(201).send({ runId });
+    },
+  );
+
+  app.post(
+    '/api/runner/initializing',
+    { schema: { body: InitializingBodySchema } },
+    async (req, reply) => {
+      const svc = req.diScope.resolve('runFailureService');
+      await svc.recordInitializing(req.body);
+      return reply.code(204).send();
     },
   );
 
