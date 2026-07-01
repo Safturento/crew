@@ -5,6 +5,7 @@ import { join, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { Kysely } from 'kysely';
 import { createDb, runMigrations, type DaemonDatabase } from '../db.js';
+import { AgentsService } from './AgentsService.js';
 import { RunnerPageService } from './RunnerPageService.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -25,7 +26,21 @@ async function setup(): Promise<Harness> {
   tmpdirs.push(dir);
   const db = createDb(join(dir, 'state.db'));
   await runMigrations(db, MIGRATIONS_DIR);
-  return { db, service: new RunnerPageService({ db }) };
+  const agentsService = new AgentsService({ db });
+  return { db, service: new RunnerPageService({ db, agentsService }) };
+}
+
+/** Seed a `state_transitions` row (the birth/reduce writers' shape). */
+async function insertTransition(
+  db: Kysely<DaemonDatabase>,
+  key: string,
+  to: string,
+  ts: number,
+): Promise<void> {
+  await db
+    .insertInto('state_transitions')
+    .values({ agent_key: key, from_state: null, to_state: to, ts, source: 'test' })
+    .execute();
 }
 
 async function insertAgent(
@@ -204,5 +219,85 @@ describe('RunnerPageService.getPage', () => {
     const page = await service.getPage();
     expect(page.recentlyEnded.find((r) => r.key === 'CREW-ERR')!.kind).toBe('error');
     expect(page.recentlyEnded.find((r) => r.key === 'CREW-CAN')!.kind).toBe('cancelled');
+  });
+});
+
+describe('RunnerPageService.reconcile', () => {
+  const QUEUED_TS = Date.parse('2026-06-30T00:00:00.000Z');
+  const ORPHANED_TS = Date.parse('2026-06-30T00:05:00.000Z');
+
+  it('buckets queued + orphaned agents and excludes running', async () => {
+    const { db, service } = await setup();
+
+    // Queued: an enqueued agent with no run row (dashboard birth path).
+    await insertAgent(db, 'CREW-Q', 'crew');
+    await insertTransition(db, 'CREW-Q', 'queued', QUEUED_TS);
+
+    // Orphaned: an agent with an uncompleted run whose latest transition is
+    // `orphaned` (the running → orphaned reduce edge).
+    await insertAgent(db, 'CREW-O', 'recipes');
+    await db
+      .insertInto('runs')
+      .values({
+        agent_key: 'CREW-O',
+        command: 'run',
+        session_id: 'sess-CREW-O',
+        started_at: '2026-06-30T00:04:00.000Z',
+        completed_at: null,
+        exit_code: null,
+      })
+      .execute();
+    await insertTransition(db, 'CREW-O', 'running', ORPHANED_TS - 1000);
+    await insertTransition(db, 'CREW-O', 'orphaned', ORPHANED_TS);
+
+    // Running: must NOT appear in either bucket.
+    await insertAgent(db, 'CREW-R', 'crew');
+    await db
+      .insertInto('runs')
+      .values({
+        agent_key: 'CREW-R',
+        command: 'run',
+        session_id: 'sess-CREW-R',
+        started_at: '2026-06-30T00:06:00.000Z',
+        completed_at: null,
+        exit_code: null,
+      })
+      .execute();
+    await insertTransition(db, 'CREW-R', 'running', Date.parse('2026-06-30T00:06:00.000Z'));
+
+    const rollup = await service.reconcile();
+
+    expect(rollup.queued.map((r) => r.key)).toEqual(['CREW-Q']);
+    expect(rollup.orphaned.map((r) => r.key)).toEqual(['CREW-O']);
+
+    const q = rollup.queued[0];
+    expect(q.projectName).toBe('crew');
+    expect(q.state).toBe('queued');
+    expect(q.since).toBe('2026-06-30T00:00:00.000Z');
+
+    const o = rollup.orphaned[0];
+    expect(o.projectName).toBe('recipes');
+    expect(o.state).toBe('orphaned');
+    expect(o.since).toBe('2026-06-30T00:05:00.000Z');
+
+    // Running agent is absent from both buckets.
+    const allKeys = [...rollup.queued, ...rollup.orphaned].map((r) => r.key);
+    expect(allKeys).not.toContain('CREW-R');
+  });
+
+  it('returns empty buckets when no agent is queued or orphaned', async () => {
+    const { service } = await setup();
+    expect(await service.reconcile()).toEqual({ queued: [], orphaned: [] });
+  });
+
+  it('sorts each bucket oldest-since-first', async () => {
+    const { db, service } = await setup();
+    await insertAgent(db, 'CREW-Q2', 'crew');
+    await insertTransition(db, 'CREW-Q2', 'queued', QUEUED_TS + 60_000); // newer
+    await insertAgent(db, 'CREW-Q1', 'crew');
+    await insertTransition(db, 'CREW-Q1', 'queued', QUEUED_TS); // older
+
+    const rollup = await service.reconcile();
+    expect(rollup.queued.map((r) => r.key)).toEqual(['CREW-Q1', 'CREW-Q2']);
   });
 });

@@ -1,18 +1,31 @@
 import type { Kysely } from 'kysely';
+import { sql } from 'kysely';
 import type {
   EndedKind,
   EndedRunView,
   FailedStartView,
   QueuedActionView,
+  ReconcileRollup,
   RunFailure,
+  RunRef,
   RunnerCommandName,
   RunnerPage,
 } from 'crew-shared';
 import type { DaemonDatabase } from '../db.js';
+import type { AgentsService, AgentState } from './AgentsService.js';
 
 export interface RunnerPageServiceDeps {
   db: Kysely<DaemonDatabase>;
+  /**
+   * Reused by `reconcile()` for its state derivation — the roll-up filters
+   * `list()` by state (the `activeTicketKeys` pattern) rather than
+   * reimplementing the terminal/override guards.
+   */
+  agentsService: AgentsService;
 }
+
+/** The housekeeping states the reconcile roll-up buckets. */
+const RECONCILE_STATES = new Set<AgentState>(['queued', 'orphaned']);
 
 /** Cap on the recently-ended history list — the most recent terminal runs. */
 const RECENTLY_ENDED_LIMIT = 50;
@@ -44,9 +57,58 @@ function prNumberFromUrl(prUrl: string): number | undefined {
  */
 export class RunnerPageService {
   private readonly db: Kysely<DaemonDatabase>;
+  private readonly agentsService: AgentsService;
 
   constructor(deps: RunnerPageServiceDeps) {
     this.db = deps.db;
+    this.agentsService = deps.agentsService;
+  }
+
+  /**
+   * CREW-310 (plan task D): the housekeeping roll-up backing
+   * `GET /api/runner/reconcile` — every agent whose *derived* state is
+   * `queued` or `orphaned`, across all projects, bucketed. Reuses
+   * `AgentsService.list()` for derivation (the `activeTicketKeys` pattern) so
+   * the terminal/override guards aren't reimplemented, then joins each match's
+   * latest `state_transitions.ts` for `since` (the moment it entered the
+   * state — `startedAt` is empty for a queued agent that has no run row yet).
+   * `running` (and every other state) is excluded. This is the read surface the
+   * dashboard supervisor drawer (F) and runner chip badge (E) consume.
+   */
+  async reconcile(): Promise<ReconcileRollup> {
+    const matches = (await this.agentsService.list()).filter((a) => RECONCILE_STATES.has(a.state));
+    if (matches.length === 0) return { queued: [], orphaned: [] };
+
+    const sinceByKey = await this.sinceByKey(matches.map((a) => a.key));
+
+    const refs: RunRef[] = matches.map((a) => ({
+      key: a.key,
+      projectName: a.projectName,
+      state: a.state as RunRef['state'],
+      since: sinceByKey.get(a.key) ?? a.startedAt,
+    }));
+    // Oldest-waiting first, so the longest-queued / oldest-orphan tops the drawer.
+    refs.sort((x, y) => x.since.localeCompare(y.since));
+
+    return {
+      queued: refs.filter((r) => r.state === 'queued'),
+      orphaned: refs.filter((r) => r.state === 'orphaned'),
+    };
+  }
+
+  /**
+   * Latest `state_transitions.ts` per key, as an ISO string — the timestamp
+   * the agent entered its current (queued/orphaned) state. `MAX(ts)` is the
+   * entry into the newest state, which is the one `list()` derived.
+   */
+  private async sinceByKey(keys: string[]): Promise<Map<string, string>> {
+    const rows = await this.db
+      .selectFrom('state_transitions')
+      .select(['agent_key', sql<number>`MAX(ts)`.as('ts')])
+      .where('agent_key', 'in', keys)
+      .groupBy('agent_key')
+      .execute();
+    return new Map(rows.map((r) => [r.agent_key, new Date(Number(r.ts)).toISOString()]));
   }
 
   async getPage(): Promise<RunnerPage> {
