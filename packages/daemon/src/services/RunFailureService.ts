@@ -156,10 +156,14 @@ export class RunFailureService {
    * tool/gh-auth/worktree gate fails, *before* the process exits. The agent row
    * was normally already birthed as `init` by `recordInitializing` (Task 5), so
    * this is a transition write; the `upsertAgent` is a fallback for the rare
-   * case that birth call was lost to a downed daemon. Idempotent: a run already
-   * settled at `error` is not re-transitioned (mirrors `recordInitializing`).
-   * The failure `phase`/`summary` ride on the startup log the CLI wrote — the
-   * transition just carries the state.
+   * case that birth call was lost to a downed daemon. It never regresses a run
+   * that already advanced past the early gate — a birth (`init`/`queued`) or a
+   * re-run over an `idle`/`orphaned` row settles to `error`, but a live
+   * (`running`/`pr_open`) or terminal (`pr_merged`/`finished`/`error`) run is
+   * left alone (also makes a duplicate call idempotent). In the real flow the
+   * gate always runs pre-spawn, so `previous` is `null`/`queued`/`init`; the
+   * guard just makes future misuse safe. The failure `phase`/`summary` ride on
+   * the startup log the CLI wrote — the transition just carries the state.
    */
   async recordEarlyFailure(input: EarlyFailureInput): Promise<void> {
     await this.upsertAgent({
@@ -171,7 +175,14 @@ export class RunFailureService {
       appUrl: input.appUrl ?? null,
     });
     const previous = await this.latestState(input.key);
-    if (previous === 'error') return;
+    const advanced: StateTransitionsTable['to_state'][] = [
+      'running',
+      'pr_open',
+      'pr_merged',
+      'finished',
+      'error',
+    ];
+    if (previous !== null && advanced.includes(previous)) return;
     await this.writeBirthTransition(input.key, 'error', 'startup-failure', previous);
   }
 

@@ -291,6 +291,23 @@ describe('RunFailureService.recordEarlyFailure (CREW-308)', () => {
       .execute();
     expect(rows).toHaveLength(1);
   });
+
+  it('never regresses a run that already advanced to running', async () => {
+    const { service, db } = await setup();
+    await service.recordInitializing(input);
+    await db
+      .insertInto('state_transitions')
+      .values({
+        agent_key: 'HA-7',
+        from_state: 'init',
+        to_state: 'running',
+        ts: Date.now() + 1,
+        source: 'cli-run',
+      })
+      .execute();
+    await service.recordEarlyFailure(input);
+    expect(await latestTo(db, 'HA-7')).toBe('running');
+  });
 });
 
 describe('RunFailureService.recordLaunching', () => {

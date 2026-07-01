@@ -44,6 +44,29 @@ describe('reapReason (CREW-308)', () => {
     expect(reapReason('HAI-12', home)).toBe('worktree already exists at /w/home-assistant-HAI-12');
   });
 
+  it('returns the most recent failed phase when several failed', () => {
+    const home = seedStartupLog('HAI-15', [
+      started,
+      {
+        type: 'system',
+        subtype: 'crew_startup_preflight',
+        status: 'failed',
+        timestamp: '2026-06-30T00:00:01.000Z',
+        summary: 'missing required tool(s) on PATH: bwrap',
+        durationMs: 3,
+      },
+      {
+        type: 'system',
+        subtype: 'crew_startup_worktree',
+        status: 'failed',
+        timestamp: '2026-06-30T00:00:02.000Z',
+        summary: 'worktree already exists',
+        durationMs: 4,
+      },
+    ]);
+    expect(reapReason('HAI-15', home)).toBe('worktree already exists');
+  });
+
   it('returns null when the log has no failed phase', () => {
     const home = seedStartupLog('HAI-13', [
       started,
