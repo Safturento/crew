@@ -114,11 +114,13 @@ export type ReconcileOrphanWorktreeResult =
  * Run this in preflight, after `git fetch origin <default>` and before
  * `requireWorktreeAvailable`, so the common wedge self-heals. It distinguishes a
  * **safe orphan** — a worktree whose `<key>` branch has no commits beyond
- * `origin/<default>` — which it removes so the run can recreate it cleanly, from
- * one carrying **unrecovered work** (unique commits), which it refuses to touch,
- * throwing an actionable error. When the unique-commit count can't be computed
- * (e.g. the origin ref is missing) it also refuses rather than risk discarding
- * real work — mirroring `reconcileOrphanBranch`'s "refuse on any uncertainty".
+ * `origin/<default>` **and** a clean working tree — which it removes so the run
+ * can recreate it cleanly, from one carrying **unrecovered work** (unique commits
+ * or uncommitted/untracked changes), which it refuses to touch, throwing an
+ * actionable error. When the commit count or the working-tree cleanliness can't
+ * be determined (e.g. a missing origin ref, an errored `git status`) it also
+ * refuses rather than risk discarding real work — mirroring
+ * `reconcileOrphanBranch`'s "refuse on any uncertainty".
  *
  * Only the worktree directory is removed here; the `<key>` branch it held is
  * left in place (now unchecked-out) for `reconcileOrphanBranch` — which runs
@@ -172,9 +174,42 @@ export async function reconcileOrphanWorktree(
     );
   }
 
+  // A zero-commit branch is not the whole story for a *worktree*: unlike a bare
+  // branch (which `reconcileOrphanBranch` handles), a worktree has a live working
+  // tree that can hold uncommitted/untracked edits. `git worktree remove --force`
+  // would discard those silently, so the count check alone is not enough — an
+  // interrupted run that edited but never committed has 0 unique commits yet real
+  // unrecovered work. `git -C <worktree> status --porcelain` (cwd stays repoPath)
+  // is empty only for a genuinely clean tree; refuse on any content, and refuse
+  // on an errored status too (can't confirm clean ⇒ don't delete).
+  const status = await execa('git', ['-C', worktreePath, 'status', '--porcelain'], {
+    cwd,
+    env,
+    reject: false,
+  });
+  if (status.exitCode !== 0) {
+    throw new Error(
+      `worktree for ${opts.key} at ${worktreePath} already exists, but whether it has uncommitted ` +
+        `changes could not be determined (${status.stderr.trim() || `git status rc=${status.exitCode}`}) ` +
+        `— refusing to delete it.\n` +
+        `       Inspect and remove it manually if it is safe to discard:  ` +
+        `git -C ${cwd} worktree remove --force ${worktreePath}`,
+    );
+  }
+  if (status.stdout.trim() !== '') {
+    throw new Error(
+      `worktree for ${opts.key} at ${worktreePath} already exists with uncommitted changes — ` +
+        `refusing to delete it. This is unrecovered work from an earlier interrupted run. ` +
+        `Inspect it, then choose:\n` +
+        `       • Keep it:     git -C ${worktreePath} status\n` +
+        `       • Discard it:  crew restart ${opts.key} --hard   ` +
+        `(or: git -C ${cwd} worktree remove --force ${worktreePath})`,
+    );
+  }
+
   // Safe orphan: remove so `git worktree add` recreates it from origin/<default>.
-  // `--force` is safe — the zero-unique-commits check above already proved there
-  // is nothing to lose. This leaves the `<key>` branch behind for
+  // `--force` is safe — the zero-unique-commits + clean-tree checks above already
+  // proved there is nothing to lose. This leaves the `<key>` branch behind for
   // reconcileOrphanBranch to reclaim next.
   const remove = await execa('git', ['worktree', 'remove', '--force', worktreePath], {
     cwd,

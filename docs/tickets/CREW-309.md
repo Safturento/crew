@@ -9,7 +9,7 @@ Plan task 8 in `docs/superpowers/plans/2026-06-30-runner-page-rework.md` (branch
 ## Goal
 
 Make a wedged run self-heal on a plain re-run instead of hard-failing. Extend
-CREW-287's safe/unsafe orphan-*branch* reclaim to orphan-*worktree directories*:
+CREW-287's safe/unsafe orphan-_branch_ reclaim to orphan-_worktree directories_:
 a leftover worktree whose branch has zero commits beyond `origin/<default>` is
 safely removed so the worktree can be recreated; one carrying unique commits
 refuses with actionable guidance.
@@ -46,6 +46,13 @@ refuses with actionable guidance.
   `git worktree remove --force <path>` leaves the `<key>` branch (now not checked
   out), which `reconcileOrphanBranch` (already in the bracket) then reclaims. The
   two compose: worktree reclaim (preflight) → branch reclaim (bracket) → add.
+- **"Safe" requires a clean working tree, not just zero unique commits** — a
+  worktree (unlike a bare branch) has a live working tree; a run interrupted
+  after edits but before a commit has 0 unique commits yet real unrecovered work,
+  and `git worktree remove --force` would discard it silently. So the reclaim
+  also runs `git -C <worktree> status --porcelain` and refuses on any content (or
+  an errored status). This is the extra exposure `reconcileOrphanBranch` doesn't
+  have. Surfaced by code review.
 
 ## Notes
 
