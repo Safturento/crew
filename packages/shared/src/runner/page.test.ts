@@ -96,8 +96,17 @@ describe('runner page-data schemas', () => {
 
   it('validates the ReconcileRollup envelope', () => {
     const rollup: ReconcileRollup = {
-      queued: [{ key: 'CREW-Q', projectName: 'crew', state: 'queued', since: '2026-06-30T00:00:00.000Z' }],
-      orphaned: [{ key: 'CREW-O', projectName: 'crew', state: 'orphaned', since: '2026-06-30T00:01:00.000Z' }],
+      queued: [
+        { key: 'CREW-Q', projectName: 'crew', state: 'queued', since: '2026-06-30T00:00:00.000Z' },
+      ],
+      orphaned: [
+        {
+          key: 'CREW-O',
+          projectName: 'crew',
+          state: 'orphaned',
+          since: '2026-06-30T00:01:00.000Z',
+        },
+      ],
     };
     expect(reconcileRollupSchema.parse(rollup)).toEqual(rollup);
   });
