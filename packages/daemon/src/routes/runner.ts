@@ -7,6 +7,7 @@ import {
   enqueueRunnerCommandSchema,
   liveProcessSchema,
   runnerCommandPayloadSchema,
+  reconcileRollupSchema,
   runnerPageSchema,
   runnerSnapshotSchema,
 } from 'crew-shared';
@@ -241,6 +242,15 @@ export async function registerRunnerRoutes(app: DaemonApp): Promise<void> {
   // and recently-ended lists from the DB. Thin wrapper over RunnerPageService.
   app.get('/api/runner/page', { schema: { response: { 200: runnerPageSchema } } }, async (req) =>
     req.diScope.resolve('runnerPageService').getPage(),
+  );
+
+  // CREW-310 (plan task D): the reconcile roll-up — queued + orphaned agents
+  // across all projects, bucketed. Thin wrapper over RunnerPageService.reconcile.
+  // Backs the supervisor drawer (F) + runner chip badge (E).
+  app.get(
+    '/api/runner/reconcile',
+    { schema: { response: { 200: reconcileRollupSchema } } },
+    async (req) => req.diScope.resolve('runnerPageService').reconcile(),
   );
 
   // CREW-249 (T2): the supervisor drawer's read surface — the management slice

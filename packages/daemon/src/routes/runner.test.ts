@@ -430,6 +430,97 @@ describe('GET /api/runner/page', () => {
   });
 });
 
+describe('GET /api/runner/reconcile', () => {
+  it('returns empty buckets when nothing is queued or orphaned', async () => {
+    const { app, close } = await setupApp();
+    try {
+      const res = await app.inject({ method: 'GET', url: '/api/runner/reconcile' });
+      expect(res.statusCode).toBe(200);
+      expect(res.json()).toEqual({ queued: [], orphaned: [] });
+    } finally {
+      await close();
+    }
+  });
+
+  it('buckets queued + orphaned agents and excludes running', async () => {
+    const { app, db, close } = await setupApp();
+    try {
+      // Queued: agent + queued transition, no run row.
+      await db
+        .insertInto('agents')
+        .values({
+          key: 'CREW-Q',
+          project_name: 'crew',
+          ticket_title: null,
+          worktree_path: '/tmp/CREW-Q',
+          branch: 'CREW-Q',
+          pr_url: null,
+          app_url: null,
+          created_at: '2026-06-30T00:00:00.000Z',
+        })
+        .execute();
+      await db
+        .insertInto('state_transitions')
+        .values({
+          agent_key: 'CREW-Q',
+          from_state: null,
+          to_state: 'queued',
+          ts: Date.parse('2026-06-30T00:00:00.000Z'),
+          source: 'enqueue',
+        })
+        .execute();
+
+      // Running: agent + uncompleted run + running transition → excluded.
+      await db
+        .insertInto('agents')
+        .values({
+          key: 'CREW-R',
+          project_name: 'crew',
+          ticket_title: null,
+          worktree_path: '/tmp/CREW-R',
+          branch: 'CREW-R',
+          pr_url: null,
+          app_url: null,
+          created_at: '2026-06-30T00:00:00.000Z',
+        })
+        .execute();
+      await db
+        .insertInto('runs')
+        .values({
+          agent_key: 'CREW-R',
+          command: 'run',
+          session_id: 'sess-CREW-R',
+          started_at: '2026-06-30T00:06:00.000Z',
+          completed_at: null,
+          exit_code: null,
+        })
+        .execute();
+      await db
+        .insertInto('state_transitions')
+        .values({
+          agent_key: 'CREW-R',
+          from_state: null,
+          to_state: 'running',
+          ts: Date.parse('2026-06-30T00:06:00.000Z'),
+          source: 'ingest',
+        })
+        .execute();
+
+      const res = await app.inject({ method: 'GET', url: '/api/runner/reconcile' });
+      expect(res.statusCode).toBe(200);
+      const body = res.json();
+      expect(body.queued.map((r: { key: string }) => r.key)).toEqual(['CREW-Q']);
+      expect(body.queued[0].state).toBe('queued');
+      expect(body.queued[0].since).toBe('2026-06-30T00:00:00.000Z');
+      expect(body.orphaned).toEqual([]);
+      const allKeys = [...body.queued, ...body.orphaned].map((r: { key: string }) => r.key);
+      expect(allKeys).not.toContain('CREW-R');
+    } finally {
+      await close();
+    }
+  });
+});
+
 describe('GET /api/runner/supervisor-log', () => {
   it('returns an empty tail when runner.log is absent', async () => {
     const { app, close } = await setupApp();

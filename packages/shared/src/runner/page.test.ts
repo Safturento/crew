@@ -3,10 +3,14 @@ import {
   endedRunViewSchema,
   failedStartViewSchema,
   queuedActionViewSchema,
+  reconcileRollupSchema,
+  runRefSchema,
   runnerPageSchema,
   type EndedRunView,
   type FailedStartView,
   type QueuedActionView,
+  type ReconcileRollup,
+  type RunRef,
   type RunnerPage,
 } from './page.js';
 
@@ -67,5 +71,43 @@ describe('runner page-data schemas', () => {
   it('validates the full RunnerPage envelope', () => {
     const page: RunnerPage = { failedToStart: [], queued: [], recentlyEnded: [] };
     expect(runnerPageSchema.parse(page)).toEqual(page);
+  });
+
+  it('validates a RunRef', () => {
+    const ref: RunRef = {
+      key: 'CREW-Q',
+      projectName: 'crew',
+      state: 'queued',
+      since: '2026-06-30T00:00:00.000Z',
+    };
+    expect(runRefSchema.parse(ref)).toEqual(ref);
+  });
+
+  it('rejects a RunRef whose state is neither queued nor orphaned', () => {
+    expect(() =>
+      runRefSchema.parse({
+        key: 'CREW-R',
+        projectName: 'crew',
+        state: 'running',
+        since: '2026-06-30T00:00:00.000Z',
+      }),
+    ).toThrow();
+  });
+
+  it('validates the ReconcileRollup envelope', () => {
+    const rollup: ReconcileRollup = {
+      queued: [
+        { key: 'CREW-Q', projectName: 'crew', state: 'queued', since: '2026-06-30T00:00:00.000Z' },
+      ],
+      orphaned: [
+        {
+          key: 'CREW-O',
+          projectName: 'crew',
+          state: 'orphaned',
+          since: '2026-06-30T00:01:00.000Z',
+        },
+      ],
+    };
+    expect(reconcileRollupSchema.parse(rollup)).toEqual(rollup);
   });
 });
