@@ -1,0 +1,43 @@
+meta {
+  name: GET /api/runner/reconcile
+  type: http
+  seq: 12
+}
+
+get {
+  url: {{baseUrl}}/api/runner/reconcile
+}
+
+assert {
+  res.status: eq 200
+  res.body.queued: isArray
+  res.body.orphaned: isArray
+}
+
+tests {
+  test("every RunRef carries key, projectName, state, and since", () => {
+    const refs = [...res.body.queued, ...res.body.orphaned];
+    for (const r of refs) {
+      expect(r.key).to.be.a("string");
+      expect(r.projectName).to.be.a("string");
+      expect(["queued", "orphaned"]).to.include(r.state);
+      expect(r.since).to.be.a("string");
+    }
+  });
+
+  test("queued and orphaned buckets never contain a running agent's state", () => {
+    const states = [...res.body.queued, ...res.body.orphaned].map((r) => r.state);
+    expect(states).to.not.include("running");
+  });
+}
+
+docs {
+  CREW-310 (runner rework D): the reconcile roll-up. Returns every agent whose
+  derived state is `queued` or `orphaned`, across all projects, bucketed —
+  `{ queued: RunRef[], orphaned: RunRef[] }` where
+  `RunRef = { key, projectName, state, since }`. `running` (and every other
+  state) is excluded. Read surface for the dashboard supervisor drawer (F) and
+  the runner chip badge (E). The smoke seeds no queued/orphaned agent, so both
+  buckets are typically empty here — the asserts exercise shape + the
+  running-exclusion invariant rather than fixture presence.
+}
