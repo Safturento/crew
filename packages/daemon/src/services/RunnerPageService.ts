@@ -100,6 +100,14 @@ export class RunnerPageService {
    * Latest `state_transitions.ts` per key, as an ISO string — the timestamp
    * the agent entered its current (queued/orphaned) state. `MAX(ts)` is the
    * entry into the newest state, which is the one `list()` derived.
+   *
+   * `list()` picks the derivation row by `ts DESC, id DESC` (the `id`
+   * tiebreaker matters because `ts` is the producer's event time, not
+   * monotonic insert order); we take only `MAX(ts)` here. That's still the
+   * right value: we extract the *timestamp*, not a row identity, and the
+   * derivation row is by construction the one holding the maximum `ts` — so
+   * even under a same-`ts` collision (where `id` breaks the tie in `list()`)
+   * the colliding rows share that `ts`, and `since` is unchanged.
    */
   private async sinceByKey(keys: string[]): Promise<Map<string, string>> {
     const rows = await this.db
