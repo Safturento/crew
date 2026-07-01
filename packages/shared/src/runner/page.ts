@@ -70,3 +70,27 @@ export const runnerPageSchema = z.object({
   recentlyEnded: z.array(endedRunViewSchema),
 });
 export type RunnerPage = z.infer<typeof runnerPageSchema>;
+
+/**
+ * A lightweight reference to an agent in a housekeeping state, for the
+ * reconcile roll-up (`GET /api/runner/reconcile`, plan task D / CREW-310).
+ * `state` is narrowed to the two housekeeping states the roll-up buckets —
+ * `queued` (awaiting a slot) and `orphaned` (a leftover worktree/branch to
+ * reap). `since` is the ISO timestamp the agent entered that state (its latest
+ * `state_transitions` row). Consumed by the supervisor drawer (F) and the
+ * runner chip badge (E).
+ */
+export const runRefSchema = z.object({
+  key: z.string(),
+  projectName: z.string(),
+  state: z.enum(['queued', 'orphaned']),
+  since: z.string(), // ISO
+});
+export type RunRef = z.infer<typeof runRefSchema>;
+
+/** The `GET /api/runner/reconcile` response envelope — housekeeping buckets. */
+export const reconcileRollupSchema = z.object({
+  queued: z.array(runRefSchema),
+  orphaned: z.array(runRefSchema),
+});
+export type ReconcileRollup = z.infer<typeof reconcileRollupSchema>;
