@@ -22,6 +22,20 @@ export interface ReportLaunchingInput {
   appUrl?: string | null;
 }
 
+/**
+ * CREW-307 — the direct-CLI birth payload. Mirrors the launching input minus
+ * the run-specific fields (`command`/`startedAt`): it births only the agent row
+ * + an `init` transition, not a `runs` row.
+ */
+export interface ReportInitializingInput {
+  key: string;
+  projectName: string;
+  worktreePath: string;
+  branch: string;
+  ticketTitle?: string;
+  appUrl?: string | null;
+}
+
 export interface ReportFailedStartInput {
   key: string;
   projectName: string;
@@ -253,6 +267,35 @@ export class CrewDaemonClient {
       return { ok: true };
     } catch (err) {
       this.warn(`reportFinishStep: ${(err as Error).message}`);
+      return { ok: false, reason: 'connect_error' };
+    }
+  }
+
+  /**
+   * CREW-307 — birth the agent row on the direct-CLI path, immediately after
+   * config resolves and before the preflight gate, so a `crew run` is visible
+   * in the dashboard from the earliest attributable moment. Idempotent on the
+   * daemon side (safe when a `queued` row already exists). Best-effort: a downed
+   * daemon just means the run won't be tracked, exactly like `reportLaunching`.
+   */
+  async reportInitializing(
+    input: ReportInitializingInput,
+  ): Promise<DaemonResult<{ ok: true }>> {
+    try {
+      const res = await fetch(`${this.baseUrl}/api/runner/initializing`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(input),
+      });
+      if (!res.ok) {
+        this.warn(`reportInitializing: HTTP ${res.status} (run will not be tracked)`);
+        return { ok: false, reason: `http_${res.status}` };
+      }
+      return { ok: true };
+    } catch (err) {
+      this.warn(
+        `reportInitializing: ${(err as Error).message} (daemon unreachable; run will not be tracked)`,
+      );
       return { ok: false, reason: 'connect_error' };
     }
   }

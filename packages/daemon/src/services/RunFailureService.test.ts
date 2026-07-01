@@ -80,6 +80,71 @@ describe('RunFailureService.birthQueued (CREW-307)', () => {
   });
 });
 
+async function latestTo(db: Kysely<DaemonDatabase>, key: string): Promise<string | null> {
+  const row = await db
+    .selectFrom('state_transitions')
+    .select('to_state')
+    .where('agent_key', '=', key)
+    .orderBy('ts', 'desc')
+    .orderBy('id', 'desc')
+    .executeTakeFirst();
+  return row?.to_state ?? null;
+}
+
+describe('RunFailureService.recordInitializing (CREW-307)', () => {
+  const input = {
+    key: 'HA-3',
+    projectName: 'home-assistant',
+    worktreePath: '/w/home-assistant-HA-3',
+    branch: 'HA-3',
+  };
+
+  it('births a fresh agent as init', async () => {
+    const { service, db } = await setup();
+    await service.recordInitializing(input);
+    const agent = await db
+      .selectFrom('agents')
+      .selectAll()
+      .where('key', '=', 'HA-3')
+      .executeTakeFirstOrThrow();
+    expect(agent.worktree_path).toBe('/w/home-assistant-HA-3');
+    expect(await latestTo(db, 'HA-3')).toBe('init');
+  });
+
+  it('advances a queued agent to init (dashboard → direct-CLI takeover)', async () => {
+    const { service, db } = await setup();
+    await service.birthQueued(input);
+    expect(await latestTo(db, 'HA-3')).toBe('queued');
+    await service.recordInitializing(input);
+    expect(await latestTo(db, 'HA-3')).toBe('init');
+  });
+
+  it('is idempotent — a second call writes no duplicate init transition', async () => {
+    const { service, db } = await setup();
+    await service.recordInitializing(input);
+    await service.recordInitializing(input);
+    const rows = await db
+      .selectFrom('state_transitions')
+      .selectAll()
+      .where('agent_key', '=', 'HA-3')
+      .where('to_state', '=', 'init')
+      .execute();
+    expect(rows).toHaveLength(1);
+  });
+
+  it('never regresses a run already past init', async () => {
+    const { service, db } = await setup();
+    await service.birthQueued(input);
+    // Simulate the run having started (a running transition landed).
+    await db
+      .insertInto('state_transitions')
+      .values({ agent_key: 'HA-3', from_state: 'init', to_state: 'running', ts: Date.now() + 1, source: 'cli-run' })
+      .execute();
+    await service.recordInitializing(input);
+    expect(await latestTo(db, 'HA-3')).toBe('running');
+  });
+});
+
 describe('RunFailureService.recordLaunching', () => {
   it('upserts the agent and inserts a launching run', async () => {
     const { service, db } = await setup();
