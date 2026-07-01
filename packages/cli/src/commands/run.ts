@@ -64,6 +64,7 @@ import {
   preflightTools,
   readWorktreeState,
   reconcileOrphanBranch,
+  reconcileOrphanWorktree,
   injectStateEventHook,
   requireWorktreeAvailable,
   runLogPathFor,
@@ -184,6 +185,7 @@ export async function runRun(key: string, opts: RunOptions): Promise<never> {
     if (segments.includes(localBin)) return existing;
     return `${localBin}:${existing}`;
   })();
+  const childEnv = { ...process.env, PATH: childPath };
 
   const skipDocker = opts.skipDocker || !hasBinary('docker', childPath);
 
@@ -258,6 +260,30 @@ export async function runRun(key: string, opts: RunOptions): Promise<never> {
 
   const worktree = worktreePathFor(config.repo_path, key);
   try {
+    // CREW-309: an interrupted run can leave the <key> worktree registered and
+    // checked out; requireWorktreeAvailable then throws on it and wedges every
+    // re-run of the key (the dashboard error-row Restart hits the same path).
+    // Fetch so the commit-count baseline is fresh, then reclaim a *safe* orphan
+    // worktree — one whose <key> branch has no commits beyond origin/<default> —
+    // so a plain re-run self-heals; a worktree carrying unrecovered work refuses
+    // loudly instead of being silently discarded. Only the worktree dir is
+    // removed here; the <key> branch it held is reclaimed next by
+    // reconcileOrphanBranch in the worktree bracket below.
+    console.log(pc.dim(`→ fetching origin/${config.default_branch}…`));
+    await execa('git', ['-C', config.repo_path, 'fetch', 'origin', config.default_branch], {
+      stdout: 'inherit',
+      stderr: 'inherit',
+      env: childEnv,
+    });
+    const reclaim = await reconcileOrphanWorktree({
+      repoPath: config.repo_path,
+      key,
+      defaultBranch: config.default_branch,
+      env: childEnv,
+    });
+    if (reclaim === 'reclaimed') {
+      console.log(pc.dim(`→ reclaimed a safe orphan worktree for ${key} (self-heal)`));
+    }
     requireWorktreeAvailable(worktree);
   } catch (err) {
     failStartupPhase(
@@ -277,8 +303,6 @@ export async function runRun(key: string, opts: RunOptions): Promise<never> {
     durationMs: Date.now() - preflightStartedAt,
   });
 
-  const childEnv = { ...process.env, PATH: childPath };
-
   try {
     await bracketStartupPhase(
       key,
@@ -288,19 +312,12 @@ export async function runRun(key: string, opts: RunOptions): Promise<never> {
         completedSummary: () => `worktree at ${worktree} (branch ${key})`,
       },
       async () => {
-        console.log(pc.dim(`→ fetching origin/${config.default_branch}…`));
-        await execa('git', ['-C', config.repo_path, 'fetch', 'origin', config.default_branch], {
-          stdout: 'inherit',
-          stderr: 'inherit',
-          env: childEnv,
-        });
-
         // CREW-287: `git worktree add -b <KEY>` hard-fails if a <KEY> branch
         // already exists (orphaned by an earlier interrupted run), wedging every
         // later run of the key. Reclaim a safe orphan (no unique commits vs
         // origin/<default>) before the add; refuse loudly if it carries
         // unrecovered work, so the clean message surfaces instead of the raw git
-        // fatal. Runs after fetch so origin/<default> is fresh.
+        // fatal. origin/<default> was refreshed by the preflight fetch above.
         await reconcileOrphanBranch({
           repoPath: config.repo_path,
           key,
