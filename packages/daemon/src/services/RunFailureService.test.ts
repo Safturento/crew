@@ -45,6 +45,41 @@ const failure: RunFailure = {
   output: '✗ preflight: No git remote configured',
 };
 
+type StateChanged = Extract<SseEvent, { type: 'agent.state_changed' }>;
+const isStateChanged = (e: SseEvent): e is StateChanged => e.type === 'agent.state_changed';
+
+describe('RunFailureService.birthQueued (CREW-307)', () => {
+  it('creates the agent row and a queued transition', async () => {
+    const { service, db, events } = await setup();
+    await service.birthQueued({
+      key: 'HA-9',
+      projectName: 'home-assistant',
+      worktreePath: '/w/home-assistant-HA-9',
+      branch: 'HA-9',
+    });
+
+    const agent = await db
+      .selectFrom('agents')
+      .selectAll()
+      .where('key', '=', 'HA-9')
+      .executeTakeFirstOrThrow();
+    expect(agent.project_name).toBe('home-assistant');
+    expect(agent.worktree_path).toBe('/w/home-assistant-HA-9');
+
+    const transition = await db
+      .selectFrom('state_transitions')
+      .selectAll()
+      .where('agent_key', '=', 'HA-9')
+      .orderBy('ts', 'desc')
+      .executeTakeFirstOrThrow();
+    expect(transition.to_state).toBe('queued');
+
+    const changed = events.filter(isStateChanged);
+    expect(changed).toHaveLength(1);
+    expect(changed[0].data).toMatchObject({ key: 'HA-9', to: 'queued' });
+  });
+});
+
 describe('RunFailureService.recordLaunching', () => {
   it('upserts the agent and inserts a launching run', async () => {
     const { service, db } = await setup();

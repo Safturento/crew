@@ -1,5 +1,12 @@
 import type { Kysely, Selectable } from 'kysely';
-import type { ActionPayload, ActionRequest, ActionStatus, EnqueueAction } from 'crew-shared';
+import type { Logger } from 'pino';
+import {
+  worktreePathFor,
+  type ActionPayload,
+  type ActionRequest,
+  type ActionStatus,
+  type EnqueueAction,
+} from 'crew-shared';
 import type { ActionRequestsTable, DaemonDatabase } from '../db.js';
 import { NotFoundError } from '../errors.js';
 import type { EventBus } from './EventBus.js';
@@ -7,9 +14,35 @@ import type { EventBus } from './EventBus.js';
 /** The non-pending, non-claimed statuses the host runner reports back. */
 export type ReportStatus = Extract<ActionStatus, 'launching' | 'launched' | 'failed'>;
 
+/**
+ * Narrow slices of the collaborators `enqueue` needs to birth the `queued`
+ * agent row (CREW-307). Defined here (structural) so unit tests can stub them
+ * without dragging the full ProjectsService / RunFailureService in.
+ */
+export interface ProjectRepoResolver {
+  getBySlug(slug: string): { repo_path: string };
+}
+export interface QueuedRowBirther {
+  birthQueued(input: {
+    key: string;
+    projectName: string;
+    worktreePath: string;
+    branch: string;
+  }): Promise<void>;
+}
+
 export interface ActionServiceDeps {
   db: Kysely<DaemonDatabase>;
   eventBus: EventBus;
+  /**
+   * CREW-307 row-birth collaborators. Optional so the queue-mechanics unit
+   * tests need not wire them; production (`container.ts`) always injects both,
+   * so a `kind:'run'` enqueue births a `queued` agent row. When absent, birth
+   * is skipped and the run is still enqueued (pre-CREW-307 behavior).
+   */
+  projects?: ProjectRepoResolver;
+  runFailure?: QueuedRowBirther;
+  logger?: Logger;
 }
 
 /**
@@ -26,10 +59,16 @@ export interface ActionServiceDeps {
 export class ActionService {
   private readonly db: Kysely<DaemonDatabase>;
   private readonly eventBus: EventBus;
+  private readonly projects: ProjectRepoResolver | undefined;
+  private readonly runFailure: QueuedRowBirther | undefined;
+  private readonly logger: Logger | undefined;
 
   constructor(deps: ActionServiceDeps) {
     this.db = deps.db;
     this.eventBus = deps.eventBus;
+    this.projects = deps.projects;
+    this.runFailure = deps.runFailure;
+    this.logger = deps.logger;
   }
 
   /** Insert a `pending` request, emit `action.changed`, return the row. */
@@ -53,7 +92,28 @@ export class ActionService {
 
     const action = rowToActionRequest(inserted);
     this.publish(action);
+    // CREW-307: a fresh run is born visible in the grid as `queued` the moment
+    // it is requested — before the runner has claimed it. Only `kind:'run'`
+    // births a row: fix_pr/finish/resume target an existing agent, so re-birthing
+    // would clobber its live state.
+    if (input.kind === 'run') await this.birthQueuedRow(input.ticketKey, input.project);
     return action;
+  }
+
+  /**
+   * Birth the `queued` agent row for a run enqueue. Best-effort: a failure to
+   * resolve the project or write the row is logged but never fails the enqueue
+   * — the action is already queued and the runner will still pick it up.
+   */
+  private async birthQueuedRow(key: string, project: string): Promise<void> {
+    if (!this.projects || !this.runFailure) return;
+    try {
+      const { repo_path } = this.projects.getBySlug(project);
+      const worktreePath = worktreePathFor(repo_path, key);
+      await this.runFailure.birthQueued({ key, projectName: project, worktreePath, branch: key });
+    } catch (err) {
+      this.logger?.warn({ err, key, project }, 'queued-row birth failed; run still enqueued');
+    }
   }
 
   /**

@@ -1,14 +1,7 @@
-import { basename, dirname, join } from 'node:path';
-
-/**
- * Compute the worktree path for `<repo>-<KEY>`. The new worktree is a
- * sibling of the source repo so the docker host port allocator (which
- * keys off the basename) gives different worktrees different ports.
- */
-export function worktreePathFor(repoPath: string, key: string): string {
-  const trimmed = repoPath.replace(/\/+$/, '');
-  return join(dirname(trimmed), `${basename(trimmed)}-${key}`);
-}
+// CREW-307: `worktreePathFor` moved to `crew-shared` so the daemon can derive
+// the same path when it births the queued agent row at enqueue. Re-exported
+// here so existing CLI callers keep importing it from this module unchanged.
+export { worktreePathFor } from 'crew-shared';
 
 export function runLogPathFor(key: string): string {
   return `/tmp/crew-run-${key}.log`;

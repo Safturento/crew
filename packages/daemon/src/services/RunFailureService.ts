@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { sql, type Kysely } from 'kysely';
 import type { RunFailure } from 'crew-shared';
-import type { DaemonDatabase, RunsTable } from '../db.js';
+import type { DaemonDatabase, RunsTable, StateTransitionsTable } from '../db.js';
 import type { EventBus } from './EventBus.js';
 
 /** The dispatch command a run row records — mirrors `RunsTable['command']`. */
@@ -33,6 +33,16 @@ export interface RecordFailedStartInput {
   branch?: string;
   ticketTitle?: string;
   startedAt?: string;
+}
+
+/** CREW-307: the row-birth inputs shared by `birthQueued`/`recordInitializing`. */
+export interface BirthAgentInput {
+  key: string;
+  projectName: string;
+  worktreePath: string;
+  branch: string;
+  ticketTitle?: string;
+  appUrl?: string | null;
 }
 
 export interface ReapStuckLaunchingOptions {
@@ -75,6 +85,49 @@ export class RunFailureService {
   constructor(deps: RunFailureServiceDeps) {
     this.db = deps.db;
     this.eventBus = deps.eventBus;
+  }
+
+  /**
+   * CREW-307 — birth the agent row as `queued` at enqueue (the dashboard path).
+   * Idempotent upsert of the agents row + a `queued` state transition, so the
+   * run is visible in the grid from the moment it is requested — before the
+   * runner has claimed it. The `worktree_path` is derived by the caller
+   * (`ActionService.enqueue`) via `worktreePathFor(repoPath, key)`.
+   */
+  async birthQueued(input: BirthAgentInput): Promise<void> {
+    await this.upsertAgent({
+      key: input.key,
+      projectName: input.projectName,
+      ticketTitle: input.ticketTitle,
+      worktreePath: input.worktreePath,
+      branch: input.branch,
+      appUrl: input.appUrl ?? null,
+    });
+    await this.writeBirthTransition(input.key, 'queued', 'enqueue');
+  }
+
+  /**
+   * CREW-307 — birth (or advance) the agent row to `init` on the direct-CLI
+   * path, called immediately after config resolves and before the preflight
+   * gate. Idempotent: the agents row is always upserted (refreshing
+   * worktree/app-url), but the `init` transition is written only when the row
+   * is fresh (no prior transition) or still `queued` — so re-calling it, or
+   * calling it on a run already past init (running/pr_open/...), never
+   * regresses the state.
+   */
+  async recordInitializing(input: BirthAgentInput): Promise<void> {
+    await this.upsertAgent({
+      key: input.key,
+      projectName: input.projectName,
+      ticketTitle: input.ticketTitle,
+      worktreePath: input.worktreePath,
+      branch: input.branch,
+      appUrl: input.appUrl ?? null,
+    });
+    const previous = await this.latestState(input.key);
+    if (previous === null || previous === 'queued') {
+      await this.writeBirthTransition(input.key, 'init', 'initializing', previous);
+    }
   }
 
   /** Pre-register a run as `launching` before preflight. Returns the run id. */
@@ -286,6 +339,41 @@ export class RunFailureService {
         }),
       )
       .execute();
+  }
+
+  /** Latest `state_transitions.to_state` for a key (null when none). */
+  private async latestState(
+    agentKey: string,
+  ): Promise<StateTransitionsTable['to_state'] | null> {
+    const row = await this.db
+      .selectFrom('state_transitions')
+      .select('to_state')
+      .where('agent_key', '=', agentKey)
+      .orderBy('ts', 'desc')
+      .orderBy('id', 'desc')
+      .executeTakeFirst();
+    return row?.to_state ?? null;
+  }
+
+  /**
+   * CREW-307 — write a birth transition (`queued`/`init`) + publish the
+   * `agent.state_changed` SSE. This is the row-birth counterpart to
+   * `IngestService`'s transition writers; it is safe re: that service's
+   * in-memory state cache because the cache lazily loads from the DB on first
+   * touch of a key, and a birthed key has not yet been touched by ingest.
+   */
+  private async writeBirthTransition(
+    agentKey: string,
+    to: 'queued' | 'init',
+    source: string,
+    from: StateTransitionsTable['from_state'] = null,
+  ): Promise<void> {
+    const ts = Date.now();
+    await this.db
+      .insertInto('state_transitions')
+      .values({ agent_key: agentKey, from_state: from, to_state: to, ts, source })
+      .execute();
+    this.eventBus.publish({ type: 'agent.state_changed', data: { key: agentKey, from, to, ts } });
   }
 
   private publishFailedStart(key: string): void {
