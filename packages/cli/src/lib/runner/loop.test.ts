@@ -215,6 +215,48 @@ describe('runLoop', () => {
     expect(d.client.heartbeat.mock.calls[0][0].processes).toHaveLength(0);
   });
 
+  it('enriches the reap log line with the startup-failure reason (CREW-308)', async () => {
+    const controller = new AbortController();
+    const registry = trackedRegistry(); // one entry: CREW-231, dead pid
+    const reapReason = vi.fn().mockReturnValue('worktree already exists');
+    const d = runLoopDeps({
+      signal: controller.signal,
+      registry,
+      isAlive: () => false,
+      reapReason,
+    });
+    d.client.claimPendingAction.mockImplementation(async () => {
+      controller.abort();
+      return { action: null };
+    });
+
+    await runLoop(d);
+
+    expect(reapReason).toHaveBeenCalledWith('CREW-231');
+    expect(d.log).toHaveBeenCalledWith(
+      'reaped 1 dead process(es): CREW-231 — startup failed: worktree already exists',
+    );
+  });
+
+  it('falls back to the bare key in the reap line when there is no reason', async () => {
+    const controller = new AbortController();
+    const registry = trackedRegistry();
+    const d = runLoopDeps({
+      signal: controller.signal,
+      registry,
+      isAlive: () => false,
+      reapReason: () => null,
+    });
+    d.client.claimPendingAction.mockImplementation(async () => {
+      controller.abort();
+      return { action: null };
+    });
+
+    await runLoop(d);
+
+    expect(d.log).toHaveBeenCalledWith('reaped 1 dead process(es): CREW-231');
+  });
+
   it('retains a live-pid process in the heartbeat snapshot', async () => {
     const controller = new AbortController();
     const registry = trackedRegistry();
