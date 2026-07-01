@@ -14,7 +14,15 @@
 import { hasPrCreateInvocation } from 'crew-shared';
 import type { AgentState } from './AgentsService.js';
 
-export type TransitionState = 'init' | 'running' | 'pr_open' | 'pr_merged' | 'finished' | 'error';
+export type TransitionState =
+  | 'init'
+  | 'queued'
+  | 'running'
+  | 'pr_open'
+  | 'pr_merged'
+  | 'finished'
+  | 'error'
+  | 'orphaned';
 
 /**
  * Every value `state_transitions.to_state` can hold (mirrors the DB column
@@ -34,6 +42,10 @@ export type TransitionTarget = TransitionState | 'idle' | 'waiting';
  */
 const TRANSITION_TO_AGENT_STATE: Record<TransitionTarget, AgentState> = {
   init: 'initializing',
+  // CREW-307: enqueued-but-not-yet-launched (dashboard path) and the
+  // running/no-live-process mismatch. Both map 1:1 to their own badge.
+  queued: 'queued',
+  orphaned: 'orphaned',
   running: 'running',
   pr_open: 'pr_open',
   pr_merged: 'pr_merged',

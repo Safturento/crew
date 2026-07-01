@@ -71,7 +71,8 @@ export interface ToolCallsTable {
 
 /** Slice 1c: one row per derived agent-state flip. CHECK on `to_state` is
  *  forward-compatible — `idle` and `waiting` are allowed even though slice 1c
- *  never emits them. `from_state` is null on the very first row for an agent.
+ *  never emits them. `queued` + `orphaned` were added by migration 0015
+ *  (CREW-307). `from_state` is null on the very first row for an agent.
  *  `source` (CREW-259, migration 0012) records what drove the hop — a StateEvent
  *  source, `poller`, `startup-failure`, or `override`. Nullable: legacy rows
  *  predate the column. */
@@ -80,20 +81,24 @@ export interface StateTransitionsTable {
   agent_key: string;
   from_state:
     | 'init'
+    | 'queued'
     | 'running'
     | 'pr_open'
     | 'pr_merged'
     | 'error'
+    | 'orphaned'
     | 'finished'
     | 'idle'
     | 'waiting'
     | null;
   to_state:
     | 'init'
+    | 'queued'
     | 'running'
     | 'pr_open'
     | 'pr_merged'
     | 'error'
+    | 'orphaned'
     | 'finished'
     | 'idle'
     | 'waiting';

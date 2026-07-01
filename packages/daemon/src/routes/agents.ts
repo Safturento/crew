@@ -4,21 +4,25 @@ import { NotFoundError } from '../errors.js';
 
 const AgentStateEnum = z.enum([
   'initializing',
+  'queued',
   'running',
   'idle',
   'waiting',
   'pr_open',
   'pr_merged',
   'error',
+  'orphaned',
   'finished',
 ]);
 
 const TransitionStateEnum = z.enum([
   'init',
+  'queued',
   'running',
   'pr_open',
   'pr_merged',
   'error',
+  'orphaned',
   'finished',
   'idle',
   'waiting',

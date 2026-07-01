@@ -1,6 +1,16 @@
 import { describe, it, expect } from 'vitest';
 import { currentStateFromTransitions, deriveStateFromToolCalls } from './state-derivation.js';
 
+describe('currentStateFromTransitions — new pre-run / mismatch states (CREW-307)', () => {
+  it('maps a queued transition to the queued badge state', () => {
+    expect(currentStateFromTransitions([{ to: 'queued', ts: 0 }])).toBe('queued');
+  });
+
+  it('maps an orphaned transition to the orphaned badge state', () => {
+    expect(currentStateFromTransitions([{ to: 'orphaned', ts: 0 }])).toBe('orphaned');
+  });
+});
+
 describe('deriveStateFromToolCalls', () => {
   it('returns init for an empty slice', () => {
     expect(deriveStateFromToolCalls([])).toBe('init');
