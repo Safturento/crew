@@ -109,7 +109,7 @@ test.describe('Supervisor controls (CREW-293 / CREW-312)', () => {
     });
   });
 
-  test('offline shows a cold-Start control instead of Stop/Restart', async ({ page }) => {
+  test('offline Start shows the CLI hint and enqueues nothing', async ({ page }) => {
     await setOnline(page, false);
     await openDrawer(page);
     const drawer = page.getByRole('dialog');
@@ -117,5 +117,16 @@ test.describe('Supervisor controls (CREW-293 / CREW-312)', () => {
     await expect(drawer.getByRole('button', { name: /start supervisor/i })).toBeVisible();
     await expect(drawer.getByRole('button', { name: /stop supervisor/i })).toHaveCount(0);
     await expect(drawer.getByRole('button', { name: /restart supervisor/i })).toHaveCount(0);
+
+    // Cold Start can't be enqueued — it only surfaces a CLI hint. Track any
+    // command POST so we can assert none fires.
+    let enqueued = false;
+    page.on('request', (req) => {
+      if (req.url().includes('/api/runner/commands') && req.method() === 'POST') enqueued = true;
+    });
+    await drawer.getByRole('button', { name: /start supervisor/i }).click();
+
+    await expect(page.getByText(/crew runner start/i)).toBeVisible();
+    expect(enqueued).toBe(false);
   });
 });

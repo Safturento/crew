@@ -170,8 +170,9 @@ export function SupervisorDrawer({ supervisor, open, onOpenChange }: SupervisorD
                   <div className="flex min-w-0 flex-col">
                     <span className="truncate font-mono text-sm text-foreground">{ref.key}</span>
                     <span className="truncate font-mono text-[11px] text-muted-foreground">
-                      {RECONCILE_REASON[ref.state]} · {ref.projectName} ·{' '}
-                      {formatAgo(new Date(ref.since).toISOString())}
+                      {/* `since` is already an ISO string (runRefSchema) — pass it straight
+                          through so a malformed value degrades inside formatAgo. */}
+                      {RECONCILE_REASON[ref.state]} · {ref.projectName} · {formatAgo(ref.since)}
                     </span>
                   </div>
                   <Button

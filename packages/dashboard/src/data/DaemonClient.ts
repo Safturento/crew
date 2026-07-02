@@ -49,8 +49,10 @@ export interface DaemonClient {
   getSupervisorLog(tail?: number): Promise<string[]>;
   /**
    * CREW-245: enqueue a runner reverse-queue control command
-   * (`cancel_soft` / `cancel_hard` / `reap` / `dequeue`) via
-   * `POST /api/runner/commands`. Backs the Runner page row controls.
+   * (`cancel_soft` / `cancel_hard` / `reap` / `dequeue`, plus the queue-level
+   * `supervisor_stop` / `supervisor_restart`) via `POST /api/runner/commands`.
+   * Backs the Agents-grid row actions + the supervisor drawer's controls +
+   * Reconcile roll-up (CREW-312).
    */
   enqueueRunnerCommand(input: EnqueueRunnerCommand): Promise<RunnerCommand>;
   /**

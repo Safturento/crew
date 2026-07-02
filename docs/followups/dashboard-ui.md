@@ -23,7 +23,10 @@ live daemon endpoint). Flagged so the decommission is deliberate, not forgotten.
 **Anchors:** `packages/dashboard/src/data/runnerControls.ts`
 (`useArchiveFailedStart`), `packages/dashboard/src/data/runnerControls.test.tsx`,
 `acknowledgeRun` on `DaemonClient`/`HttpDaemonClient`/`MockDaemonClient`, the
-daemon `POST /api/runs/:key/acknowledge` route + its Bruno endpoint.
+daemon `POST /api/runs/:key/acknowledge` route + its Bruno endpoint. Note:
+`useArchiveFailedStart.onSuccess` now invalidates the `['runner-page']` query
+key, which no longer exists after this PR removed `useRunnerPage` — a harmless
+silent no-op that further confirms the hook is orphaned.
 
 **What's been considered:** Two paths — (a) fully decommission: drop the hook,
 the client method across all three surfaces + tests, and (if nothing else needs
