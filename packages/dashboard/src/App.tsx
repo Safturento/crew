@@ -22,7 +22,6 @@ import { AgentDrawer } from './routes/AgentDrawer.js';
 import { AgentFullPage } from './routes/AgentFullPage.js';
 import { ProjectDetailPage } from './routes/ProjectDetailPage.js';
 import { ProjectsListPage } from './routes/ProjectsListPage.js';
-import { RunnerPage } from './routes/RunnerPage.js';
 import { navigate, useHashRoute } from './routing/useHashRoute.js';
 
 const defaultClient: DaemonClient = new HttpDaemonClient();
@@ -123,8 +122,6 @@ function AppContent({ client }: { client: DaemonClient }) {
         return <ProjectDetailPage slug={route.slug} />;
       case 'projects':
         return <ProjectsListPage projects={projects} />;
-      case 'runner':
-        return <RunnerPage agents={agents} loading={agentsQuery.isLoading} />;
       case 'agent-drawer':
       case 'agents-list':
       default:
@@ -139,7 +136,7 @@ function AppContent({ client }: { client: DaemonClient }) {
           />
         );
     }
-  }, [route, projects, agents, onAgentAction, runner.online, agentsQuery.isLoading]);
+  }, [route, projects, agents, onAgentAction, runner.online]);
 
   return (
     <>

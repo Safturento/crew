@@ -162,7 +162,6 @@ describe('App', () => {
       getSupervisorLog: () => Promise.reject(new Error('daemon unreachable')),
       enqueueRunnerCommand: () => Promise.reject(new Error('daemon unreachable')),
       acknowledgeRun: () => Promise.reject(new Error('daemon unreachable')),
-      getRunnerPage: () => Promise.reject(new Error('daemon unreachable')),
       reconcile: () => Promise.reject(new Error('daemon unreachable')),
       getStartupLog: () => Promise.reject(new Error('daemon unreachable')),
     };
@@ -410,7 +409,9 @@ describe('App — runner-rework row actions (CREW-311)', () => {
       .mockResolvedValue({ ...SAMPLE_COMMAND, kind: 'reap' });
     const user = userEvent.setup();
 
-    renderWithProviders(<App client={new MockDaemonClient({ projects, agents: agentIn('orphaned') })} />);
+    renderWithProviders(
+      <App client={new MockDaemonClient({ projects, agents: agentIn('orphaned') })} />,
+    );
 
     await user.click(await screen.findByRole('button', { name: 'Reap' }));
 

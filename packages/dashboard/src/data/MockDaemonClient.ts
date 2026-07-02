@@ -5,7 +5,6 @@ import type {
   ProjectTicketsResponse,
   ReconcileRollup,
   RunnerCommand,
-  RunnerPage,
 } from 'crew-shared';
 
 import type { DaemonClient, RunnerStatus } from './DaemonClient.js';
@@ -18,8 +17,6 @@ export interface MockDaemonClientOptions {
   projects?: Project[];
   projectDetails?: Record<string, ProjectDetailResponse>;
   runnerStatus?: RunnerStatus;
-  /** CREW-291: the three Runner-page lists served by `getRunnerPage`. */
-  runnerPage?: RunnerPage;
   /** CREW-291: per-key startup logs served by `getStartupLog` (absent → 404/null). */
   startupLogs?: Record<string, string>;
   /** CREW-292: the supervisor management log served by `getSupervisorLog`. */
@@ -28,7 +25,6 @@ export interface MockDaemonClientOptions {
   reconcileRollup?: ReconcileRollup;
 }
 
-const EMPTY_RUNNER_PAGE: RunnerPage = { failedToStart: [], queued: [], recentlyEnded: [] };
 const EMPTY_RECONCILE: ReconcileRollup = { queued: [], orphaned: [] };
 
 export class MockDaemonClient implements DaemonClient {
@@ -36,7 +32,6 @@ export class MockDaemonClient implements DaemonClient {
   private readonly projects: Project[];
   private readonly projectDetails: Record<string, ProjectDetailResponse>;
   private readonly runnerStatus: RunnerStatus;
-  private readonly runnerPage: RunnerPage;
   private readonly startupLogs: Record<string, string>;
   private readonly supervisorLog: string[];
   private readonly reconcileRollup: ReconcileRollup;
@@ -56,7 +51,6 @@ export class MockDaemonClient implements DaemonClient {
       lastSeen: Date.now(),
       processes: [],
     };
-    this.runnerPage = options.runnerPage ?? EMPTY_RUNNER_PAGE;
     this.startupLogs = options.startupLogs ?? {};
     this.supervisorLog = options.supervisorLog ?? [];
     this.reconcileRollup = options.reconcileRollup ?? EMPTY_RECONCILE;
@@ -120,10 +114,6 @@ export class MockDaemonClient implements DaemonClient {
   async acknowledgeRun(key: string): Promise<number> {
     this.acknowledged.push(key);
     return 1;
-  }
-
-  async getRunnerPage(): Promise<RunnerPage> {
-    return this.runnerPage;
   }
 
   async reconcile(): Promise<ReconcileRollup> {

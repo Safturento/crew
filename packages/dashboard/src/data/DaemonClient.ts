@@ -6,7 +6,6 @@ import type {
   ProjectTicketsResponse,
   ReconcileRollup,
   RunnerCommand,
-  RunnerPage,
 } from 'crew-shared';
 
 import type { Agent, Project, ProjectDetailResponse } from './types.js';
@@ -50,8 +49,10 @@ export interface DaemonClient {
   getSupervisorLog(tail?: number): Promise<string[]>;
   /**
    * CREW-245: enqueue a runner reverse-queue control command
-   * (`cancel_soft` / `cancel_hard` / `reap` / `dequeue`) via
-   * `POST /api/runner/commands`. Backs the Runner page row controls.
+   * (`cancel_soft` / `cancel_hard` / `reap` / `dequeue`, plus the queue-level
+   * `supervisor_stop` / `supervisor_restart`) via `POST /api/runner/commands`.
+   * Backs the Agents-grid row actions + the supervisor drawer's controls +
+   * Reconcile roll-up (CREW-312).
    */
   enqueueRunnerCommand(input: EnqueueRunnerCommand): Promise<RunnerCommand>;
   /**
@@ -59,12 +60,6 @@ export interface DaemonClient {
    * `POST /api/runs/:key/acknowledge`. Returns the number acknowledged.
    */
   acknowledgeRun(key: string): Promise<number>;
-  /**
-   * CREW-291: the Runner page's read surface — `failedToStart` / `queued` /
-   * `recentlyEnded` from `GET /api/runner/page` (CREW-290 / T2). Backs the
-   * three previously-stubbed sections.
-   */
-  getRunnerPage(): Promise<RunnerPage>;
   /**
    * CREW-311: the housekeeping roll-up from `GET /api/runner/reconcile`
    * (CREW-310) — queued + orphaned agents across all projects. Backs the

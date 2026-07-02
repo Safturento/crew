@@ -35,11 +35,14 @@ describe('parseRoute', () => {
     });
   });
 
-  it('parses /runner as the runner route', () => {
-    expect(parseRoute('#/runner')).toEqual({ kind: 'runner' });
-  });
-
   it('falls back to agents-list for unknown routes', () => {
     expect(parseRoute('#/something/else')).toEqual({ kind: 'agents-list' });
+  });
+
+  it('falls back to agents-list for the retired /runner route', () => {
+    // The standalone Runner page was retired (CREW-312) — its hash no longer
+    // resolves to a dedicated route; the runner chip opens the supervisor
+    // drawer instead.
+    expect(parseRoute('#/runner')).toEqual({ kind: 'agents-list' });
   });
 });
