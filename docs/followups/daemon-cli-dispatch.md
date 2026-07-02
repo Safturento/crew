@@ -4,6 +4,50 @@
 
 (entries below, newest at top)
 
+## 2026-07-02 — `.claude/` dispatch artifacts are untracked-but-visible in non-crew worktrees
+
+**What:** Dispatch writes two per-run files into the target worktree's
+`.claude/`: `settings.local.json` (carrying the templated `CREW_AGENT_KEY`)
+and, as of CREW-314, `crew-hooks/pr-create-postuse.mjs`. Both are untracked,
+which is what makes them survive the `crew fix-pr` resume rebase — but "never
+dirties the worktree" only holds when the target repo gitignores `.claude/`.
+The crew repo does (`.gitignore` `.claude/*`); a non-crew target (Recipes,
+home-assistant, …) does not — `crew init` only appends `.claude/secrets/` to a
+target's `.gitignore` (`packages/cli/src/lib/init/scaffold-gh-token.ts`). So on
+those repos both files show up in `git status` as untracked, and an agent that
+runs `git add -A` / `git add .` would sweep the per-dispatch key file into its
+PR — a latent secret leak.
+
+**Why noticed:** CREW-314 code review (Code Reviewer subagent). CREW-314 copied
+the hook into `.claude/crew-hooks/`, and the reviewer flagged that the
+accompanying "gitignored, so it never dirties the worktree" comment overstates a
+guarantee that's crew-repo-specific. The `settings.local.json` half of the
+exposure predates CREW-314 (CREW-256); CREW-314 adds one more file and made the
+inaccurate comment visible. Wording was softened in the CREW-314 PR; the
+underlying leak is deferred here.
+
+**Anchors:** `packages/cli/src/lib/run/state-event-hook-injection.ts` (the copy +
+`HOOK_PATH` doc comment), `.agents/dispatch.md` "Distribution" paragraph,
+`packages/cli/src/lib/init/scaffold-gh-token.ts` (the `.gitignore` append),
+CREW-256, CREW-314.
+
+**What's been considered:** Reviewer's suggestion — have dispatch append
+`.claude/settings.local.json` + `.claude/crew-hooks/` to the worktree's
+`.git/info/exclude`, making the untracked guarantee real on every target
+regardless of its `.gitignore`. Note `info/exclude` lives in the shared common
+git dir, so a linked-worktree write applies repo-wide (fine here — the same
+pattern holds across all crew worktrees of that repo). Alternative: have `crew
+init` widen the target's `.gitignore` to `.claude/*` (broader blast radius, and
+doesn't retro-protect already-inited repos).
+
+**Shape of work:** small, localized in dispatch setup — one `.git/info/exclude`
+converge step (idempotent append) run alongside/near `injectStateEventHook`,
+plus a unit test. Covers both files, closing the pre-existing
+`settings.local.json` exposure too.
+
+**Open questions:** `.git/info/exclude` path resolution for a linked worktree
+(resolve via `git rev-parse --git-common-dir`, not `--git-dir`); whether to also
+sweep pre-existing dirty entries left by past dispatches.
 
 ## 2026-07-02 — Dequeue apply + orphaned-lifecycle producers are missing (Epic CREW-306 gap)
 
@@ -45,16 +89,15 @@ transition on `reap` apply (an `idle`-or-`error` decision to make).
 or `error` (something died)? Should dequeue cancel the action row or delete
 it (history vs cleanliness)?
 
-
 ## 2026-06-30 — Re-running a terminal agent leaves IngestService's state cache stale (birth transition ignored)
 
-**What:** `IngestService` keeps an in-memory `agentStateCache` (`packages/daemon/src/services/IngestService.ts:85`) that `reduceState` reads as `previous` for each concrete state event. The cache is only ever populated (never invalidated) per key for the daemon's lifetime, and `getCachedAgentState` reads the DB *only on a cache miss*. So when a **terminal** agent (`finished`/`pr_merged`) is re-run in the same long-lived daemon, the cache still holds the old terminal state, and the new run's first `run_started` event reduces `reduceState('finished','run_started') → null` (terminal guard) — **no `running` transition is written**, and the agent can stick. This predates CREW-307 (nothing invalidated the cache on re-run before either), but CREW-307 makes row-at-initiation / re-run a first-class flow, so it's now worth fixing. `RunFailureService.birthQueued`/`recordInitializing` write the birth transition to the DB + publish SSE but deliberately do **not** touch the cache (see the `writeBirthTransition` docstring), which is coherent for a fresh key but not for a cached re-run.
+**What:** `IngestService` keeps an in-memory `agentStateCache` (`packages/daemon/src/services/IngestService.ts:85`) that `reduceState` reads as `previous` for each concrete state event. The cache is only ever populated (never invalidated) per key for the daemon's lifetime, and `getCachedAgentState` reads the DB _only on a cache miss_. So when a **terminal** agent (`finished`/`pr_merged`) is re-run in the same long-lived daemon, the cache still holds the old terminal state, and the new run's first `run_started` event reduces `reduceState('finished','run_started') → null` (terminal guard) — **no `running` transition is written**, and the agent can stick. This predates CREW-307 (nothing invalidated the cache on re-run before either), but CREW-307 makes row-at-initiation / re-run a first-class flow, so it's now worth fixing. `RunFailureService.birthQueued`/`recordInitializing` write the birth transition to the DB + publish SSE but deliberately do **not** touch the cache (see the `writeBirthTransition` docstring), which is coherent for a fresh key but not for a cached re-run.
 
 **Why noticed:** CREW-307 code review (2026-06-30). The reviewer flagged the `writeBirthTransition` docstring as claiming a cache-coherence property that doesn't hold for a re-run of an already-cached key. Docstring corrected to state the real (pre-existing) limitation and point here.
 
-**Anchors:** `packages/daemon/src/services/IngestService.ts` (`agentStateCache`, `getCachedAgentState:746`, `announceTransition:733`, `recordStateOverride:629` — the one path that *does* advance the cache); `packages/daemon/src/services/RunFailureService.ts` (`birthQueued`/`recordInitializing`/`writeBirthTransition`); `packages/daemon/src/services/state-reduce.ts:35` (terminal guard).
+**Anchors:** `packages/daemon/src/services/IngestService.ts` (`agentStateCache`, `getCachedAgentState:746`, `announceTransition:733`, `recordStateOverride:629` — the one path that _does_ advance the cache); `packages/daemon/src/services/RunFailureService.ts` (`birthQueued`/`recordInitializing`/`writeBirthTransition`); `packages/daemon/src/services/state-reduce.ts:35` (terminal guard).
 
-**What's been considered:** The clean fix is to invalidate (or advance) the cache entry when a birth transition lands — either inject `IngestService` into `RunFailureService` and call a new public `invalidateStateCache(key)` (delete → next event re-reads the birth row from the DB, reducing correctly), or route birth transitions *through* `IngestService` so the single writer owns both the row and the cache. A cache *delete* is the lowest-risk form (worst case one redundant DB read). Deferred from CREW-307 to keep the spine ticket scoped and because the underlying stuck-on-terminal-rerun is pre-existing, not introduced there.
+**What's been considered:** The clean fix is to invalidate (or advance) the cache entry when a birth transition lands — either inject `IngestService` into `RunFailureService` and call a new public `invalidateStateCache(key)` (delete → next event re-reads the birth row from the DB, reducing correctly), or route birth transitions _through_ `IngestService` so the single writer owns both the row and the cache. A cache _delete_ is the lowest-risk form (worst case one redundant DB read). Deferred from CREW-307 to keep the spine ticket scoped and because the underlying stuck-on-terminal-rerun is pre-existing, not introduced there.
 
 **Shape of work:** small daemon change — a public cache-invalidation method on `IngestService` + a dependency edge from `RunFailureService`, or a modest refactor moving birth writes into `IngestService`. Add an integration test: re-run a `finished` key → birth → `run_started` → agent reduces to `running` (not stuck).
 
@@ -72,21 +115,22 @@ it (history vs cleanliness)?
 
 **What:** The host runner has two unmanaged failure modes that let a dead-but-heartbeating worker pollute the Runner tab indefinitely, and the management commands can't clean it up:
 
-1. **A worker can outlive its supervisor and keep heartbeating.** The supervisor (`crew runner __supervise`) spawns one worker (`crew runner __worker`); if the supervisor dies (crash, the daemon-connectivity blip seen at `02:21` in `runner.log`, a `kill` that missed it) the worker is reparented (to a subreaper / init) and keeps POSTing `/api/runner/heartbeat` with its stale in-memory `Registry`. Nothing detects "a worker with no supervisor." The pidfile (`~/.config/crew/runner.pid`) only ever records the *supervisor* pid, so `crew runner stop`/`restart` — which read that one pid — are blind to an orphan worker. Net: the orphan's snapshot keeps overwriting the daemon's live-process list.
+1. **A worker can outlive its supervisor and keep heartbeating.** The supervisor (`crew runner __supervise`) spawns one worker (`crew runner __worker`); if the supervisor dies (crash, the daemon-connectivity blip seen at `02:21` in `runner.log`, a `kill` that missed it) the worker is reparented (to a subreaper / init) and keeps POSTing `/api/runner/heartbeat` with its stale in-memory `Registry`. Nothing detects "a worker with no supervisor." The pidfile (`~/.config/crew/runner.pid`) only ever records the _supervisor_ pid, so `crew runner stop`/`restart` — which read that one pid — are blind to an orphan worker. Net: the orphan's snapshot keeps overwriting the daemon's live-process list.
 
-2. **A long-lived worker runs stale code with no version signal.** The runner runs from source via `tsx` (`node_modules/.bin/tsx packages/cli/src/index.ts runner __worker`), so a worker started before a code change keeps the *old* logic loaded in memory forever — there's no watch/reload. The orphan we hit had been up `4d19h` and predated the `reapDead` liveness sweep (CREW-288), so it never pruned its own dead children — exactly the bug CREW-288 "fixed", still live in an old process. There is no way to ask "is the active runner on latest code?" short of reading `etime` and correlating against git history by hand.
+2. **A long-lived worker runs stale code with no version signal.** The runner runs from source via `tsx` (`node_modules/.bin/tsx packages/cli/src/index.ts runner __worker`), so a worker started before a code change keeps the _old_ logic loaded in memory forever — there's no watch/reload. The orphan we hit had been up `4d19h` and predated the `reapDead` liveness sweep (CREW-288), so it never pruned its own dead children — exactly the bug CREW-288 "fixed", still live in an old process. There is no way to ask "is the active runner on latest code?" short of reading `etime` and correlating against git history by hand.
 
-3. **`crew runner restart` doesn't reconcile duplicates.** `restart` = `stop` (SIGTERM the pidfile pid) + `start` (spawn a fresh supervisor). When the pidfile is stale/missing the `stop` is a silent no-op and `start` adds a *second* live runner alongside the survivor → two workers heartbeating one daemon, and the Runner tab flip-flops between their snapshots every ~5s (each worker's own heartbeat cadence). There is no "is more than one worker heartbeating this daemon?" check and no all-instances reset.
+3. **`crew runner restart` doesn't reconcile duplicates.** `restart` = `stop` (SIGTERM the pidfile pid) + `start` (spawn a fresh supervisor). When the pidfile is stale/missing the `stop` is a silent no-op and `start` adds a _second_ live runner alongside the survivor → two workers heartbeating one daemon, and the Runner tab flip-flops between their snapshots every ~5s (each worker's own heartbeat cadence). There is no "is more than one worker heartbeating this daemon?" check and no all-instances reset.
 
 **Why noticed:** 2026-06-28 cleanup session. The Runner tab showed 26 phantom "Live processes" (actions back to 2026-06-24, including `finish` commands "running" for 4 days). Root cause: an orphaned `4d19h`-old worker (pid `30556`, reparented to ppid `1222`, no supervisor) running pre-`reapDead` code, endlessly re-pushing its 26-entry registry. The user's `crew runner restart` didn't fix it — it spawned a healthy second runner (pid `607619`, empty registry) next to the orphan, producing a 26↔0 flicker. Fix was manual: find the orphan by process listing on the distinctive `__worker`/`__supervise` tokens (a `crew runner` grep misses the `node …/index.ts runner __worker` cmdline), `kill 30556 30572`, leaving the one healthy runner. Diagnosis was done entirely through `GET /api/runner/status` because the Bash sandbox is in its own PID namespace (`--unshare-pid`) — `kill -0 <hostpid>` and `ps` can't see host runner processes from inside, only the pidfile + `runner.log` (host files) are readable.
 
-**Anchors:** `packages/cli/src/commands/runner.ts` (`startAction`/`stopAction`/`restart`/`spawnSupervisor`/`superviseAction`/`workerAction`; pidfile read at `readPidFile`); `packages/cli/src/lib/runner/paths.ts` (pidfile = `~/.config/crew/runner.pid`, log dir = `~/.crew/runner`); `packages/cli/src/lib/runner/loop.ts` (`startHeartbeat`→`reapDead`); `packages/cli/src/lib/runner/registry.ts`; daemon `RunnerStatusService` (`status()` / heartbeat staleness window) + `GET /api/runner/status`. Related shipped work: Resolved [[#2026-06-25--runner-never-reaps-dead-processes-phantom-running-entries-linger-and-early-death-runs-never-settle-to-error]] (CREW-288 reapDead — only helps *inside* a current-code worker; orthogonal to orphan/stale-code detection).
+**Anchors:** `packages/cli/src/commands/runner.ts` (`startAction`/`stopAction`/`restart`/`spawnSupervisor`/`superviseAction`/`workerAction`; pidfile read at `readPidFile`); `packages/cli/src/lib/runner/paths.ts` (pidfile = `~/.config/crew/runner.pid`, log dir = `~/.crew/runner`); `packages/cli/src/lib/runner/loop.ts` (`startHeartbeat`→`reapDead`); `packages/cli/src/lib/runner/registry.ts`; daemon `RunnerStatusService` (`status()` / heartbeat staleness window) + `GET /api/runner/status`. Related shipped work: Resolved [[#2026-06-25--runner-never-reaps-dead-processes-phantom-running-entries-linger-and-early-death-runs-never-settle-to-error]] (CREW-288 reapDead — only helps _inside_ a current-code worker; orthogonal to orphan/stale-code detection).
 
 **What's been considered:**
-- **Single-instance enforcement at the daemon.** The heartbeat already carries enough to stamp each worker with an identity (worker pid / a boot-time nonce). The daemon could reject or flag a heartbeat from a *second* worker id and expose "N workers heartbeating" so the dashboard can warn — turning the silent flip-flop into a visible "duplicate runner" state with a one-click "stop the stale one".
+
+- **Single-instance enforcement at the daemon.** The heartbeat already carries enough to stamp each worker with an identity (worker pid / a boot-time nonce). The daemon could reject or flag a heartbeat from a _second_ worker id and expose "N workers heartbeating" so the dashboard can warn — turning the silent flip-flop into a visible "duplicate runner" state with a one-click "stop the stale one".
 - **Worker→supervisor liveness.** A worker could probe its own parent (`process.ppid` / `isProcessAlive(supervisorPid)`) each heartbeat and self-exit when orphaned, so a dead supervisor takes its worker with it instead of leaving a zombie. (Mirror of the existing supervisor→worker probe in `supervisor.ts`.)
 - **Code-version stamp.** Stamp the worker at boot with the repo `HEAD` sha (and/or dirty flag) and surface it in `GET /api/runner/status` + the supervisor drawer, so "is the active runner on latest code?" is answerable at a glance and a stale runner is obvious. `crew runner status` could warn when the running sha ≠ current `HEAD`.
-- **A real reset command.** `crew runner restart --force` (or a `reap`/`nuke` verb) that finds *all* `__worker`/`__supervise` processes (token match, not pidfile), kills them, clears the pidfile, and starts exactly one — codifying the manual recovery so the next operator doesn't have to hand-craft the `ps … grep '__worker|__supervise'` + `pkill`.
+- **A real reset command.** `crew runner restart --force` (or a `reap`/`nuke` verb) that finds _all_ `__worker`/`__supervise` processes (token match, not pidfile), kills them, clears the pidfile, and starts exactly one — codifying the manual recovery so the next operator doesn't have to hand-craft the `ps … grep '__worker|__supervise'` + `pkill`.
 
 **Shape of work:** Two-to-three tickets, likely an Epic. (1) worker self-orphan detection + version stamp (CLI `runner/` lib + worker boot) — small/medium; (2) daemon single-instance identity + duplicate-runner surfacing in status/SSE + dashboard warning — medium, touches `RunnerStatusService`, the heartbeat schema in `crew-shared`, and the Runner page; (3) `crew runner restart --force`/reset verb — small. (1) and (3) are independent of the daemon work and can land first.
 
@@ -94,13 +138,13 @@ it (history vs cleanliness)?
 
 ## 2026-06-27 — Auto-rebase open PRs on upstream merge via the new webhook (no manual fix-pr)
 
-**What:** Now that the daemon receives GitHub `pull_request` events (CREW-303), a merge to `main` can trigger an automatic reaction: re-check every *other* open crew PR for conflicts against the new `main`, and for each one that's now conflicted, auto-dispatch a `fix-pr`-style agent to rebase + resolve — instead of the operator noticing the red "conflicts" badge and manually running `crew fix-pr`.
+**What:** Now that the daemon receives GitHub `pull_request` events (CREW-303), a merge to `main` can trigger an automatic reaction: re-check every _other_ open crew PR for conflicts against the new `main`, and for each one that's now conflicted, auto-dispatch a `fix-pr`-style agent to rebase + resolve — instead of the operator noticing the red "conflicts" badge and manually running `crew fix-pr`.
 
 **Why noticed:** Raised during the CREW-303 live verification (2026-06-27), immediately after the `pr_merged` webhook flip was confirmed working end-to-end. The realization: the webhook receiver isn't just for merge-detection — it's a general "the daemon now hears about GitHub events" capability, and the highest-value first use is killing the manual-rebase toil when one merge invalidates sibling PRs. Context: crew dispatches multiple parallel ticket branches off `main`; merging one routinely conflicts the others, and today each needs a hand-run `fix-pr`.
 
 **Anchors:** `packages/daemon/src/services/GithubWebhookService.ts` (the receiver — would branch on the `closed`/merged action beyond the current `markMerged`); `packages/daemon/src/services/github/github-client.ts` (the Octokit client — would query other open PRs' `mergeable_state`); the existing `crew fix-pr` dispatch path (the agent that does the rebase). The merge event already carries the base branch.
 
-**What's been considered:** Mergeability has a GitHub quirk — `mergeable_state` is recomputed *asynchronously* after a push to base, so the handler can't read it synchronously on the merge event; it'd need to poll/recompute (short delay) or attempt a trial rebase. Auto-dispatching agents off a webhook also needs guardrails: scope (only crew-tracked agents in `pr_open`?), a concurrency cap, and avoiding a dispatch storm when many PRs conflict at once. The `fix-pr` machinery already exists, so the work is mostly the trigger + scoping/safety, not the rebase itself.
+**What's been considered:** Mergeability has a GitHub quirk — `mergeable_state` is recomputed _asynchronously_ after a push to base, so the handler can't read it synchronously on the merge event; it'd need to poll/recompute (short delay) or attempt a trial rebase. Auto-dispatching agents off a webhook also needs guardrails: scope (only crew-tracked agents in `pr_open`?), a concurrency cap, and avoiding a dispatch storm when many PRs conflict at once. The `fix-pr` machinery already exists, so the work is mostly the trigger + scoping/safety, not the rebase itself.
 
 **Shape of work:** Likely its own Epic. Roughly: (1) extend the receiver to fire on merge with the base branch; (2) a daemon service that lists crew-tracked open PRs against that base and classifies the conflicted ones (Octokit `mergeable_state`, handling the async recompute); (3) an auto-dispatch path reusing `fix-pr`, gated by scope + concurrency policy; (4) operator controls (opt-in per project / a dashboard toggle).
 
@@ -431,7 +475,7 @@ Three fix directions (likely an Epic, not one ticket): (a) **kill the anon volum
 
 ## 2026-05-18 — Daemon has no reaper for orphaned runs stuck in `running`
 
-**Ticket:** [CREW-305](https://safturento.atlassian.net/browse/CREW-305) — standalone Task, Backlog (needs-planning). Carved out of Epic CREW-235 at its 2026-06-28 close: the epic shipped the *manual* Reap affordance plus the `launching`-only auto-reaper ([CREW-244](https://safturento.atlassian.net/browse/CREW-244)), but the automatic detection-and-settle of fully-`running` orphans (no live runner snapshot to diff against) was deferred to this ticket.
+**Ticket:** [CREW-305](https://safturento.atlassian.net/browse/CREW-305) — standalone Task, Backlog (needs-planning). Carved out of Epic CREW-235 at its 2026-06-28 close: the epic shipped the _manual_ Reap affordance plus the `launching`-only auto-reaper ([CREW-244](https://safturento.atlassian.net/browse/CREW-244)), but the automatic detection-and-settle of fully-`running` orphans (no live runner snapshot to diff against) was deferred to this ticket.
 
 **What:** A crew run can finish its real-world work — PR opened and merged, Jira ticket Done — while the daemon's run record stays stuck in `running` indefinitely. The daemon marks a run complete only when the CLI delivers `POST /api/agents/runs/:id/complete` on Claude exit. If that call never lands (CLI crash, daemon down at exit, killed process), the run sits in `running` forever — `completed_at` null, metrics null, no PR URL — and the dashboard shows the agent as perpetually active. Nothing detects or reaps these.
 
@@ -843,4 +887,3 @@ Auto-detect is most user-friendly; the flag is the cheapest first step.
 - `docs/superpowers/specs/2026-04-29-bruno-smoke-tests-design.md` §13
 
 **Shape of work:** Single small refactor PR. `git mv` to `packages/cli/src/lib/url-substitution/`, update callers' imports, leave a re-export in `lib/playwright/index.ts` or update everyone. Tests unchanged.
-
