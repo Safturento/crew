@@ -5,6 +5,59 @@
 (entries below, newest at top)
 
 
+## 2026-07-02 — Dispatch-gate preflight failures never reach the agent timeline (all-green timeline on an error run)
+
+**Ticket:** [CREW-313](https://safturento.atlassian.net/browse/CREW-313) (child G of Epic CREW-306)
+
+**What:** When the late dispatch preflight fails (the `runPreflight` call at the
+end of `prepareAgentEnvironment`), the agent lands in `error` but its timeline
+shows every startup phase green and then just stops — the failure is invisible
+in the drawer. Two compounding gaps:
+
+1. **No `failed` startup event is written.** `runPreflight` and
+   `installPlaywrightBrowsers` (`packages/cli/src/lib/run/agent-environment.ts:133-146`)
+   are the only pre-spawn steps *not* wrapped in `bracketStartupPhase`, so a
+   throw there emits no `failed` phase to `~/.crew/startup/<key>.jsonl` /
+   `startup_events`. Every bracketed sibling (docker, npm_install, worktree,
+   early preflight) records its own failure; these two die silently.
+2. **The timeline never merges run-level failures.** The structured diagnosis
+   *is* captured — `runTrackedPreflight` → `reportFailedStart` → `runs` row
+   `failure_check/headline/remediation/output` — and the Runner page's
+   "Failed to start" section renders it. But `TimelineService.getTimeline`
+   (`packages/daemon/src/services/TimelineService.ts:44`) concatenates only
+   `startup_events` + transcript JSONL, so the drawer/timeline has no path to
+   the failure fields.
+
+**Why noticed:** KAN-48 dispatch (2026-07-02) failed the `excluded-commands`
+check (Recipes' settings.json had un-globbed entries; fixed in
+Safturento/Recipes#55). The dashboard showed the agent in `error` with an
+all-green timeline; the actual diagnosis was only reachable via
+`GET /api/runner/page`.
+
+**Anchors:** `packages/cli/src/lib/run/agent-environment.ts` (unbracketed
+tail), `packages/cli/src/lib/run/preflight-tracking.ts` (`runTrackedPreflight`),
+`packages/daemon/src/services/RunFailureService.ts` (`recordFailedStart`),
+`packages/daemon/src/services/TimelineService.ts` (`getTimeline`),
+`packages/daemon/src/services/RunnerPageService.ts` (the surface that *does*
+show it).
+
+**What's been considered:** Fix 1 (bracket the dispatch preflight + playwright
+install with `bracketStartupPhase`, e.g. a `crew_startup_dispatch_preflight`
+subtype) is the minimal change and makes the timeline self-explanatory — the
+failed phase carries the rendered `PreflightError`. Fix 2 (TimelineService
+merges `failed-start` run failures as a synthetic terminal event) covers *all*
+unbracketed death paths, not just this one, but adds a second event source to
+the timeline contract. They compose; Fix 1 alone would have surfaced KAN-48.
+
+**Shape of work:** small — Fix 1 is a CLI-only change in
+`agent-environment.ts` + a `event-labels.ts` label; Fix 2 is a daemon-side
+TimelineService/schema touch. One ticket either way.
+
+**Open questions:** Should the drawer also link to the Runner page's
+failed-start card when one exists for the key, instead of (or in addition to)
+merging into the timeline?
+
+
 ## 2026-07-02 — Dequeue apply + orphaned-lifecycle producers are missing (Epic CREW-306 gap)
 
 **What:** The runner-rework dashboard (CREW-311) surfaces Dequeue on queued
