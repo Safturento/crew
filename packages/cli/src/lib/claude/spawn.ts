@@ -24,12 +24,33 @@ export const CLAUDE_PERMISSION_FLAG = '--dangerously-skip-permissions';
 export const CLAUDE_SETTING_SOURCES_FLAGS = ['--setting-sources', 'user,project,local'] as const;
 
 /**
+ * Model every crew-spawned `claude` runs on. Without an explicit `--model`,
+ * a headless spawn inherits the user's interactive default (their `/model`
+ * selection in user settings) — so switching the interactive session to a
+ * pricier tier (e.g. Fable) would silently move every dispatch onto it too.
+ * Pinned to Opus so dispatch cost is independent of the interactive choice;
+ * override a single run with `CREW_CLAUDE_MODEL`.
+ */
+export const CLAUDE_DEFAULT_MODEL = 'claude-opus-4-8';
+
+/** `--model` argv pair for a crew claude spawn. Reads the env override at call time. */
+export function claudeModelFlags(): string[] {
+  return ['--model', process.env.CREW_CLAUDE_MODEL ?? CLAUDE_DEFAULT_MODEL];
+}
+
+/**
  * Argv for a fresh (`-p`, no `--resume`) crew claude spawn. Single source of
  * truth shared by `spawnClaudeFresh` and the inline launch in `commands/run.ts`
- * so the permission + setting-sources flags can't drift between the two.
+ * so the permission + setting-sources + model flags can't drift between the two.
  */
 export function claudeFreshArgs(prompt: string): string[] {
-  return [CLAUDE_PERMISSION_FLAG, ...CLAUDE_SETTING_SOURCES_FLAGS, '-p', prompt];
+  return [
+    CLAUDE_PERMISSION_FLAG,
+    ...CLAUDE_SETTING_SOURCES_FLAGS,
+    ...claudeModelFlags(),
+    '-p',
+    prompt,
+  ];
 }
 
 /** Argv for a resume (`--resume <id> -p`) crew claude spawn. Sibling of `claudeFreshArgs`. */
@@ -37,6 +58,7 @@ export function claudeResumeArgs(sessionId: string, prompt: string): string[] {
   return [
     CLAUDE_PERMISSION_FLAG,
     ...CLAUDE_SETTING_SOURCES_FLAGS,
+    ...claudeModelFlags(),
     '--resume',
     sessionId,
     '-p',
@@ -82,8 +104,8 @@ export interface SpawnClaudeResumeOptions {
 
 /**
  * Spawn `claude --dangerously-skip-permissions --setting-sources
- * user,project,local --resume <id> -p <prompt>` in the background, piping all
- * stdio to `logFile`. Returns the execa
+ * user,project,local --model <pinned> --resume <id> -p <prompt>` in the
+ * background, piping all stdio to `logFile`. Returns the execa
  * subprocess so the caller can `await` it for completion or wire signal
  * handling (SIGINT) to it.
  */
@@ -109,9 +131,9 @@ export interface SpawnClaudeFreshOptions {
 
 /**
  * Spawn `claude --dangerously-skip-permissions --setting-sources
- * user,project,local -p <prompt>` (no `--resume`) so claude starts a fresh
- * conversation. Sibling of `spawnClaudeResume`; identical PATH augmentation +
- * env merge.
+ * user,project,local --model <pinned> -p <prompt>` (no `--resume`) so claude
+ * starts a fresh conversation. Sibling of `spawnClaudeResume`; identical PATH
+ * augmentation + env merge.
  */
 export function spawnClaudeFresh(opts: SpawnClaudeFreshOptions): ResultPromise {
   const sub = execa('claude', claudeFreshArgs(opts.prompt), {

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { execa } from 'execa';
 import {
   spawnClaudeFresh,
@@ -6,8 +6,10 @@ import {
   claudeSpawnEnv,
   claudeFreshArgs,
   claudeResumeArgs,
+  claudeModelFlags,
   CLAUDE_PERMISSION_FLAG,
   CLAUDE_SETTING_SOURCES_FLAGS,
+  CLAUDE_DEFAULT_MODEL,
 } from './spawn.js';
 
 vi.mock('execa', () => ({ execa: vi.fn() }));
@@ -37,6 +39,8 @@ describe('spawnClaudeResume', () => {
         '--dangerously-skip-permissions',
         '--setting-sources',
         'user,project,local',
+        '--model',
+        'claude-opus-4-8',
         '--resume',
         'abc-123',
         '-p',
@@ -164,26 +168,55 @@ describe('setting-sources args', () => {
     expect(CLAUDE_SETTING_SOURCES_FLAGS).toEqual(['--setting-sources', 'user,project,local']);
   });
 
-  it('claudeFreshArgs carries the permission + setting-sources flags before the prompt', () => {
+  it('claudeFreshArgs carries the permission + setting-sources + model flags before the prompt', () => {
     expect(claudeFreshArgs('do the thing')).toEqual([
       '--dangerously-skip-permissions',
       '--setting-sources',
       'user,project,local',
+      '--model',
+      'claude-opus-4-8',
       '-p',
       'do the thing',
     ]);
   });
 
-  it('claudeResumeArgs carries the permission + setting-sources flags before --resume', () => {
+  it('claudeResumeArgs carries the permission + setting-sources + model flags before --resume', () => {
     expect(claudeResumeArgs('abc-123', 'do the thing')).toEqual([
       '--dangerously-skip-permissions',
       '--setting-sources',
       'user,project,local',
+      '--model',
+      'claude-opus-4-8',
       '--resume',
       'abc-123',
       '-p',
       'do the thing',
     ]);
+  });
+});
+
+describe('model flags', () => {
+  // Dispatches must not inherit the user's interactive default model — a
+  // `/model` switch to a pricier tier (e.g. Fable) would otherwise silently
+  // move every crew run onto it. See claudeModelFlags in spawn.ts.
+  const originalOverride = process.env.CREW_CLAUDE_MODEL;
+
+  afterEach(() => {
+    if (originalOverride === undefined) delete process.env.CREW_CLAUDE_MODEL;
+    else process.env.CREW_CLAUDE_MODEL = originalOverride;
+  });
+
+  it('pins the default model to Opus', () => {
+    delete process.env.CREW_CLAUDE_MODEL;
+    expect(CLAUDE_DEFAULT_MODEL).toBe('claude-opus-4-8');
+    expect(claudeModelFlags()).toEqual(['--model', 'claude-opus-4-8']);
+  });
+
+  it('CREW_CLAUDE_MODEL overrides the pinned model for a single invocation', () => {
+    process.env.CREW_CLAUDE_MODEL = 'claude-fable-5';
+    expect(claudeModelFlags()).toEqual(['--model', 'claude-fable-5']);
+    expect(claudeFreshArgs('p')).toContain('claude-fable-5');
+    expect(claudeResumeArgs('s', 'p')).toContain('claude-fable-5');
   });
 });
 
@@ -240,6 +273,8 @@ describe('spawnClaudeFresh', () => {
         '--dangerously-skip-permissions',
         '--setting-sources',
         'user,project,local',
+        '--model',
+        'claude-opus-4-8',
         '-p',
         'do the thing',
       ],
