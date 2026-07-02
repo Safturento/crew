@@ -35,17 +35,23 @@ const RECONCILE_REASON: Record<RunRef['state'], string> = {
 };
 
 /**
- * CREW-292: the supervisor drawer, opened from the `SupervisorCard`. Mirrors
- * the agent drawer shell (right-anchored `Drawer` + a `crew / runner`
- * breadcrumb header) and tails the supervisor's process-management log — the
- * spawn/respawn/heartbeat/reap slice of `runner.log` served by
- * `GET /api/runner/supervisor-log` (CREW-290). The log live-tails on a short
- * interval while the drawer is open (`useSupervisorLog`).
+ * CREW-292 / CREW-312: the supervisor drawer, opened from the runner chip
+ * (the sole home now that the standalone Runner page is retired). Mirrors the
+ * agent drawer shell (right-anchored `Drawer` + a `crew / runner` breadcrumb
+ * header) and holds the runner's housekeeping surface:
+ *
+ * - **Controls** — Start / Stop / Restart the host runner (CREW-293).
+ * - **Reconcile** — the queued + orphaned roll-up across all projects
+ *   (CREW-310), with Dequeue / Reap; duplicates the inline Agents-grid row
+ *   actions by design (act inline, or sweep here).
+ * - **Management log** — the spawn/respawn/heartbeat/reap slice of `runner.log`
+ *   served by `GET /api/runner/supervisor-log` (CREW-290), live-tailed while
+ *   the drawer is open (`useSupervisorLog`).
  *
  * The meta line shows only what's on the wire today — the 5s heartbeat cadence
  * and last-seen. The Figma also depicts workers/uptime/pid, but those aren't
- * carried on `SupervisorView` yet (same limitation the `SupervisorCard`
- * documents); they fill in once the heartbeat payload grows.
+ * carried on `SupervisorView` yet; they fill in once the heartbeat payload
+ * grows.
  */
 export function SupervisorDrawer({ supervisor, open, onOpenChange }: SupervisorDrawerProps) {
   const { online, lastSeen } = supervisor;
@@ -129,7 +135,12 @@ export function SupervisorDrawer({ supervisor, open, onOpenChange }: SupervisorD
               >
                 Restart supervisor
               </Button>
-              <Button color="error" intensity="muted" size="sm" onClick={() => stopSupervisor.mutate()}>
+              <Button
+                color="error"
+                intensity="muted"
+                size="sm"
+                onClick={() => stopSupervisor.mutate()}
+              >
                 Stop supervisor
               </Button>
             </>

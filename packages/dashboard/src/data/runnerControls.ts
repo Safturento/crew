@@ -5,13 +5,13 @@ import type { RunnerCommand, RunnerCommandKind } from 'crew-shared';
 import { defaultClient } from './queries.js';
 
 /**
- * CREW-245: the Runner page control layer. Each hook enqueues a runner
- * reverse-queue command (or acknowledges a failed-start) and toasts the
- * outcome. The actual effect — signalling the tracked process group, settling
- * an orphan, dropping a pending action — happens host-side when the runner
- * drains the command; the row reconciles against the next snapshot. These are
- * thin mutation wrappers so the Runner page rows and (CREW-246) the drawer
- * header share one control path.
+ * CREW-245: the runner control layer. Each hook enqueues a runner reverse-queue
+ * command (or acknowledges a failed-start) and toasts the outcome. The actual
+ * effect — signalling the tracked process group, settling an orphan, dropping a
+ * pending action — happens host-side when the runner drains the command; the
+ * row reconciles against the next snapshot. These are thin mutation wrappers so
+ * the Agents-grid rows (CREW-311) and the supervisor drawer (CREW-312) share
+ * one control path.
  */
 
 function useRunnerCommand(
@@ -90,7 +90,7 @@ export function useDequeue(): UseMutationResult<RunnerCommand, Error, string> {
  * controls above, `supervisor_stop` / `supervisor_restart` carry a null
  * `agentKey` — they target the supervisor process itself. The host worker
  * drains the command and exits (stop) or exits-and-respawns (restart); the
- * SupervisorCard reconciles to its new online/offline state on the next
+ * supervisor drawer reconciles to its new online/offline state on the next
  * heartbeat. Takes no input (void) since there's no agent to address.
  */
 function useSupervisorCommand(

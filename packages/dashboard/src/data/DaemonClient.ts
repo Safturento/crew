@@ -6,7 +6,6 @@ import type {
   ProjectTicketsResponse,
   ReconcileRollup,
   RunnerCommand,
-  RunnerPage,
 } from 'crew-shared';
 
 import type { Agent, Project, ProjectDetailResponse } from './types.js';
@@ -59,12 +58,6 @@ export interface DaemonClient {
    * `POST /api/runs/:key/acknowledge`. Returns the number acknowledged.
    */
   acknowledgeRun(key: string): Promise<number>;
-  /**
-   * CREW-291: the Runner page's read surface — `failedToStart` / `queued` /
-   * `recentlyEnded` from `GET /api/runner/page` (CREW-290 / T2). Backs the
-   * three previously-stubbed sections.
-   */
-  getRunnerPage(): Promise<RunnerPage>;
   /**
    * CREW-311: the housekeeping roll-up from `GET /api/runner/reconcile`
    * (CREW-310) — queued + orphaned agents across all projects. Backs the
