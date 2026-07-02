@@ -1,8 +1,41 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-/** Absolute (via $CLAUDE_PROJECT_DIR) path to the shipped PostToolUse hook. */
-const HOOK_PATH = '$CLAUDE_PROJECT_DIR/hooks/state-events/pr-create-postuse.mjs';
+/** Basename of the dependency-free hook script shipped in the crew repo root. */
+const HOOK_SCRIPT = 'pr-create-postuse.mjs';
+
+/**
+ * Absolute (via $CLAUDE_PROJECT_DIR) path to the per-worktree hook copy. Lives
+ * under `.claude/crew-hooks/`, alongside the injected `settings.local.json`.
+ * Both are untracked (never `git add`ed by dispatch), so they survive the
+ * `crew fix-pr` resume rebase; in the crew repo they're also gitignored by
+ * `.claude/*`. A non-crew target that doesn't ignore `.claude/` leaves them
+ * untracked-but-visible — see the `claude-hooks-untracked-in-non-crew` followup.
+ */
+const HOOK_PATH = `$CLAUDE_PROJECT_DIR/.claude/crew-hooks/${HOOK_SCRIPT}`;
+
+/**
+ * Source of the hook script, resolved relative to this module (never
+ * `process.cwd()` — dispatches run with arbitrary cwd). This file sits at
+ * `packages/cli/src/lib/run/`, five levels below the repo root where the hook
+ * ships (`hooks/state-events/pr-create-postuse.mjs`). The crew CLI runs via tsx
+ * against the source tree (no compiled `dist/`), so the source-relative walk is
+ * the reliable anchor.
+ */
+function hookScriptSource(): string {
+  return join(
+    dirname(fileURLToPath(import.meta.url)),
+    '..',
+    '..',
+    '..',
+    '..',
+    '..',
+    'hooks',
+    'state-events',
+    HOOK_SCRIPT,
+  );
+}
 
 interface HookCommand {
   type: 'command';
@@ -64,10 +97,13 @@ export function injectStateEventHook(opts: StateEventHookInjectionOptions): stri
   }
 
   const hooks = settings.hooks ?? {};
-  // Drop any prior crew state-event hook (identified by the script path) so the
-  // merge stays idempotent and a re-dispatched key is re-templated.
+  // Drop any prior crew state-event hook (identified by the script basename, so
+  // both the current `.claude/crew-hooks/` path and the legacy
+  // `hooks/state-events/` path are swept) — keeps the merge idempotent, re-
+  // templates a changed key, and stops re-dispatched worktrees accumulating a
+  // dead entry pointing at the old, uncopied location.
   const existing = (hooks.PostToolUse ?? []).filter(
-    (entry) => !entry.hooks?.some((h) => h.command?.includes(HOOK_PATH)),
+    (entry) => !entry.hooks?.some((h) => h.command?.includes(HOOK_SCRIPT)),
   );
 
   // Fire on a `gh pr create` Bash call OR the GitHub MCP's PR-create tool — the
@@ -79,6 +115,14 @@ export function injectStateEventHook(opts: StateEventHookInjectionOptions): stri
   };
 
   settings.hooks = { ...hooks, PostToolUse: [...existing, entry] };
+
+  // Copy the dependency-free hook script into the worktree so it exists even for
+  // a non-crew target repo (which has no `hooks/` dir of its own). Overwrite on
+  // every dispatch — idempotent, and lets hook fixes propagate to existing
+  // worktrees on re-dispatch.
+  const hookDest = join(worktree, '.claude', 'crew-hooks', HOOK_SCRIPT);
+  mkdirSync(dirname(hookDest), { recursive: true });
+  copyFileSync(hookScriptSource(), hookDest);
 
   mkdirSync(dirname(dest), { recursive: true });
   writeFileSync(dest, `${JSON.stringify(settings, null, 2)}\n`, 'utf8');
