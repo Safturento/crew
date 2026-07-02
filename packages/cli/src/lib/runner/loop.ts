@@ -2,6 +2,7 @@ import type { ActionRequest } from 'crew-shared';
 import type { CrewDaemonClient } from '../daemon-client/index.js';
 import { applyCommand } from './commands.js';
 import type { ExecutionResult, LaunchHandle } from './executor.js';
+import { reapReason as defaultReapReason } from './reap-reason.js';
 import type { Registry } from './registry.js';
 
 /** The daemon surface a single poll iteration needs. */
@@ -142,6 +143,12 @@ export interface RunLoopDeps extends RunnerLoopDeps {
    * crash, OOM-kill) doesn't linger as a phantom "running".
    */
   isAlive: (pid: number) => boolean;
+  /**
+   * CREW-308: resolve a reaped key's startup-failure reason for the enriched
+   * reap log line. Optional — defaults to the real startup-log reader; tests
+   * inject a fake to avoid touching disk.
+   */
+  reapReason?: (key: string) => string | null;
   /** Resume boundary for command apply (re-dispatch `crew resume <key>`). */
   resume?: (agentKey: string, message?: string) => Promise<LaunchHandle>;
   /** Pause-sentinel boundary for command apply (CREW-273 pause marker). */
@@ -184,13 +191,25 @@ function startHeartbeat(
   client: Pick<CrewDaemonClient, 'heartbeat'>,
   registry: Registry,
   isAlive: (pid: number) => boolean,
+  reapReason: (key: string) => string | null,
   intervalMs: number,
   signal: AbortSignal,
   log: (line: string) => void,
 ): () => void {
   const beat = (): void => {
     const reaped = registry.reapDead(isAlive);
-    if (reaped.length > 0) log(`reaped ${reaped.length} dead process(es): ${reaped.join(', ')}`);
+    if (reaped.length > 0) {
+      // CREW-308: annotate each reaped key with its startup-failure reason (from
+      // the startup log) so a preflight-gate death names its cause in the
+      // supervisor management log instead of being a bare, unexplained key.
+      const detail = reaped
+        .map((key) => {
+          const reason = reapReason(key);
+          return reason ? `${key} — startup failed: ${reason}` : key;
+        })
+        .join(', ');
+      log(`reaped ${reaped.length} dead process(es): ${detail}`);
+    }
     void client.heartbeat(registry.toSnapshot());
   };
   beat();
@@ -243,6 +262,7 @@ export async function runLoop(deps: RunLoopDeps): Promise<void> {
     deps.client,
     deps.registry,
     deps.isAlive,
+    deps.reapReason ?? defaultReapReason,
     deps.heartbeatMs ?? 5_000,
     deps.signal,
     deps.log,

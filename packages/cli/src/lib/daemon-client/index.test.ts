@@ -480,6 +480,42 @@ describe('CrewDaemonClient.reportInitializing', () => {
   });
 });
 
+const earlyFailureInput = {
+  key: 'HA-7',
+  projectName: 'home-assistant',
+  worktreePath: '/w/home-assistant-HA-7',
+  branch: 'HA-7',
+  phase: 'crew_startup_preflight' as const,
+  summary: 'worktree already exists',
+};
+
+describe('CrewDaemonClient.reportEarlyFailure (CREW-308)', () => {
+  it('POSTs the phase+summary to /api/runner/early-failure and returns ok on 204', async () => {
+    const fetchSpy = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValue(new Response(null, { status: 204 }));
+    const client = new CrewDaemonClient({ baseUrl: 'http://localhost:7773' });
+    const result = await client.reportEarlyFailure(earlyFailureInput);
+    expect(result.ok).toBe(true);
+    expect(fetchSpy).toHaveBeenCalledWith(
+      'http://localhost:7773/api/runner/early-failure',
+      expect.objectContaining({ method: 'POST' }),
+    );
+    const body = JSON.parse((fetchSpy.mock.calls[0]?.[1] as RequestInit).body as string) as Record<
+      string,
+      unknown
+    >;
+    expect(body).toMatchObject({ phase: 'crew_startup_preflight', summary: 'worktree already exists' });
+  });
+
+  it('returns ok:false on connection error without throwing', async () => {
+    vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('ECONNREFUSED'));
+    const client = new CrewDaemonClient({ baseUrl: 'http://localhost:7773', warn: vi.fn() });
+    const result = await client.reportEarlyFailure(earlyFailureInput);
+    expect(result.ok).toBe(false);
+  });
+});
+
 describe('CrewDaemonClient.reportLaunching', () => {
   it('POSTs to /api/runner/launching and returns the runId on 201', async () => {
     const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(

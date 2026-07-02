@@ -232,6 +232,84 @@ describe('RunFailureService.recordInitializing (CREW-307)', () => {
   });
 });
 
+describe('RunFailureService.recordEarlyFailure (CREW-308)', () => {
+  const input = {
+    key: 'HA-7',
+    projectName: 'home-assistant',
+    worktreePath: '/w/home-assistant-HA-7',
+    branch: 'HA-7',
+    phase: 'crew_startup_preflight' as const,
+    summary: 'worktree already exists',
+  };
+
+  it('transitions a birthed (init) agent to error', async () => {
+    const { service, db, events } = await setup();
+    // Task 5 births the row as `init` before the gate; the gate death lands here.
+    await service.recordInitializing(input);
+    expect(await latestTo(db, 'HA-7')).toBe('init');
+
+    await service.recordEarlyFailure(input);
+
+    const latest = await db
+      .selectFrom('state_transitions')
+      .selectAll()
+      .where('agent_key', '=', 'HA-7')
+      .orderBy('ts', 'desc')
+      .orderBy('id', 'desc')
+      .executeTakeFirstOrThrow();
+    expect(latest.to_state).toBe('error');
+    expect(latest.from_state).toBe('init');
+    expect(latest.source).toBe('startup-failure');
+
+    const changed = events.filter(isStateChanged);
+    expect(changed.at(-1)?.data).toMatchObject({ key: 'HA-7', to: 'error' });
+  });
+
+  it('births a fresh error agent when the birth call was lost (no prior row)', async () => {
+    const { service, db } = await setup();
+    await service.recordEarlyFailure(input);
+
+    const agent = await db
+      .selectFrom('agents')
+      .selectAll()
+      .where('key', '=', 'HA-7')
+      .executeTakeFirstOrThrow();
+    expect(agent.project_name).toBe('home-assistant');
+    expect(agent.worktree_path).toBe('/w/home-assistant-HA-7');
+    expect(await latestTo(db, 'HA-7')).toBe('error');
+  });
+
+  it('is idempotent — a second call writes no duplicate error transition', async () => {
+    const { service, db } = await setup();
+    await service.recordEarlyFailure(input);
+    await service.recordEarlyFailure(input);
+    const rows = await db
+      .selectFrom('state_transitions')
+      .selectAll()
+      .where('agent_key', '=', 'HA-7')
+      .where('to_state', '=', 'error')
+      .execute();
+    expect(rows).toHaveLength(1);
+  });
+
+  it('never regresses a run that already advanced to running', async () => {
+    const { service, db } = await setup();
+    await service.recordInitializing(input);
+    await db
+      .insertInto('state_transitions')
+      .values({
+        agent_key: 'HA-7',
+        from_state: 'init',
+        to_state: 'running',
+        ts: Date.now() + 1,
+        source: 'cli-run',
+      })
+      .execute();
+    await service.recordEarlyFailure(input);
+    expect(await latestTo(db, 'HA-7')).toBe('running');
+  });
+});
+
 describe('RunFailureService.recordLaunching', () => {
   it('upserts the agent and inserts a launching run', async () => {
     const { service, db } = await setup();

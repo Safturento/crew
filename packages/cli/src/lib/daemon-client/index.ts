@@ -36,6 +36,23 @@ export interface ReportInitializingInput {
   appUrl?: string | null;
 }
 
+/**
+ * CREW-308 — the early preflight-gate failure payload. Extends the initializing
+ * birth payload (so a lost birth can be recovered by upserting the agent) with
+ * the failing `phase` + `summary`. The reason itself is already on the
+ * CLI-written `~/.crew/startup/<key>.jsonl`; these carry it through for the
+ * `error` transition the daemon writes.
+ */
+export interface ReportEarlyFailureInput {
+  key: string;
+  projectName: string;
+  worktreePath: string;
+  branch: string;
+  phase: string;
+  summary: string;
+  appUrl?: string | null;
+}
+
 export interface ReportFailedStartInput {
   key: string;
   projectName: string;
@@ -303,6 +320,34 @@ export class CrewDaemonClient {
     } catch (err) {
       this.warn(
         `reportInitializing: ${(err as Error).message} (daemon unreachable; run will not be tracked)`,
+      );
+      return { ok: false, reason: 'connect_error' };
+    }
+  }
+
+  /**
+   * CREW-308 — report an early preflight-gate death (tool/gh-auth/worktree)
+   * through the daemon *before* the CLI exits, so the whole gate-failure class
+   * surfaces as a visible `error` row instead of a silent exit. Best-effort: a
+   * downed daemon just means the failure isn't tracked, exactly like
+   * `reportInitializing` — the CLI still emits its startup-log `failed` phase
+   * and exits 1 regardless.
+   */
+  async reportEarlyFailure(input: ReportEarlyFailureInput): Promise<DaemonResult<{ ok: true }>> {
+    try {
+      const res = await fetch(`${this.baseUrl}/api/runner/early-failure`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(input),
+      });
+      if (!res.ok) {
+        this.warn(`reportEarlyFailure: HTTP ${res.status} (failure will not be tracked)`);
+        return { ok: false, reason: `http_${res.status}` };
+      }
+      return { ok: true };
+    } catch (err) {
+      this.warn(
+        `reportEarlyFailure: ${(err as Error).message} (daemon unreachable; failure will not be tracked)`,
       );
       return { ok: false, reason: 'connect_error' };
     }

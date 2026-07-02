@@ -1,0 +1,41 @@
+meta {
+  name: POST /api/runner/early-failure
+  type: http
+  seq: 12
+}
+
+post {
+  url: {{baseUrl}}/api/runner/early-failure
+  body: json
+}
+
+body:json {
+  {
+    "key": "BRUNO-EARLY-1",
+    "projectName": "bruno-smoke",
+    "worktreePath": "/tmp/bruno-smoke-worktree-early",
+    "branch": "BRUNO-EARLY-1",
+    "phase": "crew_startup_preflight",
+    "summary": "worktree already exists"
+  }
+}
+
+assert {
+  res.status: eq 204
+}
+
+tests {
+  test("settles the agent row to error and returns 204", () => {
+    expect(res.status).to.equal(204);
+  });
+}
+
+docs {
+  CREW-308: an early preflight-gate death (missing tool, gh-auth, worktree
+  already exists). Upserts the agent row (fallback for a lost birth) and writes
+  an `error` state transition (source `startup-failure`), so the whole gate-
+  failure class becomes a visible `error` row instead of a silent CLI exit. The
+  operator-facing reason lives on the CLI-written `~/.crew/startup/<key>.jsonl`
+  `failed` phase; the transition just carries the state. Idempotent — a run
+  already settled at `error` is not re-transitioned.
+}
