@@ -3,6 +3,17 @@
 > Items that were ticketed + shipped, or fixed inline. Kept for historical context. Index: [`../followups.md`](../followups.md).
 
 
+## 2026-07-02 — Dispatch-gate preflight failures never reach the agent timeline (all-green timeline on an `error` run)
+
+**What:** The KAN-48 dispatch died in the `excluded-commands` dispatch-preflight check ~700ms after `npm ci`. The agent settled to `error`, but its timeline showed every startup phase green then simply stopped — the diagnosis was only reachable via the (now-retired) Runner page. Three gaps: (1) the dispatch preflight + `installPlaywrightBrowsers` tail of `prepareAgentEnvironment` (plus the Bruno env write and skill/hook injection) were not wrapped in `bracketStartupPhase`, so a throw there emitted no `failed` phase; (2) `TimelineService.getTimeline` never merged the `runs` row's structured `failed-start` diagnosis, so the reason was captured but unreachable from the drawer; (3) `GET /api/agents/:key` 404'd for a zero-run agent (a pre-registration death, e.g. a worktree-phase failure), so the drawer couldn't even open.
+
+**Why noticed:** The 2026-07-02 KAN-48 dispatch (recipes) and CREW-313's own failed dispatch (a stale host `.git/config.lock` worktree-phase death). This is the late-gate counterpart to CREW-308's early-gate visibility work — the Epic's "no startup failure is ever invisible" goal.
+
+**Anchors:** `packages/cli/src/lib/run/agent-environment.ts` (dispatch preflight + playwright install tail); `packages/cli/src/commands/run.ts` (Bruno env write, skill/hook injection); `packages/daemon/src/services/TimelineService.ts`; `packages/daemon/src/services/AgentsService.ts` (`getByKey`); `packages/shared/src/transcripts/schemas.ts`; the Timeline dashboard components. Originated as the crew PR [#450](https://github.com/Safturento/crew/pull/450) followup entry.
+
+**Resolved 2026-07-02:** Shipped in CREW-313. Bracketed the pre-spawn tail (new `crew_startup_dispatch_preflight` / `crew_startup_playwright_install` / `crew_startup_bruno_env` / `crew_startup_skill_injection` phases); added a synthetic `crew_failed_start` event that `TimelineService` merges from the latest `failed-start` run's `failure_*` columns; and made `getByKey` return an agents-row-backed detail (state from the transition log, null run-derived fields) for a zero-run agent so the drawer opens on a pre-registration death. The original Active entry lived in the still-unmerged PR #450, so it was recorded directly here on resolution rather than cut from a topic file.
+
+
 ## 2026-06-05 — Dashboard has no cancel action; CLI kill never notifies the daemon
 
 **What:** There is no way to stop an in-flight `crew run` from the dashboard, and stopping one from a separate shell (`kill`, killing the container, deleting the worktree) never tells the daemon the run ended. `crew run` only POSTs `…/runs/:id/complete` on a clean exit of the foreground process — claude exits normally, or a foreground Ctrl+C that the `sigintHandler` forwards to claude before falling through to the `completeRun` call. An out-of-band kill skips that path entirely, so the run row keeps `completed_at = null` and the agent shows "running" forever (the orphaned-run symptom). The dashboard's action surface (the CREW-208 lineage: New Run / Fix PR / Finish) has no Cancel verb, so the operator's only recourse is a CLI kill — which is exactly what orphans the run.
