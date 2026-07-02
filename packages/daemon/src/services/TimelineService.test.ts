@@ -222,7 +222,8 @@ describe('TimelineService — CREW-313 failed-start merge', () => {
         failure_check: overrides.check ?? 'excluded-commands',
         failure_headline: overrides.headline ?? 'Missing excludedCommands entries',
         failure_remediation: overrides.remediation ?? 'Run `crew doctor --fix`',
-        failure_output: overrides.output ?? 'excluded-commands FAIL\n  missing: npm run bruno:smoke*',
+        failure_output:
+          overrides.output ?? 'excluded-commands FAIL\n  missing: npm run bruno:smoke*',
       })
       .execute();
   }
@@ -294,7 +295,10 @@ describe('TimelineService — CREW-313 failed-start merge', () => {
         (e) => (e as { subtype?: string }).subtype === 'crew_failed_start',
       );
       expect(failedStart).toHaveLength(1);
-      expect(failedStart[0]).toMatchObject({ check: 'excluded-commands', headline: 'newest failure' });
+      expect(failedStart[0]).toMatchObject({
+        check: 'excluded-commands',
+        headline: 'newest failure',
+      });
     } finally {
       await db.destroy();
     }
