@@ -1,7 +1,7 @@
 ---
 name: design-system
 description: Crew Figma DS + token bindings + Pill primitive contract
-last_updated: 2026-06-27
+last_updated: 2026-07-02
 covers:
   - 'packages/dashboard/src/components/**'
   - '*.figma.tsx'
@@ -77,6 +77,21 @@ in code; no `state/pr-merged` variable was added to Crew DS Figma yet. Followup
 tracked at `docs/followups/figma-crew-ds.md` ("CREW-202 — publish state/pr-merged
 in Crew DS Figma") so a future Figma pass can rebind the consumer components without
 code churn.
+
+**CREW-311 — `queued` + `orphaned` states reuse existing token families.**
+The runner-rework states (Epic CREW-306) render through the *existing*
+families — `queued` = the idle slate set (`text-slate-500` / `bg-slate-1100` /
+`border-slate-600`), `orphaned` = the waiting amber set (`text-amber-400` /
+`bg-amber-1050` / `border-amber-500`) — exactly as the FINAL grid design binds
+them (`state/idle`, `state/waiting`); no new Figma variables are needed. The
+design source for the new rows is the runner-rework FINAL grid on the
+Brainstorm page (`901:2209`), **not** the Composites `AgentRow` set — `212:910`
+still carries only the original 7 `state` variants, so the committed
+`figma-snapshot` can't verify the new rows until the set grows
+`queued`/`orphaned` variants and the snapshot is refreshed. Inline actions per
+state: `queued` → ghost `Dequeue`; `orphaned` → ghost amber `Reap`; `error`
+splits on `startedAt === ''` (failed-start → `Restart`, mid-run → `Resume`;
+both with `Inspect`).
 
 `border` and `input` alias to `white` (RGB only) — consumer fills carry the alpha (screens-file fills use opacity 0.04 / 0.06 / 0.07 / 0.12 for the white-overlay pattern). Required because Figma variable aliases don't have alpha overlay built-in.
 
