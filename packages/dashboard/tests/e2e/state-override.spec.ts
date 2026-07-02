@@ -4,7 +4,7 @@ const AGENT_KEY = 'CREW-101';
 
 /**
  * The drawer state-override control (CREW-260): a secondary icon button beside
- * the header state badge → popover of all 8 states (current disabled) →
+ * the header state badge → popover of all 10 states (current disabled) →
  * AlertModal confirm → `POST /api/agents/:key/state`. This spec locks the
  * popover → confirm-modal wiring against a real browser. `/api/agents/:key` is
  * mocked to a known `running` state so the assertions don't depend on whichever
@@ -53,9 +53,10 @@ test.describe('Drawer state-override control (CREW-260)', () => {
     // Open the override popover.
     await page.getByRole('button', { name: 'Override state' }).click();
 
-    // All 8 states are offered (in the labelled group); current (running) disabled.
+    // All 10 states are offered (in the labelled group); current (running)
+    // disabled. CREW-311 added queued + orphaned.
     const group = page.getByRole('group', { name: 'Override state' });
-    await expect(group.getByRole('button')).toHaveCount(8);
+    await expect(group.getByRole('button')).toHaveCount(10);
     await expect(group.getByRole('button', { name: /running/i })).toBeDisabled();
 
     // Selecting a different state raises the AlertModal naming both states.

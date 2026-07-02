@@ -23,6 +23,16 @@ test.describe('Supervisor drawer (CREW-292)', () => {
   test('clicking the supervisor card opens a drawer tailing the management log', async ({
     page,
   }) => {
+    // The management log reads whatever `~/.crew/runner.log` the host has
+    // accumulated — mock it empty so the empty-state assertion is
+    // deterministic regardless of past host-runner activity.
+    await page.route('**/api/runner/supervisor-log*', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ lines: [] }),
+      });
+    });
     await page.goto('/#/runner');
     await expect(page.getByRole('heading', { name: 'Runner' })).toBeVisible();
     await setOnline(page, true);

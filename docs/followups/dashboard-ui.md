@@ -5,6 +5,45 @@
 (entries below, newest at top)
 
 
+## 2026-07-02 — Drawer-family e2e specs broken by Timeline live-mode auto-scroll
+
+**What:** Three drawer e2e specs fail deterministically against the live worktree
+stack — `agent-drawer.spec.ts:77` (Open as page: strict-mode violation, two
+`drawer-header`s), `agent-drawer.spec.ts:118` (empty-filter: the
+`open timeline filters` click times out), and `drawer-sticky-headers.spec.ts:86`
+(condensed header present at rest, expected absent). Root cause for the latter
+two: `Timeline.tsx`'s live-mode auto-scroll (`el.scrollTop = el.scrollHeight`
+when `filteredEvents.length` grows under `liveMode`) fires on the *first* data
+load of a `running` agent (ref seeds 0 → N), so the drawer opens pre-scrolled —
+observed `scrollTop: 134` at rest on `/#/agent/CREW-101`. The condensed header
+is then already mounted and the toolbar sits under it. The specs predate the
+live-tail behavior. The `:77` dual-header case needs its own diagnosis (drawer
+content lingering across the route change to the full page).
+
+**Why noticed:** CREW-311's e2e verification. Confirmed pre-existing by
+re-running the specs with `packages/dashboard/src` checked out at `origin/main`
+(fbe2e1d) — same failures. Not a CREW-311 regression.
+
+**Anchors:** `packages/dashboard/src/components/Timeline/Timeline.tsx:148-157`
+(auto-scroll effect), `packages/dashboard/tests/e2e/agent-drawer.spec.ts`,
+`packages/dashboard/tests/e2e/drawer-sticky-headers.spec.ts`, CREW-311 PR
+description (Test Plan section).
+
+**What's been considered:** (a) reset scroll in the specs before asserting —
+papers over a possibly-unintended UX (should a *drawer open* really start at
+the bottom?); (b) suppress the auto-scroll on the initial load (only tail on
+*subsequent* growth) — likely the real fix if the design intent is "open at
+top, tail once you're following"; (c) decide the design intent first, then fix
+whichever side is wrong.
+
+**Shape of work:** small — one guard in `Timeline.tsx` (skip the scroll when
+`prev === 0`/first data) or spec updates; plus a separate look at the `:77`
+dual-header strict violation.
+
+**Open questions:** Is open-at-bottom intended for live agents? Does the `:77`
+failure share the same root cause or is it a Radix presence/animation issue?
+
+
 ## 2026-06-25 — Supervisor Stop/Restart effect lags up to one action long-poll cycle
 
 **What:** CREW-293 wired the SupervisorCard Stop/Restart to the `runner_commands` reverse-queue. The command is _applied_ + reported quickly (the command-drain runs on its own ~2s timer), but the actual effect — the worker process exiting so the supervisor stops (exit 0) or respawns (non-zero) — is gated on the worker's **main loop** noticing the abort, which only happens after the in-flight `claimPendingAction` long-poll returns (up to a full poll cycle, ~25s). So the dashboard can show the command `applied` well before the supervisor actually goes down / comes back. Functionally correct, just laggy.

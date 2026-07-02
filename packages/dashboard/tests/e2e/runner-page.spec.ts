@@ -3,19 +3,21 @@ import { test, expect } from '@playwright/test';
 type Injector = (name: string, data: unknown) => void;
 
 /**
- * The Runner page (CREW-245): a third top-level tab rendering the supervisor,
- * live processes, and the empty attention sections, with the live-process list
- * driven by the `runner.snapshot_changed` SSE event. The worktree stack has no
- * host runner, so the page starts empty; we fan a synthetic snapshot through
- * the same dispatcher real SSE messages use (the dev build exposes
+ * The Runner page (CREW-245): the supervisor, live processes, and the empty
+ * attention sections, with the live-process list driven by the
+ * `runner.snapshot_changed` SSE event. The worktree stack has no host runner,
+ * so the page starts empty; we fan a synthetic snapshot through the same
+ * dispatcher real SSE messages use (the dev build exposes
  * `__crewTestInjectEvent`) to prove the snapshot wiring + cancel control.
+ *
+ * CREW-311 removed the Runner nav tab (the grid is the single lifecycle
+ * surface), so these specs enter via the direct hash route — which survives
+ * until ticket F deletes the page wholesale, and these specs with it.
  */
 test.describe('Runner page (CREW-245)', () => {
-  test('navigates to the Runner tab and renders the section stack', async ({ page }) => {
-    await page.goto('/');
-    await page.getByRole('link', { name: 'Runner' }).click();
+  test('renders the section stack at the direct #/runner route', async ({ page }) => {
+    await page.goto('/#/runner');
 
-    await expect(page).toHaveURL(/#\/runner$/);
     await expect(page.getByRole('heading', { name: 'Runner' })).toBeVisible();
     // The supervisor card always renders (its status pill is down or running).
     await expect(page.getByText('Supervisor', { exact: true })).toBeVisible();
@@ -89,8 +91,10 @@ test.describe('Runner page (CREW-245)', () => {
       );
     });
 
-    // The ProcessRow renders the tracked process with a Cancel control.
-    await expect(page.getByText('CREW-999')).toBeVisible();
+    // The ProcessRow renders the tracked process with a Cancel control. The
+    // locator is scoped to the row (a bare getByText('CREW-999') collides
+    // with whatever pending action_requests the worktree DB accumulates).
+    await expect(page.getByRole('button', { name: 'Open run drawer for CREW-999' })).toBeVisible();
     const cancel = page.getByRole('button', { name: 'Cancel' });
     await expect(cancel).toBeVisible();
 
