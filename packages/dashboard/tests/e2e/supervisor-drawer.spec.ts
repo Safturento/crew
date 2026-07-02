@@ -59,7 +59,9 @@ test.describe('Supervisor drawer — reconcile roll-up (CREW-312)', () => {
 
   test('lists queued + orphaned runs and enqueues Dequeue / Reap commands', async ({ page }) => {
     await mockReconcile(page, {
-      queued: [{ key: 'CREW-9', projectName: 'crew', state: 'queued', since: '2026-06-30T10:00:00Z' }],
+      queued: [
+        { key: 'CREW-9', projectName: 'crew', state: 'queued', since: '2026-06-30T10:00:00Z' },
+      ],
       orphaned: [
         { key: 'CREW-11', projectName: 'crew', state: 'orphaned', since: '2026-06-30T09:00:00Z' },
       ],
