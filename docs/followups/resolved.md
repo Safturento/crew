@@ -2,6 +2,15 @@
 
 > Items that were ticketed + shipped, or fixed inline. Kept for historical context. Index: [`../followups.md`](../followups.md).
 
+## 2026-07-02 — Dispatch-gate preflight failures never reach the agent timeline (all-green timeline on an `error` run)
+
+**What:** The KAN-48 dispatch died in the `excluded-commands` dispatch-preflight check ~700ms after `npm ci`. The agent settled to `error`, but its timeline showed every startup phase green then simply stopped — the diagnosis was only reachable via the (now-retired) Runner page. Three gaps: (1) the dispatch preflight + `installPlaywrightBrowsers` tail of `prepareAgentEnvironment` (plus the Bruno env write and skill/hook injection) were not wrapped in `bracketStartupPhase`, so a throw there emitted no `failed` phase; (2) `TimelineService.getTimeline` never merged the `runs` row's structured `failed-start` diagnosis, so the reason was captured but unreachable from the drawer; (3) `GET /api/agents/:key` 404'd for a zero-run agent (a pre-registration death, e.g. a worktree-phase failure), so the drawer couldn't even open.
+
+**Why noticed:** The 2026-07-02 KAN-48 dispatch (recipes) and CREW-313's own failed dispatch (a stale host `.git/config.lock` worktree-phase death). This is the late-gate counterpart to CREW-308's early-gate visibility work — the Epic's "no startup failure is ever invisible" goal.
+
+**Anchors:** `packages/cli/src/lib/run/agent-environment.ts` (dispatch preflight + playwright install tail); `packages/cli/src/commands/run.ts` (Bruno env write, skill/hook injection); `packages/daemon/src/services/TimelineService.ts`; `packages/daemon/src/services/AgentsService.ts` (`getByKey`); `packages/shared/src/transcripts/schemas.ts`; the Timeline dashboard components. Originated as the crew PR [#450](https://github.com/Safturento/crew/pull/450) followup entry.
+
+**Resolved 2026-07-02:** Shipped in CREW-313. Bracketed the pre-spawn tail (new `crew_startup_dispatch_preflight` / `crew_startup_playwright_install` / `crew_startup_bruno_env` / `crew_startup_skill_injection` phases); added a synthetic `crew_failed_start` event that `TimelineService` merges from the latest `failed-start` run's `failure_*` columns; and made `getByKey` return an agents-row-backed detail (state from the transition log, null run-derived fields) for a zero-run agent so the drawer opens on a pre-registration death. The original Active entry lived in the still-unmerged PR #450, so it was recorded directly here on resolution rather than cut from a topic file.
 
 ## 2026-06-05 — Dashboard has no cancel action; CLI kill never notifies the daemon
 
@@ -20,7 +29,7 @@
 - Does the runner currently track the PID of each `crew run` it spawns well enough to signal it cleanly? (Check `packages/cli/src/lib/runner/`.)
 - New terminal state (`cancelled`) vs reusing `error`? Resolve together with the reaper followup, which raises the same question.
 
-**Resolved 2026-06-28:** Closed by Epic [CREW-235](https://safturento.atlassian.net/browse/CREW-235) — the dashboard Cancel action shipped: drawer-header cancel ([CREW-246](https://safturento.atlassian.net/browse/CREW-246)) and Runner-page soft→hard cancel escalation ([CREW-245](https://safturento.atlassian.net/browse/CREW-245)), routing through the `runner_commands` reverse queue so the signalled process lands a clean `completeRun`. The **backstop half** (a daemon auto-reaper for fully-`running` orphans that bypass *any* graceful path — SIGKILL, container death) was deliberately NOT covered here; it is carved out to standalone ticket [CREW-305](https://safturento.atlassian.net/browse/CREW-305), tracked by the still-Active "2026-05-18 — Daemon has no reaper for orphaned runs stuck in `running`" entry.
+**Resolved 2026-06-28:** Closed by Epic [CREW-235](https://safturento.atlassian.net/browse/CREW-235) — the dashboard Cancel action shipped: drawer-header cancel ([CREW-246](https://safturento.atlassian.net/browse/CREW-246)) and Runner-page soft→hard cancel escalation ([CREW-245](https://safturento.atlassian.net/browse/CREW-245)), routing through the `runner_commands` reverse queue so the signalled process lands a clean `completeRun`. The **backstop half** (a daemon auto-reaper for fully-`running` orphans that bypass _any_ graceful path — SIGKILL, container death) was deliberately NOT covered here; it is carved out to standalone ticket [CREW-305](https://safturento.atlassian.net/browse/CREW-305), tracked by the still-Active "2026-05-18 — Daemon has no reaper for orphaned runs stuck in `running`" entry.
 
 ## 2026-06-04 — New Run modal step 2 is a text entry, not the Figma open-ticket picker
 
@@ -83,7 +92,7 @@
 
 **Open questions:** Does the webhook actually run on a separate event-loop turn from the poll round such that a race is reachable in practice (both are in-process on one Node daemon)? If `markMerged` calls are never truly interleaved (single-threaded JS, no `await` between the read and insert in the same microtask)… but there _is_ an `await` between `latestState` and the insert, so interleaving is reachable. Confirm in child C.
 
-**Resolved 2026-06-28:** Resolved as **option (b) — accept the duplicate as harmless** — at the close of Epic [CREW-267](https://safturento.atlassian.net/browse/CREW-267). Verified against HEAD: `PrTransitionService.markMerged` still performs an unguarded check-then-insert (an `await` separates the `latestState` read from the insert), so a genuine concurrent webhook-vs-poll race could write two `pr_merged` rows. This is intentionally tolerated — `AgentsService.deriveState` projects from the *latest* transition and two identical `pr_merged` rows render identically, so the duplicate is inert at crew's scale and single-daemon write pattern. If exactly-once transitions are ever needed, wrap the check+insert in a `BEGIN IMMEDIATE` Kysely transaction (option a).
+**Resolved 2026-06-28:** Resolved as **option (b) — accept the duplicate as harmless** — at the close of Epic [CREW-267](https://safturento.atlassian.net/browse/CREW-267). Verified against HEAD: `PrTransitionService.markMerged` still performs an unguarded check-then-insert (an `await` separates the `latestState` read from the insert), so a genuine concurrent webhook-vs-poll race could write two `pr_merged` rows. This is intentionally tolerated — `AgentsService.deriveState` projects from the _latest_ transition and two identical `pr_merged` rows render identically, so the duplicate is inert at crew's scale and single-daemon write pattern. If exactly-once transitions are ever needed, wrap the check+insert in a `BEGIN IMMEDIATE` Kysely transaction (option a).
 
 ## 2026-06-25 — Runner never reaps dead processes: phantom "running" entries linger, and early-death runs never settle to error
 
@@ -472,4 +481,3 @@ The first two examples resolve once the structural fix lands. The third is a ski
 - Is the empty-state-hides-section behavior intentional UX, or accidental?
 
 **Resolved 2026-05-22:** Resolved via the drawer code migration Epic (CREW-177). `StateHistoryBar` and `TokenTable` were both deleted in CREW-182. The Token-usage section now ships as the `TokensByTool` composite (CREW-180), wired into `AgentBody` between the header and Timeline (CREW-178 backend + CREW-180 frontend). State history is surfaced as state-grouped Timeline sections (CREW-181) instead of the standalone bar.
-

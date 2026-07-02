@@ -278,9 +278,18 @@ export const STARTUP_PHASE_SUBTYPES_INTERNAL = [
   'crew_startup_preflight',
   'crew_startup_worktree',
   'crew_startup_env_spec',
-  'crew_startup_npm_install',
+  // CREW-313: Bruno env write (run.ts) — a pre-launching-register throw path.
+  'crew_startup_bruno_env',
   'crew_startup_docker',
+  'crew_startup_npm_install',
+  // CREW-313: the pre-spawn tail of prepareAgentEnvironment. Chromium install
+  // + the dispatch preflight gate — a throw here used to leave an all-green
+  // timeline with the reason only on the Runner page.
+  'crew_startup_playwright_install',
+  'crew_startup_dispatch_preflight',
   'crew_startup_mcp',
+  // CREW-313: skill + state-event-hook injection into the worktree.
+  'crew_startup_skill_injection',
   'crew_startup_claude_spawn',
 ] as const;
 
@@ -298,13 +307,35 @@ export const systemStartupPhaseRowSchema = baseEnvelopeSchema
   .passthrough();
 
 /**
+ * CREW-313 synthetic terminal event. Built by `TimelineService.getTimeline`
+ * from the latest `failed-start` `runs` row (`failure_check/headline/
+ * remediation/output`) when the dispatch died in a gate whose structured
+ * diagnosis reached the daemon but never a startup `failed` phase (e.g. a
+ * `PreflightError` caught by `runTrackedPreflight`). It is the safety net that
+ * surfaces the reason on the drawer timeline for any death path that skipped
+ * the startup log. Like `systemStartupPhaseRowSchema` it is never round-tripped
+ * through `parseTranscriptLine` — it is constructed daemon-side.
+ */
+export const systemFailedStartSchema = baseEnvelopeSchema
+  .extend({
+    type: z.literal('system'),
+    subtype: z.literal('crew_failed_start'),
+    timestamp: z.string(),
+    check: z.string(),
+    headline: z.string(),
+    remediation: z.string(),
+    output: z.string(),
+  })
+  .passthrough();
+
+/**
  * `z.union` (not `z.discriminatedUnion`) because the startup-phase
  * variant carries a `z.enum`-typed subtype rather than a single literal
  * — making `subtype` a non-literal discriminator across the union.
- * The runtime cost is negligible at this arm count (8 variants) and
- * the resulting `SystemEvent` type stays accurate. Switching to a
- * generated per-literal discriminated form is a documented tradeoff:
- * it weakens `TranscriptEvent` inference downstream (CREW-201 review).
+ * The runtime cost is negligible at this arm count and the resulting
+ * `SystemEvent` type stays accurate. Switching to a generated per-literal
+ * discriminated form is a documented tradeoff: it weakens `TranscriptEvent`
+ * inference downstream (CREW-201 review).
  */
 export const systemEventSchema = z.union([
   systemTurnDurationSchema,
@@ -315,6 +346,7 @@ export const systemEventSchema = z.union([
   systemApiErrorSchema,
   systemAwaySummarySchema,
   systemStartupPhaseRowSchema,
+  systemFailedStartSchema,
 ]);
 
 // ─── attachment subtypes (20) — nested z.union on `attachment.type` ───
@@ -498,10 +530,15 @@ export const KNOWN_SYSTEM_SUBTYPES = new Set<string>([
   'crew_startup_preflight',
   'crew_startup_worktree',
   'crew_startup_env_spec',
+  'crew_startup_bruno_env',
   'crew_startup_npm_install',
   'crew_startup_docker',
+  'crew_startup_playwright_install',
+  'crew_startup_dispatch_preflight',
   'crew_startup_mcp',
+  'crew_startup_skill_injection',
   'crew_startup_claude_spawn',
+  'crew_failed_start',
 ]);
 
 export const KNOWN_ATTACHMENT_TYPES = new Set<string>([
@@ -578,4 +615,5 @@ export type AiTitleEvent = z.infer<typeof aiTitleEventSchema>;
 export type CustomTitleEvent = z.infer<typeof customTitleEventSchema>;
 export type AgentNameEvent = z.infer<typeof agentNameEventSchema>;
 export type SystemEvent = z.infer<typeof systemEventSchema>;
+export type SystemFailedStartEvent = z.infer<typeof systemFailedStartSchema>;
 export type AttachmentEvent = z.infer<typeof attachmentEventSchema>;

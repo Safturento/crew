@@ -375,6 +375,36 @@ describe('TranscriptRow', () => {
         );
       });
     });
+
+    describe('CREW-313 synthetic failed-start event', () => {
+      const failedStart = {
+        type: 'system',
+        subtype: 'crew_failed_start',
+        timestamp: '2026-07-02T17:44:01.000Z',
+        check: 'excluded-commands',
+        headline: 'Sandbox is missing required excludedCommands entries',
+        remediation: 'Run `crew doctor --fix`',
+        output: 'excluded-commands FAIL\n  missing: npm run bruno:smoke*',
+      } as unknown as SystemEvent;
+
+      it('renders the Failed start label with error tone and the headline', () => {
+        render(<TranscriptRow event={failedStart} />);
+        expect(screen.getByTestId('transcript-row-tag')).toHaveTextContent('Failed start');
+        expect(screen.getByTestId('transcript-row')).toHaveAttribute('data-tone', 'error');
+        expect(screen.getByTestId('transcript-row-text')).toHaveTextContent(
+          'Sandbox is missing required excludedCommands entries',
+        );
+      });
+
+      it('expanded view carries the full diagnosis (check, remediation, output)', () => {
+        render(<TranscriptRow event={failedStart} />);
+        fireEvent.click(screen.getByTestId('transcript-row-trigger'));
+        const expanded = screen.getByTestId('transcript-row-expanded');
+        expect(expanded).toHaveTextContent('Check: excluded-commands');
+        expect(expanded).toHaveTextContent('crew doctor --fix');
+        expect(expanded).toHaveTextContent('npm run bruno:smoke*');
+      });
+    });
   });
 
   describe('multi-block events', () => {

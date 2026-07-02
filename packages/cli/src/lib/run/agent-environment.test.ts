@@ -18,12 +18,21 @@ vi.mock('./install-node-modules.js', () => ({
 vi.mock('../preflight/run-preflight.js', () => ({
   runPreflight: vi.fn(),
 }));
+// Record which phases get bracketed without touching `~/.crew` on disk. The
+// stub just runs the work fn, preserving each caller's throw/return semantics
+// (bracket.ts's started/failed emission is covered by its own unit test).
+vi.mock('../startup-events/index.js', () => ({
+  bracketStartupPhase: vi.fn(
+    async (_key: string, _spec: { subtype: string }, work: () => Promise<unknown>) => work(),
+  ),
+}));
 
 import { ensureStackRunning } from '../docker/ensure-stack-running.js';
 import { startDockerBringup } from '../docker/start-bringup.js';
 import { installPlaywrightBrowsers } from '../mcp-config/install-browsers.js';
 import { installNodeModules } from './install-node-modules.js';
 import { runPreflight, PreflightError } from '../preflight/index.js';
+import { bracketStartupPhase } from '../startup-events/index.js';
 import { prepareAgentEnvironment } from './agent-environment.js';
 
 const ensureMock = vi.mocked(ensureStackRunning);
@@ -31,13 +40,29 @@ const startBringupMock = vi.mocked(startDockerBringup);
 const installMock = vi.mocked(installPlaywrightBrowsers);
 const npmInstallMock = vi.mocked(installNodeModules);
 const runPreflightMock = vi.mocked(runPreflight);
+const bracketMock = vi.mocked(bracketStartupPhase);
+
+/** Subtypes passed to `bracketStartupPhase` across all recorded calls. */
+function bracketedSubtypes(): string[] {
+  return bracketMock.mock.calls.map((c) => (c[1] as { subtype: string }).subtype);
+}
+
+// Clear recorded bracket calls between every test (mockClear keeps the
+// run-the-work implementation; mockReset would strip it).
+beforeEach(() => {
+  bracketMock.mockClear();
+});
 
 function baseConfig(): ProjectConfig {
   return {
     name: 'test',
     repo_path: '/repo',
     default_branch: 'main',
-    jira: { project_key: 'X', site: 'https://x.atlassian.net', ready_status: 'Ready for Development' },
+    jira: {
+      project_key: 'X',
+      site: 'https://x.atlassian.net',
+      ready_status: 'Ready for Development',
+    },
     github: { repo: 'a/b' },
     db_clone: {
       postgres_service: 'postgres',
@@ -456,6 +481,55 @@ describe('prepareAgentEnvironment — preflight integration', () => {
     });
 
     expect(events).toEqual(['docker-started', 'preflight-ran']);
+  });
+
+  it('brackets the dispatch preflight as crew_startup_dispatch_preflight', async () => {
+    await prepareAgentEnvironment({
+      config: configWithDocker(),
+      worktree: '/wt',
+      key: 'KAN-1',
+      env: process.env,
+      mode: 'fresh',
+    });
+
+    expect(bracketedSubtypes()).toContain('crew_startup_dispatch_preflight');
+  });
+
+  it('records the dispatch-preflight phase even when the gate fails', async () => {
+    startBringupMock.mockReturnValue(
+      Promise.resolve({ exitCode: 0 }) as unknown as ReturnType<typeof startDockerBringup>,
+    );
+    runPreflightMock.mockRejectedValue(new PreflightError('fail', 'forced failure', 'fix it'));
+
+    await expect(
+      prepareAgentEnvironment({
+        config: configWithDocker(),
+        worktree: '/wt',
+        key: 'KAN-1',
+        env: process.env,
+        mode: 'fresh',
+      }),
+    ).rejects.toBeInstanceOf(PreflightError);
+
+    // The bracket wrapped the throwing gate (its own unit test covers that the
+    // wrapper emits a `failed` event before re-throwing).
+    expect(bracketedSubtypes()).toContain('crew_startup_dispatch_preflight');
+  });
+
+  it('brackets the Chromium install as crew_startup_playwright_install', async () => {
+    const cfg = baseConfig();
+    cfg.playwright = { app_url: 'http://localhost:3000', smoke: { enabled: true } };
+    installMock.mockResolvedValue({ rc: 0, logPath: '/tmp/crew-playwright-KAN-1.log' });
+
+    await prepareAgentEnvironment({
+      config: cfg,
+      worktree: '/wt',
+      key: 'KAN-1',
+      env: process.env,
+      mode: 'fresh',
+    });
+
+    expect(bracketedSubtypes()).toContain('crew_startup_playwright_install');
   });
 
   it('propagates PreflightError out of prepareAgentEnvironment', async () => {

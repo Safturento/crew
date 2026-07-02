@@ -78,4 +78,11 @@ describe('labelForSystem', () => {
     expect(labelForSystem('crew_startup_mcp')).toBe('MCP');
     expect(labelForSystem('crew_startup_claude_spawn')).toBe('Claude spawn');
   });
+  it('CREW-313 pre-spawn tail phases + failed-start have labels', () => {
+    expect(labelForSystem('crew_startup_bruno_env')).toBe('Bruno env');
+    expect(labelForSystem('crew_startup_playwright_install')).toBe('Playwright install');
+    expect(labelForSystem('crew_startup_dispatch_preflight')).toBe('Dispatch preflight');
+    expect(labelForSystem('crew_startup_skill_injection')).toBe('Skill injection');
+    expect(labelForSystem('crew_failed_start')).toBe('Failed start');
+  });
 });

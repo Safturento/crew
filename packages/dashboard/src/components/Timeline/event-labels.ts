@@ -38,6 +38,12 @@ export const SYSTEM_LABELS: Record<string, string> = {
   crew_startup_docker: 'Docker',
   crew_startup_mcp: 'MCP',
   crew_startup_claude_spawn: 'Claude spawn',
+  // CREW-313 — pre-spawn tail phases + the synthetic run-level failed-start.
+  crew_startup_bruno_env: 'Bruno env',
+  crew_startup_playwright_install: 'Playwright install',
+  crew_startup_dispatch_preflight: 'Dispatch preflight',
+  crew_startup_skill_injection: 'Skill injection',
+  crew_failed_start: 'Failed start',
 };
 
 export function labelForAttachment(type: string): string {

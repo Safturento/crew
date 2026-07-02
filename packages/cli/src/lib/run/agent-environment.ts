@@ -13,7 +13,7 @@ import { runPreflight } from '../preflight/index.js';
 import { agentNeedsAppRunning } from './app-lifecycle.js';
 import { installNodeModules } from './install-node-modules.js';
 import { bracketStartupPhase } from '../startup-events/index.js';
-import { dockerLogPathFor, npmInstallLogPathFor } from './paths.js';
+import { dockerLogPathFor, npmInstallLogPathFor, playwrightLogPathFor } from './paths.js';
 
 export interface AgentEnvironmentOptions {
   config: ProjectConfig;
@@ -129,21 +129,46 @@ export async function prepareAgentEnvironment(
     );
     result.npmInstallLogPath = npmInstall.logPath;
 
-    console.log(pc.dim('→ ensuring Chromium is installed for Playwright…'));
-    const install = await installPlaywrightBrowsers({ worktree, key, env });
+    // CREW-313: bracket the Chromium install so a throw here records a
+    // `crew_startup_playwright_install` `failed` phase (with its log path)
+    // instead of a silent all-green timeline.
+    const install = await bracketStartupPhase(
+      key,
+      {
+        subtype: 'crew_startup_playwright_install',
+        startedSummary: 'installing Chromium for Playwright',
+        completedSummary: () => 'Chromium ready',
+        completedLogPath: playwrightLogPathFor(key),
+        failedLogPath: playwrightLogPathFor(key),
+      },
+      async () => {
+        console.log(pc.dim('→ ensuring Chromium is installed for Playwright…'));
+        const r = await installPlaywrightBrowsers({ worktree, key, env });
+        if (r.rc !== 0) {
+          throw new Error(`playwright install failed (rc=${r.rc}). Log: ${r.logPath}`);
+        }
+        console.log(pc.dim(`    log: ${r.logPath}`));
+        return r;
+      },
+    );
     result.playwrightLogPath = install.logPath;
-    if (install.rc !== 0) {
-      throw new Error(`playwright install failed (rc=${install.rc}). Log: ${install.logPath}`);
-    }
-    console.log(pc.dim(`    log: ${install.logPath}`));
   }
 
-  await runPreflight({
-    config,
-    worktree,
-    dockerPorts,
-    envVars,
-  });
+  // CREW-313: bracket the dispatch preflight gate. A `PreflightError` thrown
+  // here re-throws unchanged (caught upstream by `runTrackedPreflight`, which
+  // records the structured failed-start on the run row), but now it also
+  // records a red `crew_startup_dispatch_preflight` phase on the startup
+  // timeline — carrying `preflight <check>: <headline>` as its summary — so the
+  // dispatch gate is no longer invisible on an otherwise all-green timeline.
+  await bracketStartupPhase(
+    key,
+    {
+      subtype: 'crew_startup_dispatch_preflight',
+      startedSummary: 'running dispatch preflight checks',
+      completedSummary: () => 'dispatch preflight passed',
+    },
+    () => runPreflight({ config, worktree, dockerPorts, envVars }),
+  );
 
   return result;
 }
