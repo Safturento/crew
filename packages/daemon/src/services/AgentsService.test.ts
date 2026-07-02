@@ -669,12 +669,38 @@ describe('AgentsService.getByKey', () => {
     }
   });
 
-  it('returns null when an agent row exists but has no runs', async () => {
+  it('returns a detail for a zero-run agent (pre-registration death), state from the transition log', async () => {
     const db = await freshDb();
     try {
-      await makeAgent(db, 'KAN-X');
+      // A worktree-phase failure: agents row + an `error` startup-failure
+      // transition, but no runs row was ever pre-registered.
+      await makeAgent(db, 'KAN-X', {
+        projectName: 'demo',
+        worktreePath: '/work/KAN-X',
+      });
+      await makeStateTransition(db, 'KAN-X', 'error', 1000, 'init', 'startup-failure');
+
       const svc = new AgentsService({ db });
-      expect(await svc.getByKey('KAN-X')).toBeNull();
+      const detail = await svc.getByKey('KAN-X');
+      expect(detail).not.toBeNull();
+      expect(detail).toMatchObject({
+        key: 'KAN-X',
+        project: 'demo',
+        state: 'error',
+        worktree_path: '/work/KAN-X',
+        pr_url: null,
+        model: '',
+        tool_call_count: 0,
+      });
+      expect(detail?.runs).toEqual([]);
+      expect(detail?.tokens).toEqual({
+        total: 0,
+        input: 0,
+        output: 0,
+        cache_read: 0,
+        cache_creation: 0,
+      });
+      expect(detail?.tokens_by_tool).toEqual([]);
     } finally {
       await db.destroy();
     }

@@ -282,14 +282,29 @@ export class AgentsService {
   }
 
   /**
-   * Single-agent detail. Returns null when no run exists for the key
-   * (an agents row alone is not enough — a run is the signal that the
-   * agent actually started). State derivation reuses the same machinery
-   * as `list()`: terminal guards (finish/error/pr_merged) over a
-   * non-terminal state projected from the `state_transitions` log
-   * (CREW-234). The caller renders 404 on null.
+   * Single-agent detail. Returns null only when no agents row exists for the
+   * key — the caller renders 404 on null. A zero-run agents row (a
+   * pre-registration death, CREW-313) returns a detail with state derived from
+   * the `state_transitions` log and null/empty run-derived fields, so the
+   * drawer opens and can render the startup timeline that carries the failure
+   * reason. State derivation reuses the same machinery as `list()`: terminal
+   * guards (finish/error/pr_merged) over a non-terminal state projected from the
+   * transition log (CREW-234).
    */
   async getByKey(key: string): Promise<AgentDetail | null> {
+    // CREW-313: the agents row is the existence signal, not the runs rows. A
+    // pre-registration death (e.g. a worktree-phase failure) leaves an agents
+    // row + an `error` transition but zero runs; the drawer must still open so
+    // it can render the startup timeline that carries the failure reason. Only
+    // a genuinely-unknown key (no agents row) 404s.
+    const agent = await this.db
+      .selectFrom('agents')
+      .select(['key', 'project_name', 'ticket_title', 'worktree_path', 'pr_url', 'app_url'])
+      .where('key', '=', key)
+      .executeTakeFirst();
+
+    if (!agent) return null;
+
     const runRows = await this.db
       .selectFrom('runs')
       .select([
@@ -308,21 +323,10 @@ export class AgentsService {
       .orderBy('id', 'asc')
       .execute();
 
-    if (runRows.length === 0) return null;
-
-    const agent = await this.db
-      .selectFrom('agents')
-      .select(['key', 'project_name', 'ticket_title', 'worktree_path', 'pr_url', 'app_url'])
-      .where('key', '=', key)
-      .executeTakeFirst();
-
-    // The runs row exists, so there should always be an agents row too —
-    // but defend against an inconsistent DB rather than crashing the
-    // request. An empty record is preferable to a 500.
-    const project = agent?.project_name ?? '';
-    const worktreePath = agent?.worktree_path ?? '';
-    const ticketTitle = agent?.ticket_title ?? null;
-    const prUrl = agent?.pr_url ?? null;
+    const project = agent.project_name ?? '';
+    const worktreePath = agent.worktree_path ?? '';
+    const ticketTitle = agent.ticket_title ?? null;
+    const prUrl = agent.pr_url ?? null;
 
     const totals = await this.db
       .selectFrom('tool_calls as tc')
@@ -348,12 +352,17 @@ export class AgentsService {
     // not feed `completedAt`/`exitCode`/`latestHasToolCalls`. Whether
     // finish itself completed ok is handled separately below.
     const meaningfulRuns = runRows.filter((r) => r.command !== 'finish');
-    const latest = meaningfulRuns[meaningfulRuns.length - 1] ?? runRows[runRows.length - 1];
-    const latestHasToolCalls = await this.db
-      .selectFrom('tool_calls')
-      .select(sql<number>`COUNT(*)`.as('n'))
-      .where('run_id', '=', latest.id)
-      .executeTakeFirst();
+    // Null for a zero-run agent (CREW-313) — state then derives purely from the
+    // transition log below (completedAt/exitCode null), exactly as `list()` does
+    // for the same rows.
+    const latest = meaningfulRuns[meaningfulRuns.length - 1] ?? runRows[runRows.length - 1] ?? null;
+    const latestHasToolCalls = latest
+      ? await this.db
+          .selectFrom('tool_calls')
+          .select(sql<number>`COUNT(*)`.as('n'))
+          .where('run_id', '=', latest.id)
+          .executeTakeFirst()
+      : undefined;
     const finishCompletedOk = runRows.some(
       (r) => r.command === 'finish' && r.completed_at !== null && r.exit_code === 0,
     );
@@ -381,8 +390,8 @@ export class AgentsService {
       .executeTakeFirst();
 
     const state = deriveState({
-      completedAt: latest.completed_at,
-      exitCode: latest.exit_code,
+      completedAt: latest?.completed_at ?? null,
+      exitCode: latest?.exit_code ?? null,
       latestHasToolCalls: (latestHasToolCalls?.n ?? 0) > 0,
       currentState: latestToAgentState(latestTransition?.to_state ?? null),
       finishCompletedOk,

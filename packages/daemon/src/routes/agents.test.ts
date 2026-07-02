@@ -98,12 +98,52 @@ describe('GET /api/agents', () => {
 });
 
 describe('GET /api/agents/:key', () => {
-  it('returns 404 when no run exists for the key', async () => {
+  it('returns 404 when no agent row exists for the key', async () => {
     const { app, db } = await setupApp();
     try {
       const res = await app.inject({ method: 'GET', url: '/api/agents/NOPE-99' });
       expect(res.statusCode).toBe(404);
       expect(res.json()).toMatchObject({ error: 'agent_not_found' });
+    } finally {
+      await app.close();
+      await db.destroy();
+    }
+  });
+
+  it('returns 200 for a zero-run agent (pre-registration death) so the drawer can open', async () => {
+    const { app, db } = await setupApp();
+    try {
+      await db
+        .insertInto('agents')
+        .values({
+          key: 'KAN-DEAD',
+          project_name: 'demo',
+          ticket_title: null,
+          worktree_path: '/work/KAN-DEAD',
+          branch: 'KAN-DEAD',
+          pr_url: null,
+          created_at: '2026-07-02T17:44:00Z',
+        })
+        .execute();
+      await db
+        .insertInto('state_transitions')
+        .values({
+          agent_key: 'KAN-DEAD',
+          from_state: 'init',
+          to_state: 'error',
+          ts: 1000,
+          source: 'startup-failure',
+        })
+        .execute();
+
+      const res = await app.inject({ method: 'GET', url: '/api/agents/KAN-DEAD' });
+      expect(res.statusCode).toBe(200);
+      expect(res.json()).toMatchObject({
+        key: 'KAN-DEAD',
+        state: 'error',
+        worktree_path: '/work/KAN-DEAD',
+        runs: [],
+      });
     } finally {
       await app.close();
       await db.destroy();

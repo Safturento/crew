@@ -2,7 +2,11 @@ import { createReadStream } from 'node:fs';
 import { createInterface } from 'node:readline';
 import type { Kysely } from 'kysely';
 import type { Logger } from 'pino';
-import { parseTranscriptLine, type TranscriptEvent } from 'crew-shared';
+import {
+  parseTranscriptLine,
+  type SystemFailedStartEvent,
+  type TranscriptEvent,
+} from 'crew-shared';
 
 import type { DaemonDatabase } from '../db.js';
 import { mergeStartedAndCompleted } from './startup-events-merge.js';
@@ -43,15 +47,23 @@ export class TimelineService {
 
   async getTimeline(agentKey: string): Promise<TimelineResult> {
     const startupRows = await this.readStartupPhaseRows(agentKey);
+    // CREW-313: the latest structured `failed-start` run's diagnosis, rendered
+    // as a synthetic terminal event. It is the safety net for any death path
+    // whose reason reached the `runs` row but never a startup `failed` phase
+    // (e.g. a `PreflightError` intercepted by `runTrackedPreflight`). Empty
+    // array when there's no such row, so it concatenates transparently.
+    const failedStart = await this.readFailedStartEvent(agentKey);
+    const trailing: TranscriptEvent[] = failedStart ? [failedStart] : [];
 
     const path = await this.deps.resolveJsonlPath(agentKey);
     if (!path) {
-      // Transcript missing is non-terminal: startup events may still
-      // exist (e.g. an agent stuck in `initializing` because docker
-      // bringup is in flight). Surface them so the drawer is useful.
+      // Transcript missing is non-terminal: startup events (or a failed-start
+      // diagnosis) may still exist (e.g. a preflight death that never spawned
+      // claude). Surface them so the drawer is useful.
+      const events = [...startupRows, ...trailing];
       return {
-        events: startupRows,
-        warnings: startupRows.length === 0 ? ['transcript-missing'] : [],
+        events,
+        warnings: events.length === 0 ? ['transcript-missing'] : [],
       };
     }
 
@@ -67,9 +79,10 @@ export class TimelineService {
       }
     } catch (err) {
       if (isEnoent(err)) {
+        const events = [...startupRows, ...trailing];
         return {
-          events: startupRows,
-          warnings: startupRows.length === 0 ? ['transcript-missing'] : [],
+          events,
+          warnings: events.length === 0 ? ['transcript-missing'] : [],
         };
       }
       throw err;
@@ -85,9 +98,55 @@ export class TimelineService {
     // CREW-201: startup phase rows come BEFORE transcript events (CLI
     // emits them at preflight/bringup time, well before claude's first
     // tool_use). The transcript already has its own internal ordering,
-    // so we keep the two streams as-is and concatenate.
-    const events = [...startupRows, ...transcriptEvents];
+    // so we keep the two streams as-is and concatenate. CREW-313: the
+    // failed-start event is appended LAST — it is the terminal reason the
+    // dispatch never produced a running agent.
+    const events = [...startupRows, ...transcriptEvents, ...trailing];
     return { events, warnings: [] };
+  }
+
+  /**
+   * CREW-313: build a synthetic `crew_failed_start` event from the latest
+   * `failed-start` run for the agent. Returns `null` when no DB is wired, no
+   * failed-start row exists, or (defensively) the row carries no diagnosis at
+   * all — never an event full of empty strings for a partially-written row.
+   */
+  private async readFailedStartEvent(agentKey: string): Promise<SystemFailedStartEvent | null> {
+    const db = this.deps.db;
+    if (!db) return null;
+    const row = await db
+      .selectFrom('runs')
+      .select([
+        'failure_check',
+        'failure_headline',
+        'failure_remediation',
+        'failure_output',
+        'started_at',
+        'completed_at',
+      ])
+      .where('agent_key', '=', agentKey)
+      .where('status', '=', 'failed-start')
+      .orderBy('id', 'desc')
+      .limit(1)
+      .executeTakeFirst();
+    if (!row) return null;
+    if (
+      row.failure_check === null &&
+      row.failure_headline === null &&
+      row.failure_remediation === null &&
+      row.failure_output === null
+    ) {
+      return null;
+    }
+    return {
+      type: 'system',
+      subtype: 'crew_failed_start',
+      timestamp: row.completed_at ?? row.started_at,
+      check: row.failure_check ?? '',
+      headline: row.failure_headline ?? '',
+      remediation: row.failure_remediation ?? '',
+      output: row.failure_output ?? '',
+    };
   }
 
   /** CREW-201: read merged startup phase rows for an agent. Returns an
