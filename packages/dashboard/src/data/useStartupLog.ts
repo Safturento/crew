@@ -3,7 +3,7 @@ import { useQuery, type UseQueryResult } from '@tanstack/react-query';
 import { defaultClient } from './queries.js';
 
 // While a run is in-flight the startup log keeps growing, so the drawer
-// live-tails by refetching on a short interval (mirrors `useRunnerLogs`). The
+// live-tails by refetching on a short interval (mirrors `useSupervisorLog`). The
 // daemon also serves an SSE tail at `?follow=1`; the poll keeps the client one
 // shape (a plain `string | null`) and avoids an EventSource lifecycle.
 const LIVE_TAIL_INTERVAL_MS = 2_000;

@@ -18,7 +18,6 @@ export interface MockDaemonClientOptions {
   projects?: Project[];
   projectDetails?: Record<string, ProjectDetailResponse>;
   runnerStatus?: RunnerStatus;
-  runnerLogs?: string[];
   /** CREW-291: the three Runner-page lists served by `getRunnerPage`. */
   runnerPage?: RunnerPage;
   /** CREW-291: per-key startup logs served by `getStartupLog` (absent → 404/null). */
@@ -37,7 +36,6 @@ export class MockDaemonClient implements DaemonClient {
   private readonly projects: Project[];
   private readonly projectDetails: Record<string, ProjectDetailResponse>;
   private readonly runnerStatus: RunnerStatus;
-  private readonly runnerLogs: string[];
   private readonly runnerPage: RunnerPage;
   private readonly startupLogs: Record<string, string>;
   private readonly supervisorLog: string[];
@@ -58,7 +56,6 @@ export class MockDaemonClient implements DaemonClient {
       lastSeen: Date.now(),
       processes: [],
     };
-    this.runnerLogs = options.runnerLogs ?? [];
     this.runnerPage = options.runnerPage ?? EMPTY_RUNNER_PAGE;
     this.startupLogs = options.startupLogs ?? {};
     this.supervisorLog = options.supervisorLog ?? [];
@@ -99,10 +96,6 @@ export class MockDaemonClient implements DaemonClient {
 
   async getRunnerStatus(): Promise<RunnerStatus> {
     return this.runnerStatus;
-  }
-
-  async getRunnerLogs(): Promise<string[]> {
-    return this.runnerLogs;
   }
 
   async getSupervisorLog(): Promise<string[]> {

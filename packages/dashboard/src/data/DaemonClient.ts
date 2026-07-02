@@ -41,7 +41,6 @@ export interface DaemonClient {
   listProjectTickets(slug: string): Promise<ProjectTicketsResponse>;
   enqueueAction(input: EnqueueAction): Promise<ActionRequest>;
   getRunnerStatus(): Promise<RunnerStatus>;
-  getRunnerLogs(tail?: number): Promise<string[]>;
   /**
    * CREW-292: tail the supervisor's process-management log (the
    * spawn/respawn/heartbeat/reap slice of `runner.log`) for the supervisor

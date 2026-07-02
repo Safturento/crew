@@ -704,57 +704,6 @@ describe('HttpDaemonClient runner controls (CREW-245)', () => {
   });
 });
 
-describe('HttpDaemonClient.getRunnerLogs (CREW-221)', () => {
-  it('GETs /api/runner/logs and returns the lines', async () => {
-    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
-      new Response(JSON.stringify({ lines: ['boot', 'claimed CREW-1'] }), {
-        status: 200,
-        headers: { 'content-type': 'application/json' },
-      }),
-    );
-
-    const lines = await new HttpDaemonClient().getRunnerLogs();
-
-    expect(lines).toEqual(['boot', 'claimed CREW-1']);
-    expect(fetchSpy).toHaveBeenCalledWith('/api/runner/logs');
-  });
-
-  it('passes the tail count as a query param when given', async () => {
-    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
-      new Response(JSON.stringify({ lines: [] }), {
-        status: 200,
-        headers: { 'content-type': 'application/json' },
-      }),
-    );
-
-    await new HttpDaemonClient().getRunnerLogs(50);
-    expect(fetchSpy).toHaveBeenCalledWith('/api/runner/logs?tail=50');
-  });
-
-  it('returns an empty array when the log is absent (no runner)', async () => {
-    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
-      new Response(JSON.stringify({ lines: [] }), {
-        status: 200,
-        headers: { 'content-type': 'application/json' },
-      }),
-    );
-
-    expect(await new HttpDaemonClient().getRunnerLogs()).toEqual([]);
-  });
-
-  it('throws on non-2xx', async () => {
-    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('boom', { status: 500 }));
-    await expect(new HttpDaemonClient().getRunnerLogs()).rejects.toThrow(/500/);
-  });
-
-  it('throws on schema mismatch', async () => {
-    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
-      new Response(JSON.stringify({ lines: [42] }), { status: 200 }),
-    );
-    await expect(new HttpDaemonClient().getRunnerLogs()).rejects.toThrow();
-  });
-});
-
 describe('HttpDaemonClient.getRunnerPage (CREW-291)', () => {
   const PAGE = {
     failedToStart: [

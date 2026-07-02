@@ -159,7 +159,6 @@ describe('App', () => {
       listProjectTickets: () => Promise.reject(new Error('daemon unreachable')),
       enqueueAction: () => Promise.reject(new Error('daemon unreachable')),
       getRunnerStatus: () => Promise.reject(new Error('daemon unreachable')),
-      getRunnerLogs: () => Promise.reject(new Error('daemon unreachable')),
       getSupervisorLog: () => Promise.reject(new Error('daemon unreachable')),
       enqueueRunnerCommand: () => Promise.reject(new Error('daemon unreachable')),
       acknowledgeRun: () => Promise.reject(new Error('daemon unreachable')),

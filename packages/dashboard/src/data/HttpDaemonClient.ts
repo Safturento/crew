@@ -504,19 +504,6 @@ export class HttpDaemonClient implements DaemonClient {
     return RunnerStatusSchema.parse(await res.json());
   }
 
-  /**
-   * CREW-221: tail the host runner's log. Returns the trailing `tail` lines
-   * (daemon default when omitted), or `[]` when no runner log exists yet —
-   * the normal state on a worktree stack that runs no runner. Backs the
-   * log viewer opened from the runner health chip.
-   */
-  async getRunnerLogs(tail?: number): Promise<string[]> {
-    const qs = tail === undefined ? '' : `?tail=${tail}`;
-    const res = await fetch(`${this.baseUrl}/api/runner/logs${qs}`);
-    if (!res.ok) throw new Error(`GET /api/runner/logs: ${res.status}`);
-    return RunnerLogsSchema.parse(await res.json()).lines;
-  }
-
   async getSupervisorLog(tail?: number): Promise<string[]> {
     const qs = tail === undefined ? '' : `?tail=${tail}`;
     const res = await fetch(`${this.baseUrl}/api/runner/supervisor-log${qs}`);
@@ -584,7 +571,7 @@ export class HttpDaemonClient implements DaemonClient {
    * text, or `null` on 404 — a run that never captured a log. Backs the run
    * drawer's Console output region. The daemon also serves an SSE tail at
    * `?follow=1`; the drawer poll-refetches the static body while a run is
-   * in-flight instead (consistent with `getRunnerLogs`).
+   * in-flight instead (consistent with `getSupervisorLog`).
    */
   async getStartupLog(key: string): Promise<string | null> {
     const res = await fetch(`${this.baseUrl}/api/runs/${encodeURIComponent(key)}/startup-log`);

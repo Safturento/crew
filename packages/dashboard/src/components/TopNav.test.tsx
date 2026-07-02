@@ -15,14 +15,14 @@ function renderTopNav(ui: ReactElement) {
 
 beforeEach(() => {
   qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  // The mounted RunnerStatusChip reads runner status/logs; stub both so
-  // TopNav tests stay offline and deterministic.
+  // The mounted RunnerStatusChip reads runner status + the reconcile
+  // roll-up; stub both so TopNav tests stay offline and deterministic.
   vi.spyOn(defaultClient, 'getRunnerStatus').mockResolvedValue({
     online: false,
     lastSeen: null,
     processes: [],
   });
-  vi.spyOn(defaultClient, 'getRunnerLogs').mockResolvedValue([]);
+  vi.spyOn(defaultClient, 'reconcile').mockResolvedValue({ queued: [], orphaned: [] });
 });
 
 afterEach(() => {
@@ -56,17 +56,20 @@ describe('TopNav', () => {
     expect(screen.getByRole('link', { name: 'Projects' })).toHaveAttribute('aria-current', 'page');
   });
 
-  it('marks the Runner tab active for the runner route', () => {
+  // CREW-311: the Runner page retires with the runner rework — the grid is
+  // the single lifecycle surface and the chip toggles the supervisor drawer.
+  it('renders only the Agents and Projects tabs (no Runner tab)', () => {
     renderTopNav(
       <TopNav
-        route={{ kind: 'runner' }}
+        route={{ kind: 'agents-list' }}
         attentionCount={0}
         onClearAttention={() => {}}
         onNewRun={() => {}}
       />,
     );
-    expect(screen.getByRole('link', { name: 'Runner' })).toHaveAttribute('aria-current', 'page');
-    expect(screen.getByRole('link', { name: 'Agents' })).not.toHaveAttribute('aria-current');
+    expect(screen.queryByRole('link', { name: 'Runner' })).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Agents' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Projects' })).toBeInTheDocument();
   });
 
   it('disables the Clear attention button when count is 0', () => {
