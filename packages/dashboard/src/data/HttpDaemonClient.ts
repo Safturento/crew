@@ -4,6 +4,7 @@ import type {
   EnqueueAction,
   EnqueueRunnerCommand,
   ProjectTicketsResponse,
+  ReconcileRollup,
   RunnerCommand,
   RunnerPage,
 } from 'crew-shared';
@@ -60,12 +61,14 @@ const AgentSchema = z.object({
   ticketTitle: z.string(),
   state: z.enum([
     'initializing',
+    'queued',
     'running',
     'idle',
     'waiting',
     'pr_open',
     'pr_merged',
     'error',
+    'orphaned',
     'finished',
   ]),
   startedAt: z.string(),
@@ -82,12 +85,14 @@ const AgentDetailSchema = z.object({
   ticket_title: z.string().nullable(),
   state: z.enum([
     'initializing',
+    'queued',
     'running',
     'idle',
     'waiting',
     'pr_open',
     'pr_merged',
     'error',
+    'orphaned',
     'finished',
   ]),
   worktree_path: z.string(),
@@ -131,10 +136,12 @@ const AgentDetailSchema = z.object({
 
 const TransitionStateEnum = z.enum([
   'init',
+  'queued',
   'running',
   'pr_open',
   'pr_merged',
   'error',
+  'orphaned',
   'finished',
   'idle',
   'waiting',
@@ -142,12 +149,14 @@ const TransitionStateEnum = z.enum([
 
 const AgentStateEnum = z.enum([
   'initializing',
+  'queued',
   'running',
   'idle',
   'waiting',
   'pr_open',
   'pr_merged',
   'error',
+  'orphaned',
   'finished',
 ]);
 
@@ -326,6 +335,19 @@ const RunnerPageSchema = z.object({
   ),
 });
 
+// CREW-311: inline mirror of the shared `reconcileRollupSchema` — the
+// housekeeping buckets served by GET /api/runner/reconcile (CREW-310).
+const RunRefSchema = z.object({
+  key: z.string(),
+  projectName: z.string(),
+  state: z.enum(['queued', 'orphaned']),
+  since: z.string(),
+});
+const ReconcileRollupSchema = z.object({
+  queued: z.array(RunRefSchema),
+  orphaned: z.array(RunRefSchema),
+});
+
 const StateHistoryResponseSchema = z.object({
   transitions: z.array(
     z.object({
@@ -490,19 +512,6 @@ export class HttpDaemonClient implements DaemonClient {
     return RunnerStatusSchema.parse(await res.json());
   }
 
-  /**
-   * CREW-221: tail the host runner's log. Returns the trailing `tail` lines
-   * (daemon default when omitted), or `[]` when no runner log exists yet —
-   * the normal state on a worktree stack that runs no runner. Backs the
-   * log viewer opened from the runner health chip.
-   */
-  async getRunnerLogs(tail?: number): Promise<string[]> {
-    const qs = tail === undefined ? '' : `?tail=${tail}`;
-    const res = await fetch(`${this.baseUrl}/api/runner/logs${qs}`);
-    if (!res.ok) throw new Error(`GET /api/runner/logs: ${res.status}`);
-    return RunnerLogsSchema.parse(await res.json()).lines;
-  }
-
   async getSupervisorLog(tail?: number): Promise<string[]> {
     const qs = tail === undefined ? '' : `?tail=${tail}`;
     const res = await fetch(`${this.baseUrl}/api/runner/supervisor-log${qs}`);
@@ -553,12 +562,24 @@ export class HttpDaemonClient implements DaemonClient {
   }
 
   /**
+   * CREW-311: the housekeeping roll-up (CREW-310) — every agent whose derived
+   * state is `queued` or `orphaned`, bucketed, across all projects. Backs the
+   * runner chip's orphaned-count badge and (F) the supervisor drawer's
+   * Reconcile section.
+   */
+  async reconcile(): Promise<ReconcileRollup> {
+    const res = await fetch(`${this.baseUrl}/api/runner/reconcile`);
+    if (!res.ok) throw new Error(`GET /api/runner/reconcile: ${res.status}`);
+    return ReconcileRollupSchema.parse(await res.json());
+  }
+
+  /**
    * CREW-291: a run's raw startup console log (the `crew run` wrapper's
    * stdout/stderr captured at `~/.crew/startup/<key>.log`). Returns the body
    * text, or `null` on 404 — a run that never captured a log. Backs the run
    * drawer's Console output region. The daemon also serves an SSE tail at
    * `?follow=1`; the drawer poll-refetches the static body while a run is
-   * in-flight instead (consistent with `getRunnerLogs`).
+   * in-flight instead (consistent with `getSupervisorLog`).
    */
   async getStartupLog(key: string): Promise<string | null> {
     const res = await fetch(`${this.baseUrl}/api/runs/${encodeURIComponent(key)}/startup-log`);

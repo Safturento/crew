@@ -135,6 +135,39 @@ describe('HttpDaemonClient.listAgents', () => {
     expect(fetchSpy).toHaveBeenCalledWith('/api/agents');
   });
 
+  // CREW-311: the daemon serves queued/orphaned agents since CREW-307; a
+  // stale enum here would blank the whole grid on the first queued row.
+  it('parses queued and orphaned agents (with the empty startedAt a queued row carries)', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          agents: [
+            {
+              key: 'KAN-23',
+              projectName: 'demo',
+              ticketTitle: 'Queued work',
+              state: 'queued',
+              startedAt: '',
+              tokens: 0,
+            },
+            {
+              key: 'CREW-11',
+              projectName: 'crew',
+              ticketTitle: 'Orphaned work',
+              state: 'orphaned',
+              startedAt: '2026-06-30T09:00:00Z',
+              tokens: 48_000,
+            },
+          ],
+        }),
+        { status: 200, headers: { 'content-type': 'application/json' } },
+      ),
+    );
+
+    const agents = await new HttpDaemonClient().listAgents();
+    expect(agents.map((a) => a.state)).toEqual(['queued', 'orphaned']);
+  });
+
   it('throws on non-2xx', async () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('oops', { status: 500 }));
     await expect(new HttpDaemonClient().listAgents()).rejects.toThrow(/500/);
@@ -257,6 +290,26 @@ describe('HttpDaemonClient.getStateHistory', () => {
     expect(out.transitions).toHaveLength(2);
     expect(out.transitions[0]).toEqual({ from: null, to: 'init', ts: 1000 });
     expect(fetchSpy).toHaveBeenCalledWith('/api/agents/KAN-1/state-history');
+  });
+
+  // CREW-311: agents are born queued (CREW-307), so histories now open with
+  // a queued transition; orphaned edges land mid-history.
+  it('parses queued and orphaned transitions', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          transitions: [
+            { from: null, to: 'queued', ts: 1000 },
+            { from: 'queued', to: 'init', ts: 1500 },
+            { from: 'running', to: 'orphaned', ts: 2000 },
+          ],
+        }),
+        { status: 200 },
+      ),
+    );
+
+    const out = await new HttpDaemonClient().getStateHistory('KAN-1');
+    expect(out.transitions.map((t) => t.to)).toEqual(['queued', 'init', 'orphaned']);
   });
 
   it('throws on non-2xx', async () => {
@@ -704,57 +757,6 @@ describe('HttpDaemonClient runner controls (CREW-245)', () => {
   });
 });
 
-describe('HttpDaemonClient.getRunnerLogs (CREW-221)', () => {
-  it('GETs /api/runner/logs and returns the lines', async () => {
-    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
-      new Response(JSON.stringify({ lines: ['boot', 'claimed CREW-1'] }), {
-        status: 200,
-        headers: { 'content-type': 'application/json' },
-      }),
-    );
-
-    const lines = await new HttpDaemonClient().getRunnerLogs();
-
-    expect(lines).toEqual(['boot', 'claimed CREW-1']);
-    expect(fetchSpy).toHaveBeenCalledWith('/api/runner/logs');
-  });
-
-  it('passes the tail count as a query param when given', async () => {
-    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
-      new Response(JSON.stringify({ lines: [] }), {
-        status: 200,
-        headers: { 'content-type': 'application/json' },
-      }),
-    );
-
-    await new HttpDaemonClient().getRunnerLogs(50);
-    expect(fetchSpy).toHaveBeenCalledWith('/api/runner/logs?tail=50');
-  });
-
-  it('returns an empty array when the log is absent (no runner)', async () => {
-    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
-      new Response(JSON.stringify({ lines: [] }), {
-        status: 200,
-        headers: { 'content-type': 'application/json' },
-      }),
-    );
-
-    expect(await new HttpDaemonClient().getRunnerLogs()).toEqual([]);
-  });
-
-  it('throws on non-2xx', async () => {
-    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('boom', { status: 500 }));
-    await expect(new HttpDaemonClient().getRunnerLogs()).rejects.toThrow(/500/);
-  });
-
-  it('throws on schema mismatch', async () => {
-    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
-      new Response(JSON.stringify({ lines: [42] }), { status: 200 }),
-    );
-    await expect(new HttpDaemonClient().getRunnerLogs()).rejects.toThrow();
-  });
-});
-
 describe('HttpDaemonClient.getRunnerPage (CREW-291)', () => {
   const PAGE = {
     failedToStart: [
@@ -822,6 +824,44 @@ describe('HttpDaemonClient.getRunnerPage (CREW-291)', () => {
       new Response(JSON.stringify({ failedToStart: [{ key: 'x' }] }), { status: 200 }),
     );
     await expect(new HttpDaemonClient().getRunnerPage()).rejects.toThrow();
+  });
+});
+
+describe('HttpDaemonClient.reconcile (CREW-311)', () => {
+  const ROLLUP = {
+    queued: [
+      { key: 'KAN-23', projectName: 'kanban-api', state: 'queued', since: '2026-06-30T10:00:00Z' },
+    ],
+    orphaned: [
+      { key: 'CREW-11', projectName: 'crew', state: 'orphaned', since: '2026-06-30T09:00:00Z' },
+    ],
+  };
+
+  it('GETs /api/runner/reconcile and returns the parsed buckets', async () => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify(ROLLUP), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      }),
+    );
+
+    const rollup = await new HttpDaemonClient().reconcile();
+
+    expect(rollup.queued.map((r) => r.key)).toEqual(['KAN-23']);
+    expect(rollup.orphaned.map((r) => r.key)).toEqual(['CREW-11']);
+    expect(fetchSpy).toHaveBeenCalledWith('/api/runner/reconcile');
+  });
+
+  it('throws on non-2xx', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('boom', { status: 500 }));
+    await expect(new HttpDaemonClient().reconcile()).rejects.toThrow(/500/);
+  });
+
+  it('throws on schema mismatch', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify({ queued: [{ key: 1 }] }), { status: 200 }),
+    );
+    await expect(new HttpDaemonClient().reconcile()).rejects.toThrow();
   });
 });
 

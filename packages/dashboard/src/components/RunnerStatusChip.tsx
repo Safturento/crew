@@ -1,19 +1,29 @@
 import { useState } from 'react';
 
+import { useReconcile } from '../data/useReconcile.js';
 import { useRunnerStatus } from '../data/useRunnerStatus.js';
 import { Badge } from './ui/badge.js';
 import { StateIcon } from './ui/state-icon.js';
-import { RunnerLogViewer } from './RunnerLogViewer.js';
+import { SupervisorDrawer } from './runner/SupervisorDrawer.js';
 
 /**
- * CREW-221: top-nav runner health chip. Reads `useRunnerStatus()` and renders
- * healthy (green) when a runner is heartbeating, unhealthy (muted) otherwise —
- * the latter being the normal state on a worktree dashboard, which runs no
- * runner. Clicking opens the {@link RunnerLogViewer} to tail the runner log.
+ * CREW-221 / CREW-311: top-nav runner health chip. Reads `useRunnerStatus()`
+ * and renders healthy (green) when a runner is heartbeating, unhealthy
+ * (muted) otherwise — the latter being the normal state on a worktree
+ * dashboard, which runs no runner. While online it appends the supervised
+ * live-process count (`Runner · N live`), and when the reconcile roll-up
+ * (CREW-310) reports orphaned agents it carries an amber count badge.
+ * Clicking toggles the {@link SupervisorDrawer} — the chip is the drawer's
+ * home now that the standalone Runner page is retiring (Epic CREW-306).
  */
 export function RunnerStatusChip() {
-  const { online } = useRunnerStatus();
-  const [logsOpen, setLogsOpen] = useState(false);
+  const { online, lastSeen, processes } = useRunnerStatus();
+  const reconcile = useReconcile();
+  const orphanedCount = reconcile.data?.orphaned.length ?? 0;
+  const [drawerOpen, setDrawerOpen] = useState(false);
+
+  const health = `Runner ${online ? 'online' : 'offline'}`;
+  const anomalies = orphanedCount > 0 ? `, ${orphanedCount} orphaned` : '';
 
   return (
     <>
@@ -21,13 +31,23 @@ export function RunnerStatusChip() {
         <button
           type="button"
           data-online={online}
-          aria-label={`Runner ${online ? 'online' : 'offline'} — open logs`}
-          onClick={() => setLogsOpen(true)}
+          aria-label={`${health}${anomalies} — open supervisor`}
+          onClick={() => setDrawerOpen(true)}
         >
           Runner
+          {online && processes.length > 0 && ` · ${processes.length} live`}
+          {orphanedCount > 0 && (
+            <Badge color="waiting" intensity="mid" className="ml-1">
+              {orphanedCount}
+            </Badge>
+          )}
         </button>
       </Badge>
-      <RunnerLogViewer open={logsOpen} onOpenChange={setLogsOpen} />
+      <SupervisorDrawer
+        supervisor={{ online, lastSeen }}
+        open={drawerOpen}
+        onOpenChange={setDrawerOpen}
+      />
     </>
   );
 }

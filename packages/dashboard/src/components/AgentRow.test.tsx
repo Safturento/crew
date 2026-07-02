@@ -223,10 +223,91 @@ describe('AgentRow', () => {
     );
   });
 
-  it('renders "Resume" + "Inspect" quick actions for error state', () => {
+  it('renders "Resume" + "Inspect" quick actions for a mid-run error', () => {
     render(<AgentRow agent={{ ...baseAgent, state: 'error' }} onSelect={() => {}} />);
     expect(screen.getByRole('button', { name: 'Resume' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Inspect' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Restart' })).not.toBeInTheDocument();
+  });
+
+  // CREW-311: a failed-start error never registered a run (the daemon serves
+  // startedAt: ''), so there is no session to Resume — the recovery verb is
+  // Restart (a fresh `run`; CREW-309 preflight reclaims the orphan worktree).
+  describe('failed-start error rows (CREW-311)', () => {
+    const failedStart: Agent = { ...baseAgent, state: 'error', startedAt: '' };
+
+    it('renders "Restart" + "Inspect" instead of Resume', () => {
+      render(<AgentRow agent={failedStart} onSelect={() => {}} />);
+      expect(screen.getByRole('button', { name: 'Restart' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Inspect' })).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Resume' })).not.toBeInTheDocument();
+    });
+
+    it('forwards a restart action', async () => {
+      const user = userEvent.setup();
+      const onAction = vi.fn();
+      render(<AgentRow agent={failedStart} onSelect={() => {}} onAction={onAction} />);
+      await user.click(screen.getByRole('button', { name: 'Restart' }));
+      expect(onAction).toHaveBeenCalledWith('restart', expect.objectContaining({ key: 'KAN-31' }));
+    });
+
+    it('disables Restart when the runner is offline', () => {
+      render(<AgentRow agent={failedStart} onSelect={() => {}} runnerOnline={false} />);
+      expect(screen.getByRole('button', { name: 'Restart' })).toBeDisabled();
+    });
+
+    it('shows an em-dash runtime instead of a NaN duration', () => {
+      render(<AgentRow agent={failedStart} onSelect={() => {}} />);
+      expect(screen.getByText('—')).toBeInTheDocument();
+      expect(screen.queryByText(/NaN/)).not.toBeInTheDocument();
+    });
+  });
+
+  // CREW-311: queued rows carry a single ghost Dequeue (drop the pending
+  // action before the runner spawns it).
+  describe('queued rows (CREW-311)', () => {
+    const queued: Agent = { ...baseAgent, state: 'queued', startedAt: '' };
+
+    it('renders a single Dequeue quick action', () => {
+      render(<AgentRow agent={queued} onSelect={() => {}} />);
+      const dequeue = screen.getByRole('button', { name: 'Dequeue' });
+      expect(dequeue).toBeInTheDocument();
+      expect(dequeue.parentElement).not.toHaveAttribute('data-qa-group');
+    });
+
+    it('forwards a dequeue action', async () => {
+      const user = userEvent.setup();
+      const onAction = vi.fn();
+      render(<AgentRow agent={queued} onSelect={() => {}} onAction={onAction} />);
+      await user.click(screen.getByRole('button', { name: 'Dequeue' }));
+      expect(onAction).toHaveBeenCalledWith('dequeue', expect.objectContaining({ key: 'KAN-31' }));
+    });
+
+    // Dequeue enqueues a runner_commands row the host runner drains, so like
+    // Resume/Finish it degrades to disabled with no runner connected.
+    it('disables Dequeue when the runner is offline', () => {
+      render(<AgentRow agent={queued} onSelect={() => {}} runnerOnline={false} />);
+      expect(screen.getByRole('button', { name: 'Dequeue' })).toBeDisabled();
+    });
+  });
+
+  // CREW-311: orphaned rows carry a single Reap (force-settle the DB/process
+  // mismatch).
+  describe('orphaned rows (CREW-311)', () => {
+    const orphaned: Agent = { ...baseAgent, state: 'orphaned' };
+
+    it('renders a single Reap quick action', () => {
+      render(<AgentRow agent={orphaned} onSelect={() => {}} />);
+      expect(screen.getByRole('button', { name: 'Reap' })).toBeInTheDocument();
+    });
+
+    it('forwards a reap action', async () => {
+      const user = userEvent.setup();
+      const onAction = vi.fn();
+      render(<AgentRow agent={orphaned} onSelect={() => {}} onAction={onAction} />);
+      await user.click(screen.getByRole('button', { name: 'Reap' }));
+      expect(onAction).toHaveBeenCalledWith('reap', expect.objectContaining({ key: 'KAN-31' }));
+    });
   });
 
   // The error-state Resume re-enters the preserved worktree via crew resume, so
@@ -262,6 +343,7 @@ describe('AgentRow', () => {
     ['waiting', 'border-amber-500', 'bg-amber-1050'],
     ['error', 'border-red-500', 'bg-red-1050'],
     ['pr_open', 'border-violet-500', 'bg-violet-1050'],
+    ['orphaned', 'border-amber-500', 'bg-amber-1050'],
   ];
 
   it.each(ATTENTION_TOKENS)(
@@ -274,7 +356,13 @@ describe('AgentRow', () => {
     },
   );
 
-  const NON_ATTENTION_STATES: AgentState[] = ['initializing', 'running', 'idle', 'finished'];
+  const NON_ATTENTION_STATES: AgentState[] = [
+    'initializing',
+    'queued',
+    'running',
+    'idle',
+    'finished',
+  ];
 
   it.each(NON_ATTENTION_STATES)('uses neutral border for non-attention state %s', (state) => {
     render(<AgentRow agent={{ ...baseAgent, state }} onSelect={() => {}} />);

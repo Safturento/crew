@@ -5,6 +5,43 @@
 (entries below, newest at top)
 
 
+## 2026-07-02 — e2e runs pollute the worktree DB and break the Bruno smoke's claim assertions
+
+**What:** Several Playwright specs enqueue *real* work against the live daemon —
+`agent-actions.spec` POSTs `finish`/`resume`/`fix_pr` actions, the New Run flow
+POSTs a `run` (the stale `CREW-999`), and `supervisor-controls.spec` POSTs
+`supervisor_stop`/`supervisor_restart` commands. With no host runner draining
+the queues these stay `pending` forever, and the Bruno smoke's claim tests
+(`get-pending.bru`, `get-commands-pending.bru`) assert the claim returns the
+row *the smoke just enqueued* — the daemon claims oldest-first, so any stale
+pending row fails them. Since CREW-307, a stale pending `run` action also
+leaves a permanent `queued` **agent row** in the grid. Order dependency:
+`bruno:smoke` passes on a fresh DB, fails after any full e2e run.
+
+**Why noticed:** CREW-311 verification — smoke failed 55/57 after the e2e
+suite; draining 4 stale actions + 3 stale supervisor commands via the claim
+endpoints restored 57/57. The stale rows also broke `runner-page.spec`'s
+strict-mode `getByText('CREW-999')` (fixed by scoping in CREW-311).
+
+**Anchors:** `bruno/endpoints/actions/get-pending.bru`,
+`bruno/endpoints/runner/get-commands-pending.bru`,
+`packages/dashboard/tests/e2e/agent-actions.spec.ts`,
+`packages/dashboard/tests/e2e/supervisor-controls.spec.ts`.
+
+**What's been considered:** (a) e2e specs intercept the enqueue POSTs
+(`page.route`) instead of hitting the real daemon — cleanest, loses a little
+integration value; (b) a post-e2e drain step (claim-loop) in the e2e teardown
+or the crew verification harness; (c) make the smoke's claim tests drain until
+they find their own id — masks real queue bugs; (d) dispatch harness runs
+`bruno:smoke` before `test:e2e` — fragile ordering contract.
+
+**Shape of work:** small — pick (a) or (b), one spec-file edit or one teardown
+script.
+
+**Open questions:** Is the enqueue-for-real behavior of `agent-actions.spec`
+intentionally integration-y (proving the wire), or incidental?
+
+
 ## 2026-05-15 — `.agents/` topic-doc system vs native `.claude/rules/` and agents.md alignment
 
 **Ticket:** [CREW-210](https://safturento.atlassian.net/browse/CREW-210) — parked in Backlog (needs planning).

@@ -18,7 +18,6 @@ export function TopNav({ route, attentionCount, onClearAttention, onNewRun }: To
   const agentsActive =
     route.kind === 'agents-list' || route.kind === 'agent-drawer' || route.kind === 'agent-full';
   const projectsActive = route.kind === 'projects' || route.kind === 'project-detail';
-  const runnerActive = route.kind === 'runner';
 
   return (
     <header className="flex items-center justify-between gap-4 border-b border-white/10 bg-card px-5 py-3">
@@ -33,9 +32,6 @@ export function TopNav({ route, attentionCount, onClearAttention, onNewRun }: To
           </NavTab>
           <NavTab href="#/projects" active={projectsActive}>
             Projects
-          </NavTab>
-          <NavTab href="#/runner" active={runnerActive}>
-            Runner
           </NavTab>
         </nav>
       </div>

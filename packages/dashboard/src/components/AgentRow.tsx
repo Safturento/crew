@@ -14,11 +14,14 @@ import { formatTokens } from '@/format/tokens';
 
 export type QuickActionKind =
   | 'resume'
+  | 'restart'
   | 'finish'
   | 'fix-pr'
   | 'view-pr'
   | 'provide-input'
-  | 'inspect';
+  | 'inspect'
+  | 'dequeue'
+  | 'reap';
 
 interface AgentRowProps {
   agent: Agent;
@@ -209,10 +212,13 @@ function QuickActions({
         </QaGroup>
       );
     case 'error':
-      // An errored run keeps its worktree, so Resume (crew resume) continues
-      // it — crew run would bounce on "worktree already exists". Like the idle
-      // Resume it drains through the host runner, hence the connectivity gate.
-      // Inspect stays available (error-colored) for diagnosing the failure.
+      // A mid-run error keeps its worktree, so Resume (crew resume) continues
+      // it — crew run would bounce on "worktree already exists". A failed-start
+      // error (CREW-311; startedAt '' — no run row ever registered) has no
+      // session to continue, so its recovery verb is Restart: a fresh `run`,
+      // whose preflight reclaims the leftover worktree (CREW-309). Both drain
+      // through the host runner, hence the connectivity gate. Inspect stays
+      // available (error-colored) for diagnosing the failure.
       return (
         <QaGroup>
           <Button
@@ -220,15 +226,46 @@ function QuickActions({
             intensity="mid"
             size="sm"
             className={gateClass}
-            onClick={fire('resume')}
+            onClick={fire(agent.startedAt === '' ? 'restart' : 'resume')}
             {...gate}
           >
-            Resume
+            {agent.startedAt === '' ? 'Restart' : 'Resume'}
           </Button>
           <Button color="error" intensity="ghost" size="sm" onClick={fire('inspect')}>
             Inspect
           </Button>
         </QaGroup>
+      );
+    case 'queued':
+      // CREW-311: drop the pending action request before the runner spawns
+      // it. Like the other queue verbs it enqueues a runner_commands row the
+      // host runner drains — hence the connectivity gate. NOTE: the host
+      // apply currently reports `dequeue` "not yet supported" (it needs a
+      // daemon action-drop route) — tracked in
+      // docs/followups/daemon-cli-dispatch.md.
+      return (
+        <SingleAction>
+          <Button
+            color="idle"
+            intensity="ghost"
+            size="sm"
+            className={gateClass}
+            onClick={fire('dequeue')}
+            {...gate}
+          >
+            Dequeue
+          </Button>
+        </SingleAction>
+      );
+    case 'orphaned':
+      // CREW-311: force-settle the DB/process mismatch (running in the DB,
+      // no live process). Amber to match the row's waiting-family accent.
+      return (
+        <SingleAction>
+          <Button color="waiting" intensity="ghost" size="sm" onClick={fire('reap')}>
+            Reap
+          </Button>
+        </SingleAction>
       );
     default:
       return <span aria-hidden />;
@@ -259,5 +296,8 @@ function useLiveRuntime(startedAt: string, live: boolean): string {
     const id = window.setInterval(() => setNow(Date.now()), 1_000);
     return () => window.clearInterval(id);
   }, [live]);
+  // CREW-311: a queued / failed-start agent has no run row yet — the daemon
+  // serves startedAt: '' — so there is no runtime to count.
+  if (startedAt === '') return '—';
   return formatDuration(now - start);
 }

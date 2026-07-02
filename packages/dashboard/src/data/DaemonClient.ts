@@ -4,6 +4,7 @@ import type {
   EnqueueRunnerCommand,
   LiveProcess,
   ProjectTicketsResponse,
+  ReconcileRollup,
   RunnerCommand,
   RunnerPage,
 } from 'crew-shared';
@@ -40,7 +41,6 @@ export interface DaemonClient {
   listProjectTickets(slug: string): Promise<ProjectTicketsResponse>;
   enqueueAction(input: EnqueueAction): Promise<ActionRequest>;
   getRunnerStatus(): Promise<RunnerStatus>;
-  getRunnerLogs(tail?: number): Promise<string[]>;
   /**
    * CREW-292: tail the supervisor's process-management log (the
    * spawn/respawn/heartbeat/reap slice of `runner.log`) for the supervisor
@@ -65,6 +65,13 @@ export interface DaemonClient {
    * three previously-stubbed sections.
    */
   getRunnerPage(): Promise<RunnerPage>;
+  /**
+   * CREW-311: the housekeeping roll-up from `GET /api/runner/reconcile`
+   * (CREW-310) — queued + orphaned agents across all projects. Backs the
+   * runner chip's orphaned-count badge and the supervisor drawer's
+   * Reconcile section.
+   */
+  reconcile(): Promise<ReconcileRollup>;
   /**
    * CREW-291: a run's raw startup console log from
    * `GET /api/runs/:key/startup-log`. Returns the body text, or `null` when no

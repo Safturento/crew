@@ -3,6 +3,7 @@ import type {
   EnqueueAction,
   EnqueueRunnerCommand,
   ProjectTicketsResponse,
+  ReconcileRollup,
   RunnerCommand,
   RunnerPage,
 } from 'crew-shared';
@@ -17,26 +18,28 @@ export interface MockDaemonClientOptions {
   projects?: Project[];
   projectDetails?: Record<string, ProjectDetailResponse>;
   runnerStatus?: RunnerStatus;
-  runnerLogs?: string[];
   /** CREW-291: the three Runner-page lists served by `getRunnerPage`. */
   runnerPage?: RunnerPage;
   /** CREW-291: per-key startup logs served by `getStartupLog` (absent → 404/null). */
   startupLogs?: Record<string, string>;
   /** CREW-292: the supervisor management log served by `getSupervisorLog`. */
   supervisorLog?: string[];
+  /** CREW-311: the housekeeping roll-up served by `reconcile`. */
+  reconcileRollup?: ReconcileRollup;
 }
 
 const EMPTY_RUNNER_PAGE: RunnerPage = { failedToStart: [], queued: [], recentlyEnded: [] };
+const EMPTY_RECONCILE: ReconcileRollup = { queued: [], orphaned: [] };
 
 export class MockDaemonClient implements DaemonClient {
   private readonly agents: Agent[];
   private readonly projects: Project[];
   private readonly projectDetails: Record<string, ProjectDetailResponse>;
   private readonly runnerStatus: RunnerStatus;
-  private readonly runnerLogs: string[];
   private readonly runnerPage: RunnerPage;
   private readonly startupLogs: Record<string, string>;
   private readonly supervisorLog: string[];
+  private readonly reconcileRollup: ReconcileRollup;
   /** Records of every action enqueued through this mock, for assertions. */
   readonly enqueued: EnqueueAction[] = [];
   /** Records of every runner command enqueued through this mock. */
@@ -53,10 +56,10 @@ export class MockDaemonClient implements DaemonClient {
       lastSeen: Date.now(),
       processes: [],
     };
-    this.runnerLogs = options.runnerLogs ?? [];
     this.runnerPage = options.runnerPage ?? EMPTY_RUNNER_PAGE;
     this.startupLogs = options.startupLogs ?? {};
     this.supervisorLog = options.supervisorLog ?? [];
+    this.reconcileRollup = options.reconcileRollup ?? EMPTY_RECONCILE;
   }
 
   async listProjects(): Promise<Project[]> {
@@ -95,10 +98,6 @@ export class MockDaemonClient implements DaemonClient {
     return this.runnerStatus;
   }
 
-  async getRunnerLogs(): Promise<string[]> {
-    return this.runnerLogs;
-  }
-
   async getSupervisorLog(): Promise<string[]> {
     return this.supervisorLog;
   }
@@ -125,6 +124,10 @@ export class MockDaemonClient implements DaemonClient {
 
   async getRunnerPage(): Promise<RunnerPage> {
     return this.runnerPage;
+  }
+
+  async reconcile(): Promise<ReconcileRollup> {
+    return this.reconcileRollup;
   }
 
   async getStartupLog(key: string): Promise<string | null> {

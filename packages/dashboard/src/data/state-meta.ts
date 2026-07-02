@@ -9,6 +9,10 @@ export interface StateMetaEntry {
 export const STATE_META: Record<AgentState, StateMetaEntry> = {
   waiting: { label: 'Waiting', attention: true, sortRank: 0 },
   error: { label: 'Error', attention: true, sortRank: 1 },
+  // CREW-311: orphaned = the DB says running but no live process exists —
+  // housekeeping the operator should act on (Reap), so it sorts with the
+  // attention cluster, just below error (which usually needs diagnosis).
+  orphaned: { label: 'Orphaned', attention: true, sortRank: 1.5 },
   pr_open: { label: 'PR open', attention: true, sortRank: 2 },
   // CREW-202: pr_merged signals "PR closed, ready to finish". Ranked just
   // after pr_open (still attention-worthy because Finish is the next user
@@ -16,6 +20,10 @@ export const STATE_META: Record<AgentState, StateMetaEntry> = {
   pr_merged: { label: 'PR merged', attention: true, sortRank: 2.5 },
   running: { label: 'Running', attention: false, sortRank: 3 },
   initializing: { label: 'Starting', attention: false, sortRank: 4 },
+  // CREW-311: queued = row born at enqueue, waiting for a runner slot. A
+  // normal transient state — non-attention, parked between the active
+  // states and idle.
+  queued: { label: 'Queued', attention: false, sortRank: 4.5 },
   idle: { label: 'Idle', attention: false, sortRank: 5 },
   finished: { label: 'Finished', attention: false, sortRank: 6 },
 };
@@ -50,7 +58,25 @@ export const STATE_CLASSES: Record<AgentState, StateClassTokens> = {
     solidBg: 'bg-slate-500',
     solidBorder: 'border-slate-500',
   },
+  // CREW-311: queued is pre-run quiescence, so it reads in idle's dim slate
+  // family — visually calm until the runner picks it up.
+  queued: {
+    text: 'text-slate-500',
+    bg: 'bg-slate-1100',
+    border: 'border-slate-600',
+    solidBg: 'bg-slate-500',
+    solidBorder: 'border-slate-500',
+  },
   waiting: {
+    text: 'text-amber-400',
+    bg: 'bg-amber-1050',
+    border: 'border-amber-500',
+    solidBg: 'bg-amber-400',
+    solidBorder: 'border-amber-400',
+  },
+  // CREW-311: orphaned shares waiting's amber family — an anomaly the
+  // operator should reap, urgent-ish but not error-red.
+  orphaned: {
     text: 'text-amber-400',
     bg: 'bg-amber-1050',
     border: 'border-amber-500',
@@ -92,10 +118,12 @@ export const STATE_CLASSES: Record<AgentState, StateClassTokens> = {
 
 const TRANSITION_TO_AGENT_STATE: Record<TransitionState, AgentState> = {
   init: 'initializing',
+  queued: 'queued',
   running: 'running',
   pr_open: 'pr_open',
   pr_merged: 'pr_merged',
   error: 'error',
+  orphaned: 'orphaned',
   finished: 'finished',
   idle: 'idle',
   waiting: 'waiting',
@@ -107,15 +135,17 @@ export function transitionToAgentState(t: TransitionState): AgentState {
 
 // CREW-260: the override route speaks the daemon's TransitionState vocabulary
 // (`init`), while the dashboard models agents in AgentState (`initializing`).
-// `initializing → init` is the only divergence; the other seven labels match.
+// `initializing → init` is the only divergence; the other nine labels match.
 const AGENT_STATE_TO_TRANSITION: Record<AgentState, TransitionState> = {
   initializing: 'init',
+  queued: 'queued',
   running: 'running',
   idle: 'idle',
   waiting: 'waiting',
   pr_open: 'pr_open',
   pr_merged: 'pr_merged',
   error: 'error',
+  orphaned: 'orphaned',
   finished: 'finished',
 };
 

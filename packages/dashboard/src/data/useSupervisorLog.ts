@@ -6,7 +6,7 @@ const DEFAULT_TAIL = 200;
 // The supervisor log is the management slice of the host `runner.log`, which
 // has no SSE ping (the daemon only tails it on request), so the drawer
 // live-tails by refetching on a short interval while it's open. 2s keeps it
-// lively without hammering the file read — matching `useRunnerLogs`.
+// lively without hammering the file read.
 const LIVE_TAIL_INTERVAL_MS = 2_000;
 
 interface UseSupervisorLogOptions {
