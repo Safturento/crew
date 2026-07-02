@@ -61,12 +61,14 @@ const AgentSchema = z.object({
   ticketTitle: z.string(),
   state: z.enum([
     'initializing',
+    'queued',
     'running',
     'idle',
     'waiting',
     'pr_open',
     'pr_merged',
     'error',
+    'orphaned',
     'finished',
   ]),
   startedAt: z.string(),
@@ -83,12 +85,14 @@ const AgentDetailSchema = z.object({
   ticket_title: z.string().nullable(),
   state: z.enum([
     'initializing',
+    'queued',
     'running',
     'idle',
     'waiting',
     'pr_open',
     'pr_merged',
     'error',
+    'orphaned',
     'finished',
   ]),
   worktree_path: z.string(),
@@ -132,10 +136,12 @@ const AgentDetailSchema = z.object({
 
 const TransitionStateEnum = z.enum([
   'init',
+  'queued',
   'running',
   'pr_open',
   'pr_merged',
   'error',
+  'orphaned',
   'finished',
   'idle',
   'waiting',
@@ -143,12 +149,14 @@ const TransitionStateEnum = z.enum([
 
 const AgentStateEnum = z.enum([
   'initializing',
+  'queued',
   'running',
   'idle',
   'waiting',
   'pr_open',
   'pr_merged',
   'error',
+  'orphaned',
   'finished',
 ]);
 

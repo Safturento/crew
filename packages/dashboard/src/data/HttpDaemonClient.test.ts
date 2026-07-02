@@ -135,6 +135,39 @@ describe('HttpDaemonClient.listAgents', () => {
     expect(fetchSpy).toHaveBeenCalledWith('/api/agents');
   });
 
+  // CREW-311: the daemon serves queued/orphaned agents since CREW-307; a
+  // stale enum here would blank the whole grid on the first queued row.
+  it('parses queued and orphaned agents (with the empty startedAt a queued row carries)', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          agents: [
+            {
+              key: 'KAN-23',
+              projectName: 'demo',
+              ticketTitle: 'Queued work',
+              state: 'queued',
+              startedAt: '',
+              tokens: 0,
+            },
+            {
+              key: 'CREW-11',
+              projectName: 'crew',
+              ticketTitle: 'Orphaned work',
+              state: 'orphaned',
+              startedAt: '2026-06-30T09:00:00Z',
+              tokens: 48_000,
+            },
+          ],
+        }),
+        { status: 200, headers: { 'content-type': 'application/json' } },
+      ),
+    );
+
+    const agents = await new HttpDaemonClient().listAgents();
+    expect(agents.map((a) => a.state)).toEqual(['queued', 'orphaned']);
+  });
+
   it('throws on non-2xx', async () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('oops', { status: 500 }));
     await expect(new HttpDaemonClient().listAgents()).rejects.toThrow(/500/);
@@ -257,6 +290,26 @@ describe('HttpDaemonClient.getStateHistory', () => {
     expect(out.transitions).toHaveLength(2);
     expect(out.transitions[0]).toEqual({ from: null, to: 'init', ts: 1000 });
     expect(fetchSpy).toHaveBeenCalledWith('/api/agents/KAN-1/state-history');
+  });
+
+  // CREW-311: agents are born queued (CREW-307), so histories now open with
+  // a queued transition; orphaned edges land mid-history.
+  it('parses queued and orphaned transitions', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          transitions: [
+            { from: null, to: 'queued', ts: 1000 },
+            { from: 'queued', to: 'init', ts: 1500 },
+            { from: 'running', to: 'orphaned', ts: 2000 },
+          ],
+        }),
+        { status: 200 },
+      ),
+    );
+
+    const out = await new HttpDaemonClient().getStateHistory('KAN-1');
+    expect(out.transitions.map((t) => t.to)).toEqual(['queued', 'init', 'orphaned']);
   });
 
   it('throws on non-2xx', async () => {
