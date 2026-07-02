@@ -13,7 +13,7 @@ import { fileURLToPath } from 'node:url';
 import { Command } from 'commander';
 import { execa } from 'execa';
 import pc from 'picocolors';
-import type { ProjectConfig } from 'crew-shared';
+import type { ProjectConfig, StartupPhaseSubtype } from 'crew-shared';
 import {
   claudeProjectDirFor,
   discoverProjectConfig,
@@ -450,22 +450,37 @@ export async function runRun(key: string, opts: RunOptions): Promise<never> {
   let brunoEnvName: string | undefined;
   let resolvedBrunoBaseUrl: string | undefined;
   if (config.bruno_smoke?.enabled) {
-    resolvedBrunoBaseUrl = resolveAppUrl(config.bruno_smoke.base_url, dockerPorts, envVars).raw;
-    brunoEnvName = resolveBrunoEnvName(worktree);
-    const writeResult = writeBrunoEnvFile(worktree, {
-      collectionDir: config.bruno_smoke.collection_dir,
-      envName: brunoEnvName,
-      baseUrl: resolvedBrunoBaseUrl,
-      smokeUser: config.bruno_smoke.smoke_user,
-    });
-    console.log(
-      pc.dim(
-        `→ wrote ${writeResult.envFilePath} (CREW_BRUNO_ENV=${brunoEnvName}, baseUrl=${resolvedBrunoBaseUrl})`,
-      ),
+    // CREW-313: bracket the Bruno env write. It runs before the run is
+    // registered as `launching`, so a throw here (unresolvable base_url, a
+    // non-writable collection dir) was a pre-registration death with no trace;
+    // the bracket records a `crew_startup_bruno_env` `failed` phase.
+    const bruno = config.bruno_smoke;
+    await bracketStartupPhase(
+      key,
+      {
+        subtype: 'crew_startup_bruno_env',
+        startedSummary: 'writing Bruno env file',
+        completedSummary: () => (brunoEnvName ? `wrote ${brunoEnvName}` : 'wrote Bruno env file'),
+      },
+      async () => {
+        resolvedBrunoBaseUrl = resolveAppUrl(bruno.base_url, dockerPorts, envVars).raw;
+        brunoEnvName = resolveBrunoEnvName(worktree);
+        const writeResult = writeBrunoEnvFile(worktree, {
+          collectionDir: bruno.collection_dir,
+          envName: brunoEnvName,
+          baseUrl: resolvedBrunoBaseUrl,
+          smokeUser: bruno.smoke_user,
+        });
+        console.log(
+          pc.dim(
+            `→ wrote ${writeResult.envFilePath} (CREW_BRUNO_ENV=${brunoEnvName}, baseUrl=${resolvedBrunoBaseUrl})`,
+          ),
+        );
+        if (writeResult.existed) {
+          console.warn(pc.yellow(`  ! ${writeResult.envFilePath} already existed — overwritten`));
+        }
+      },
     );
-    if (writeResult.existed) {
-      console.warn(pc.yellow(`  ! ${writeResult.envFilePath} already existed — overwritten`));
-    }
   }
 
   // CREW-244: register the run as `launching` BEFORE preflight, so an init
@@ -584,29 +599,45 @@ export async function runRun(key: string, opts: RunOptions): Promise<never> {
     );
   }
 
-  console.log(pc.dim('→ injecting dispatcher-managed skills into the worktree…'));
-  // browsing is plugin-sourced, not crew-owned: inject it from the
-  // superpowers-chrome plugin cache, but only for [visual_fidelity] projects
-  // (the chrome MCP it drives is only wired for those). Plugin-absent is
-  // already warned about by writeMcpFile above — stay silent here.
-  const browsingSkillSource = config.visual_fidelity
-    ? resolveSuperpowersChrome()?.skillsRoot
-    : undefined;
-  await runSkillInjection({
-    worktree,
-    sourceRoot: skillsSourceRoot(),
-    browsingSkillSource,
-    log: (msg) => console.log(pc.dim(`    ${msg}`)),
-    warn: (msg) => console.warn(pc.yellow(`  ! ${msg}`)),
-  });
-
-  // Inject the PostToolUse hook that captures the in-session `pr_created` fact
-  // into the dispatched session's settings.local.json (templated with this key).
-  injectStateEventHook({
-    worktree,
+  // CREW-313: bracket skill + state-event-hook injection as one worktree-setup
+  // phase. Both run after the run is registered, but neither throws a
+  // `PreflightError`, so a failure here would not be converted to a failed-start
+  // by `runTrackedPreflight` — the bracket is the only thing that makes it
+  // visible on the timeline.
+  await bracketStartupPhase(
     key,
-    log: (msg) => console.log(pc.dim(`    ${msg}`)),
-  });
+    {
+      subtype: 'crew_startup_skill_injection',
+      startedSummary: 'injecting skills + state-event hook',
+      completedSummary: () => 'skills + state-event hook injected',
+    },
+    async () => {
+      console.log(pc.dim('→ injecting dispatcher-managed skills into the worktree…'));
+      // browsing is plugin-sourced, not crew-owned: inject it from the
+      // superpowers-chrome plugin cache, but only for [visual_fidelity] projects
+      // (the chrome MCP it drives is only wired for those). Plugin-absent is
+      // already warned about by writeMcpFile above — stay silent here.
+      const browsingSkillSource = config.visual_fidelity
+        ? resolveSuperpowersChrome()?.skillsRoot
+        : undefined;
+      await runSkillInjection({
+        worktree,
+        sourceRoot: skillsSourceRoot(),
+        browsingSkillSource,
+        log: (msg) => console.log(pc.dim(`    ${msg}`)),
+        warn: (msg) => console.warn(pc.yellow(`  ! ${msg}`)),
+      });
+
+      // Inject the PostToolUse hook that captures the in-session `pr_created`
+      // fact into the dispatched session's settings.local.json (templated with
+      // this key).
+      injectStateEventHook({
+        worktree,
+        key,
+        log: (msg) => console.log(pc.dim(`    ${msg}`)),
+      });
+    },
+  );
 
   const ghToken = hasRepoToken(ghTokenDest) ? readFileSync(ghTokenDest, 'utf8').trim() : undefined;
   const prompt = buildTicketPrompt({
@@ -891,14 +922,9 @@ function fail(message: string): never {
   process.exit(1);
 }
 
-type StartupFailSubtype =
-  | 'crew_startup_preflight'
-  | 'crew_startup_worktree'
-  | 'crew_startup_env_spec'
-  | 'crew_startup_npm_install'
-  | 'crew_startup_docker'
-  | 'crew_startup_mcp'
-  | 'crew_startup_claude_spawn';
+// Aliased to the canonical shared union so new phases (CREW-313) can't drift
+// out of sync here.
+type StartupFailSubtype = StartupPhaseSubtype;
 
 /**
  * Emit a `failed` startup phase event synchronously, then call `fail()`.
