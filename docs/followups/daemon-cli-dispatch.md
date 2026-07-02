@@ -7,6 +7,8 @@
 
 ## 2026-07-02 — Dispatch-gate preflight failures never reach the agent timeline (all-green timeline on an error run)
 
+**Ticket:** [CREW-313](https://safturento.atlassian.net/browse/CREW-313) (child G of Epic CREW-306)
+
 **What:** When the late dispatch preflight fails (the `runPreflight` call at the
 end of `prepareAgentEnvironment`), the agent lands in `error` but its timeline
 shows every startup phase green and then just stops — the failure is invisible
