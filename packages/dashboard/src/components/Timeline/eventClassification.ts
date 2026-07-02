@@ -163,8 +163,12 @@ export function eventCategories(
     }
     case 'system': {
       const subtype = (event as { subtype?: string }).subtype ?? '';
-      if (subtype.startsWith('crew_startup_')) categories.add('startup');
-      else categories.add('system');
+      // CREW-313: the synthetic `crew_failed_start` joins the startup lens
+      // (visible by default) so a dispatch death's diagnosis isn't buried in
+      // the off-by-default System lens.
+      if (subtype.startsWith('crew_startup_') || subtype === 'crew_failed_start') {
+        categories.add('startup');
+      } else categories.add('system');
       return categories;
     }
     case 'attachment': {
@@ -357,7 +361,9 @@ function stringifyResultContent(content: unknown): string {
 }
 
 function collectSystemTail(record: Record<string, unknown>): string {
-  for (const key of ['content', 'error', 'url']) {
+  // `headline` covers the CREW-313 synthetic `crew_failed_start`; the rest are
+  // the pre-existing system-event tails.
+  for (const key of ['headline', 'content', 'error', 'url', 'output']) {
     const value = record[key];
     if (typeof value === 'string') return value;
   }

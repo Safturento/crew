@@ -284,6 +284,22 @@ describe('eventCategories (Slim 7)', () => {
     }
   });
 
+  it('routes the synthetic crew_failed_start to startup (CREW-313)', () => {
+    const event = {
+      type: 'system',
+      subtype: 'crew_failed_start',
+      timestamp: stamp,
+      check: 'excluded-commands',
+      headline: 'Missing excludedCommands entries',
+      remediation: 'crew doctor --fix',
+      output: 'excluded-commands FAIL',
+    } as unknown as TranscriptEvent;
+    const cats = eventCategories(event);
+    expect(cats.has('startup')).toBe(true);
+    expect(cats.has('system')).toBe(false);
+    expect(eventOneLiner(event)).toContain('Missing excludedCommands entries');
+  });
+
   it('uses system as the catch-all for unrecognised top-types and attachment subtypes', () => {
     expect([
       ...eventCategories({

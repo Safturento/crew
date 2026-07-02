@@ -353,6 +353,27 @@ function specForSystem(event: SystemEvent): RowSpec {
     };
   }
 
+  // CREW-313: the synthetic run-level failed-start. Render as an error row whose
+  // one-liner is the headline and whose expanded body is the full structured
+  // diagnosis (check / headline / remediation / output) rather than raw JSON.
+  if (subtype === 'crew_failed_start') {
+    const f = event as unknown as {
+      check?: string;
+      headline?: string;
+      remediation?: string;
+      output?: string;
+    };
+    return {
+      blockType: 'system',
+      category: 'system',
+      tone: 'error',
+      tagLabel: labelForSystem(subtype),
+      oneLiner: truncate(f.headline ?? f.check ?? 'dispatch failed to start'),
+      timestamp: event.timestamp,
+      expanded: formatFailedStart(f),
+    };
+  }
+
   const summary = summarizeSystem(event);
   return {
     blockType: 'system',
@@ -363,6 +384,20 @@ function specForSystem(event: SystemEvent): RowSpec {
     timestamp: event.timestamp,
     expanded: prettyJson(event),
   };
+}
+
+function formatFailedStart(f: {
+  check?: string;
+  headline?: string;
+  remediation?: string;
+  output?: string;
+}): string {
+  const parts: string[] = [];
+  if (f.check) parts.push(`Check: ${f.check}`);
+  if (f.headline) parts.push(f.headline);
+  if (f.remediation) parts.push(`\nRemediation:\n${f.remediation}`);
+  if (f.output) parts.push(`\n${f.output}`);
+  return parts.join('\n');
 }
 
 function specForAttachment(event: AttachmentEvent): RowSpec {
