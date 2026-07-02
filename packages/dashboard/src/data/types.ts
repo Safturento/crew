@@ -2,12 +2,14 @@ import type { FinishStepStatus, ProjectConfig, TranscriptEvent } from 'crew-shar
 
 export type AgentState =
   | 'initializing'
+  | 'queued'
   | 'running'
   | 'idle'
   | 'waiting'
   | 'pr_open'
   | 'pr_merged'
   | 'error'
+  | 'orphaned'
   | 'finished';
 
 /**
@@ -18,13 +20,18 @@ export type AgentState =
  *
  * CREW-202: `pr_merged` is written by the daemon's PrPoller when GitHub
  * reports a PR is no longer OPEN. Both vocabularies carry it.
+ *
+ * CREW-311: `queued` (row born at enqueue) and `orphaned` (running in the
+ * DB, no live process) join both vocabularies with the runner rework.
  */
 export type TransitionState =
   | 'init'
+  | 'queued'
   | 'running'
   | 'pr_open'
   | 'pr_merged'
   | 'error'
+  | 'orphaned'
   | 'finished'
   | 'idle'
   | 'waiting';
