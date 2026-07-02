@@ -6,7 +6,12 @@ import {
   type StartupPhaseRow,
   type StartupPhaseSubtype,
 } from './types.js';
-import type { TranscriptEvent } from '../transcripts/index.js';
+import {
+  systemFailedStartSchema,
+  transcriptEventSchema,
+  type SystemFailedStartEvent,
+  type TranscriptEvent,
+} from '../transcripts/index.js';
 
 describe('StartupEvent', () => {
   it('shape pin for started event', () => {
@@ -46,16 +51,38 @@ describe('StartupEvent', () => {
     expect(e.logPath).toBe('/tmp/crew-npm-install-A.log');
   });
 
-  it('STARTUP_PHASE_SUBTYPES lists all 7 phases', () => {
+  it('STARTUP_PHASE_SUBTYPES lists every dispatch phase', () => {
     expect(STARTUP_PHASE_SUBTYPES).toEqual([
       'crew_startup_preflight',
       'crew_startup_worktree',
       'crew_startup_env_spec',
-      'crew_startup_npm_install',
+      'crew_startup_bruno_env',
       'crew_startup_docker',
+      'crew_startup_npm_install',
+      'crew_startup_playwright_install',
+      'crew_startup_dispatch_preflight',
       'crew_startup_mcp',
+      'crew_startup_skill_injection',
       'crew_startup_claude_spawn',
     ]);
+  });
+
+  it('startupEventSchema parses the CREW-313 pre-spawn tail phases', () => {
+    for (const subtype of [
+      'crew_startup_dispatch_preflight',
+      'crew_startup_playwright_install',
+      'crew_startup_bruno_env',
+      'crew_startup_skill_injection',
+    ] as const) {
+      const parsed = startupEventSchema.parse({
+        type: 'system',
+        subtype,
+        status: 'failed',
+        timestamp: '2026-07-02T17:44:00.000Z',
+        summary: 'boom',
+      });
+      expect(parsed.subtype).toBe(subtype);
+    }
   });
 
   it('startupEventSchema parses a valid completed event', () => {
@@ -141,6 +168,36 @@ describe('StartupPhaseRow', () => {
       logPath: null,
     };
     const evt: TranscriptEvent = row;
+    expect(evt.type).toBe('system');
+  });
+});
+
+describe('SystemFailedStartEvent (CREW-313)', () => {
+  const sample: SystemFailedStartEvent = {
+    type: 'system',
+    subtype: 'crew_failed_start',
+    timestamp: '2026-07-02T17:44:00.000Z',
+    check: 'excluded-commands',
+    headline: 'Sandbox is missing required excludedCommands entries',
+    remediation: 'Run `crew doctor --fix`',
+    output: 'excluded-commands FAIL\n  missing: npm run bruno:smoke*',
+  };
+
+  it('systemFailedStartSchema parses the synthetic failed-start event', () => {
+    const parsed = systemFailedStartSchema.parse(sample);
+    expect(parsed.subtype).toBe('crew_failed_start');
+    expect(parsed.check).toBe('excluded-commands');
+    expect(parsed.output).toContain('npm run bruno:smoke*');
+  });
+
+  it('flows through the top-level transcriptEventSchema union', () => {
+    const parsed = transcriptEventSchema.parse(sample);
+    expect(parsed.type).toBe('system');
+    expect((parsed as SystemFailedStartEvent).headline).toContain('excludedCommands');
+  });
+
+  it('is assignable to TranscriptEvent', () => {
+    const evt: TranscriptEvent = sample;
     expect(evt.type).toBe('system');
   });
 });
