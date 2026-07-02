@@ -5,6 +5,41 @@
 (entries below, newest at top)
 
 
+## 2026-07-02 — `useArchiveFailedStart` / `acknowledgeRun` orphaned by the Runner-page retirement
+
+**What:** The Runner page's "Archive" control on the Failed-to-start section was
+the sole consumer of `useArchiveFailedStart` (`data/runnerControls.ts`) and, via
+it, the `acknowledgeRun` client method + `POST /api/runs/:key/acknowledge`
+daemon route. CREW-312 deleted that section, so `useArchiveFailedStart` is now
+referenced only by its own test, and `acknowledgeRun` is unreferenced on the
+dashboard. Failed-start runs now surface as `error`-state agents in the grid
+(Restart / Inspect), with no Archive verb anywhere in the UI.
+
+**Why noticed:** CREW-312 (Runner rework F) — retiring the Runner page. Left the
+hook + client method in place rather than expand the ticket's scope (it was
+scoped to deleting the dead *reads*; `acknowledgeRun` is a write backed by a
+live daemon endpoint). Flagged so the decommission is deliberate, not forgotten.
+
+**Anchors:** `packages/dashboard/src/data/runnerControls.ts`
+(`useArchiveFailedStart`), `packages/dashboard/src/data/runnerControls.test.tsx`,
+`acknowledgeRun` on `DaemonClient`/`HttpDaemonClient`/`MockDaemonClient`, the
+daemon `POST /api/runs/:key/acknowledge` route + its Bruno endpoint.
+
+**What's been considered:** Two paths — (a) fully decommission: drop the hook,
+the client method across all three surfaces + tests, and (if nothing else needs
+it) the daemon route + Bruno endpoint; or (b) re-surface an Archive/acknowledge
+affordance on `error` rows or in the supervisor drawer, if muting stale
+failed-start noise is still wanted. Decide which before removing — the daemon
+route may have non-dashboard callers.
+
+**Shape of work:** Small — either a delete-only sweep across dashboard (+ maybe
+daemon route/Bruno) or a tiny UI addition. Confirm no other `acknowledgeRun`
+callers first.
+
+**Open questions:** Is acknowledging failed-start rows still a wanted capability,
+or is the grid's error-state surfacing sufficient?
+
+
 ## 2026-07-02 — Drawer-family e2e specs broken by Timeline live-mode auto-scroll
 
 **What:** Three drawer e2e specs fail deterministically against the live worktree
