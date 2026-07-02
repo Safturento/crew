@@ -825,6 +825,44 @@ describe('HttpDaemonClient.getRunnerPage (CREW-291)', () => {
   });
 });
 
+describe('HttpDaemonClient.reconcile (CREW-311)', () => {
+  const ROLLUP = {
+    queued: [
+      { key: 'KAN-23', projectName: 'kanban-api', state: 'queued', since: '2026-06-30T10:00:00Z' },
+    ],
+    orphaned: [
+      { key: 'CREW-11', projectName: 'crew', state: 'orphaned', since: '2026-06-30T09:00:00Z' },
+    ],
+  };
+
+  it('GETs /api/runner/reconcile and returns the parsed buckets', async () => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify(ROLLUP), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      }),
+    );
+
+    const rollup = await new HttpDaemonClient().reconcile();
+
+    expect(rollup.queued.map((r) => r.key)).toEqual(['KAN-23']);
+    expect(rollup.orphaned.map((r) => r.key)).toEqual(['CREW-11']);
+    expect(fetchSpy).toHaveBeenCalledWith('/api/runner/reconcile');
+  });
+
+  it('throws on non-2xx', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('boom', { status: 500 }));
+    await expect(new HttpDaemonClient().reconcile()).rejects.toThrow(/500/);
+  });
+
+  it('throws on schema mismatch', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify({ queued: [{ key: 1 }] }), { status: 200 }),
+    );
+    await expect(new HttpDaemonClient().reconcile()).rejects.toThrow();
+  });
+});
+
 describe('HttpDaemonClient.getStartupLog (CREW-291)', () => {
   it('GETs /api/runs/:key/startup-log and returns the raw body text', async () => {
     const body = '$ crew run CREW-241\n[preflight] resolving project config… ok\nexit code 1';

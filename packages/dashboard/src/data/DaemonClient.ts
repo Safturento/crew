@@ -4,6 +4,7 @@ import type {
   EnqueueRunnerCommand,
   LiveProcess,
   ProjectTicketsResponse,
+  ReconcileRollup,
   RunnerCommand,
   RunnerPage,
 } from 'crew-shared';
@@ -65,6 +66,13 @@ export interface DaemonClient {
    * three previously-stubbed sections.
    */
   getRunnerPage(): Promise<RunnerPage>;
+  /**
+   * CREW-311: the housekeeping roll-up from `GET /api/runner/reconcile`
+   * (CREW-310) — queued + orphaned agents across all projects. Backs the
+   * runner chip's orphaned-count badge and the supervisor drawer's
+   * Reconcile section.
+   */
+  reconcile(): Promise<ReconcileRollup>;
   /**
    * CREW-291: a run's raw startup console log from
    * `GET /api/runs/:key/startup-log`. Returns the body text, or `null` when no

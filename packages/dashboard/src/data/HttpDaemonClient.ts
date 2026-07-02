@@ -4,6 +4,7 @@ import type {
   EnqueueAction,
   EnqueueRunnerCommand,
   ProjectTicketsResponse,
+  ReconcileRollup,
   RunnerCommand,
   RunnerPage,
 } from 'crew-shared';
@@ -326,6 +327,19 @@ const RunnerPageSchema = z.object({
   ),
 });
 
+// CREW-311: inline mirror of the shared `reconcileRollupSchema` — the
+// housekeeping buckets served by GET /api/runner/reconcile (CREW-310).
+const RunRefSchema = z.object({
+  key: z.string(),
+  projectName: z.string(),
+  state: z.enum(['queued', 'orphaned']),
+  since: z.string(),
+});
+const ReconcileRollupSchema = z.object({
+  queued: z.array(RunRefSchema),
+  orphaned: z.array(RunRefSchema),
+});
+
 const StateHistoryResponseSchema = z.object({
   transitions: z.array(
     z.object({
@@ -550,6 +564,18 @@ export class HttpDaemonClient implements DaemonClient {
     const res = await fetch(`${this.baseUrl}/api/runner/page`);
     if (!res.ok) throw new Error(`GET /api/runner/page: ${res.status}`);
     return RunnerPageSchema.parse(await res.json());
+  }
+
+  /**
+   * CREW-311: the housekeeping roll-up (CREW-310) — every agent whose derived
+   * state is `queued` or `orphaned`, bucketed, across all projects. Backs the
+   * runner chip's orphaned-count badge and (F) the supervisor drawer's
+   * Reconcile section.
+   */
+  async reconcile(): Promise<ReconcileRollup> {
+    const res = await fetch(`${this.baseUrl}/api/runner/reconcile`);
+    if (!res.ok) throw new Error(`GET /api/runner/reconcile: ${res.status}`);
+    return ReconcileRollupSchema.parse(await res.json());
   }
 
   /**
