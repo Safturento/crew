@@ -10,7 +10,7 @@ You hand `crew` a Jira ticket key. It:
 
 - Sets up a fresh git worktree for the branch
 - Generates per-worktree docker config so multiple stacks coexist
-- Hands off to a sandboxed Claude Code agent with a self-contained prompt: pull the ticket, plan, implement, verify, push, open a PR, transition Jira
+- Hands off to a sandboxed Claude Code agent with a self-contained prompt: pull the ticket, plan, implement, verify, push, open a PR, transition Jira. Dispatches are pinned to Opus (`claude-opus-4-8`) regardless of your interactive `/model` choice; set `CREW_CLAUDE_MODEL` to override for a single run
 - Surfaces live progress via a CLI watcher and (eventually) a web dashboard
 - Handles the post-merge cleanup with one command
 
