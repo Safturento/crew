@@ -382,6 +382,12 @@ describe('App — runner-rework row actions (CREW-311)', () => {
   });
 
   it('enqueues a dequeue runner command when a queued row Dequeue is clicked', async () => {
+    // Dequeue drains through the host runner, so it needs the runner online.
+    vi.spyOn(defaultClient, 'getRunnerStatus').mockResolvedValue({
+      online: true,
+      lastSeen: 1,
+      processes: [],
+    });
     const command = vi
       .spyOn(defaultClient, 'enqueueRunnerCommand')
       .mockResolvedValue(SAMPLE_COMMAND);
@@ -391,7 +397,9 @@ describe('App — runner-rework row actions (CREW-311)', () => {
       <App client={new MockDaemonClient({ projects, agents: agentIn('queued', '') })} />,
     );
 
-    await user.click(await screen.findByRole('button', { name: 'Dequeue' }));
+    const dequeue = await screen.findByRole('button', { name: 'Dequeue' });
+    await waitFor(() => expect(dequeue).toBeEnabled());
+    await user.click(dequeue);
 
     expect(command).toHaveBeenCalledWith({ agentKey: 'KAN-50', kind: 'dequeue', payload: null });
   });

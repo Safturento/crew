@@ -238,12 +238,21 @@ function QuickActions({
       );
     case 'queued':
       // CREW-311: drop the pending action request before the runner spawns
-      // it. Dequeue mutates the daemon queue directly (the runner only drains
-      // the drop), so it stays enabled with no runner connected — matching
-      // the Runner page's Queued-actions section.
+      // it. Like the other queue verbs it enqueues a runner_commands row the
+      // host runner drains — hence the connectivity gate. NOTE: the host
+      // apply currently reports `dequeue` "not yet supported" (it needs a
+      // daemon action-drop route) — tracked in
+      // docs/followups/daemon-cli-dispatch.md.
       return (
         <SingleAction>
-          <Button color="idle" intensity="ghost" size="sm" onClick={fire('dequeue')}>
+          <Button
+            color="idle"
+            intensity="ghost"
+            size="sm"
+            className={gateClass}
+            onClick={fire('dequeue')}
+            {...gate}
+          >
             Dequeue
           </Button>
         </SingleAction>

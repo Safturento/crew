@@ -282,6 +282,13 @@ describe('AgentRow', () => {
       await user.click(screen.getByRole('button', { name: 'Dequeue' }));
       expect(onAction).toHaveBeenCalledWith('dequeue', expect.objectContaining({ key: 'KAN-31' }));
     });
+
+    // Dequeue enqueues a runner_commands row the host runner drains, so like
+    // Resume/Finish it degrades to disabled with no runner connected.
+    it('disables Dequeue when the runner is offline', () => {
+      render(<AgentRow agent={queued} onSelect={() => {}} runnerOnline={false} />);
+      expect(screen.getByRole('button', { name: 'Dequeue' })).toBeDisabled();
+    });
   });
 
   // CREW-311: orphaned rows carry a single Reap (force-settle the DB/process

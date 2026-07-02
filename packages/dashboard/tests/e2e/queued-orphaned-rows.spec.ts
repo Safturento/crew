@@ -36,6 +36,27 @@ async function mockAgents(page: Page): Promise<void> {
       }),
     });
   });
+  // The chip badge reads the reconcile roll-up — mock it consistent with the
+  // orphaned agent below.
+  await page.route('**/api/runner/reconcile', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        queued: [
+          {
+            key: 'KAN-23',
+            projectName: 'kanban-api',
+            state: 'queued',
+            since: '2026-06-30T10:00:00Z',
+          },
+        ],
+        orphaned: [
+          { key: 'CREW-11', projectName: 'crew', state: 'orphaned', since: '2026-06-30T09:00:00Z' },
+        ],
+      }),
+    });
+  });
   await page.route('**/api/agents', async (route) => {
     await route.fulfill({
       status: 200,
@@ -94,5 +115,10 @@ test.describe('queued/orphaned grid rows (CREW-311)', () => {
     await expect(errorRow.getByRole('button', { name: 'Restart' })).toBeVisible();
     await expect(errorRow.getByRole('button', { name: 'Inspect' })).toBeVisible();
     await expect(errorRow.getByRole('button', { name: 'Resume' })).toHaveCount(0);
+
+    // The runner chip carries the orphaned count from the reconcile roll-up.
+    const chip = page.getByRole('button', { name: /Runner offline.*orphaned/i });
+    await expect(chip).toBeVisible();
+    await expect(chip).toHaveText(/1/);
   });
 });

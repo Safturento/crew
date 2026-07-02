@@ -41,6 +41,9 @@ script.
 **Open questions:** Is the enqueue-for-real behavior of `agent-actions.spec`
 intentionally integration-y (proving the wire), or incidental?
 
+
+## 2026-05-15 — `.agents/` topic-doc system vs native `.claude/rules/` and agents.md alignment
+
 **Ticket:** [CREW-210](https://safturento.atlassian.net/browse/CREW-210) — parked in Backlog (needs planning).
 
 **What:** crew's `.agents/<topic>.md` system — per-topic docs with `covers:` path globs, indexed from `AGENTS.md`'s "When you need it" table — is a hand-rolled equivalent of Claude Code's native `.claude/rules/` feature: topic `.md` files with `paths:` frontmatter that lazy-load when Claude touches matching files. Decide whether to migrate `.agents/` onto `.claude/rules/`, keep `.agents/` as-is (now that its load path is fixed), or run both.

@@ -5,6 +5,47 @@
 (entries below, newest at top)
 
 
+## 2026-07-02 — Dequeue apply + orphaned-lifecycle producers are missing (Epic CREW-306 gap)
+
+**What:** The runner-rework dashboard (CREW-311) surfaces Dequeue on queued
+rows and Reap on orphaned rows, but neither verb completes end-to-end:
+
+1. **Dequeue is a no-op.** It enqueues a `runner_commands` row, and the host
+   runner's `applyCommand` reports `dequeue` → `failed` "not yet supported"
+   (`packages/cli/src/lib/runner/commands.ts:78`) — it needs a daemon
+   action-drop route (mark the pending `action_requests` row cancelled +
+   settle the `queued` agent row). The Runner page's Queued-actions section
+   has the same dead path; the dashboard shows no error because nothing
+   listens on `runner.command_changed`.
+2. **Nothing produces `run_orphaned`.** The reducer edge `running → orphaned`
+   (CREW-307) and the shared event type exist, but no daemon or CLI code
+   emits the event — orphaned rows can currently only arise via manual state
+   override. The runner's liveness sweep (CREW-288) knows exactly when a pid
+   dies without a terminal remove; it's the natural producer.
+3. **Reap doesn't settle the state.** The host apply only does
+   `registry.remove()`; no transition is written, so a reaped `orphaned`
+   agent stays amber forever.
+
+**Why noticed:** CREW-311 self-review (code-reviewer subagent). The dashboard
+wiring is correct-per-plan; the 12-task runner-rework plan simply has no task
+for these producers, so at Epic close the chip badge + Dequeue/Reap would be
+dead UI without them.
+
+**Anchors:** `packages/cli/src/lib/runner/commands.ts` (`applyCommand`),
+`packages/cli/src/lib/runner/liveness.ts` / `registry.reapDead`,
+`packages/daemon/src/services/RunnerCommandsService.ts`,
+`packages/daemon/src/services/state-reduce.ts` (`run_orphaned` edge),
+`packages/dashboard/src/components/AgentRow.tsx` (queued/orphaned cases).
+
+**Shape of work:** likely one Epic child — a daemon action-drop route +
+`dequeue` apply, a `run_orphaned` emit from the liveness sweep, and a settle
+transition on `reap` apply (an `idle`-or-`error` decision to make).
+
+**Open questions:** Should reap settle to `idle` (resumable worktree remains)
+or `error` (something died)? Should dequeue cancel the action row or delete
+it (history vs cleanliness)?
+
+
 ## 2026-06-30 — Re-running a terminal agent leaves IngestService's state cache stale (birth transition ignored)
 
 **What:** `IngestService` keeps an in-memory `agentStateCache` (`packages/daemon/src/services/IngestService.ts:85`) that `reduceState` reads as `previous` for each concrete state event. The cache is only ever populated (never invalidated) per key for the daemon's lifetime, and `getCachedAgentState` reads the DB *only on a cache miss*. So when a **terminal** agent (`finished`/`pr_merged`) is re-run in the same long-lived daemon, the cache still holds the old terminal state, and the new run's first `run_started` event reduces `reduceState('finished','run_started') → null` (terminal guard) — **no `running` transition is written**, and the agent can stick. This predates CREW-307 (nothing invalidated the cache on re-run before either), but CREW-307 makes row-at-initiation / re-run a first-class flow, so it's now worth fixing. `RunFailureService.birthQueued`/`recordInitializing` write the birth transition to the DB + publish SSE but deliberately do **not** touch the cache (see the `writeBirthTransition` docstring), which is coherent for a fresh key but not for a cached re-run.
