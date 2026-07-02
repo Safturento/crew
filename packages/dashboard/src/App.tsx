@@ -13,6 +13,7 @@ import { NewRunModal } from './components/NewRunModal.js';
 import { TopNav } from './components/TopNav.js';
 import { ViewportFrame } from './components/ViewportFrame.js';
 import { useActionToasts, useEnqueueAction } from './data/actions.js';
+import { useDequeue, useReap } from './data/runnerControls.js';
 import type { DaemonClient } from './data/DaemonClient.js';
 import { HttpDaemonClient } from './data/HttpDaemonClient.js';
 import type { Agent } from './data/types.js';
@@ -73,9 +74,13 @@ function AppContent({ client }: { client: DaemonClient }) {
   // no-runner degradation; `onAgentAction` finally backs the QuickAction
   // thread (AgentRow → ProjectSection → AgentsList). Resume → `resume`
   // (CREW-275: continues an interrupted run on its existing worktree),
-  // Finish → `finish`; the other QuickActions belong to later tickets.
+  // Finish → `finish`. CREW-311 adds the runner-rework verbs: Restart →
+  // a fresh `run` (CREW-309 preflight reclaims the leftover worktree),
+  // Dequeue/Reap → runner reverse-queue commands.
   const runner = useRunnerStatus();
   const enqueue = useEnqueueAction();
+  const dequeue = useDequeue();
+  const reap = useReap();
   useActionToasts();
 
   // CREW-218: the "+ New Run" stepper modal. App owns the open state + the
@@ -93,13 +98,21 @@ function AppContent({ client }: { client: DaemonClient }) {
       if (kind === 'resume') {
         // CREW-275: continue an interrupted run on its existing worktree.
         enqueue.mutate({ kind: 'resume', project: agent.projectName, ticketKey: agent.key });
+      } else if (kind === 'restart') {
+        // CREW-311: a failed-start never registered a run, so Restart is a
+        // plain re-run — CREW-309's preflight self-heals the orphan worktree.
+        enqueue.mutate({ kind: 'run', project: agent.projectName, ticketKey: agent.key });
       } else if (kind === 'finish') {
         enqueue.mutate({ kind: 'finish', project: agent.projectName, ticketKey: agent.key });
       } else if (kind === 'fix-pr') {
         setFixPrAgent(agent);
+      } else if (kind === 'dequeue') {
+        dequeue.mutate(agent.key);
+      } else if (kind === 'reap') {
+        reap.mutate(agent.key);
       }
     },
-    [enqueue],
+    [enqueue, dequeue, reap],
   );
 
   const body = useMemo(() => {

@@ -315,3 +315,97 @@ describe('App — agent actions (CREW-217)', () => {
     expect(screen.getByRole('button', { name: 'Finish' })).toBeDisabled();
   });
 });
+
+// CREW-311: the runner-rework row actions. Restart re-enqueues a plain `run`
+// (CREW-309 preflight reclaims the leftover worktree); Dequeue/Reap enqueue
+// runner reverse-queue commands, same path as the Runner page sections.
+describe('App — runner-rework row actions (CREW-311)', () => {
+  const agentIn = (state: Agent['state'], startedAt = '2026-04-26T13:00:00Z'): Agent[] => [
+    {
+      key: 'KAN-50',
+      projectName: 'kanban-api',
+      ticketTitle: 'Rework work',
+      state,
+      startedAt,
+      tokens: 10,
+    },
+  ];
+
+  const SAMPLE_COMMAND = {
+    id: 1,
+    agentKey: 'KAN-50',
+    kind: 'dequeue' as const,
+    payload: null,
+    status: 'pending' as const,
+    error: null,
+    createdAt: '2026-06-04T00:00:00Z',
+    updatedAt: '2026-06-04T00:00:00Z',
+  };
+
+  beforeEach(() => {
+    window.location.hash = '';
+  });
+
+  it('enqueues a run action when a failed-start row Restart is clicked', async () => {
+    vi.spyOn(defaultClient, 'getRunnerStatus').mockResolvedValue({
+      online: true,
+      lastSeen: 1,
+      processes: [],
+    });
+    const enqueue = vi.spyOn(defaultClient, 'enqueueAction').mockResolvedValue({
+      id: 1,
+      kind: 'run',
+      ticketKey: 'KAN-50',
+      project: 'kanban-api',
+      payload: { kind: 'run' },
+      status: 'pending',
+      error: null,
+      createdAt: '2026-06-04T00:00:00Z',
+      updatedAt: '2026-06-04T00:00:00Z',
+    });
+    const user = userEvent.setup();
+
+    // startedAt '' = failed-start error → the row offers Restart.
+    renderWithProviders(
+      <App client={new MockDaemonClient({ projects, agents: agentIn('error', '') })} />,
+    );
+
+    const restart = await screen.findByRole('button', { name: 'Restart' });
+    await waitFor(() => expect(restart).toBeEnabled());
+    await user.click(restart);
+
+    expect(enqueue).toHaveBeenCalledWith({
+      kind: 'run',
+      project: 'kanban-api',
+      ticketKey: 'KAN-50',
+    });
+  });
+
+  it('enqueues a dequeue runner command when a queued row Dequeue is clicked', async () => {
+    const command = vi
+      .spyOn(defaultClient, 'enqueueRunnerCommand')
+      .mockResolvedValue(SAMPLE_COMMAND);
+    const user = userEvent.setup();
+
+    renderWithProviders(
+      <App client={new MockDaemonClient({ projects, agents: agentIn('queued', '') })} />,
+    );
+
+    await user.click(await screen.findByRole('button', { name: 'Dequeue' }));
+
+    expect(command).toHaveBeenCalledWith({ agentKey: 'KAN-50', kind: 'dequeue', payload: null });
+  });
+
+  it('enqueues a reap runner command when an orphaned row Reap is clicked', async () => {
+    const command = vi
+      .spyOn(defaultClient, 'enqueueRunnerCommand')
+      .mockResolvedValue({ ...SAMPLE_COMMAND, kind: 'reap' });
+    const user = userEvent.setup();
+
+    renderWithProviders(<App client={new MockDaemonClient({ projects, agents: agentIn('orphaned') })} />);
+
+    await user.click(await screen.findByRole('button', { name: 'Reap' }));
+
+    expect(command).toHaveBeenCalledWith({ agentKey: 'KAN-50', kind: 'reap', payload: null });
+  });
+});
