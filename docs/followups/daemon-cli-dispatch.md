@@ -4,61 +4,6 @@
 
 (entries below, newest at top)
 
-## 2026-07-02 — `.claude/` dispatch artifacts are untracked-but-visible in non-crew worktrees
-
-**Ticket:** [CREW-315](https://safturento.atlassian.net/browse/CREW-315)
-
-**What:** Dispatch writes per-run artifacts into the target worktree's
-`.claude/`: `settings.local.json` (carrying the templated `CREW_AGENT_KEY`),
-`skills/` (skill injection, every dispatch), and, as of CREW-314,
-`crew-hooks/pr-create-postuse.mjs`. All are untracked, which is what makes
-them survive the `crew fix-pr` resume rebase — but "never dirties the
-worktree" only holds when the target repo gitignores `.claude/`. The crew repo
-does (`.gitignore` `.claude/*`); a non-crew target (Recipes, home-assistant,
-…) does not — `crew init` only appends `.claude/secrets/` to a target's
-`.gitignore` (`packages/cli/src/lib/init/scaffold-gh-token.ts`). So on those
-repos the artifacts show up in `git status` as untracked, with two impacts:
-(1) **`crew finish` is hard-blocked on every non-crew repo** — its dirty gate
-(`hasUncommittedChanges` in `packages/cli/src/commands/finish.ts`) uses
-`git status --porcelain`, which counts untracked files; observed 2026-07-02 on
-KAN-48/KAN-49 (Recipes), where both merged PRs refused finish with "worktree
-has uncommitted changes" on nothing but `?? .claude/skills/`. (2) An agent
-that runs `git add -A` / `git add .` would sweep the per-dispatch key file
-into its PR — a latent secret leak.
-
-**Why noticed:** CREW-314 code review (Code Reviewer subagent). CREW-314 copied
-the hook into `.claude/crew-hooks/`, and the reviewer flagged that the
-accompanying "gitignored, so it never dirties the worktree" comment overstates a
-guarantee that's crew-repo-specific. The `settings.local.json` half of the
-exposure predates CREW-314 (CREW-256); CREW-314 adds one more file and made the
-inaccurate comment visible. Wording was softened in the CREW-314 PR; the
-underlying leak is deferred here.
-
-**Anchors:** `packages/cli/src/lib/run/state-event-hook-injection.ts` (the copy +
-`HOOK_PATH` doc comment), `.agents/dispatch.md` "Distribution" paragraph,
-`packages/cli/src/lib/init/scaffold-gh-token.ts` (the `.gitignore` append),
-CREW-256, CREW-314.
-
-**What's been considered:** Reviewer's suggestion — have dispatch append
-`.claude/settings.local.json` + `.claude/crew-hooks/` to the worktree's
-`.git/info/exclude`, making the untracked guarantee real on every target
-regardless of its `.gitignore`. Note `info/exclude` lives in the shared common
-git dir, so a linked-worktree write applies repo-wide (fine here — the same
-pattern holds across all crew worktrees of that repo). Alternative: have `crew
-init` widen the target's `.gitignore` to `.claude/*` (broader blast radius, and
-doesn't retro-protect already-inited repos).
-
-**Shape of work:** small, localized in dispatch setup — one `.git/info/exclude`
-converge step (idempotent append) run alongside/near `injectStateEventHook`,
-plus a unit test. Covers all three artifacts (`skills/`, `crew-hooks/`,
-`settings.local.json`), closing the pre-existing `settings.local.json`
-exposure too — and, since `info/exclude` lives in the shared common git dir,
-retroactively un-dirties worktrees left by earlier dispatches.
-
-**Open questions:** `.git/info/exclude` path resolution for a linked worktree
-(resolve via `git rev-parse --git-common-dir`, not `--git-dir`); whether to also
-sweep pre-existing dirty entries left by past dispatches.
-
 ## 2026-07-02 — Dispatch-gate preflight failures never reach the agent timeline (all-green timeline on an error run)
 
 **Ticket:** [CREW-313](https://safturento.atlassian.net/browse/CREW-313) (child G of Epic CREW-306)
@@ -70,12 +15,12 @@ in the drawer. Two compounding gaps:
 
 1. **No `failed` startup event is written.** `runPreflight` and
    `installPlaywrightBrowsers` (`packages/cli/src/lib/run/agent-environment.ts:133-146`)
-   are the only pre-spawn steps *not* wrapped in `bracketStartupPhase`, so a
+   are the only pre-spawn steps _not_ wrapped in `bracketStartupPhase`, so a
    throw there emits no `failed` phase to `~/.crew/startup/<key>.jsonl` /
    `startup_events`. Every bracketed sibling (docker, npm_install, worktree,
    early preflight) records its own failure; these two die silently.
 2. **The timeline never merges run-level failures.** The structured diagnosis
-   *is* captured — `runTrackedPreflight` → `reportFailedStart` → `runs` row
+   _is_ captured — `runTrackedPreflight` → `reportFailedStart` → `runs` row
    `failure_check/headline/remediation/output` — and the Runner page's
    "Failed to start" section renders it. But `TimelineService.getTimeline`
    (`packages/daemon/src/services/TimelineService.ts:44`) concatenates only
@@ -92,14 +37,14 @@ all-green timeline; the actual diagnosis was only reachable via
 tail), `packages/cli/src/lib/run/preflight-tracking.ts` (`runTrackedPreflight`),
 `packages/daemon/src/services/RunFailureService.ts` (`recordFailedStart`),
 `packages/daemon/src/services/TimelineService.ts` (`getTimeline`),
-`packages/daemon/src/services/RunnerPageService.ts` (the surface that *does*
+`packages/daemon/src/services/RunnerPageService.ts` (the surface that _does_
 show it).
 
 **What's been considered:** Fix 1 (bracket the dispatch preflight + playwright
 install with `bracketStartupPhase`, e.g. a `crew_startup_dispatch_preflight`
 subtype) is the minimal change and makes the timeline self-explanatory — the
 failed phase carries the rendered `PreflightError`. Fix 2 (TimelineService
-merges `failed-start` run failures as a synthetic terminal event) covers *all*
+merges `failed-start` run failures as a synthetic terminal event) covers _all_
 unbracketed death paths, not just this one, but adds a second event source to
 the timeline contract. They compose; Fix 1 alone would have surfaced KAN-48.
 
@@ -110,7 +55,6 @@ TimelineService/schema touch. One ticket either way.
 **Open questions:** Should the drawer also link to the Runner page's
 failed-start card when one exists for the key, instead of (or in addition to)
 merging into the timeline?
-
 
 ## 2026-07-02 — Dequeue apply + orphaned-lifecycle producers are missing (Epic CREW-306 gap)
 

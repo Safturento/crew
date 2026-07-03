@@ -2,6 +2,53 @@
 
 > Items that were ticketed + shipped, or fixed inline. Kept for historical context. Index: [`../followups.md`](../followups.md).
 
+## 2026-07-02 — `.claude/` dispatch artifacts are untracked-but-visible in non-crew worktrees
+
+**What:** Dispatch writes per-run artifacts into the target worktree's
+`.claude/`: `settings.local.json` (carrying the templated `CREW_AGENT_KEY`),
+`skills/` (skill injection, every dispatch), and, as of CREW-314,
+`crew-hooks/pr-create-postuse.mjs`. All are untracked, which is what makes
+them survive the `crew fix-pr` resume rebase — but "never dirties the
+worktree" only holds when the target repo gitignores `.claude/`. The crew repo
+does (`.gitignore` `.claude/*`); a non-crew target (Recipes, home-assistant,
+…) does not — `crew init` only appends `.claude/secrets/` to a target's
+`.gitignore` (`packages/cli/src/lib/init/scaffold-gh-token.ts`). So on those
+repos the artifacts show up in `git status` as untracked, with two impacts:
+(1) **`crew finish` is hard-blocked on every non-crew repo** — its dirty gate
+(`hasUncommittedChanges` in `packages/cli/src/commands/finish.ts`) uses
+`git status --porcelain`, which counts untracked files; observed 2026-07-02 on
+KAN-48/KAN-49 (Recipes), where both merged PRs refused finish with "worktree
+has uncommitted changes" on nothing but `?? .claude/skills/`. (2) An agent
+that runs `git add -A` / `git add .` would sweep the per-dispatch key file
+into its PR — a latent secret leak.
+
+**Why noticed:** CREW-314 code review (Code Reviewer subagent). CREW-314 copied
+the hook into `.claude/crew-hooks/`, and the reviewer flagged that the
+accompanying "gitignored, so it never dirties the worktree" comment overstates a
+guarantee that's crew-repo-specific. The `settings.local.json` half of the
+exposure predates CREW-314 (CREW-256); CREW-314 adds one more file and made the
+inaccurate comment visible. Wording was softened in the CREW-314 PR; the
+underlying leak was deferred here.
+
+**Anchors:** `packages/cli/src/lib/run/state-event-hook-injection.ts` (the copy +
+`HOOK_PATH` doc comment), `.agents/dispatch.md` "Distribution" paragraph,
+`packages/cli/src/lib/init/scaffold-gh-token.ts` (the `.gitignore` append),
+CREW-256, CREW-314.
+
+**Resolved 2026-07-03:** Shipped in CREW-315. Dispatch setup now runs a
+`convergeGitExclude` step (`packages/cli/src/lib/run/converge-git-exclude.ts`) in
+the skill/hook-injection bracket of `crew run`: it appends `.claude/skills/`,
+`.claude/crew-hooks/`, and `.claude/settings.local.json` to the target repo's
+`info/exclude`, resolved via `git rev-parse --git-common-dir` so the one append
+covers all current and future worktrees of that repo (retroactively un-dirtying
+already-dispatched ones). The append is dedup-aware (no duplicate lines on
+re-dispatch), tolerates a missing `info/` dir, and is best-effort (warns, never
+throws). Closes both impacts at the source, including the pre-existing
+`settings.local.json` exposure; no change to `finish`'s dirty gate was needed —
+it stays strict for genuinely unrecovered work. The optional finish-side warn for
+pre-fix worktrees on other machines was skipped: the shared-common-git-dir append
+already retro-fixes them on the next `crew run` of that repo.
+
 ## 2026-07-02 — Dispatch-gate preflight failures never reach the agent timeline (all-green timeline on an `error` run)
 
 **What:** The KAN-48 dispatch died in the `excluded-commands` dispatch-preflight check ~700ms after `npm ci`. The agent settled to `error`, but its timeline showed every startup phase green then simply stopped — the diagnosis was only reachable via the (now-retired) Runner page. Three gaps: (1) the dispatch preflight + `installPlaywrightBrowsers` tail of `prepareAgentEnvironment` (plus the Bruno env write and skill/hook injection) were not wrapped in `bracketStartupPhase`, so a throw there emitted no `failed` phase; (2) `TimelineService.getTimeline` never merged the `runs` row's structured `failed-start` diagnosis, so the reason was captured but unreachable from the drawer; (3) `GET /api/agents/:key` 404'd for a zero-run agent (a pre-registration death, e.g. a worktree-phase failure), so the drawer couldn't even open.

@@ -65,6 +65,7 @@ import {
   readWorktreeState,
   reconcileOrphanBranch,
   reconcileOrphanWorktree,
+  convergeGitExclude,
   injectStateEventHook,
   requireWorktreeAvailable,
   runLogPathFor,
@@ -635,6 +636,18 @@ export async function runRun(key: string, opts: RunOptions): Promise<never> {
         worktree,
         key,
         log: (msg) => console.log(pc.dim(`    ${msg}`)),
+      });
+
+      // CREW-315: exclude the three injected `.claude/` artifacts (skills/,
+      // crew-hooks/, settings.local.json) via the repo's `.git/info/exclude`, so
+      // they stay untracked even on a target that doesn't gitignore `.claude/`.
+      // Keeps `crew finish`'s dirty gate green and stops a stray `git add -A`
+      // from committing the per-dispatch-key file. Best-effort (warns, never
+      // throws), so a converge miss can't abort an otherwise-healthy dispatch.
+      await convergeGitExclude({
+        worktree,
+        log: (msg) => console.log(pc.dim(`    ${msg}`)),
+        warn: (msg) => console.warn(pc.yellow(`  ! ${msg}`)),
       });
     },
   );

@@ -3,6 +3,7 @@ export * from './agent-options.js';
 export * from './app-lifecycle.js';
 export * from './baseline.js';
 export * from './cleanup-worktree.js';
+export * from './converge-git-exclude.js';
 export * from './discover-transcript.js';
 export * from './paths.js';
 export * from './skill-injection-step.js';
