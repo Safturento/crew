@@ -4,60 +4,46 @@
 
 (entries below, newest at top)
 
-## 2026-07-02 — `.claude/` dispatch artifacts are untracked-but-visible in non-crew worktrees
+## 2026-07-03 — Two `--git-common-dir` → `info/exclude` appenders in dispatch setup (converge-git-exclude vs write-mcp-file)
 
-**Ticket:** [CREW-315](https://safturento.atlassian.net/browse/CREW-315)
+**What:** A single `crew run` now resolves `git rev-parse --git-common-dir` and
+read-modify-writes the shared `info/exclude` **twice**: once in
+`convergeGitExclude` (CREW-315, the three `.claude/` injection artifacts) and
+once in `appendExcludeLine` inside `write-mcp-file.ts` (the `.mcp.json` line).
+The logic is near-identical — resolve common dir (abs-vs-rel guard), dedup by
+trimmed line, append with a leading-newline guard — but the two differ in error
+semantics: `convergeGitExclude` is best-effort (warns, never throws) while
+`appendExcludeLine` throws on a failed `rev-parse`. Both also share the same
+lock-free read-modify-write on the shared common-dir file, so concurrent
+dispatches into sibling worktrees of one repo can momentarily clobber each
+other's lines (self-healing on the next dispatch; pre-existing in
+`appendExcludeLine`).
 
-**What:** Dispatch writes per-run artifacts into the target worktree's
-`.claude/`: `settings.local.json` (carrying the templated `CREW_AGENT_KEY`),
-`skills/` (skill injection, every dispatch), and, as of CREW-314,
-`crew-hooks/pr-create-postuse.mjs`. All are untracked, which is what makes
-them survive the `crew fix-pr` resume rebase — but "never dirties the
-worktree" only holds when the target repo gitignores `.claude/`. The crew repo
-does (`.gitignore` `.claude/*`); a non-crew target (Recipes, home-assistant,
-…) does not — `crew init` only appends `.claude/secrets/` to a target's
-`.gitignore` (`packages/cli/src/lib/init/scaffold-gh-token.ts`). So on those
-repos the artifacts show up in `git status` as untracked, with two impacts:
-(1) **`crew finish` is hard-blocked on every non-crew repo** — its dirty gate
-(`hasUncommittedChanges` in `packages/cli/src/commands/finish.ts`) uses
-`git status --porcelain`, which counts untracked files; observed 2026-07-02 on
-KAN-48/KAN-49 (Recipes), where both merged PRs refused finish with "worktree
-has uncommitted changes" on nothing but `?? .claude/skills/`. (2) An agent
-that runs `git add -A` / `git add .` would sweep the per-dispatch key file
-into its PR — a latent secret leak.
+**Why noticed:** CREW-315 code review (general-purpose reviewer). Flagged
+Minor/style: reasonable to keep them separate given the throw-vs-warn split, but
+a shared `appendToGitExclude(worktree, lines[], { throwOnError })` primitive
+would remove the duplication and let one call batch all four exclude lines
+(`.mcp.json` + the three `.claude/` artifacts), halving the git calls + file
+writes per dispatch.
 
-**Why noticed:** CREW-314 code review (Code Reviewer subagent). CREW-314 copied
-the hook into `.claude/crew-hooks/`, and the reviewer flagged that the
-accompanying "gitignored, so it never dirties the worktree" comment overstates a
-guarantee that's crew-repo-specific. The `settings.local.json` half of the
-exposure predates CREW-314 (CREW-256); CREW-314 adds one more file and made the
-inaccurate comment visible. Wording was softened in the CREW-314 PR; the
-underlying leak is deferred here.
+**Anchors:** `packages/cli/src/lib/run/converge-git-exclude.ts`
+(`convergeGitExclude`), `packages/cli/src/lib/mcp-config/write-mcp-file.ts`
+(`appendExcludeLine`, `EXCLUDE_LINE`). Both call sites are in
+`packages/cli/src/commands/run.ts` (the MCP write at step 8, the converge at
+step 9).
 
-**Anchors:** `packages/cli/src/lib/run/state-event-hook-injection.ts` (the copy +
-`HOOK_PATH` doc comment), `.agents/dispatch.md` "Distribution" paragraph,
-`packages/cli/src/lib/init/scaffold-gh-token.ts` (the `.gitignore` append),
-CREW-256, CREW-314.
+**What's been considered:** Extract a shared exclude-append primitive taking a
+list of patterns + an error-mode flag; `.mcp.json`'s appender keeps its throwing
+behavior by passing `throwOnError: true`, the converge stays best-effort.
+Batching is a natural bonus (one `rev-parse` + one write covers all four lines).
+Left out of CREW-315 to keep the fix scoped to the leak and avoid regressing the
+independently-tested `.mcp.json` path. Also worth deciding whether the lock-free
+write wants any guard, or whether self-healing-on-next-dispatch is acceptable
+(it has been for `appendExcludeLine` to date).
 
-**What's been considered:** Reviewer's suggestion — have dispatch append
-`.claude/settings.local.json` + `.claude/crew-hooks/` to the worktree's
-`.git/info/exclude`, making the untracked guarantee real on every target
-regardless of its `.gitignore`. Note `info/exclude` lives in the shared common
-git dir, so a linked-worktree write applies repo-wide (fine here — the same
-pattern holds across all crew worktrees of that repo). Alternative: have `crew
-init` widen the target's `.gitignore` to `.claude/*` (broader blast radius, and
-doesn't retro-protect already-inited repos).
-
-**Shape of work:** small, localized in dispatch setup — one `.git/info/exclude`
-converge step (idempotent append) run alongside/near `injectStateEventHook`,
-plus a unit test. Covers all three artifacts (`skills/`, `crew-hooks/`,
-`settings.local.json`), closing the pre-existing `settings.local.json`
-exposure too — and, since `info/exclude` lives in the shared common git dir,
-retroactively un-dirties worktrees left by earlier dispatches.
-
-**Open questions:** `.git/info/exclude` path resolution for a linked worktree
-(resolve via `git rev-parse --git-common-dir`, not `--git-dir`); whether to also
-sweep pre-existing dirty entries left by past dispatches.
+**Shape of work:** small refactor — one new helper in `lib/run/` (or a neutral
+`lib/git/`), both call sites re-pointed, existing tests retargeted + a batched
+test. Independent of any other work.
 
 ## 2026-07-02 — Dispatch-gate preflight failures never reach the agent timeline (all-green timeline on an error run)
 
@@ -70,12 +56,12 @@ in the drawer. Two compounding gaps:
 
 1. **No `failed` startup event is written.** `runPreflight` and
    `installPlaywrightBrowsers` (`packages/cli/src/lib/run/agent-environment.ts:133-146`)
-   are the only pre-spawn steps *not* wrapped in `bracketStartupPhase`, so a
+   are the only pre-spawn steps _not_ wrapped in `bracketStartupPhase`, so a
    throw there emits no `failed` phase to `~/.crew/startup/<key>.jsonl` /
    `startup_events`. Every bracketed sibling (docker, npm_install, worktree,
    early preflight) records its own failure; these two die silently.
 2. **The timeline never merges run-level failures.** The structured diagnosis
-   *is* captured — `runTrackedPreflight` → `reportFailedStart` → `runs` row
+   _is_ captured — `runTrackedPreflight` → `reportFailedStart` → `runs` row
    `failure_check/headline/remediation/output` — and the Runner page's
    "Failed to start" section renders it. But `TimelineService.getTimeline`
    (`packages/daemon/src/services/TimelineService.ts:44`) concatenates only
@@ -92,14 +78,14 @@ all-green timeline; the actual diagnosis was only reachable via
 tail), `packages/cli/src/lib/run/preflight-tracking.ts` (`runTrackedPreflight`),
 `packages/daemon/src/services/RunFailureService.ts` (`recordFailedStart`),
 `packages/daemon/src/services/TimelineService.ts` (`getTimeline`),
-`packages/daemon/src/services/RunnerPageService.ts` (the surface that *does*
+`packages/daemon/src/services/RunnerPageService.ts` (the surface that _does_
 show it).
 
 **What's been considered:** Fix 1 (bracket the dispatch preflight + playwright
 install with `bracketStartupPhase`, e.g. a `crew_startup_dispatch_preflight`
 subtype) is the minimal change and makes the timeline self-explanatory — the
 failed phase carries the rendered `PreflightError`. Fix 2 (TimelineService
-merges `failed-start` run failures as a synthetic terminal event) covers *all*
+merges `failed-start` run failures as a synthetic terminal event) covers _all_
 unbracketed death paths, not just this one, but adds a second event source to
 the timeline contract. They compose; Fix 1 alone would have surfaced KAN-48.
 
@@ -110,7 +96,6 @@ TimelineService/schema touch. One ticket either way.
 **Open questions:** Should the drawer also link to the Runner page's
 failed-start card when one exists for the key, instead of (or in addition to)
 merging into the timeline?
-
 
 ## 2026-07-02 — Dequeue apply + orphaned-lifecycle producers are missing (Epic CREW-306 gap)
 
