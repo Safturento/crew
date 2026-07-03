@@ -6,17 +6,25 @@
 
 ## 2026-07-02 — `.claude/` dispatch artifacts are untracked-but-visible in non-crew worktrees
 
-**What:** Dispatch writes two per-run files into the target worktree's
-`.claude/`: `settings.local.json` (carrying the templated `CREW_AGENT_KEY`)
-and, as of CREW-314, `crew-hooks/pr-create-postuse.mjs`. Both are untracked,
-which is what makes them survive the `crew fix-pr` resume rebase — but "never
-dirties the worktree" only holds when the target repo gitignores `.claude/`.
-The crew repo does (`.gitignore` `.claude/*`); a non-crew target (Recipes,
-home-assistant, …) does not — `crew init` only appends `.claude/secrets/` to a
-target's `.gitignore` (`packages/cli/src/lib/init/scaffold-gh-token.ts`). So on
-those repos both files show up in `git status` as untracked, and an agent that
-runs `git add -A` / `git add .` would sweep the per-dispatch key file into its
-PR — a latent secret leak.
+**Ticket:** [CREW-315](https://safturento.atlassian.net/browse/CREW-315)
+
+**What:** Dispatch writes per-run artifacts into the target worktree's
+`.claude/`: `settings.local.json` (carrying the templated `CREW_AGENT_KEY`),
+`skills/` (skill injection, every dispatch), and, as of CREW-314,
+`crew-hooks/pr-create-postuse.mjs`. All are untracked, which is what makes
+them survive the `crew fix-pr` resume rebase — but "never dirties the
+worktree" only holds when the target repo gitignores `.claude/`. The crew repo
+does (`.gitignore` `.claude/*`); a non-crew target (Recipes, home-assistant,
+…) does not — `crew init` only appends `.claude/secrets/` to a target's
+`.gitignore` (`packages/cli/src/lib/init/scaffold-gh-token.ts`). So on those
+repos the artifacts show up in `git status` as untracked, with two impacts:
+(1) **`crew finish` is hard-blocked on every non-crew repo** — its dirty gate
+(`hasUncommittedChanges` in `packages/cli/src/commands/finish.ts`) uses
+`git status --porcelain`, which counts untracked files; observed 2026-07-02 on
+KAN-48/KAN-49 (Recipes), where both merged PRs refused finish with "worktree
+has uncommitted changes" on nothing but `?? .claude/skills/`. (2) An agent
+that runs `git add -A` / `git add .` would sweep the per-dispatch key file
+into its PR — a latent secret leak.
 
 **Why noticed:** CREW-314 code review (Code Reviewer subagent). CREW-314 copied
 the hook into `.claude/crew-hooks/`, and the reviewer flagged that the
@@ -42,8 +50,10 @@ doesn't retro-protect already-inited repos).
 
 **Shape of work:** small, localized in dispatch setup — one `.git/info/exclude`
 converge step (idempotent append) run alongside/near `injectStateEventHook`,
-plus a unit test. Covers both files, closing the pre-existing
-`settings.local.json` exposure too.
+plus a unit test. Covers all three artifacts (`skills/`, `crew-hooks/`,
+`settings.local.json`), closing the pre-existing `settings.local.json`
+exposure too — and, since `info/exclude` lives in the shared common git dir,
+retroactively un-dirties worktrees left by earlier dispatches.
 
 **Open questions:** `.git/info/exclude` path resolution for a linked worktree
 (resolve via `git rev-parse --git-common-dir`, not `--git-dir`); whether to also
