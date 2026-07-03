@@ -4,6 +4,47 @@
 
 (entries below, newest at top)
 
+## 2026-07-03 — Two `--git-common-dir` → `info/exclude` appenders in dispatch setup (converge-git-exclude vs write-mcp-file)
+
+**What:** A single `crew run` now resolves `git rev-parse --git-common-dir` and
+read-modify-writes the shared `info/exclude` **twice**: once in
+`convergeGitExclude` (CREW-315, the three `.claude/` injection artifacts) and
+once in `appendExcludeLine` inside `write-mcp-file.ts` (the `.mcp.json` line).
+The logic is near-identical — resolve common dir (abs-vs-rel guard), dedup by
+trimmed line, append with a leading-newline guard — but the two differ in error
+semantics: `convergeGitExclude` is best-effort (warns, never throws) while
+`appendExcludeLine` throws on a failed `rev-parse`. Both also share the same
+lock-free read-modify-write on the shared common-dir file, so concurrent
+dispatches into sibling worktrees of one repo can momentarily clobber each
+other's lines (self-healing on the next dispatch; pre-existing in
+`appendExcludeLine`).
+
+**Why noticed:** CREW-315 code review (general-purpose reviewer). Flagged
+Minor/style: reasonable to keep them separate given the throw-vs-warn split, but
+a shared `appendToGitExclude(worktree, lines[], { throwOnError })` primitive
+would remove the duplication and let one call batch all four exclude lines
+(`.mcp.json` + the three `.claude/` artifacts), halving the git calls + file
+writes per dispatch.
+
+**Anchors:** `packages/cli/src/lib/run/converge-git-exclude.ts`
+(`convergeGitExclude`), `packages/cli/src/lib/mcp-config/write-mcp-file.ts`
+(`appendExcludeLine`, `EXCLUDE_LINE`). Both call sites are in
+`packages/cli/src/commands/run.ts` (the MCP write at step 8, the converge at
+step 9).
+
+**What's been considered:** Extract a shared exclude-append primitive taking a
+list of patterns + an error-mode flag; `.mcp.json`'s appender keeps its throwing
+behavior by passing `throwOnError: true`, the converge stays best-effort.
+Batching is a natural bonus (one `rev-parse` + one write covers all four lines).
+Left out of CREW-315 to keep the fix scoped to the leak and avoid regressing the
+independently-tested `.mcp.json` path. Also worth deciding whether the lock-free
+write wants any guard, or whether self-healing-on-next-dispatch is acceptable
+(it has been for `appendExcludeLine` to date).
+
+**Shape of work:** small refactor — one new helper in `lib/run/` (or a neutral
+`lib/git/`), both call sites re-pointed, existing tests retargeted + a batched
+test. Independent of any other work.
+
 ## 2026-07-02 — Dispatch-gate preflight failures never reach the agent timeline (all-green timeline on an error run)
 
 **Ticket:** [CREW-313](https://safturento.atlassian.net/browse/CREW-313) (child G of Epic CREW-306)

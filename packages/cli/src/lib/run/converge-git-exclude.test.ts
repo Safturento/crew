@@ -129,6 +129,21 @@ describe('convergeGitExclude', () => {
     expect(existsSync(join(sharedGit, 'info', 'exclude'))).toBe(true);
   });
 
+  it('returns a warning (never throws) when the exclude write fails', async () => {
+    const worktree = makeWorktree();
+    // Point the common dir at a *file*, so mkdir/write of `<file>/info/exclude`
+    // throws ENOTDIR — the fs-failure branch, distinct from the rev-parse one.
+    const notADir = join(worktree, 'not-a-dir');
+    writeFileSync(notADir, 'x', 'utf8');
+    mockCommonDir(notADir);
+    const warn = vi.fn();
+
+    const result = await convergeGitExclude({ worktree, log: () => {}, warn });
+
+    expect(result.kind).toBe('warning');
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('failed to write'));
+  });
+
   it('returns a warning (never throws) when git rev-parse fails', async () => {
     const worktree = makeWorktree();
     execaMock.mockReturnValueOnce(
