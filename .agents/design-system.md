@@ -1,11 +1,13 @@
 ---
 name: design-system
 description: Crew Figma DS + token bindings + Pill primitive contract
-last_updated: 2026-07-02
+last_updated: 2026-07-04
 covers:
   - 'packages/dashboard/src/components/**'
   - '*.figma.tsx'
   - 'packages/dashboard/components.json'
+  - '.design-sync/**'
+  - 'packages/dashboard/.design-sync.entry.tsx'
 core_library_url: 'https://www.figma.com/design/UkPJj6vd7HMKcey7M0XF4N/Core-Design-System'
 project_library_url: 'https://www.figma.com/design/DsA7QuEa2WthDATkksd1Bq/Crew-Design-System'
 screens_file_url: 'https://www.figma.com/design/9FeJPriqdsdA4n9R5Xsrr8/Untitled'
@@ -333,3 +335,7 @@ Visual-fidelity verification for UI work is governed by the user-level **`visual
 The committed snapshot goes stale the moment the Crew Figma design changes without it being regenerated. **After any change to the Crew Figma design system this session — a `use_figma` write, a `figma-generate-*` run, a component or token edit — run the `figma-snapshot-refresh` skill before that design feeds into code implementation.** It re-exports, re-enriches, and commits `.crew/figma-snapshot/`, keeping it in step with the Figma file `visual-fidelity-check` validates against.
 
 `figma-snapshot-refresh` is the producer gate (after design, before code); `visual-fidelity-check` is the consumer gate (after code). `crew figma-snapshot --check` reports on demand whether the committed snapshot has gone stale.
+
+## claude.ai/design sync
+
+The dashboard DS is mirrored into a claude.ai/design project ("Crew Design System", first synced 2026-07-04) via the `/design-sync` skill, so the Claude Design agent builds mockups from crew's real compiled components. Sync inputs are committed and live in `.design-sync/` (`config.json`, `NOTES.md` — repo-specific gotchas, `conventions.md` — the design-agent README header, `previews/` — hand-authored preview stories, `prepare-css.mjs`) plus the bundle entry `packages/dashboard/.design-sync.entry.tsx`, which re-exports exactly the DS surface (23 components; `ui/form.tsx` deliberately excluded — its RHF `FormField` collides with the composite). Re-syncs after DS changes: run `/design-sync` — the committed config + the project's uploaded anchor make it incremental. Read `.design-sync/NOTES.md` before touching any of this.

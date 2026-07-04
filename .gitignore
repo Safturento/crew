@@ -77,3 +77,10 @@ desktop.ini
 # ...except `browsing`: injected per-dispatch from the superpowers-chrome
 # plugin cache by runSkillInjection, never committed (see .agents/dispatch.md).
 .claude/skills/browsing/
+
+# design-sync (claude.ai/design converter) — staged scripts, build output, machine state
+.ds-sync/
+ds-bundle/
+.design-sync/.cache/
+.design-sync/learnings/
+.design-sync/node_modules
