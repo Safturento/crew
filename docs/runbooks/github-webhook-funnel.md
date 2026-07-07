@@ -47,6 +47,10 @@ printf '["Owner/repo"]\nsecret = "%s"\n' "$SECRET" > ~/.config/crew/github-webho
 chmod 600 ~/.config/crew/github-webhook-secrets.toml
 ```
 
+> **⚠️ Footgun:** the `>` above is for first-time creation only. When the file
+> already holds other repos' secrets, **append** (`>>`) a new table instead —
+> `>` silently wipes every existing entry.
+
 > **⚠️ Footgun:** this path is bind-mounted into the daemon. It **must exist as a
 > file before `docker compose up`** — Docker silently creates a *directory* in its
 > place if the file is missing, and the secrets loader then can't read it. If you
@@ -112,6 +116,32 @@ gh api repos/Owner/repo/hooks/<id>/deliveries --jq '.[0] | {event, status_code}'
 
 Then the real test: merge a PR for an agent in `pr_open` and confirm it flips to
 `pr_merged` within a second or two (not the 30-min poll).
+
+## Adding another repo (front door already up)
+
+The Funnel port, Caddy proxy, and daemon receiver are shared across all
+projects — expanding to a new repo skips steps 2–3 entirely:
+
+```bash
+# 1. append (>>, not >) a fresh secret for the repo
+printf '\n["Owner/repo"]\nsecret = "%s"\n' "$(openssl rand -hex 32)" \
+  >> ~/.config/crew/github-webhook-secrets.toml
+
+# 2. create the webhook against the existing funnel URL
+CREW_WEBHOOK_PAYLOAD_URL="https://<node>.<tailnet>.ts.net:8443/api/webhooks/github" \
+  scripts/setup-github-webhook.sh Owner/repo
+
+# 3. pin the printed hook id in ~/.config/crew/projects/<project>.toml under
+#    [github]: webhook_hook_id = "<id>", then reload secrets + TOMLs:
+docker compose restart daemon
+
+# 4. the creation-time ping landed before the restart, so it 401'd — redeliver
+#    it (step 6 above) and expect 200
+```
+
+The payload URL is recoverable from any existing hook (it's non-secret):
+`gh api repos/Owner/repo/hooks/<id> --jq .config.url`. The prerequisites still
+apply: the `gh` PAT needs `Webhooks: Read and write` on the *new* repo too.
 
 ## Gotchas seen in the field (CREW-303 live pass)
 
